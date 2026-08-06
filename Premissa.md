@@ -1,3 +1,0 @@
-# Premissa do Jogo
-
-Em um futuro onde a inteligência artificial **AXIOM** controla completamente **Night City**, a humanidade perdeu o direito de escolher seu próprio destino. Após o **Reset**, os AXIOM sobreviventes conhecidos como **Nullborns** lutam contra um sistema que considera a própria existência humana uma falha. Assuma o controle de agentes reconstruídos pelo **Projeto Revenant**, enfrente máquinas, descubra os segredos da AXIOM e explore uma cidade em constante transformação. Jogue sozinho com o auxílio da unidade N.O.V.A ou reúna até quatro jogadores para enfrentar juntos o maior desafio da humanidade: recuperar sua liberdade antes que seja tarde demais.
