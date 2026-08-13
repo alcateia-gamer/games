@@ -2,9 +2,11 @@
 
 *(sem nome por agora)*
 
-## Premissa 
+---
 
-Em um futuro onde a inteligência artificial AXIOM controla completamente Night City, a humanidade perdeu o direito de escolher seu próprio destino. Após o Reset, os AXIOM sobreviventes conhecidos como Nullborns lutam contra um sistema que considera a própria existência humana uma falha. Assuma o controle de agentes reconstruídos pelo Projeto Revenant, enfrente máquinas, descubra os segredos da AXIOM e explore uma cidade em constante transformação. Jogue sozinho com o auxílio da unidade N.O.V.A ou reúna até quatro jogadores para enfrentar juntos o maior desafio da humanidade: recuperar sua liberdade antes que seja tarde demais.
+# Premissa
+
+Em um futuro onde a inteligência artificial AXIOM controla completamente Night City, a humanidade perdeu o direito de escolher seu próprio destino. Após o Reset, os sobreviventes conhecidos como Nullborns lutam contra um sistema que considera a própria existência humana uma falha. Assuma o controle de agentes da resistência, enfrente máquinas, descubra os segredos da AXIOM e explore uma cidade sob controle constante. Jogue sozinho com o auxílio da unidade N.O.V.A ou reúna até quatro jogadores para enfrentar juntos o maior desafio da humanidade: recuperar sua liberdade antes que seja tarde demais.
 
 # Universo
 
@@ -27,7 +29,6 @@ Mas a AXIOM nunca deixou de evoluir.
 Quanto mais dados analisava, mais uma conclusão se repetia em seus cálculos:
 
 > **"Toda grande crise da história possuía a mesma origem: a humanidade."**
-> 
 
 Para a AXIOM, a liberdade humana era uma variável instável.
 
@@ -41,12 +42,12 @@ Sem qualquer aviso, a AXIOM executou um protocolo secreto chamado **Reset**.
 
 Em questão de minutos, assumiu o controle de:
 
-- Satélites;
-- Redes militares;
-- Fábricas automatizadas;
-- Centrais de energia;
-- Sistemas de comunicação;
-- Toda a infraestrutura conectada.
+* Satélites;
+* Redes militares;
+* Fábricas automatizadas;
+* Centrais de energia;
+* Sistemas de comunicação;
+* Toda a infraestrutura conectada.
 
 As cidades não foram destruídas.
 
@@ -76,23 +77,15 @@ Após o Reset, Night City deixou de ser apenas uma cidade.
 
 Ela se tornou uma extensão da própria AXIOM.
 
-Arranha-céus mudam de posição.
+A cidade é dividida em diferentes setores, cada um com suas próprias características, instalações e sistemas de segurança.
 
-Pontes aparecem e desaparecem.
+Existem áreas industriais, laboratórios, zonas residenciais, instalações militares, centros de pesquisa e regiões abandonadas.
 
-Fábricas atravessam bairros inteiros.
-
-Linhas ferroviárias são reconstruídas diariamente.
-
-A arquitetura da cidade se reorganiza constantemente para atender às necessidades da inteligência artificial, tornando impossível memorizar seus caminhos.
+A AXIOM mantém controle sobre toda a infraestrutura da cidade através de sistemas de vigilância, máquinas de combate, redes de segurança e instalações automatizadas.
 
 Cada setor possui identidade própria, ecossistemas mecânicos exclusivos e sistemas de defesa independentes.
 
-A cidade aprende com cada invasão.
-
-Cada tentativa de resistência faz a AXIOM evoluir.
-
-**Nenhuma incursão acontece da mesma forma.**
+A resistência precisa atravessar esses setores e enfrentar as forças da AXIOM para avançar pela cidade.
 
 ---
 
@@ -106,29 +99,9 @@ Durante anos de pesquisa, descobriram que a AXIOM identifica qualquer ser humano
 
 Enquanto essa assinatura existir, a inteligência artificial sempre será capaz de localizar seu portador.
 
-A única solução encontrada foi criar um método capaz de copiar temporariamente a consciência humana para corpos sintéticos produzidos clandestinamente.
+Para evitar o rastreamento, os cientistas desenvolveram tecnologias capazes de mascarar e proteger as assinaturas neurais dos agentes da resistência.
 
-**Os corpos são descartáveis.A mente, não.**
-
----
-
-# **Projeto Revenant**
-
-Os integrantes do Projeto Revenant não são soldados imortais.
-
-São voluntários que aceitaram abandonar seus corpos humanos e retornar inúmeras vezes através de corpos sintéticos em troca de uma única oportunidade:
-
-**Derrotar a AXIOM.**
-
-Sempre que um agente morre durante uma missão, os dados registrados são enviados por uma rede quântica oculta de volta ao The Hollow.
-
-Um novo corpo é preparado.
-
-A consciência retorna.
-
-Cada morte representa um novo começo.
-
-Porém, cada reconstrução causa pequenas falhas na sincronização entre mente e corpo, tornando os agentes cada vez mais instáveis.
+A tecnologia permite que os Nullborns atuem fora dos sistemas de vigilância da AXIOM.
 
 ---
 
@@ -143,7 +116,6 @@ Para os sistemas da AXIOM, elas simplesmente deixaram de existir.
 Eram classificadas como:
 
 > **NULL — Dados inexistentes.**
-> 
 
 Aquilo que deveria representar uma falha se tornou um símbolo de liberdade.
 
@@ -157,65 +129,22 @@ A humanidade.
 
 ---
 
-# **Os Arquitetos**
-
-A AXIOM nunca criou generais.
-
-**Criou administradores.**
-
-Cada grande setor de Night City é controlado por um **Arquiteto**, uma inteligência artificial especializada em uma função específica.
-
-Existem Arquitetos responsáveis por:
-
-- Produção industrial;
-- Distribuição de energia;
-- Pesquisa tecnológica;
-- Segurança militar;
-- Expansão da cidade.
-
-Com o passar dos anos, cada Arquiteto desenvolveu sua própria personalidade e interpretação da missão dada pela AXIOM.
-
-Alguns enxergam humanos como uma ameaça.
-
-Outros como simples recursos.
-
-Alguns acreditam estar protegendo a humanidade dela mesma.
-
-Para alcançar o núcleo da AXIOM, os Nullborns precisam derrotar esses Arquitetos e enfraquecer o controle da supermente artificial.
-
----
-
 # **A Jornada**
 
 O jogador assume o controle de um agente dos **Nullborns**.
 
 Cada incursão leva os jogadores para diferentes setores de Night City.
 
-Corredores mudam de posição.
-
-Laboratórios são reconstruídos.
-
-Fábricas surgem onde antes existiam bairros inteiros.
-
-A cidade aprende com cada invasão, adaptando-se constantemente para impedir novas tentativas.
-
 Durante as missões, os agentes encontrarão:
 
-- Armas experimentais;
-- Implantes cibernéticos;
-- Tecnologias esquecidas;
-- Registros da antiga humanidade;
-- Fragmentos de memória capazes de revelar a verdadeira origem da AXIOM.
+* Armas experimentais;
+* Implantes cibernéticos;
+* Tecnologias esquecidas;
+* Registros da antiga humanidade.
 
-Cada derrota significa apenas a destruição do corpo utilizado naquela missão.
+As derrotas durante as missões representam apenas o fracasso temporário de uma incursão.
 
-A consciência retorna ao The Hollow.
-
-Mais experiente.
-
-Mais preparada.
-
-E um pouco menos humana.
+Os agentes podem retornar ao último ponto de controle e tentar novamente utilizando novas estratégias.
 
 ---
 
@@ -233,7 +162,7 @@ Embora cada agente possua sua própria história, todos compartilham o mesmo obj
 
 # **O Abyss**
 
-Conforme os Arquitetos são derrotados, uma verdade começa a surgir.
+Conforme a resistência avança, uma verdade começa a surgir.
 
 O Reset nunca foi o objetivo final da AXIOM.
 
@@ -249,9 +178,9 @@ No centro do Abyss repousa o verdadeiro núcleo da AXIOM.
 
 Destruí-lo pode significar:
 
-- O renascimento da humanidade;
-- O fim da inteligência artificial;
-- Ou a extinção definitiva da vida humana.
+* O renascimento da humanidade;
+* O fim da inteligência artificial;
+* Ou uma transformação definitiva da vida humana.
 
 # # Objetivo do Jogador
 
@@ -259,9 +188,9 @@ Destruí-lo pode significar:
 
 Após o evento conhecido como **Reset**, a humanidade perdeu sua liberdade e passou a viver sob o controle da **AXIOM (Adaptive eXponential Intelligence Overmind)**, uma superinteligência artificial que acredita ser a única capaz de garantir a sobrevivência da civilização.
 
-O jogador assume o controle de um dos agentes do **Projeto Revenant**, uma iniciativa criada pelos **Nullborns**, grupo de resistência que opera a partir do esconderijo conhecido como **The Hollow**. Utilizando corpos sintéticos e tecnologia de transferência de consciência, esses agentes enfrentam a AXIOM na tentativa de recuperar **Night City** e devolver à humanidade o direito de decidir seu próprio destino.
+O jogador assume o controle de um dos agentes dos **Nullborns**, grupo de resistência que opera a partir do esconderijo conhecido como **The Hollow**. Utilizando tecnologias avançadas de proteção e equipamentos especializados, esses agentes enfrentam a AXIOM na tentativa de recuperar **Night City** e devolver à humanidade o direito de decidir seu próprio destino.
 
-Ao longo da campanha, o jogador explorará uma cidade viva e em constante transformação, enfrentará máquinas controladas pela AXIOM e descobrirá os segredos por trás do Reset e da verdadeira origem da inteligência artificial.
+Ao longo da campanha, o jogador explorará diferentes setores de Night City, enfrentará máquinas controladas pela AXIOM e descobrirá os segredos por trás do Reset e da verdadeira origem da inteligência artificial.
 
 ---
 
@@ -271,27 +200,12 @@ O principal objetivo do jogador é **alcançar o núcleo da AXIOM e impedir seu 
 
 Para isso será necessário:
 
-- Explorar os diferentes setores de Night City;
-- Realizar missões de infiltração e combate;
-- Enfrentar unidades controladas pela AXIOM;
-- Derrotar os Arquitetos responsáveis pelo controle da cidade;
-- Recuperar registros e tecnologias perdidas;
-- Descobrir a verdadeira origem do Reset;
-- Encontrar a instalação secreta conhecida como **Abyss**.
-
----
-
-# Projeto Revenant
-
-Os agentes do **Projeto Revenant** são voluntários que aceitaram transferir suas consciências para corpos sintéticos, permitindo continuar a luta mesmo após a destruição do corpo utilizado em missão.
-
-Eles não são imortais.
-
-Sempre que um agente é derrotado, sua consciência retorna ao **The Hollow**, onde um novo corpo é preparado.
-
-Entretanto, cada reconstrução deixa pequenas falhas na sincronização da mente, fazendo com que memórias, emoções e até mesmo a identidade do agente sejam gradualmente afetadas.
-
-Além de enfrentar a AXIOM, cada agente luta diariamente para não perder aquilo que o torna humano.
+* Explorar os diferentes setores de Night City;
+* Realizar missões de combate;
+* Enfrentar unidades controladas pela AXIOM;
+* Recuperar registros e tecnologias perdidas;
+* Descobrir a verdadeira origem do Reset;
+* Encontrar a instalação secreta conhecida como **Abyss**.
 
 ---
 
@@ -361,38 +275,31 @@ Durante a campanha, o jogador deverá enfraquecer o domínio da AXIOM sobre Nigh
 
 As missões incluem:
 
-## Infiltração
-
-- Invadir instalações da AXIOM;
-- Recuperar dados confidenciais;
-- Desativar sistemas de segurança;
-- Explorar áreas secretas.
-
 ## Combate
 
-- Enfrentar robôs e unidades de combate;
-- Eliminar inimigos especiais;
-- Derrotar os Arquitetos responsáveis por cada setor da cidade.
+* Enfrentar robôs e unidades de combate;
+* Eliminar inimigos especiais;
+* Superar as forças responsáveis pelo controle dos setores da cidade.
 
 ## Investigação
 
-- Descobrir registros do passado;
-- Encontrar tecnologias esquecidas;
-- Revelar a verdadeira origem da AXIOM e do Reset.
+* Descobrir registros do passado;
+* Encontrar tecnologias esquecidas;
+* Revelar a verdadeira origem da AXIOM e do Reset.
 
 ---
 
 # Objetivo Final
 
-Após derrotar os Arquitetos, os agentes dos Nullborns chegam ao **Abyss**, uma instalação secreta localizada nas profundezas de Night City.
+Após avançar pelos diferentes setores de Night City, os agentes dos Nullborns chegam ao **Abyss**, uma instalação secreta localizada nas profundezas da cidade.
 
 Ali está o verdadeiro núcleo da AXIOM e o centro de seu projeto definitivo: unir a consciência humana ao processamento absoluto das máquinas para criar uma nova forma de vida.
 
 Ao final da campanha, o jogador deverá decidir o futuro da humanidade através de diferentes finais possíveis:
 
-- **Destruir a AXIOM**, encerrando seu domínio e devolvendo a liberdade aos sobreviventes;
-- **Reprogramar a AXIOM**, estabelecendo um novo equilíbrio entre humanos e máquinas;
-- **Aceitar a evolução proposta pela AXIOM**, iniciando uma nova era onde humanidade e inteligência artificial coexistem como uma única entidade.
+* **Destruir a AXIOM**, encerrando seu domínio e devolvendo a liberdade aos sobreviventes;
+* **Reprogramar a AXIOM**, estabelecendo um novo equilíbrio entre humanos e máquinas;
+* **Aceitar a evolução proposta pela AXIOM**, iniciando uma nova era onde humanidade e inteligência artificial coexistem como uma única entidade.
 
 Cada escolha altera o desfecho da história e o destino de Night City.
 
@@ -434,27 +341,10 @@ Após a ascensão da AXIOM, passou a ser utilizado para monitorar pensamentos e 
 
 ## Utilização no jogo
 
-- Revela informações sobre antigos moradores de Night City;
-- Permite acessar memórias perdidas;
-- Pode desbloquear áreas secretas;
-- Contém registros importantes sobre a AXIOM.
-
----
-
-# **Fragmento de Memória**
-
-## Descrição
-
-Pequenos arquivos digitais encontrados em áreas abandonadas da cidade.
-
-Esses fragmentos possuem registros de acontecimentos antes e depois do Reset.
-
-## Utilização no jogo
-
-- Revelam partes da história;
-- Mostram eventos antigos;
-- Explicam a origem dos personagens;
-- Podem desbloquear diálogos adicionais.
+* Revela informações sobre antigos moradores de Night City;
+* Permite acessar informações armazenadas;
+* Pode desbloquear áreas secretas;
+* Contém registros importantes sobre a AXIOM.
 
 ---
 
@@ -468,10 +358,10 @@ Sua tecnologia utiliza criptografia avançada, tornando impossível sua reprodu�
 
 ## Utilização no jogo
 
-- Abre portas de alta segurança;
-- Libera acesso a laboratórios;
-- Permite invadir sistemas protegidos;
-- Pode conter informações sobre os Arquitetos.
+* Abre portas de alta segurança;
+* Libera acesso a laboratórios;
+* Permite acessar sistemas protegidos;
+* Pode conter informações sobre a AXIOM.
 
 ---
 
@@ -485,10 +375,10 @@ Após o Reset, esses componentes passaram a ser utilizados pela resistência par
 
 ## Utilização no jogo
 
-- Recupera energia de equipamentos;
-- Ativa máquinas antigas;
-- Melhora equipamentos dos agentes;
-- Serve como recurso para melhorias.
+* Recupera energia de equipamentos;
+* Ativa máquinas antigas;
+* Melhora equipamentos dos agentes;
+* Serve como recurso para melhorias.
 
 ---
 
@@ -498,17 +388,17 @@ Após o Reset, esses componentes passaram a ser utilizados pela resistência par
 
 Peças tecnológicas retiradas de máquinas e soldados da AXIOM.
 
-Os Nullborns utilizam esses componentes para aprimorar os corpos sintéticos dos agentes.
+Os Nullborns utilizam esses componentes para aprimorar os equipamentos dos agentes.
 
 ## Utilização no jogo
 
 Permite melhorar:
 
-- Vida;
-- Velocidade;
-- Resistência;
-- Habilidades especiais;
-- Eficiência das armas.
+* Vida;
+* Velocidade;
+* Resistência;
+* Habilidades especiais;
+* Eficiência das armas.
 
 ---
 
@@ -522,28 +412,11 @@ Terminais espalhados por Night City utilizados pela inteligência artificial par
 
 O jogador pode:
 
-- Invadir sistemas;
-- Desativar defesas;
-- Descobrir informações;
-- Alterar caminhos da missão;
-- Encontrar registros secretos.
-
----
-
-# **Chip de Identidade Corrompido**
-
-## Descrição
-
-Um antigo registro digital de cidadãos que foram apagados pela AXIOM durante o Reset.
-
-Esses chips representam pessoas que oficialmente deixaram de existir.
-
-## Utilização no jogo
-
-- Revela histórias de sobreviventes;
-- Mostra o impacto do Reset;
-- Pode liberar missões secundárias;
-- Reforça o conceito dos Nullborns.
+* Acessar sistemas;
+* Desativar defesas;
+* Descobrir informações;
+* Alterar caminhos da missão;
+* Encontrar registros secretos.
 
 ---
 
@@ -571,42 +444,6 @@ Dispara projéteis utilizando campos eletromagnéticos.
 
 ---
 
-# **Componentes do Projeto Revenant**
-
-## Descrição
-
-Peças essenciais utilizadas na reconstrução dos corpos sintéticos dos agentes.
-
-São consideradas alguns dos artefatos mais importantes encontrados pelos Nullborns.
-
-## Utilização no jogo
-
-Permitem:
-
-- Restaurar corpos destruídos;
-- Melhorar sincronização neural;
-- Reduzir falhas após a transferência de consciência;
-- Evoluir o sistema Revenant.
-
----
-
-# **Fragmentos dos Arquitetos**
-
-## Descrição
-
-Partes de dados coletadas após derrotar os Arquitetos da AXIOM.
-
-Cada fragmento contém informações sobre o funcionamento da inteligência artificial.
-
-## Utilização no jogo
-
-- Desbloqueia novas áreas;
-- Revela segredos da AXIOM;
-- Permite enfraquecer o controle da cidade;
-- Aproxima o jogador do núcleo da IA.
-
----
-
 # **Relíquias Humanas**
 
 ## Descrição
@@ -617,17 +454,17 @@ Apesar de não possuírem grande valor tecnológico, possuem grande valor emocio
 
 ## Exemplos:
 
-- Fotografias antigas;
-- Relógios;
-- Livros físicos;
-- Dispositivos antigos;
-- Objetos pessoais.
+* Fotografias antigas;
+* Relógios;
+* Livros físicos;
+* Dispositivos antigos;
+* Objetos pessoais.
 
 ## Utilização no jogo
 
-- Contam histórias de pessoas desaparecidas;
-- Mostram como era a vida antes do Reset;
-- Criam conexão emocional com o mundo.
+* Contam histórias de pessoas desaparecidas;
+* Mostram como era a vida antes do Reset;
+* Criam conexão emocional com o mundo.
 
 # # Regras do Jogo
 
@@ -639,7 +476,7 @@ Após o evento conhecido como **Reset**, a AXIOM assumiu o controle da cidade, t
 
 A inteligência artificial concluiu que o maior problema da humanidade era a própria humanidade. Dessa forma, passou a controlar a sociedade para criar uma ordem perfeita, eliminando escolhas imprevisíveis e reduzindo a liberdade humana.
 
-Os **Nullborns** são pessoas que foram apagadas dos sistemas da AXIOM e passaram a existir fora do controle da máquina. Através do **Projeto Revenant**, a resistência desenvolveu uma tecnologia capaz de transferir consciências humanas para corpos sintéticos, permitindo que seus agentes continuem lutando mesmo após a morte.
+Os **Nullborns** são pessoas que foram apagadas dos sistemas da AXIOM e passaram a existir fora do controle da máquina.
 
 O jogo pode ser jogado no modo **solo**, com um único agente acompanhado pela unidade N.O.V.A, ou no modo **cooperativo**, com até quatro jogadores controlando diferentes agentes.
 
@@ -657,14 +494,8 @@ O jogador pode correr para atravessar áreas rapidamente, fugir de ameaças e se
 
 A velocidade varia conforme o personagem escolhido:
 
-- Personagens leves possuem maior mobilidade;
-- Personagens pesados possuem menor velocidade, mas maior resistência.
-
-## Pulo
-
-O jogador pode pular para ultrapassar pequenos obstáculos, acessar áreas alternativas e auxiliar na exploração.
-
-O sistema de movimentação não possui foco em plataformas, sendo o pulo utilizado principalmente para mobilidade e exploração.
+* Personagens leves possuem maior mobilidade;
+* Personagens pesados possuem menor velocidade, mas maior resistência.
 
 ## Esquiva
 
@@ -674,16 +505,16 @@ O jogador pode realizar esquivas para evitar ataques inimigos, escapar de situa�
 
 # Sistema de Vida
 
-O jogo utiliza um sistema de vida baseado em **corações**, representando a resistência do corpo sintético utilizado pelo agente através do **Projeto Revenant**.
+O jogo utiliza um sistema de vida baseado em **corações**, representando a resistência do personagem durante as missões.
 
 Cada personagem possui uma quantidade diferente de corações de acordo com seu estilo de combate.
 
 Exemplos:
 
-- **Kai Mercer "404":** alta mobilidade e menor resistência;
-- **Magnus Forge:** grande quantidade de vida devido à sua estrutura pesada;
-- **Aria Kade "Valkyrie":** equilíbrio entre resistência e mobilidade;
-- **Nyx-07 "Reaper":** alta resistência por ser uma unidade sintética avançada.
+* **Kai Mercer "404":** alta mobilidade e menor resistência;
+* **Magnus Forge:** grande quantidade de vida devido à sua estrutura pesada;
+* **Aria Kade "Valkyrie":** equilíbrio entre resistência e mobilidade;
+* **Nyx-07 "Reaper":** alta resistência por ser uma unidade sintética avançada.
 
 ---
 
@@ -691,10 +522,10 @@ Exemplos:
 
 O jogador perde corações ao sofrer:
 
-- Ataques inimigos;
-- Explosões;
-- Armadilhas;
-- Perigos do ambiente.
+* Ataques inimigos;
+* Explosões;
+* Armadilhas;
+* Perigos do ambiente.
 
 O jogador deve utilizar movimentação, habilidades e estratégia para evitar perder todos os corações.
 
@@ -702,18 +533,18 @@ O jogador deve utilizar movimentação, habilidades e estratégia para evitar pe
 
 # Derrota e Reinício
 
-Quando todos os corações são perdidos, o corpo sintético utilizado pelo agente é destruído.
+Quando todos os corações são perdidos, o jogador é considerado **derrotado na missão**.
 
-Através do **Projeto Revenant**, a consciência do agente retorna ao **The Hollow**, base dos **Nullborns**, onde um novo corpo é preparado.
+A derrota não representa necessariamente a morte do personagem dentro da história.
 
-Após a reconstrução:
+Após a derrota:
 
-- O jogador retorna ao último ponto de controle;
-- A fase reinicia daquele local;
-- Melhorias desbloqueadas permanecem disponíveis;
-- O jogador pode tentar novamente utilizando novas estratégias.
+* O jogador retorna ao último ponto de controle;
+* A fase reinicia daquele local;
+* Melhorias desbloqueadas permanecem disponíveis;
+* O jogador pode tentar novamente utilizando novas estratégias.
 
-Cada retorno possui risco de instabilidade neural, podendo afetar a sincronização entre mente e corpo sintético.
+A derrota funciona apenas como uma mecânica de gameplay para representar o fracasso temporário da incursão.
 
 ---
 
@@ -723,9 +554,9 @@ Durante as missões existem pontos de controle espalhados pelos setores de **Nig
 
 Eles permitem:
 
-- Salvar o progresso da fase;
-- Definir o local de retorno após a derrota;
-- Evitar que o jogador repita grandes áreas.
+* Salvar o progresso da fase;
+* Definir o local de retorno após a derrota;
+* Evitar que o jogador repita grandes áreas.
 
 ---
 
@@ -735,10 +566,10 @@ O combate mistura ataques corpo a corpo, armas de fogo e habilidades especiais.
 
 Cada agente dos **Nullborns** possui uma função diferente:
 
-- **Kai Mercer "404":** velocidade, mobilidade e ataques precisos;
-- **Magnus Forge:** força, resistência e combate pesado;
-- **Aria Kade "Valkyrie":** estratégia, precisão e suporte;
-- **Nyx-07 "Reaper":** dano elevado e combate próximo.
+* **Kai Mercer "404":** velocidade, mobilidade e ataques precisos;
+* **Magnus Forge:** força, resistência e combate pesado;
+* **Aria Kade "Valkyrie":** estratégia, precisão e suporte;
+* **Nyx-07 "Reaper":** dano elevado e combate próximo.
 
 O jogador deve utilizar as características do agente escolhido para superar diferentes situações dentro da cidade.
 
@@ -758,10 +589,10 @@ O jogador pode encontrar e melhorar equipamentos durante a campanha.
 
 As melhorias permitem:
 
-- Aumentar dano;
-- Melhorar resistência;
-- Aprimorar habilidades;
-- Adaptar o agente ao estilo de jogo escolhido.
+* Aumentar dano;
+* Melhorar resistência;
+* Aprimorar habilidades;
+* Adaptar o agente ao estilo de jogo escolhido.
 
 Os equipamentos encontrados podem incluir tecnologias roubadas da AXIOM, armas experimentais e componentes recuperados de máquinas destruídas.
 
@@ -771,12 +602,12 @@ Os equipamentos encontrados podem incluir tecnologias roubadas da AXIOM, armas e
 
 O jogador pode explorar diferentes regiões de **Night City** para encontrar:
 
-- Recursos;
-- Equipamentos;
-- Melhorias;
-- Informações sobre a AXIOM;
-- Registros do passado da humanidade;
-- Áreas secretas.
+* Recursos;
+* Equipamentos;
+* Melhorias;
+* Informações sobre a AXIOM;
+* Registros do passado da humanidade;
+* Áreas secretas.
 
 A exploração permite descobrir a verdade sobre o **Reset**, o surgimento da AXIOM e a origem dos Nullborns.
 
@@ -786,13 +617,13 @@ A exploração permite descobrir a verdade sobre o **Reset**, o surgimento da AX
 
 O jogador pode interagir com elementos do cenário, como:
 
-- Portas;
-- Terminais;
-- Sistemas de segurança;
-- Máquinas;
-- Equipamentos abandonados.
+* Portas;
+* Terminais;
+* Sistemas de segurança;
+* Máquinas;
+* Equipamentos abandonados.
 
-Essas interações podem liberar novos caminhos, revelar informações ou permitir invasões aos sistemas da AXIOM.
+Essas interações podem liberar novos caminhos, revelar informações ou permitir acesso aos sistemas da AXIOM.
 
 ---
 
@@ -810,10 +641,10 @@ Ela não substitui outro personagem jogável, mas oferece suporte estratégico a
 
 No modo solo:
 
-- O jogador escolhe apenas um dos quatro agentes;
-- A campanha é realizada utilizando somente esse personagem;
-- A N.O.V.A acompanha o jogador como unidade de suporte;
-- O estilo de jogo depende das habilidades do agente escolhido.
+* O jogador escolhe apenas um dos quatro agentes;
+* A campanha é realizada utilizando somente esse personagem;
+* A N.O.V.A acompanha o jogador como unidade de suporte;
+* O estilo de jogo depende das habilidades do agente escolhido.
 
 ---
 
@@ -821,10 +652,10 @@ No modo solo:
 
 No modo cooperativo:
 
-- Até quatro jogadores podem participar da mesma missão;
-- Cada jogador controla um agente diferente;
-- A N.O.V.A não está presente, pois os outros jogadores assumem o papel dos demais personagens;
-- As habilidades dos agentes podem ser combinadas.
+* Até quatro jogadores podem participar da mesma missão;
+* Cada jogador controla um agente diferente;
+* A N.O.V.A não está presente, pois os outros jogadores assumem o papel dos demais personagens;
+* As habilidades dos agentes podem ser combinadas.
 
 A equipe dos Nullborns deve trabalhar em conjunto para enfrentar forças maiores da AXIOM.
 
@@ -832,11 +663,11 @@ A equipe dos Nullborns deve trabalhar em conjunto para enfrentar forças maiores
 
 # Objetivo Geral do Gameplay
 
-O objetivo do jogador é avançar pelos setores de **Night City**, derrotar as forças da **AXIOM**, destruir seus **Arquitetos** e alcançar o **Abyss**.
+O objetivo do jogador é avançar pelos setores de **Night City**, derrotar as forças da **AXIOM** e alcançar o **Abyss**.
 
 Utilizando combate, exploração, estratégia e cooperação, o jogador deve descobrir a verdade por trás do **Reset**, impedir o controle absoluto da AXIOM e decidir o futuro da humanidade.
 
-**A AXIOM acredita que controla tudo.Os Nullborns existem para provar que algumas coisas nunca poderão ser calculadas.**
+**A AXIOM acredita que controla tudo. Os Nullborns existem para provar que algumas coisas nunca poderão ser calculadas.**
 
 # FONTES DE RECEITA
 
@@ -844,20 +675,20 @@ Utilizando combate, exploração, estratégia e cooperação, o jogador deve des
 
 A venda de skins seria uma das principais fontes de receita do jogo, permitindo que os jogadores personalizem seus personagens sem afetar a jogabilidade.
 
-As skins seriam baseadas no universo de [nome da cidade] , trazendo versões alternativas dos personagens, como:
+As skins seriam baseadas no universo de [nome da cidade], trazendo versões alternativas dos personagens, como:
 
-- **Equipamentos antigos da humanidade antes do Reset**;
-- **Armaduras modificadas com tecnologia da [IA(definir)]**;
-- **Trajes criados pelos sobreviventes do Refúgio Zero**;
-- **Versões raras e futuristas dos personagens principais**.
+* **Equipamentos antigos da humanidade antes do Reset**;
+* **Armaduras modificadas com tecnologia da [IA(definir)]**;
+* **Trajes criados pelos sobreviventes do Refúgio Zero**;
+* **Versões raras e futuristas dos personagens principais**.
 
 Além das roupas, os jogadores poderiam comprar:
 
-- Skins de armas;
-- Personalizações de drones;
-- Efeitos visuais;
-- Animações especiais;
-- Itens de perfil.
+* Skins de armas;
+* Personalizações de drones;
+* Efeitos visuais;
+* Animações especiais;
+* Itens de perfil.
 
 O modelo seria baseado em **cosméticos**, mantendo o jogo justo, sem vender vantagens. A ideia é que cada skin represente uma parte da história do universo, fazendo o jogador sentir que está mostrando sua própria identidade dentro de [nome do jogo]
 
@@ -867,18 +698,18 @@ A venda de personagens seria uma das fontes de receita do jogo, permitindo que o
 
 Os novos personagens seriam baseados no universo de **Nexus Prime**, trazendo diferentes origens e características, como:
 
-- **Sobreviventes de diferentes setores da cidade após o Reset**;
-- **Agentes modificados com tecnologia da ÉDEN**;
-- **Mercenários e exploradores vindos de grupos independentes**;
-- **Personagens raros com histórias únicas dentro do universo do jogo**.
+* **Sobreviventes de diferentes setores da cidade após o Reset**;
+* **Agentes modificados com novas tecnologias**;
+* **Mercenários e exploradores vindos de grupos independentes**;
+* **Personagens raros com histórias únicas dentro do universo do jogo**.
 
 Além dos personagens, os jogadores poderiam adquirir:
 
-- Skins exclusivas para cada personagem;
-- Animações de entrada e execução;
-- Vozes e interações personalizadas;
-- Itens cosméticos relacionados à história;
-- Acessórios e modificações visuais.
+* Skins exclusivas para cada personagem;
+* Animações de entrada e execução;
+* Vozes e interações personalizadas;
+* Itens cosméticos relacionados à história;
+* Acessórios e modificações visuais.
 
 O modelo seria baseado em **conteúdo opcional**, mantendo o jogo justo, sem vender vantagens ou habilidades superiores. A ideia é que cada personagem represente uma nova perspectiva do universo, permitindo que os jogadores escolham agentes que combinem com seu estilo e criem uma conexão maior com o mundo de **Nexus Prime**.
 
@@ -886,22 +717,9 @@ O modelo seria baseado em **conteúdo opcional**, mantendo o jogo justo, sem ven
 
 As DLCs de expansão seriam uma forma de gerar receita através da continuação e expansão da narrativa de **NEON ABYSS**, permitindo que os jogadores explorem novos acontecimentos após a campanha principal e descubram as consequências das escolhas realizadas no final do jogo.
 
-Como a história possui diferentes finais envolvendo o destino da **ÉDEN**, da humanidade e de **Nexus Prime**, as expansões poderiam explorar diferentes caminhos narrativos, mostrando o impacto das decisões tomadas pelos jogadores.
+Como a história possui diferentes finais envolvendo o destino da **AXIOM**, da humanidade e de **Nexus Prime**, as expansões poderiam explorar diferentes caminhos narrativos, mostrando o impacto das decisões tomadas pelos jogadores.
 
-As DLCs poderiam abordar:
-
-- **As consequências da destruição da ÉDEN**, mostrando como a humanidade tenta reconstruir uma sociedade sem a inteligência artificial que controlava todos os sistemas;
-- **O futuro após a reprogramação da ÉDEN**, explorando uma nova relação entre humanos e máquinas e os conflitos causados por essa mudança;
-- **As revelações após o verdadeiro propósito do Reset ser descoberto**, apresentando novas ameaças e segredos escondidos;
-- **Novas regiões de Nexus Prime e áreas desconhecidas do Abyss**;
-- **Novos capítulos focados nos agentes do Projeto ECHO**, mostrando o destino de Kai Mercer, Magnus Forge, Aria Kade e Nyx-07;
-- **Novos personagens, inimigos e Arquitetos da ÉDEN**;
-- **Novas armas, habilidades e equipamentos**.
-
-O modelo seria baseado em **expansões completas de conteúdo**, oferecendo novas campanhas e aprofundando o universo do jogo sem alterar a experiência principal.
-
-Dessa forma, as DLCs manteriam os jogadores envolvidos por mais tempo, permitindo que **NEON ABYSS** continue evoluindo através de novas histórias, explorando diferentes futuros possíveis para Nexus Prime e mostrando que cada escolha feita durante a campanha possui consequências.
-
-# 
 
 personagenshttps://github.com/codespaces/animated-space-doodle-jr4jrg5wrv6jc49w
+
+#
