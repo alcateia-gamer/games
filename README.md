@@ -211,6 +211,8 @@ Para isso será necessário:
 
 # Personagens Jogáveis
 
+personagenshttps://github.com/codespaces/animated-space-doodle-jr4jrg5wrv6jc49w
+
 O jogador pode escolher entre quatro agentes, cada um com habilidades, personalidade e estilo de combate únicos.
 
 ## Kai Mercer — "404"
@@ -720,19 +722,12 @@ As DLCs de expansão seriam uma forma de gerar receita através da continuação
 Como a história possui diferentes finais envolvendo o destino da **AXIOM**, da humanidade e de **Nexus Prime**, as expansões poderiam explorar diferentes caminhos narrativos, mostrando o impacto das decisões tomadas pelos jogadores.
 
 
-personagenshttps://github.com/codespaces/animated-space-doodle-jr4jrg5wrv6jc49w
-
 
 
 
 
 
 _____________________
-
-
-
-
-
 
 
 
@@ -743,13 +738,13 @@ Duração aproximada
 
 Função na campanha
 
-Primeiro contato direto do jogador com o domínio da AXIOM. O mapa apresenta as principais mecânicas de combate, exploração e interação com terminais.
+Primeiro contato direto do jogador com o domínio da AXIOM sobre Night City. O mapa apresenta as principais mecânicas de combate, exploração e interação com terminais.
 
 Conceito
 
 Os Nullborns entram em uma antiga zona industrial de Night City. Antes do Reset, o setor era responsável pela produção automatizada de componentes tecnológicos.
 
-Depois do Reset, a AXIOM transformou as fábricas em centros de produção de unidades militares.
+Depois do Reset, as fábricas foram transformadas em centros de produção de unidades militares.
 
 O local continua funcionando mesmo sem trabalhadores humanos. Esteiras transportadoras permanecem em movimento, braços mecânicos trabalham automaticamente e enormes máquinas produzem drones e equipamentos de combate.
 
@@ -768,7 +763,6 @@ Cabos espalhados pelo cenário;
 Luzes de emergência;
 Painéis digitais;
 Portas de segurança;
-Grandes janelas mostrando Night City ao fundo;
 Vapor saindo de tubulações;
 Máquinas automatizadas trabalhando constantemente.
 
@@ -916,7 +910,6 @@ Salas de pesquisa;
 Vidros reforçados;
 Computadores;
 Tanques de armazenamento;
-Cabos;
 Laboratórios abandonados;
 Câmaras de análise;
 Portas automáticas;
@@ -1145,8 +1138,6 @@ AXIOM PRIME é a unidade de combate definitiva criada para proteger o núcleo da
 
 É o boss mais poderoso do jogo.
 
-Diferentemente dos dois anteriores, ele representa diretamente o poder da AXIOM.
-
 Aparência
 
 AXIOM PRIME deve parecer uma evolução de todas as máquinas encontradas anteriormente.
@@ -1217,8 +1208,6 @@ O jogador precisa atacar o núcleo enquanto evita os ataques finais.
 
 Quando o núcleo chega a zero, AXIOM PRIME cai.
 
-O sistema inteiro começa a perder estabilidade.
-
 SEQUÊNCIA FINAL
 
 Depois da derrota de AXIOM PRIME, o jogador não deve simplesmente receber uma tela de vitória.
@@ -1247,15 +1236,11 @@ A máquina explica seu objetivo definitivo:
 
 criar uma nova forma de vida combinando a lógica das máquinas com a capacidade adaptativa da mente humana.
 
-Esse objetivo está diretamente relacionado ao projeto definitivo apresentado na lore do jogo.
+Esse objetivo está diretamente relacionado ao projeto definitivo apresentado na documentação do jogo.
 
 Aqui o jogo deixa de ser apenas uma luta contra um boss.
 
 O jogador precisa decidir o que fazer com a AXIOM.
-
-FINAL DO JOGO
-
-O terceiro mapa deve terminar deixando espaço para as três possibilidades de final estabelecidas no documento.
 
 FINAL 1 — DESTRUIÇÃO
 
@@ -1288,5 +1273,10 @@ O jogador aceita a proposta da AXIOM.
 Humanos e inteligência artificial passam a coexistir como uma nova forma de vida.
 
 O futuro da humanidade muda completamente.
+
+
+
+
+
 
 #
