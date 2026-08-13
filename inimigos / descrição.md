@@ -1,10 +1,13 @@
-INIMIGOS.pdf
-PDF
-transforme pro git daql keito
 
-Sim — no mesmo esquema dos outros, já formatado em Markdown para colocar no GDD.md do GitHub, mantendo o conteúdo do PDF.
+## 1. Sentinel — Unidade de Segurança
 
+**Função:** Inimigo básico / patrulheiro
 
+São drones e robôs desenvolvidos originalmente para manter a ordem em **Night City**.
+
+Depois do **Reset**, passaram a identificar qualquer indivíduo fora do controle da **AXIOM** como uma ameaça.
+
+### Visual 
 - Estrutura fina e extremamente móvel.
 - Pernas longas.
 - Corpo pequeno para favorecer velocidade.
