@@ -24,7 +24,7 @@
 
 ## Duração aproximada
 
-**10 minutos**
+**6 minutos**
 
 ## Função na campanha
 
@@ -179,7 +179,7 @@ Os módulos podem ser utilizados para melhorar vida, velocidade, resistência, h
 
 ## Duração aproximada
 
-**10 minutos**
+**6 minutos**
 
 ## Função na campanha
 
@@ -347,7 +347,7 @@ A porta para o terceiro mapa é liberada.
 
 ## Duração aproximada
 
-**10 minutos + sequência final**
+**7 minutos + sequência final**
 
 ## Função na campanha
 
