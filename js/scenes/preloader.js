@@ -14,9 +14,18 @@ class preloader extends Phaser.Scene {
         });
     }
 
-    preload() {}
+    preload() {
+        this.load.setPath("./assets/")
+        this.load.spritesheet("Verme", "Verme.png", {
+         frameWidth: 64,
+         frameHeight: 64,
+        });
+    }
+    create () {
+        this.scene.stop();
+        this.scene.start("Level1")
 
-    create () {}
+    }
 }
 
 export default preloader;
