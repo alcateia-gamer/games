@@ -20,6 +20,8 @@ class preloader extends Phaser.Scene {
          frameWidth: 64,
          frameHeight: 64,
         });
+
+        this.load.plugin("rexvirtualjoystickplugin", "../js/rexvirtualjoystickplugin.min.js", true,);
     }
     create () {
         this.scene.stop();
