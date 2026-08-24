@@ -3,7 +3,7 @@ class Level1 extends Phaser.Scene {
     super("Level1");
 
     this.threshold = 0.1;
-    this.speed = 500;
+    this.speed = 300;
     this.direction = undefined;
   }
   create() {
