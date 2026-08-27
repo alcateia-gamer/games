@@ -4,7 +4,7 @@ class Start extends Phaser.Scene {
     }
 
     preload() {
-        this.load.image("start-background", "assets/start-background.png");
+        this.load.image("start-background", "assets/map/start-background.png");
     }
 
     create() {

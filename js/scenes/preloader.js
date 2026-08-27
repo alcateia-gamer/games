@@ -16,7 +16,7 @@ class preloader extends Phaser.Scene {
 
     preload() {
         this.load.setPath("./assets/")
-        this.load.spritesheet("Verme", "Verme.png", {
+        this.load.spritesheet("Verme", "personagem/Verme.png", {
          frameWidth: 64,
          frameHeight: 64,
         });
