@@ -3,57 +3,64 @@ class Level1 extends Phaser.Scene {
   constructor() {
     super("Level1");
 
-    /// FORÇA MÍNIMA DO JOYSTICK PARA MOVIMENTAR
+    /// FORÇA MÍNIMA DO JOYSTICK
     this.threshold = 0.1;
 
     /// VELOCIDADE DO PERSONAGEM
     this.speed = 300;
 
-    /// DIREÇÃO DO PERSONAGEM
+    /// DIREÇÃO ATUAL DO PERSONAGEM
     this.direction = undefined;
   }
 
-  /// CRIA A CENA
+  /// CRIAÇÃO DA CENA
   create() {
-    /// CRIA O MAPA DO TILED
+    /// ==================================================
+    /// MAPA DO TILED
+    /// ==================================================
+
     this.map = this.make.tilemap({
       key: "mapa",
     });
 
-    /// TILESET PIXEL CYBERPUNK
+    /// ==================================================
+    /// TILESETS
+    /// ==================================================
+
+    /// PIXEL CYBERPUNK
     const pixelCyberpunk = this.map.addTilesetImage(
       "pixel-cyberpunk-interior",
       "pixel-cyberpunk-interior",
     );
 
-    /// TILESET LABORATÓRIO
+    /// LABORATÓRIO
     const lab = this.map.addTilesetImage("lab_tileset_LITE", "lab");
 
-    /// TILESET FURNITURE
+    /// FURNITURE
     const furniture = this.map.addTilesetImage("furniture", "furniture");
 
-    /// TILESET FURNITURE PACK
+    /// FURNITURE PACK
     const furniturePack = this.map.addTilesetImage(
       "furniture_pack",
       "furniture_pack",
     );
 
-    /// TILESET IDLE
+    /// IDLE
     const idle = this.map.addTilesetImage("idle", "idle");
 
-    /// TILESET MUSH
+    /// MUSH
     const mushAnim = this.map.addTilesetImage("mush_anim", "mush_anim");
 
-    /// TILESET ORCHID
+    /// ORCHID
     const orchidAnim = this.map.addTilesetImage("orchid_anim", "orchid_anim");
 
-    /// TILESET CHAMA ROXA
+    /// CHAMA ROXA
     const purpleFlame = this.map.addTilesetImage(
       "purple_flame_sheet",
       "purple_flame_sheet",
     );
 
-    /// TILESET FUNDO ESPACIAL
+    /// FUNDO ESPACIAL
     const spaceBackground = this.map.addTilesetImage(
       "space_background",
       "space_background",
@@ -62,28 +69,31 @@ class Level1 extends Phaser.Scene {
     /// TILESET PRINCIPAL
     const tileset = this.map.addTilesetImage("tileset", "tileset");
 
-    /// TILESET WALK BACK
+    /// WALK BACK
     const walkBack = this.map.addTilesetImage("walk_back", "walk_back");
 
-    /// TILESET WALK FRONT
+    /// WALK FRONT
     const walkFront = this.map.addTilesetImage("walk_front", "walk_front");
 
-    /// TILESET WALK LEFT
+    /// WALK LEFT
     const walkLeft = this.map.addTilesetImage("walk_left", "walk_left");
 
-    /// TILESET WALK RIGHT
+    /// WALK RIGHT
     const walkRight = this.map.addTilesetImage("walk_right", "walk_right");
 
-    /// TILESET WE R MUSH
+    /// WE R MUSH
     const weRMush = this.map.addTilesetImage(
       "we_r_mush_anim",
       "we_r_mush_anim",
     );
 
-    /// TILESET TECH DUNGEON
+    /// TECH DUNGEON
     const tilesetX1 = this.map.addTilesetImage("tileset x1", "tileset_x1");
 
-    /// JUNTA TODOS OS TILESETS
+    /// ==================================================
+    /// LISTA COM TODOS OS TILESETS
+    /// ==================================================
+
     const tilesets = [
       pixelCyberpunk,
       lab,
@@ -103,28 +113,74 @@ class Level1 extends Phaser.Scene {
       tilesetX1,
     ];
 
-    /// CAMADA DO CHÃO
-    this.map.createLayer("Chão", tilesets, 0, 0);
+    /// ==================================================
+    /// CAMADAS DO MAPA
+    /// ==================================================
 
-    /// CAMADA DE SOMBRA
-    this.map.createLayer("Sombra", tilesets, 0, 0);
+    /// CHÃO
+    const camadaChao = this.map.createLayer("Chão", tilesets, 0, 0);
 
-    /// CAMADA DAS PAREDES DE TRÁS
-    this.map.createLayer("parede-trás", tilesets, 0, 0);
+    /// SOMBRA
+    const camadaSombra = this.map.createLayer("Sombra", tilesets, 0, 0);
 
-    /// CAMADA DAS PAREDES DA FRENTE
-    this.map.createLayer("parede-frente", tilesets, 0, 0);
+    /// PAREDE DE TRÁS
+    const camadaParedeTras = this.map.createLayer(
+      "parede-trás",
+      tilesets,
+      0,
+      0,
+    );
 
-    /// CAMADA DE ELEMENTOS ADICIONAIS
-    this.map.createLayer("Adicionais", tilesets, 0, 0);
+    /// PAREDE DA FRENTE
+    const camadaParedeFrente = this.map.createLayer(
+      "parede-frente",
+      tilesets,
+      0,
+      0,
+    );
 
-    /// CAMADA DE OBJETOS
-    this.map.createLayer("Objetos 1", tilesets, 0, 0);
+    /// ADICIONAIS
+    const camadaAdicionais = this.map.createLayer("Adicionais", tilesets, 0, 0);
 
-    /// SEGUNDA CAMADA DE OBJETOS
-    this.map.createLayer("objetos2", tilesets, 0, 0);
+    /// OBJETOS
+    const camadaObjetos1 = this.map.createLayer("Objetos 1", tilesets, 0, 0);
 
-    /// CRIA A ANIMAÇÃO DO PERSONAGEM
+    /// OBJETOS 2
+    const camadaObjetos2 = this.map.createLayer("objetos2", tilesets, 0, 0);
+
+    /// ==================================================
+    /// LISTA DAS CAMADAS
+    /// ==================================================
+
+    const camadas = [
+      camadaChao,
+      camadaSombra,
+      camadaParedeTras,
+      camadaParedeFrente,
+      camadaAdicionais,
+      camadaObjetos1,
+      camadaObjetos2,
+    ];
+
+    /// ==================================================
+    /// PROFUNDIDADE DAS CAMADAS
+    /// ==================================================
+
+    /// CAMADAS MAIS BAIXAS
+    camadaChao.setDepth(0);
+    camadaSombra.setDepth(1);
+    camadaParedeTras.setDepth(2);
+    camadaAdicionais.setDepth(3);
+    camadaObjetos1.setDepth(4);
+    camadaObjetos2.setDepth(5);
+
+    /// PAREDE DA FRENTE
+    camadaParedeFrente.setDepth(6);
+
+    /// ==================================================
+    /// ANIMAÇÃO DO PERSONAGEM
+    /// ==================================================
+
     this.anims.create({
       key: "right",
 
@@ -138,48 +194,65 @@ class Level1 extends Phaser.Scene {
       repeat: -1,
     });
 
-    /// CRIA O PERSONAGEM
+    /// ==================================================
+    /// PERSONAGEM
+    /// ==================================================
+
     this.player = this.physics.add.sprite(400, 300, "Verme", 14);
 
-    /// DEIXA O PERSONAGEM NA FRENTE DO MAPA
-    this.player.setDepth(10);
-
-    /// REMOVE GRAVIDADE DO PERSONAGEM
+    /// REMOVE GRAVIDADE
     this.player.body.setAllowGravity(false);
 
-    /// CRIA O JOYSTICK
+    /// DEIXA O PERSONAGEM ACIMA DO MAPA
+    this.player.setDepth(50);
+
+    /// ==================================================
+    /// JOYSTICK
+    /// ==================================================
+
     this.joystick = this.plugins.get("rexvirtualjoystickplugin").add(this, {
-      /// POSIÇÃO DO JOYSTICK
+      /// POSIÇÃO NA TELA
       x: 100,
       y: 350,
-      
-      /// TAMANHO DO JOYSTICK
+
+      /// TAMANHO
       radius: 50,
 
-      /// BASE DO JOYSTICK
+      /// BASE
       base: this.add.circle(0, 0, 50, 0xcccccc),
 
-      /// PARTE QUE O USUÁRIO MOVE
+      /// BOTÃO CENTRAL
       thumb: this.add.circle(0, 0, 25, 0x666666),
     });
-      /// DEIXA O JOYSTICK FIXO NA TELA
+
+    /// ==================================================
+    /// DEIXA O JOYSTICK FIXO NA TELA
+    /// ==================================================
+
     this.joystick.base.setScrollFactor(0);
+
     this.joystick.thumb.setScrollFactor(0);
 
-    /// DEIXA O JOYSTICK NA FRENTE DO MAPA
+    /// ==================================================
+    /// JOYSTICK SEMPRE NA FRENTE
+    /// ==================================================
+
     this.joystick.base.setDepth(100);
+
     this.joystick.thumb.setDepth(101);
 
-    /// DETECTA MOVIMENTO DO JOYSTICK
-    this.joystick.on("update", () => {
+    /// ==================================================
+    /// MOVIMENTO DO PERSONAGEM
+    /// ==================================================
 
-      /// CONVERTE O ÂNGULO DO JOYSTICK
+    this.joystick.on("update", () => {
+      /// ÂNGULO DO JOYSTICK
       const angle = Phaser.Math.DegToRad(this.joystick.angle);
 
-      /// PEGA A FORÇA DO JOYSTICK
+      /// FORÇA DO JOYSTICK
       const force = this.joystick.force;
 
-      /// SE O JOYSTICK ESTIVER SENDO MOVIDO
+      /// SE ESTIVER MOVENDO O JOYSTICK
       if (force > this.threshold) {
         /// CALCULA A DIREÇÃO
         this.direction = new Phaser.Math.Vector2(
@@ -187,13 +260,13 @@ class Level1 extends Phaser.Scene {
           Math.sin(angle),
         ).normalize();
 
-        /// CALCULA VELOCIDADE X
+        /// VELOCIDADE X
         const x = this.direction.x * this.speed;
 
-        /// CALCULA VELOCIDADE Y
+        /// VELOCIDADE Y
         const y = this.direction.y * this.speed;
 
-        /// MOVE O PERSONAGEM
+        /// MOVIMENTA O PERSONAGEM
         this.player.setVelocity(x, y);
       }
 
@@ -204,10 +277,71 @@ class Level1 extends Phaser.Scene {
       }
     });
 
+    /// ==================================================
+    /// CÂMERA
+    /// ==================================================
+
     /// FAZ A CÂMERA SEGUIR O PERSONAGEM
     this.cameras.main.startFollow(this.player, true);
 
-    
+    /// ==================================================
+    /// DESCOBRE O TAMANHO REAL DO MAPA
+    /// ==================================================
+
+    /// O SEU MAPA É INFINITO NO TILED.
+    /// POR ISSO NÃO PODEMOS USAR SIMPLESMENTE:
+    ///
+    /// 0, 0, map.widthInPixels, map.heightInPixels
+    ///
+    /// ABAIXO PEGAMOS O TAMANHO REAL DAS CAMADAS.
+
+    let esquerda = Infinity;
+    let topo = Infinity;
+    let direita = -Infinity;
+    let baixo = -Infinity;
+
+    /// VERIFICA CADA CAMADA
+    camadas.forEach((camada) => {
+      /// IGNORA CAMADA INVÁLIDA
+      if (!camada) {
+        return;
+      }
+
+      /// PEGA OS LIMITES DA CAMADA
+      const bounds = camada.getBounds();
+
+      /// MENOR POSIÇÃO X
+      esquerda = Math.min(esquerda, bounds.left);
+
+      /// MENOR POSIÇÃO Y
+      topo = Math.min(topo, bounds.top);
+
+      /// MAIOR POSIÇÃO X
+      direita = Math.max(direita, bounds.right);
+
+      /// MAIOR POSIÇÃO Y
+      baixo = Math.max(baixo, bounds.bottom);
+    });
+
+    /// ==================================================
+    /// APLICA OS LIMITES DA CÂMERA
+    /// ==================================================
+
+    if (
+      Number.isFinite(esquerda) &&
+      Number.isFinite(topo) &&
+      Number.isFinite(direita) &&
+      Number.isFinite(baixo)
+    ) {
+      /// LARGURA TOTAL DO MAPA
+      const larguraMapa = direita - esquerda;
+
+      /// ALTURA TOTAL DO MAPA
+      const alturaMapa = baixo - topo;
+
+      /// DEFINE OS LIMITES
+      this.cameras.main.setBounds(esquerda, topo, larguraMapa, alturaMapa);
+    }
   }
 }
 
