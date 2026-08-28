@@ -1,149 +1,150 @@
 class Level1 extends Phaser.Scene {
-  /// ==================================================
-  /// CONSTRUTOR DA CENA
-  /// ==================================================
   constructor() {
     super("Level1");
 
-    /// FORÇA MÍNIMA DO JOYSTICK
     this.threshold = 0.1;
-
-    /// VELOCIDADE DO PERSONAGEM
     this.speed = 300;
-
-    /// DIREÇÃO ATUAL
     this.direction = undefined;
+
+    // Respawn inicial temporário
+    this.respawnX = 1214;
+    this.respawnY = -328;
   }
 
-  /// ==================================================
-  /// CRIAÇÃO DA CENA
-  /// ==================================================
   create() {
-    /// ==================================================
-    /// MAPA DO TILED
-    /// ==================================================
+    // =====================================================
+    // MAPA
+    // =====================================================
 
     this.map = this.make.tilemap({
       key: "mapa",
     });
 
-    /// ==================================================
-    /// TILESETS
-    /// ==================================================
+    // =====================================================
+    // TILESETS
+    // =====================================================
 
-    const pixelCyberpunk = this.map.addTilesetImage(
-      "pixel-cyberpunk-interior",
-      "pixel-cyberpunk-interior",
+    const cityShopping = this.map.addTilesetImage(
+      "Tileset_SciFi_CityShopping_Rasak",
+      "cityShopping",
     );
 
-    const lab = this.map.addTilesetImage("lab_tileset_LITE", "lab");
-
-    const furniture = this.map.addTilesetImage("furniture", "furniture");
-
-    const furniturePack = this.map.addTilesetImage(
-      "furniture_pack",
-      "furniture_pack",
+    const street = this.map.addTilesetImage(
+      "Tileset_SciFi_Street_Rasak",
+      "street",
     );
 
-    const idle = this.map.addTilesetImage("idle", "idle");
-
-    const mushAnim = this.map.addTilesetImage("mush_anim", "mush_anim");
-
-    const orchidAnim = this.map.addTilesetImage("orchid_anim", "orchid_anim");
-
-    const purpleFlame = this.map.addTilesetImage(
-      "purple_flame_sheet",
-      "purple_flame_sheet",
+    const garbage = this.map.addTilesetImage(
+      "Tileset_SciFi_Garbage_Rasak",
+      "garbage",
     );
 
-    const spaceBackground = this.map.addTilesetImage(
-      "space_background",
-      "space_background",
+    const a5Street = this.map.addTilesetImage("A5_Street_Rasak", "a5Street");
+
+    const slums = this.map.addTilesetImage(
+      "Tileset_SciFi_Slums_Rasak",
+      "slums",
     );
 
-    const tileset = this.map.addTilesetImage("tileset", "tileset");
-
-    const walkBack = this.map.addTilesetImage("walk_back", "walk_back");
-
-    const walkFront = this.map.addTilesetImage("walk_front", "walk_front");
-
-    const walkLeft = this.map.addTilesetImage("walk_left", "walk_left");
-
-    const walkRight = this.map.addTilesetImage("walk_right", "walk_right");
-
-    const weRMush = this.map.addTilesetImage(
-      "we_r_mush_anim",
-      "we_r_mush_anim",
+    const a4Outside = this.map.addTilesetImage(
+      "A4_SciFi_Outside_Rasak",
+      "a4Outside",
     );
 
-    const tilesetX1 = this.map.addTilesetImage("tileset x1", "tileset_x1");
+    const a3Outside = this.map.addTilesetImage(
+      "A3_SciFi_Outside_Rasak",
+      "a3Outside",
+    );
 
-    /// ==================================================
-    /// LISTA DE TILESETS
-    /// ==================================================
+    const buildingExtras = this.map.addTilesetImage(
+      "Tileset_SciFi_BuildingExtras",
+      "buildingExtras",
+    );
+
+    // =====================================================
+    // LISTA DOS TILESETS
+    // =====================================================
 
     const tilesets = [
-      pixelCyberpunk,
-      lab,
-      furniture,
-      furniturePack,
-      idle,
-      mushAnim,
-      orchidAnim,
-      purpleFlame,
-      spaceBackground,
-      tileset,
-      walkBack,
-      walkFront,
-      walkLeft,
-      walkRight,
-      weRMush,
-      tilesetX1,
-    ];
+      cityShopping,
+      street,
+      garbage,
+      a5Street,
+      slums,
+      a4Outside,
+      a3Outside,
+      buildingExtras,
+    ].filter(Boolean);
 
-    /// ==================================================
-    /// CAMADAS DO MAPA
-    /// ==================================================
+    // =====================================================
+    // CAMADAS
+    // OFFSETS QUE CORRIGIRAM O MAPA
+    // =====================================================
 
-    const camadaChao = this.map.createLayer("Chão", tilesets, 0, 0);
-
-    const camadaSombra = this.map.createLayer("Sombra", tilesets, 0, 0);
-
-    const camadaParedeTras = this.map.createLayer(
-      "parede-trás",
+    const camadaChao = this.map.createLayer(
+      "Chão",
       tilesets,
-      0,
-      0,
+      -96 * 48,
+      -64 * 48,
     );
 
-    const camadaParedeFrente = this.map.createLayer(
-      "parede-frente",
+    const camadaPredios = this.map.createLayer(
+      "Prédios",
       tilesets,
       0,
-      0,
+      -64 * 48,
     );
 
-    const camadaAdicionais = this.map.createLayer("Adicionais", tilesets, 0, 0);
+    const camadaJanelas = this.map.createLayer(
+      "Janela dos Prédios",
+      tilesets,
+      -16 * 48,
+      -32 * 48,
+    );
 
-    const camadaObjetos1 = this.map.createLayer("Objetos 1", tilesets, 0, 0);
+    const camadaParedes = this.map.createLayer(
+      "Paredes",
+      tilesets,
+      -48 * 48,
+      -32 * 48,
+    );
 
-    const camadaObjetos2 = this.map.createLayer("objetos2", tilesets, 0, 0);
+    const camadaObjetos2 = this.map.createLayer(
+      "Objetos 2",
+      tilesets,
+      -48 * 48,
+      -32 * 48,
+    );
 
-    /// ==================================================
-    /// PROFUNDIDADE DAS CAMADAS
-    /// ==================================================
+    const camadaObjetos = this.map.createLayer(
+      "Objetos",
+      tilesets,
+      -48 * 48,
+      -32 * 48,
+    );
+
+    const camadaCerca = this.map.createLayer(
+      "Cerca do beco",
+      tilesets,
+      -48 * 48,
+      -32 * 48,
+    );
+
+    // =====================================================
+    // PROFUNDIDADE
+    // =====================================================
 
     camadaChao.setDepth(0);
-    camadaSombra.setDepth(1);
-    camadaParedeTras.setDepth(2);
-    camadaAdicionais.setDepth(3);
-    camadaObjetos1.setDepth(4);
-    camadaObjetos2.setDepth(5);
-    camadaParedeFrente.setDepth(6);
+    camadaPredios.setDepth(1);
+    camadaJanelas.setDepth(2);
+    camadaParedes.setDepth(3);
+    camadaObjetos2.setDepth(4);
+    camadaObjetos.setDepth(5);
+    camadaCerca.setDepth(6);
 
-    /// ==================================================
-    /// ANIMAÇÃO - DIREITA
-    /// ==================================================
+    // =====================================================
+    // ANIMAÇÃO DIREITA
+    // =====================================================
 
     this.anims.create({
       key: "walk-right",
@@ -157,15 +158,14 @@ class Level1 extends Phaser.Scene {
       repeat: -1,
     });
 
-    /// ==================================================
-    /// ANIMAÇÃO - ESQUERDA
-    /// ==================================================
+    // =====================================================
+    // ANIMAÇÃO ESQUERDA
+    // =====================================================
 
     this.anims.create({
       key: "walk-left",
 
       frames: this.anims.generateFrameNumbers("Verme", {
-        /// TROCAR DEPOIS PELOS FRAMES CORRETOS
         start: 69,
         end: 77,
       }),
@@ -174,15 +174,14 @@ class Level1 extends Phaser.Scene {
       repeat: -1,
     });
 
-    /// ==================================================
-    /// ANIMAÇÃO - CIMA
-    /// ==================================================
+    // =====================================================
+    // ANIMAÇÃO CIMA
+    // =====================================================
 
     this.anims.create({
       key: "walk-up",
 
       frames: this.anims.generateFrameNumbers("Verme", {
-        /// TROCAR DEPOIS PELOS FRAMES CORRETOS
         start: 59,
         end: 68,
       }),
@@ -191,15 +190,14 @@ class Level1 extends Phaser.Scene {
       repeat: -1,
     });
 
-    /// ==================================================
-    /// ANIMAÇÃO - BAIXO
-    /// ==================================================
+    // =====================================================
+    // ANIMAÇÃO BAIXO
+    // =====================================================
 
     this.anims.create({
       key: "walk-down",
 
       frames: this.anims.generateFrameNumbers("Verme", {
-        /// TROCAR DEPOIS PELOS FRAMES CORRETOS
         start: 78,
         end: 86,
       }),
@@ -208,144 +206,158 @@ class Level1 extends Phaser.Scene {
       repeat: -1,
     });
 
-    /// ==================================================
-    /// PERSONAGEM
-    /// ==================================================
+    // =====================================================
+    // PERSONAGEM
+    // =====================================================
 
-    this.player = this.physics.add.sprite(400, 300, "Verme", 14);
+    this.player = this.physics.add.sprite(
+      this.respawnX,
+      this.respawnY,
+      "Verme",
+      14,
+    );
 
-    /// REMOVE A GRAVIDADE
     this.player.body.setAllowGravity(false);
 
-    /// PERSONAGEM ACIMA DO MAPA
     this.player.setDepth(50);
 
-    /// ==================================================
-    /// GUARDA A ÚLTIMA DIREÇÃO
-    /// ==================================================
-
-    this.ultimaDirecao = "down";
-
-    /// ==================================================
-    /// JOYSTICK
-    /// ==================================================
+    // =====================================================
+    // JOYSTICK
+    // =====================================================
 
     this.joystick = this.plugins.get("rexvirtualjoystickplugin").add(this, {
-      /// POSIÇÃO
       x: 100,
       y: 350,
 
-      /// TAMANHO
       radius: 50,
 
-      /// BASE
       base: this.add.circle(0, 0, 50, 0xcccccc),
 
-      /// BOTÃO CENTRAL
       thumb: this.add.circle(0, 0, 25, 0x666666),
     });
 
-    /// ==================================================
-    /// JOYSTICK FIXO NA TELA
-    /// ==================================================
+    // =====================================================
+    // JOYSTICK FIXO NA TELA
+    // =====================================================
 
     this.joystick.base.setScrollFactor(0);
     this.joystick.thumb.setScrollFactor(0);
 
-    /// ==================================================
-    /// JOYSTICK ACIMA DO MAPA
-    /// ==================================================
-
     this.joystick.base.setDepth(100);
     this.joystick.thumb.setDepth(101);
 
-    /// ==================================================
-    /// MOVIMENTO DO PERSONAGEM
-    /// ==================================================
+    // =====================================================
+    // MOVIMENTO
+    // =====================================================
 
     this.joystick.on("update", () => {
-      /// ÂNGULO DO JOYSTICK
       const angle = Phaser.Math.DegToRad(this.joystick.angle);
 
-      /// FORÇA DO JOYSTICK
       const force = this.joystick.force;
 
-      /// ==================================================
-      /// SE O JOYSTICK ESTIVER SENDO USADO
-      /// ==================================================
-
       if (force > this.threshold) {
-        /// CALCULA A DIREÇÃO
         this.direction = new Phaser.Math.Vector2(
           Math.cos(angle),
+
           Math.sin(angle),
         ).normalize();
 
-        /// VELOCIDADE X
-        const x = this.direction.x * this.speed;
+        const velocidadeX = this.direction.x * this.speed;
 
-        /// VELOCIDADE Y
-        const y = this.direction.y * this.speed;
+        const velocidadeY = this.direction.y * this.speed;
 
-        /// MOVE O PERSONAGEM
-        this.player.setVelocity(x, y);
+        this.player.setVelocity(velocidadeX, velocidadeY);
 
-        /// ==================================================
-        /// ESCOLHE A ANIMAÇÃO
-        /// ==================================================
+        // =================================================
+        // HORIZONTAL
+        // =================================================
 
-        /// MOVIMENTO MAIS FORTE NA HORIZONTAL
         if (Math.abs(this.direction.x) > Math.abs(this.direction.y)) {
-          /// DIREITA
           if (this.direction.x > 0) {
             this.player.anims.play("walk-right", true);
-
-            this.ultimaDirecao = "right";
-          }
-
-          /// ESQUERDA
-          else {
+          } else {
             this.player.anims.play("walk-left", true);
-
-            this.ultimaDirecao = "left";
           }
         }
 
-        /// MOVIMENTO MAIS FORTE NA VERTICAL
+        // =================================================
+        // VERTICAL
+        // =================================================
         else {
-          /// BAIXO
           if (this.direction.y > 0) {
             this.player.anims.play("walk-down", true);
-
-            this.ultimaDirecao = "down";
-          }
-
-          /// CIMA
-          else {
+          } else {
             this.player.anims.play("walk-up", true);
-
-            this.ultimaDirecao = "up";
           }
         }
-      }
-
-      /// ==================================================
-      /// QUANDO SOLTAR O JOYSTICK
-      /// ==================================================
-      else {
-        /// PARA O PERSONAGEM
+      } else {
         this.player.setVelocity(0, 0);
 
-        /// PARA A ANIMAÇÃO
         this.player.anims.stop();
       }
     });
 
-    /// ==================================================
-    /// CÂMERA
-    /// ==================================================
+    // =====================================================
+    // CÂMERA
+    // =====================================================
 
     this.cameras.main.startFollow(this.player, true);
+
+    this.cameras.main.setZoom(1);
+
+    // =====================================================
+    // TEXTO COM COORDENADAS
+    // =====================================================
+
+    this.textoCoordenadas = this.add.text(10, 10, "", {
+      fontSize: "18px",
+      backgroundColor: "#000000",
+      padding: {
+        x: 8,
+        y: 5,
+      },
+    });
+
+    this.textoCoordenadas.setScrollFactor(0);
+    this.textoCoordenadas.setDepth(200);
+
+    // =====================================================
+    // TECLA R PARA TESTAR RESPAWN
+    // =====================================================
+
+    this.teclaR = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R);
+
+    console.log("Respawn atual:", this.respawnX, this.respawnY);
+  }
+
+  // =====================================================
+  // RESPAWN
+  // =====================================================
+
+  respawnPlayer() {
+    this.player.setVelocity(0, 0);
+
+    this.player.setPosition(this.respawnX, this.respawnY);
+  }
+
+  update() {
+    // =====================================================
+    // MOSTRA COORDENADAS
+    // =====================================================
+
+    const x = Math.round(this.player.x);
+
+    const y = Math.round(this.player.y);
+
+    this.textoCoordenadas.setText("X: " + x + "  Y: " + y);
+
+    // =====================================================
+    // APERTAR R = VOLTAR PARA O RESPAWN
+    // =====================================================
+
+    if (Phaser.Input.Keyboard.JustDown(this.teclaR)) {
+      this.respawnPlayer();
+    }
   }
 }
 
