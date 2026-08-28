@@ -69,17 +69,34 @@ class Preloader extends Phaser.Scene {
       "../Tilesets/City/Tileset_SciFi_Garbage_Rasak.png",
     );
 
-    this.load.image("a5Street", "../Tilesets/City/A5_Street_Rasak.png");
+    this.load.image(
+      "a5Street",
+      "../Tilesets/City/A5_Street_Rasak.png"
+    );
 
-    this.load.image("slums", "../Tilesets/City/Tileset_SciFi_Slums_Rasak.png");
+    this.load.image(
+      "slums",
+      "../Tilesets/City/Tileset_SciFi_Slums_Rasak.png"
+    );
 
-    this.load.image("a4Outside", "../Tilesets/City/A4_SciFi_Outside_Rasak.png");
+    this.load.image(
+      "a4Outside"
+      , "../Tilesets/City/A4_SciFi_Outside_Rasak.png"
+    );
 
-    this.load.image("a3Outside", "../Tilesets/City/A3_SciFi_Outside_Rasak.png");
+    this.load.image(
+      "a3Outside"
+      , "../Tilesets/City/A3_SciFi_Outside_Rasak.png"
+    );
 
     this.load.image(
       "buildingExtras",
       "../Tilesets/City/Tileset_SciFi_BuildingExtras.png",
+    );
+
+    this.load.image(
+      "torre",
+      "../Tilesets/City/TorreTileset.png"
     );
   }
 

@@ -3,12 +3,12 @@ class Level1 extends Phaser.Scene {
     super("Level1");
 
     this.threshold = 0.1;
-    this.speed = 300;
+    this.speed = 400;
     this.direction = undefined;
 
     // Respawn inicial temporário
-    this.respawnX = 1214;
-    this.respawnY = -328;
+    this.respawnX = -1440;
+    this.respawnY = 454;
   }
 
   create() {
@@ -61,6 +61,8 @@ class Level1 extends Phaser.Scene {
       "buildingExtras",
     );
 
+    const torre = this.map.addTilesetImage("TorreTileset", "torre");
+
     // =====================================================
     // LISTA DOS TILESETS
     // =====================================================
@@ -74,73 +76,99 @@ class Level1 extends Phaser.Scene {
       a4Outside,
       a3Outside,
       buildingExtras,
+      torre,
     ].filter(Boolean);
 
     // =====================================================
-    // CAMADAS
-    // OFFSETS QUE CORRIGIRAM O MAPA
-    // =====================================================
+// CAMADAS
+// CORREÇÃO PARA MAPA INFINITO DO TILED
+// =====================================================
 
-    const camadaChao = this.map.createLayer(
-      "Chão",
-      tilesets,
-      -96 * 48,
-      -64 * 48,
-    );
+const TILE = 48;
 
-    const camadaPredios = this.map.createLayer(
-      "Prédios",
-      tilesets,
-      0,
-      -64 * 48,
-    );
+const camadaChao = this.map.createLayer(
+  "Chão",
+  tilesets,
+  -48 * TILE,
+  -48 * TILE
+);
 
-    const camadaJanelas = this.map.createLayer(
-      "Janela dos Prédios",
-      tilesets,
-      -16 * 48,
-      -32 * 48,
-    );
+const camadaPredios = this.map.createLayer(
+  "Prédios",
+  tilesets,
+  -16 * TILE,
+  -32 * TILE
+);
 
-    const camadaParedes = this.map.createLayer(
-      "Paredes",
-      tilesets,
-      -48 * 48,
-      -32 * 48,
-    );
+const camadaJanelas = this.map.createLayer(
+  "Janela dos Prédios",
+  tilesets,
+  -16 * TILE,
+  -32 * TILE
+);
 
-    const camadaObjetos2 = this.map.createLayer(
-      "Objetos 2",
-      tilesets,
-      -48 * 48,
-      -32 * 48,
-    );
+const camadaParedes = this.map.createLayer(
+  "Paredes",
+  tilesets,
+  -48 * TILE,
+  -16 * TILE
+);
 
-    const camadaObjetos = this.map.createLayer(
-      "Objetos",
-      tilesets,
-      -48 * 48,
-      -32 * 48,
-    );
+const camadaObjetos2 = this.map.createLayer(
+  "Objetos 2",
+  tilesets,
+  -48 * TILE,
+  -32 * TILE
+);
 
-    const camadaCerca = this.map.createLayer(
-      "Cerca do beco",
-      tilesets,
-      -48 * 48,
-      -32 * 48,
-    );
+const camadaObjetos = this.map.createLayer(
+  "Objetos",
+  tilesets,
+  -48 * TILE,
+  -32 * TILE
+);
 
+const camadaCerca = this.map.createLayer(
+  "Cercas",
+  tilesets,
+  -48 * TILE,
+  -16 * TILE
+);
+
+const camadaCercaTorre = this.map.createLayer(
+  "CercaTorre",
+  tilesets,
+  0,
+  0,
+);
+
+const camadaMuroDelegacia = this.map.createLayer(
+  "Muro delegacia",
+  tilesets,
+  -16 * TILE,
+  0
+);
+
+const camadaPostes = this.map.createLayer(
+  "Postes",
+  tilesets,
+  -32 * TILE,
+  -48 * TILE
+);
     // =====================================================
     // PROFUNDIDADE
     // =====================================================
 
     camadaChao.setDepth(0);
-    camadaPredios.setDepth(1);
-    camadaJanelas.setDepth(2);
-    camadaParedes.setDepth(3);
-    camadaObjetos2.setDepth(4);
-    camadaObjetos.setDepth(5);
-    camadaCerca.setDepth(6);
+    camadaCercaTorre.setDepth(2);
+    camadaPredios.setDepth(3);
+    camadaMuroDelegacia.setDepth(4);
+    camadaJanelas.setDepth(5);
+    camadaParedes.setDepth(6);
+    camadaObjetos2.setDepth(7);
+    camadaObjetos.setDepth(8);
+    camadaCerca.setDepth(9);
+    camadaPostes.setDepth(10);
 
     // =====================================================
     // ANIMAÇÃO DIREITA
