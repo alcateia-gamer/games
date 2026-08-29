@@ -32,10 +32,10 @@ class Preloader extends Phaser.Scene {
     // PERSONAGEM
     // =====================================================
 
-    this.load.spritesheet("Verme", "personagem/Verme.png", {
-      frameWidth: 64,
-      frameHeight: 64,
-    });
+   this.load.spritesheet("personagem1", "personagem/personagem1.png", {
+     frameWidth: 64,
+     frameHeight: 64,
+   });
 
     // =====================================================
     // JOYSTICK

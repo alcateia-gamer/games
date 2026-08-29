@@ -170,85 +170,85 @@ const camadaPostes = this.map.createLayer(
     camadaCerca.setDepth(9);
     camadaPostes.setDepth(10);
 
-    // =====================================================
-    // ANIMAÇÃO DIREITA
-    // =====================================================
+ // =====================================================
+// ANIMAÇÃO DIREITA
+// =====================================================
 
-    this.anims.create({
-      key: "walk-right",
+this.anims.create({
+  key: "walk-right",
 
-      frames: this.anims.generateFrameNumbers("Verme", {
-        start: 87,
-        end: 95,
-      }),
+  frames: this.anims.generateFrameNumbers("personagem1", {
+    start: 87,
+    end: 95,
+  }),
 
-      frameRate: 12,
-      repeat: -1,
-    });
+  frameRate: 12,
+  repeat: -1,
+});
 
-    // =====================================================
-    // ANIMAÇÃO ESQUERDA
-    // =====================================================
+// =====================================================
+// ANIMAÇÃO ESQUERDA
+// =====================================================
 
-    this.anims.create({
-      key: "walk-left",
+this.anims.create({
+  key: "walk-left",
 
-      frames: this.anims.generateFrameNumbers("Verme", {
-        start: 69,
-        end: 77,
-      }),
+  frames: this.anims.generateFrameNumbers("personagem1", {
+    start: 69,
+    end: 77,
+  }),
 
-      frameRate: 12,
-      repeat: -1,
-    });
+  frameRate: 12,
+  repeat: -1,
+});
 
-    // =====================================================
-    // ANIMAÇÃO CIMA
-    // =====================================================
+// =====================================================
+// ANIMAÇÃO CIMA
+// =====================================================
 
-    this.anims.create({
-      key: "walk-up",
+this.anims.create({
+  key: "walk-up",
 
-      frames: this.anims.generateFrameNumbers("Verme", {
-        start: 59,
-        end: 68,
-      }),
+  frames: this.anims.generateFrameNumbers("personagem1", {
+    start: 60,
+    end: 68,
+  }),
 
-      frameRate: 12,
-      repeat: -1,
-    });
+  frameRate: 12,
+  repeat: -1,
+});
 
-    // =====================================================
-    // ANIMAÇÃO BAIXO
-    // =====================================================
+// =====================================================
+// ANIMAÇÃO BAIXO
+// =====================================================
 
-    this.anims.create({
-      key: "walk-down",
+this.anims.create({
+  key: "walk-down",
 
-      frames: this.anims.generateFrameNumbers("Verme", {
-        start: 78,
-        end: 86,
-      }),
+  frames: this.anims.generateFrameNumbers("personagem1", {
+    start: 78,
+    end: 86,
+  }),
 
-      frameRate: 12,
-      repeat: -1,
-    });
+  frameRate: 12,
+  repeat: -1,
+});
 
-    // =====================================================
-    // PERSONAGEM
-    // =====================================================
+// =====================================================
+// PERSONAGEM
+// =====================================================
 
-    this.player = this.physics.add.sprite(
-      this.respawnX,
-      this.respawnY,
-      "Verme",
-      14,
-    );
+this.player = this.physics.add.sprite(
+  this.respawnX,
+  this.respawnY,
+  "personagem1",
+  218,
+);
 
-    this.player.body.setAllowGravity(false);
+this.player.body.setAllowGravity(false);
 
     this.player.setDepth(50);
-
+    
     // =====================================================
     // JOYSTICK
     // =====================================================
