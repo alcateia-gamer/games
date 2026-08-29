@@ -17,7 +17,7 @@ class Preloader extends Phaser.Scene {
 
   preload() {
     // =====================================================
-    // ASSETS NORMAIS
+    // CAMINHO DOS ASSETS
     // =====================================================
 
     this.load.setPath("./assets/");
@@ -29,13 +29,24 @@ class Preloader extends Phaser.Scene {
     this.load.tilemapTiledJSON("mapa", "map/InicioFase1 (1).json");
 
     // =====================================================
-    // PERSONAGEM
+    // PERSONAGEM - CAMINHADA
+    // 64x64
     // =====================================================
 
-   this.load.spritesheet("personagem1", "personagem/personagem1.png", {
-     frameWidth: 64,
-     frameHeight: 64,
-   });
+    this.load.spritesheet("walk", "personagem/standard/walk.png", {
+      frameWidth: 64,
+      frameHeight: 64,
+    });
+
+    // =====================================================
+    // PERSONAGEM - ATAQUE COM KATANA
+    // 128x128
+    // =====================================================
+
+    this.load.spritesheet("attack", "personagem/katana_slash_128.png", {
+      frameWidth: 128,
+      frameHeight: 128,
+    });
 
     // =====================================================
     // JOYSTICK
@@ -49,9 +60,6 @@ class Preloader extends Phaser.Scene {
 
     // =====================================================
     // TILESETS
-    //
-    // Eles estão fora de /assets/,
-    // portanto voltamos uma pasta com ../
     // =====================================================
 
     this.load.image(
@@ -69,35 +77,20 @@ class Preloader extends Phaser.Scene {
       "../Tilesets/City/Tileset_SciFi_Garbage_Rasak.png",
     );
 
-    this.load.image(
-      "a5Street",
-      "../Tilesets/City/A5_Street_Rasak.png"
-    );
+    this.load.image("a5Street", "../Tilesets/City/A5_Street_Rasak.png");
 
-    this.load.image(
-      "slums",
-      "../Tilesets/City/Tileset_SciFi_Slums_Rasak.png"
-    );
+    this.load.image("slums", "../Tilesets/City/Tileset_SciFi_Slums_Rasak.png");
 
-    this.load.image(
-      "a4Outside"
-      , "../Tilesets/City/A4_SciFi_Outside_Rasak.png"
-    );
+    this.load.image("a4Outside", "../Tilesets/City/A4_SciFi_Outside_Rasak.png");
 
-    this.load.image(
-      "a3Outside"
-      , "../Tilesets/City/A3_SciFi_Outside_Rasak.png"
-    );
+    this.load.image("a3Outside", "../Tilesets/City/A3_SciFi_Outside_Rasak.png");
 
     this.load.image(
       "buildingExtras",
       "../Tilesets/City/Tileset_SciFi_BuildingExtras.png",
     );
 
-    this.load.image(
-      "torre",
-      "../Tilesets/City/TorreTileset.png"
-    );
+    this.load.image("torre", "../Tilesets/City/TorreTileset.png");
   }
 
   create() {
