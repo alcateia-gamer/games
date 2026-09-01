@@ -4,20 +4,36 @@ class Preloader extends Phaser.Scene {
   }
 
   init() {
+    // =====================================================
+    // BACKGROUND
+    // =====================================================
+
     this.add.image(400, 225, "start-background");
 
-    this.add.rectangle(400, 300, 468, 32).setStrokeStyle(1, 0xffffff);
+    // =====================================================
+    // BORDA DA BARRA DE CARREGAMENTO
+    // =====================================================
 
-    const bar = this.add.rectangle(400, 300, 300, 28, 0xffffff);
+    this.add.rectangle(400, 300, 468, 32).setStrokeStyle(2, 0xffffff);
+
+    // =====================================================
+    // BARRA DE CARREGAMENTO
+    // =====================================================
+
+    const bar = this.add.rectangle(168, 300, 0, 28, 0xffffff).setOrigin(0, 0.5);
+
+    // =====================================================
+    // PROGRESSO
+    // =====================================================
 
     this.load.on("progress", (progress) => {
-      bar.width = 4 + 460 * progress;
+      bar.width = 464 * progress;
     });
   }
 
   preload() {
     // =====================================================
-    // CAMINHO DOS ASSETS
+    // PASTA BASE
     // =====================================================
 
     this.load.setPath("./assets/");
@@ -38,7 +54,7 @@ class Preloader extends Phaser.Scene {
     });
 
     // =====================================================
-    // PERSONAGEM - ATAQUE COM KATANA
+    // PERSONAGEM - ATAQUE
     // =====================================================
 
     this.load.spritesheet("attack", "personagem/katana_slash_128.png", {
@@ -93,7 +109,7 @@ class Preloader extends Phaser.Scene {
 
   create() {
     // =====================================================
-    // INICIA O LEVEL 1
+    // INICIA A FASE
     // =====================================================
 
     this.scene.start("Level1");
