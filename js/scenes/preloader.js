@@ -12,124 +12,71 @@ class Preloader extends Phaser.Scene {
     // FUNDO
     // =====================================================
 
-    this.add.image(
-      400,
-      225,
-      "start-background",
-    );
+    this.add.image(400, 225, "start-background");
 
     // =====================================================
     // ESCURECIMENTO DO FUNDO
     // =====================================================
 
-    this.add.rectangle(
-      400,
-      225,
-      800,
-      450,
-      0x000000,
-      0.30,
-    );
+    this.add.rectangle(400, 225, 800, 450, 0x000000, 0.3);
 
     // =====================================================
     // PAINEL PRINCIPAL
     // =====================================================
 
-    this.add.rectangle(
-      400,
-      305,
-      440,
-      115,
-      0x050914,
-      0.88,
-    ).setStrokeStyle(
-      2,
-      0x00d9ff,
-      0.8,
-    );
+    this.add
+      .rectangle(400, 305, 440, 115, 0x050914, 0.88)
+      .setStrokeStyle(2, 0x00d9ff, 0.8);
 
     // =====================================================
     // STATUS
     // =====================================================
 
-    this.textoStatus = this.add.text(
-      200,
-      280,
-      "INICIANDO O JOGO...",
-      {
-        fontFamily: "monospace",
-        fontSize: "13px",
-        color: "#a8f3ff",
-      },
-    );
+    this.textoStatus = this.add.text(200, 280, "INICIANDO O JOGO...", {
+      fontFamily: "monospace",
+      fontSize: "13px",
+      color: "#a8f3ff",
+    });
 
     // =====================================================
     // BORDA DA BARRA
     // =====================================================
 
-    this.add.rectangle(
-      400,
-      315,
-      404,
-      26,
-      0x02040a,
-      0.95,
-    ).setStrokeStyle(
-      2,
-      0x00d9ff,
-      1,
-    );
+    this.add
+      .rectangle(400, 315, 404, 26, 0x02040a, 0.95)
+      .setStrokeStyle(2, 0x00d9ff, 1);
 
     // =====================================================
     // BARRA DE CARREGAMENTO
     // =====================================================
 
-    this.barra = this.add.rectangle(
-      204,
-      315,
-      0,
-      12,
-      0x00d9ff,
-      1,
-    ).setOrigin(
-      0,
-      0.5,
-    );
+    this.barra = this.add
+      .rectangle(204, 315, 0, 12, 0x00d9ff, 1)
+      .setOrigin(0, 0.5);
 
     // =====================================================
     // PORCENTAGEM
     // =====================================================
 
-    this.porcentagem = this.add.text(
-      600,
-      342,
-      "0%",
-      {
+    this.porcentagem = this.add
+      .text(600, 342, "0%", {
         fontFamily: "monospace",
         fontSize: "14px",
         color: "#ffffff",
-      },
-    ).setOrigin(
-      1,
-      0.5,
-    );
+      })
+      .setOrigin(1, 0.5);
 
     // =====================================================
     // PROGRESSO
     // =====================================================
 
-    this.load.on(
-      "progress",
-      (progress) => {
-        // Atualiza o tamanho da barra
-        this.barra.width = 392 * progress;
+    this.load.on("progress", (progress) => {
+      // Atualiza o tamanho da barra
+      this.barra.width = 392 * progress;
 
-        // Atualiza a porcentagem
-        this.porcentagem.setText(
-          Math.floor(progress * 100) + "%",
-        );
-      },
-    );
+      // Atualiza a porcentagem
+      this.porcentagem.setText(Math.floor(progress * 100) + "%");
+    });
   }
 
   // =====================================================
@@ -147,38 +94,39 @@ class Preloader extends Phaser.Scene {
     // MAPA
     // =====================================================
 
-    this.load.tilemapTiledJSON(
-      "mapa",
-      "map/InicioFase1 (1).json",
-    );
+    this.load.tilemapTiledJSON("mapa", "map/InicioFase1 (1).json");
 
     // =====================================================
     // PERSONAGEM - CAMINHADA
     // =====================================================
 
-    this.load.spritesheet(
-      "walk",
-      "personagem/standard/walk.png",
-      {
-        frameWidth: 64,
-        frameHeight: 64,
-      },
-    );
+    this.load.spritesheet("walk", "personagem/standard/walk.png", {
+      frameWidth: 64,
+      frameHeight: 64,
+    });
 
     // =====================================================
     // PERSONAGEM - ATAQUE
     // =====================================================
 
-    this.load.spritesheet(
-      "attack",
-      "personagem/katana_slash_128.png",
-      {
-        frameWidth: 128,
-        frameHeight: 128,
-      },
-    );
+    this.load.spritesheet("attack", "personagem/katana_slash_128.png", {
+      frameWidth: 128,
+      frameHeight: 128,
+    });
 
-    // =====================================================
+// =====================================================
+// INIMIGO DE TESTE
+// =====================================================
+
+this.load.spritesheet(
+  "robo-teste",
+  "personagem/inimigos/robo_teste.png",
+  {
+    frameWidth: 96,
+    frameHeight: 130,
+  },
+);
+// =====================================================
     // JOYSTICK
     // =====================================================
 
@@ -217,16 +165,10 @@ class Preloader extends Phaser.Scene {
     );
 
     // Rua A5
-    this.load.image(
-      "a5Street",
-      "../Tilesets/City/A5_Street_Rasak.png",
-    );
+    this.load.image("a5Street", "../Tilesets/City/A5_Street_Rasak.png");
 
     // Slums
-    this.load.image(
-      "slums",
-      "../Tilesets/City/Tileset_SciFi_Slums_Rasak.png",
-    );
+    this.load.image("slums", "../Tilesets/City/Tileset_SciFi_Slums_Rasak.png");
 
     // Transporte público
     this.load.image(
@@ -235,16 +177,10 @@ class Preloader extends Phaser.Scene {
     );
 
     // Exterior A4
-    this.load.image(
-      "a4Outside",
-      "../Tilesets/City/A4_SciFi_Outside_Rasak.png",
-    );
+    this.load.image("a4Outside", "../Tilesets/City/A4_SciFi_Outside_Rasak.png");
 
     // Exterior A3
-    this.load.image(
-      "a3Outside",
-      "../Tilesets/City/A3_SciFi_Outside_Rasak.png",
-    );
+    this.load.image("a3Outside", "../Tilesets/City/A3_SciFi_Outside_Rasak.png");
 
     // Exterior A5
     this.load.image(
@@ -259,10 +195,7 @@ class Preloader extends Phaser.Scene {
     );
 
     // Torre
-    this.load.image(
-      "torre",
-      "../Tilesets/City/TorreTileset.png",
-    );
+    this.load.image("torre", "../Tilesets/City/TorreTileset.png");
 
     // =====================================================
     // TILESETS - INTERIOR
@@ -328,16 +261,9 @@ class Preloader extends Phaser.Scene {
     // DEBUG DE ERROS
     // =====================================================
 
-    this.load.on(
-      "loaderror",
-      (file) => {
-        console.error(
-          "ERRO AO CARREGAR:",
-          file.key,
-          file.src,
-        );
-      },
-    );
+    this.load.on("loaderror", (file) => {
+      console.error("ERRO AO CARREGAR:", file.key, file.src);
+    });
   }
 
   // =====================================================
@@ -351,9 +277,7 @@ class Preloader extends Phaser.Scene {
 
     this.barra.width = 392;
     this.porcentagem.setText("100%");
-    this.textoStatus.setText(
-      "INCURSÃO PRONTA",
-    );
+    this.textoStatus.setText("INCURSÃO PRONTA");
 
     // =====================================================
     // INICIA O LEVEL 1

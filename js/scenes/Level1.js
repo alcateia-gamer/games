@@ -11,6 +11,11 @@ import {
   atualizarStatusPlayer,
 } from "../player/PlayerStatus.js";
 
+import {
+  criarInimigoTeste,
+  atualizarInimigoTeste,
+} from "../enemies/EnemyTest.js";
+
 class Level1 extends Phaser.Scene {
   constructor() {
     super("Level1");
@@ -72,6 +77,12 @@ class Level1 extends Phaser.Scene {
     criarStatusPlayer(this);
 
     // =====================================================
+    // INIMIGO DE TESTE
+    // =====================================================
+
+    criarInimigoTeste(this);
+
+    // =====================================================
     // CONTROLES
     // =====================================================
 
@@ -118,6 +129,12 @@ class Level1 extends Phaser.Scene {
     // =====================================================
 
     atualizarStatusPlayer(this, delta);
+
+    // =====================================================
+    // INIMIGO DE TESTE
+    // =====================================================
+
+    atualizarInimigoTeste(this);
 
     // =====================================================
     // COORDENADAS DO PERSONAGEM

@@ -1,5 +1,7 @@
 import { gastarEstamina } from "./PlayerStatus.js";
 
+import { causarDanoInimigo } from "../enemies/EnemyTest.js";
+
 function criarPlayer(scene) {
   // =====================================================
   // PERSONAGEM
@@ -14,10 +16,10 @@ function criarPlayer(scene) {
 
   scene.player.body.setAllowGravity(false);
 
-  scene.player.setDepth(12);
+  scene.player.setDepth(50);
 
   // =====================================================
-  // FIM DA ANIMAÇÃO DE ATAQUE
+  // FIM DO ATAQUE
   // =====================================================
 
   scene.player.on("animationcomplete", (animation) => {
@@ -30,7 +32,7 @@ function criarPlayer(scene) {
     scene.player.setVelocity(0, 0);
 
     // =================================================
-    // VOLTA PARA A DIREÇÃO CORRETA
+    // VOLTA PARA WALK
     // =================================================
 
     if (scene.direcaoAtual === "up") {
@@ -46,12 +48,103 @@ function criarPlayer(scene) {
 }
 
 // =====================================================
+// CRIA HITBOX DO ATAQUE
+// =====================================================
+
+function criarHitboxKatana(scene) {
+  let x = scene.player.x;
+
+  let y = scene.player.y;
+
+  let largura = 50;
+
+  let altura = 50;
+
+  // =====================================================
+  // CIMA
+  // =====================================================
+
+  if (scene.direcaoAtual === "up") {
+    y -= 42;
+
+    largura = 42;
+
+    altura = 55;
+  }
+
+  // =====================================================
+  // BAIXO
+  // =====================================================
+  else if (scene.direcaoAtual === "down") {
+    y += 42;
+
+    largura = 42;
+
+    altura = 55;
+  }
+
+  // =====================================================
+  // ESQUERDA
+  // =====================================================
+  else if (scene.direcaoAtual === "left") {
+    x -= 42;
+
+    largura = 55;
+
+    altura = 42;
+  }
+
+  // =====================================================
+  // DIREITA
+  // =====================================================
+  else if (scene.direcaoAtual === "right") {
+    x += 42;
+
+    largura = 55;
+
+    altura = 42;
+  }
+
+  // =====================================================
+  // ZONA TEMPORÁRIA
+  // =====================================================
+
+  const hitbox = scene.add.zone(x, y, largura, altura);
+
+  scene.physics.add.existing(hitbox);
+
+  hitbox.body.setAllowGravity(false);
+
+  hitbox.body.setImmovable(true);
+
+  // =====================================================
+  // VERIFICA DANO
+  // =====================================================
+
+  if (scene.inimigoTeste && scene.inimigoTeste.active) {
+    scene.physics.overlap(hitbox, scene.inimigoTeste, () => {
+      causarDanoInimigo(scene, 25);
+    });
+  }
+
+  // =====================================================
+  // DESTRÓI A HITBOX
+  // =====================================================
+
+  scene.time.delayedCall(100, () => {
+    if (hitbox && hitbox.active) {
+      hitbox.destroy();
+    }
+  });
+}
+
+// =====================================================
 // ATAQUE
 // =====================================================
 
 function atacar(scene) {
   // =====================================================
-  // NÃO PODE ATACAR DURANTE OUTRO ATAQUE
+  // JÁ ESTÁ ATACANDO
   // =====================================================
 
   if (scene.atacando) {
@@ -59,7 +152,7 @@ function atacar(scene) {
   }
 
   // =====================================================
-  // VERIFICA E GASTA ESTAMINA
+  // ESTAMINA
   // =====================================================
 
   const podeAtacar = gastarEstamina(scene, scene.custoAtaque);
@@ -77,31 +170,22 @@ function atacar(scene) {
   scene.player.setVelocity(0, 0);
 
   // =====================================================
-  // ATAQUE PARA CIMA
+  // CRIA HITBOX
+  // =====================================================
+
+  criarHitboxKatana(scene);
+
+  // =====================================================
+  // ANIMAÇÃO
   // =====================================================
 
   if (scene.direcaoAtual === "up") {
     scene.player.anims.play("attack-up", true);
-  }
-
-  // =====================================================
-  // ATAQUE PARA ESQUERDA
-  // =====================================================
-  else if (scene.direcaoAtual === "left") {
+  } else if (scene.direcaoAtual === "left") {
     scene.player.anims.play("attack-left", true);
-  }
-
-  // =====================================================
-  // ATAQUE PARA BAIXO
-  // =====================================================
-  else if (scene.direcaoAtual === "down") {
+  } else if (scene.direcaoAtual === "down") {
     scene.player.anims.play("attack-down", true);
-  }
-
-  // =====================================================
-  // ATAQUE PARA DIREITA
-  // =====================================================
-  else if (scene.direcaoAtual === "right") {
+  } else if (scene.direcaoAtual === "right") {
     scene.player.anims.play("attack-right", true);
   }
 }
@@ -124,10 +208,14 @@ function respawnPlayer(scene) {
   scene.player.setPosition(scene.respawnX, scene.respawnY);
 
   // =====================================================
-  // RECUPERA VIDA E ESTAMINA
+  // RECUPERA VIDA
   // =====================================================
 
   scene.vida = scene.vidaMaxima;
+
+  // =====================================================
+  // RECUPERA ESTAMINA
+  // =====================================================
 
   scene.estamina = scene.estaminaMaxima;
 }
