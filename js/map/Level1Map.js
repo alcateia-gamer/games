@@ -248,14 +248,14 @@ function criarLevel1Map(scene) {
   camadaParedes?.setDepth(9);
   camadaObjetos2?.setDepth(10);
   camadaObjetos?.setDepth(11);
-  camadaPostes?.setDepth(12);
-  camadaCercas?.setDepth(13);
+  camadaPostes?.setDepth(13);
+  camadaCercas?.setDepth(14);
 
   // Sombras
-  camadaSombra3?.setDepth(14);
-  camadaSombra2?.setDepth(15);
-  camadaSombra?.setDepth(16);
-  camadaSombraGeral?.setDepth(18);
+  camadaSombra3?.setDepth(15);
+  camadaSombra2?.setDepth(16);
+  camadaSombra?.setDepth(17);
+  camadaSombraGeral?.setDepth(19);
 
   // =====================================================
   // DEBUG

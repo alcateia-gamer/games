@@ -11,7 +11,7 @@ function criarPlayer(scene) {
   );
 
   scene.player.body.setAllowGravity(false);
-  scene.player.setDepth(17);
+  scene.player.setDepth(12);
 
   // =====================================================
   // FIM DA ANIMAÇÃO DE ATAQUE
