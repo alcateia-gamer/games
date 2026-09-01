@@ -6,6 +6,11 @@ import { criarPlayer, respawnPlayer } from "../player/Player.js";
 
 import criarControles from "../controls/PlayerControls.js";
 
+import {
+  criarStatusPlayer,
+  atualizarStatusPlayer,
+} from "../player/PlayerStatus.js";
+
 class Level1 extends Phaser.Scene {
   constructor() {
     super("Level1");
@@ -15,7 +20,9 @@ class Level1 extends Phaser.Scene {
     // =====================================================
 
     this.threshold = 0.1;
+
     this.speed = 400;
+
     this.direction = undefined;
 
     // =====================================================
@@ -35,6 +42,7 @@ class Level1 extends Phaser.Scene {
     // =====================================================
 
     this.respawnX = -1440;
+
     this.respawnY = 454;
   }
 
@@ -58,6 +66,12 @@ class Level1 extends Phaser.Scene {
     criarPlayer(this);
 
     // =====================================================
+    // VIDA E ESTAMINA
+    // =====================================================
+
+    criarStatusPlayer(this);
+
+    // =====================================================
     // CONTROLES
     // =====================================================
 
@@ -75,14 +89,15 @@ class Level1 extends Phaser.Scene {
     // TEXTO DAS COORDENADAS
     // =====================================================
 
-    this.textoCoordenadas = this.add.text(10, 10, "", {
-      fontSize: "18px",
+    this.textoCoordenadas = this.add.text(10, 78, "", {
+      fontSize: "14px",
 
       backgroundColor: "#000000",
 
       padding: {
-        x: 8,
-        y: 5,
+        x: 6,
+
+        y: 4,
       },
     });
 
@@ -97,7 +112,13 @@ class Level1 extends Phaser.Scene {
     console.log("Respawn atual:", this.respawnX, this.respawnY);
   }
 
-  update() {
+  update(time, delta) {
+    // =====================================================
+    // VIDA E ESTAMINA
+    // =====================================================
+
+    atualizarStatusPlayer(this, delta);
+
     // =====================================================
     // COORDENADAS DO PERSONAGEM
     // =====================================================

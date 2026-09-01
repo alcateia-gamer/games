@@ -1,3 +1,5 @@
+import { gastarEstamina } from "./PlayerStatus.js";
+
 function criarPlayer(scene) {
   // =====================================================
   // PERSONAGEM
@@ -11,6 +13,7 @@ function criarPlayer(scene) {
   );
 
   scene.player.body.setAllowGravity(false);
+
   scene.player.setDepth(12);
 
   // =====================================================
@@ -25,6 +28,10 @@ function criarPlayer(scene) {
     scene.atacando = false;
 
     scene.player.setVelocity(0, 0);
+
+    // =================================================
+    // VOLTA PARA A DIREÇÃO CORRETA
+    // =================================================
 
     if (scene.direcaoAtual === "up") {
       scene.player.setTexture("walk", 0);
@@ -43,21 +50,58 @@ function criarPlayer(scene) {
 // =====================================================
 
 function atacar(scene) {
+  // =====================================================
+  // NÃO PODE ATACAR DURANTE OUTRO ATAQUE
+  // =====================================================
+
   if (scene.atacando) {
     return;
   }
+
+  // =====================================================
+  // VERIFICA E GASTA ESTAMINA
+  // =====================================================
+
+  const podeAtacar = gastarEstamina(scene, scene.custoAtaque);
+
+  if (!podeAtacar) {
+    return;
+  }
+
+  // =====================================================
+  // INICIA ATAQUE
+  // =====================================================
 
   scene.atacando = true;
 
   scene.player.setVelocity(0, 0);
 
+  // =====================================================
+  // ATAQUE PARA CIMA
+  // =====================================================
+
   if (scene.direcaoAtual === "up") {
     scene.player.anims.play("attack-up", true);
-  } else if (scene.direcaoAtual === "left") {
+  }
+
+  // =====================================================
+  // ATAQUE PARA ESQUERDA
+  // =====================================================
+  else if (scene.direcaoAtual === "left") {
     scene.player.anims.play("attack-left", true);
-  } else if (scene.direcaoAtual === "down") {
+  }
+
+  // =====================================================
+  // ATAQUE PARA BAIXO
+  // =====================================================
+  else if (scene.direcaoAtual === "down") {
     scene.player.anims.play("attack-down", true);
-  } else if (scene.direcaoAtual === "right") {
+  }
+
+  // =====================================================
+  // ATAQUE PARA DIREITA
+  // =====================================================
+  else if (scene.direcaoAtual === "right") {
     scene.player.anims.play("attack-right", true);
   }
 }
@@ -70,6 +114,7 @@ function respawnPlayer(scene) {
   scene.player.setVelocity(0, 0);
 
   scene.atacando = false;
+
   scene.direcaoAtual = "down";
 
   scene.player.anims.stop();
@@ -77,6 +122,14 @@ function respawnPlayer(scene) {
   scene.player.setTexture("walk", 26);
 
   scene.player.setPosition(scene.respawnX, scene.respawnY);
+
+  // =====================================================
+  // RECUPERA VIDA E ESTAMINA
+  // =====================================================
+
+  scene.vida = scene.vidaMaxima;
+
+  scene.estamina = scene.estaminaMaxima;
 }
 
 export { criarPlayer, atacar, respawnPlayer };
