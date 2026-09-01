@@ -1,16 +1,49 @@
 <!DOCTYPE html>
-<html lang="pt_BR"
- <head>
+
+<html lang="pt_BR">
+
+<head>
+
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial=scale=1.0" />
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    />
+
     <title>Meu primeiro jogo</title>
-    <link rel="stylesheet" href="style.css" />
-  </head>
-  <body>
+
+    <link
+        rel="stylesheet"
+        href="style.css"
+    />
+
+</head>
+
+
+<body>
+
     <div id="game-container"></div>
 
-    <script src="js/phaser.min.js"></script>
-    <script src="./js/rexvirtualjoystickplugin.min.js"></script>
-    <script type="module" src="js/game.js"></script>
-  </body>
+
+    <!-- PHASER -->
+    <script
+        src="./js/libs/phaser.min.js">
+    </script>
+
+
+    <!-- REX VIRTUAL JOYSTICK -->
+    <script
+        src="./js/libs/rexvirtualjoystickplugin.min.js">
+    </script>
+
+
+    <!-- JOGO -->
+    <script
+        type="module"
+        src="./js/core/game.js">
+    </script>
+
+</body>
+
 </html>

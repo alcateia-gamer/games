@@ -30,7 +30,6 @@ class Preloader extends Phaser.Scene {
 
     // =====================================================
     // PERSONAGEM - CAMINHADA
-    // 64x64
     // =====================================================
 
     this.load.spritesheet("walk", "personagem/standard/walk.png", {
@@ -40,7 +39,6 @@ class Preloader extends Phaser.Scene {
 
     // =====================================================
     // PERSONAGEM - ATAQUE COM KATANA
-    // 128x128
     // =====================================================
 
     this.load.spritesheet("attack", "personagem/katana_slash_128.png", {
@@ -54,7 +52,7 @@ class Preloader extends Phaser.Scene {
 
     this.load.plugin(
       "rexvirtualjoystickplugin",
-      "../js/rexvirtualjoystickplugin.min.js",
+      "../js/libs/rexvirtualjoystickplugin.min.js",
       true,
     );
 
@@ -94,6 +92,10 @@ class Preloader extends Phaser.Scene {
   }
 
   create() {
+    // =====================================================
+    // INICIA O LEVEL 1
+    // =====================================================
+
     this.scene.start("Level1");
   }
 }
