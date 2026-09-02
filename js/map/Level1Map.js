@@ -218,6 +218,8 @@ function criarLevel1Map(scene) {
 
   const camadaSombraGeral = map.createLayer("SombraGeral", tilesets);
 
+  const camadaObjAcimaPerso = map.createLayer("ObjAcimaPerso", tilesets);
+
   // =====================================================
   // ORDEM DAS CAMADAS
   // =====================================================
@@ -228,18 +230,18 @@ function criarLevel1Map(scene) {
   // =====================================================
 
   // Chão
-  camadaChao?.setDepth(0);
+  camadaChao?.setDepth(1);
 
   // Rua
-  camadaFaixasRua?.setDepth(1);
-  camadaCancelas?.setDepth(2);
+  camadaFaixasRua?.setDepth(2);
+  camadaCancelas?.setDepth(3);
 
   // Veículos
-  camadaVehicles?.setDepth(3);
+  camadaVehicles?.setDepth(4);
 
   // Construções
-  camadaCercaTorre?.setDepth(4);
-  camadaTetoPredios?.setDepth(5);
+  camadaCercaTorre?.setDepth(14);
+  camadaTetoPredios?.setDepth(15);
   camadaPredios?.setDepth(6);
   camadaFrenteVaranda?.setDepth(7);
   camadaDetalhesPredios?.setDepth(8);
@@ -248,14 +250,16 @@ function criarLevel1Map(scene) {
   camadaParedes?.setDepth(9);
   camadaObjetos2?.setDepth(10);
   camadaObjetos?.setDepth(11);
-  camadaPostes?.setDepth(13);
-  camadaCercas?.setDepth(14);
+  camadaObjAcimaPerso?.setDepth(16);
+  camadaPostes?.setDepth(15);
+  camadaCercas?.setDepth(16);
 
   // Sombras
-  camadaSombra3?.setDepth(15);
-  camadaSombra2?.setDepth(16);
-  camadaSombra?.setDepth(17);
-  camadaSombraGeral?.setDepth(19);
+  camadaSombra3?.setDepth(17);
+  camadaSombra2?.setDepth(18);
+  camadaSombra?.setDepth(19);
+  camadaSombraGeral?.setDepth(20);
+  
 
   // =====================================================
   // DEBUG

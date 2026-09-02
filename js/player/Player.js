@@ -18,16 +18,9 @@ function criarPlayer(scene) {
 
   scene.player.setDepth(12);
 
-  // =====================================================
-  // HITBOX FÍSICA DO PERSONAGEM
-  // =====================================================
-  // O sprite continua 64x64.
-  // Apenas a área de colisão fica menor.
-  // =====================================================
+  scene.player.body.setSize(30, 15);
 
-  scene.player.body.setSize(28, 38);
-
-  scene.player.body.setOffset(18, 20);
+  scene.player.body.setOffset(18, 50);
 
   // =====================================================
   // FIM DO ATAQUE
