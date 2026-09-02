@@ -281,6 +281,26 @@ function criarLevel1Map(scene) {
   console.log("vehiclesSpeederCivil5:", vehiclesSpeederCivil5);
 
   // =====================================================
+  // COLISÃO
+  // =====================================================
+
+  const collisionLayer = map.getObjectLayer("Collision");
+
+  if (collisionLayer) {
+    scene.collisionGroup = scene.physics.add.staticGroup();
+
+    collisionLayer.objects.forEach((obj) => {
+      const collision = scene.collisionGroup.create(
+        obj.x + obj.width / 2,
+        obj.y + obj.height / 2,
+      );
+
+      collision.setSize(obj.width, obj.height);
+      collision.setVisible(false);
+    });
+  }
+
+  // =====================================================
   // RETORNA O MAPA
   // =====================================================
 

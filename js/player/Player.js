@@ -16,7 +16,7 @@ function criarPlayer(scene) {
 
   scene.player.body.setAllowGravity(false);
 
-  scene.player.setDepth(50);
+  scene.player.setDepth(12);
 
   // =====================================================
   // HITBOX FÍSICA DO PERSONAGEM

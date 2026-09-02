@@ -45,6 +45,7 @@ class Level1 extends Phaser.Scene {
 
     this.map = criarLevel1Map(this);
 
+  
     // =====================================================
     // PLAYER
     // =====================================================
@@ -52,6 +53,8 @@ class Level1 extends Phaser.Scene {
     criarAnimacoesPlayer(this);
 
     criarPlayer(this);
+
+    this.physics.add.collider(this.player, this.collisionGroup);
 
     // =====================================================
     // STATUS
