@@ -2,6 +2,20 @@ import { atacar } from "../player/Player.js";
 
 function criarControles(scene) {
   // =====================================================
+  // TECLAS WASD
+  // =====================================================
+
+  scene.teclasWASD = scene.input.keyboard.addKeys({
+    cima: Phaser.Input.Keyboard.KeyCodes.W,
+
+    baixo: Phaser.Input.Keyboard.KeyCodes.S,
+
+    esquerda: Phaser.Input.Keyboard.KeyCodes.A,
+
+    direita: Phaser.Input.Keyboard.KeyCodes.D,
+  });
+
+  // =====================================================
   // JOYSTICK
   // =====================================================
 
@@ -19,70 +33,6 @@ function criarControles(scene) {
   scene.joystick.base.setScrollFactor(0).setDepth(100);
 
   scene.joystick.thumb.setScrollFactor(0).setDepth(101);
-
-  // =====================================================
-  // MOVIMENTO
-  // =====================================================
-
-  scene.joystick.on("update", () => {
-    if (scene.atacando) {
-      scene.player.setVelocity(0, 0);
-
-      return;
-    }
-
-    const angle = Phaser.Math.DegToRad(scene.joystick.angle);
-
-    const force = scene.joystick.force;
-
-    if (force > scene.threshold) {
-      scene.direction = new Phaser.Math.Vector2(
-        Math.cos(angle),
-        Math.sin(angle),
-      ).normalize();
-
-      const velocidadeX = scene.direction.x * scene.speed;
-
-      const velocidadeY = scene.direction.y * scene.speed;
-
-      scene.player.setVelocity(velocidadeX, velocidadeY);
-
-      // =================================================
-      // HORIZONTAL
-      // =================================================
-
-      if (Math.abs(scene.direction.x) > Math.abs(scene.direction.y)) {
-        if (scene.direction.x > 0) {
-          scene.direcaoAtual = "right";
-
-          scene.player.anims.play("walk-right", true);
-        } else {
-          scene.direcaoAtual = "left";
-
-          scene.player.anims.play("walk-left", true);
-        }
-      }
-
-      // =================================================
-      // VERTICAL
-      // =================================================
-      else {
-        if (scene.direction.y > 0) {
-          scene.direcaoAtual = "down";
-
-          scene.player.anims.play("walk-down", true);
-        } else {
-          scene.direcaoAtual = "up";
-
-          scene.player.anims.play("walk-up", true);
-        }
-      }
-    } else {
-      scene.player.setVelocity(0, 0);
-
-      scene.player.anims.stop();
-    }
-  });
 
   // =====================================================
   // BOTÃO DE ATAQUE
@@ -125,6 +75,7 @@ function criarControles(scene) {
   scene.iconeAtaque.closePath();
 
   scene.iconeAtaque.fillPath();
+
   scene.iconeAtaque.strokePath();
 
   // =====================================================
@@ -165,7 +116,10 @@ function criarControles(scene) {
 
   scene.iconeAtaque.fillCircle(0, 31, 5);
 
-  // Inclinação da espada
+  // =====================================================
+  // INCLINAÇÃO
+  // =====================================================
+
   scene.iconeAtaque.setAngle(18);
 
   // =====================================================
@@ -174,11 +128,12 @@ function criarControles(scene) {
 
   scene.iconeAtaque.setInteractive(
     new Phaser.Geom.Rectangle(-25, -40, 50, 80),
+
     Phaser.Geom.Rectangle.Contains,
   );
 
   // =====================================================
-  // CLIQUE
+  // APERTA BOTÃO
   // =====================================================
 
   const apertarBotao = () => {
@@ -189,13 +144,19 @@ function criarControles(scene) {
     atacar(scene);
   };
 
+  // =====================================================
+  // SOLTA BOTÃO
+  // =====================================================
+
   const soltarBotao = () => {
     scene.botaoAtaque.setScale(1);
 
     scene.iconeAtaque.setScale(1);
   };
 
-  // Círculo
+  // =====================================================
+  // BOTÃO NA TELA
+  // =====================================================
 
   scene.botaoAtaque.on("pointerdown", apertarBotao);
 
@@ -203,13 +164,181 @@ function criarControles(scene) {
 
   scene.botaoAtaque.on("pointerout", soltarBotao);
 
-  // Espada
+  // =====================================================
+  // ESPADA
+  // =====================================================
 
   scene.iconeAtaque.on("pointerdown", apertarBotao);
 
   scene.iconeAtaque.on("pointerup", soltarBotao);
 
   scene.iconeAtaque.on("pointerout", soltarBotao);
+
+  // =====================================================
+  // BOTÃO ESQUERDO DO MOUSE
+  // =====================================================
+
+  scene.input.on("pointerdown", (pointer, objetosClicados) => {
+    // =================================================
+    // SOMENTE BOTÃO ESQUERDO
+    // =================================================
+
+    if (!pointer.leftButtonDown()) {
+      return;
+    }
+
+    // =================================================
+    // NÃO ATACA DE NOVO AO CLICAR NO BOTÃO DA TELA
+    // =================================================
+
+    if (objetosClicados && objetosClicados.length > 0) {
+      return;
+    }
+
+    atacar(scene);
+  });
 }
 
-export default criarControles;
+// =====================================================
+// ATUALIZA CONTROLES
+// =====================================================
+
+function atualizarControles(scene) {
+  let movimentoX = 0;
+
+  let movimentoY = 0;
+
+  let usandoTeclado = false;
+
+  // =====================================================
+  // WASD
+  // =====================================================
+
+  if (scene.teclasWASD.esquerda.isDown) {
+    movimentoX -= 1;
+
+    usandoTeclado = true;
+  }
+
+  if (scene.teclasWASD.direita.isDown) {
+    movimentoX += 1;
+
+    usandoTeclado = true;
+  }
+
+  if (scene.teclasWASD.cima.isDown) {
+    movimentoY -= 1;
+
+    usandoTeclado = true;
+  }
+
+  if (scene.teclasWASD.baixo.isDown) {
+    movimentoY += 1;
+
+    usandoTeclado = true;
+  }
+
+  // =====================================================
+  // JOYSTICK
+  // =====================================================
+
+  if (!usandoTeclado && scene.joystick.force > scene.threshold) {
+    const angle = Phaser.Math.DegToRad(scene.joystick.angle);
+
+    movimentoX = Math.cos(angle);
+
+    movimentoY = Math.sin(angle);
+  }
+
+  // =====================================================
+  // ESTÁ SE MOVENDO
+  // =====================================================
+
+  if (movimentoX !== 0 || movimentoY !== 0) {
+    const direcao = new Phaser.Math.Vector2(movimentoX, movimentoY).normalize();
+
+    // ===================================================
+    // VELOCIDADE
+    // ===================================================
+
+    scene.player.setVelocity(
+      direcao.x * scene.speed,
+
+      direcao.y * scene.speed,
+    );
+
+    // ===================================================
+    // HORIZONTAL
+    // ===================================================
+
+    if (Math.abs(direcao.x) > Math.abs(direcao.y)) {
+      // =================================================
+      // DIREITA
+      // =================================================
+
+      if (direcao.x > 0) {
+        scene.direcaoAtual = "right";
+
+        if (!scene.atacando) {
+          scene.player.anims.play("walk-right", true);
+        }
+      }
+
+      // =================================================
+      // ESQUERDA
+      // =================================================
+      else {
+        scene.direcaoAtual = "left";
+
+        if (!scene.atacando) {
+          scene.player.anims.play("walk-left", true);
+        }
+      }
+    }
+
+    // ===================================================
+    // VERTICAL
+    // ===================================================
+    else {
+      // =================================================
+      // BAIXO
+      // =================================================
+
+      if (direcao.y > 0) {
+        scene.direcaoAtual = "down";
+
+        if (!scene.atacando) {
+          scene.player.anims.play("walk-down", true);
+        }
+      }
+
+      // =================================================
+      // CIMA
+      // =================================================
+      else {
+        scene.direcaoAtual = "up";
+
+        if (!scene.atacando) {
+          scene.player.anims.play("walk-up", true);
+        }
+      }
+    }
+  }
+
+  // =====================================================
+  // PARADO
+  // =====================================================
+  else {
+    scene.player.setVelocity(0, 0);
+
+    // ===================================================
+    // NÃO INTERROMPE ATAQUE
+    // ===================================================
+
+    if (!scene.atacando) {
+      scene.player.anims.stop();
+    }
+  }
+}
+
+export { criarControles, atualizarControles };

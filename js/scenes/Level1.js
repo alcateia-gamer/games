@@ -4,7 +4,10 @@ import criarAnimacoesPlayer from "../player/PlayerAnimations.js";
 
 import { criarPlayer, respawnPlayer } from "../player/Player.js";
 
-import criarControles from "../controls/PlayerControls.js";
+import {
+  criarControles,
+  atualizarControles,
+} from "../controls/PlayerControls.js";
 
 import {
   criarStatusPlayer,
@@ -20,31 +23,15 @@ class Level1 extends Phaser.Scene {
   constructor() {
     super("Level1");
 
-    // =====================================================
-    // MOVIMENTO
-    // =====================================================
-
     this.threshold = 0.1;
 
     this.speed = 400;
 
     this.direction = undefined;
 
-    // =====================================================
-    // DIREÇÃO DO PERSONAGEM
-    // =====================================================
-
     this.direcaoAtual = "down";
 
-    // =====================================================
-    // ATAQUE
-    // =====================================================
-
     this.atacando = false;
-
-    // =====================================================
-    // RESPAWN
-    // =====================================================
 
     this.respawnX = -1440;
 
@@ -59,34 +46,30 @@ class Level1 extends Phaser.Scene {
     this.map = criarLevel1Map(this);
 
     // =====================================================
-    // ANIMAÇÕES DO PERSONAGEM
+    // PLAYER
     // =====================================================
 
     criarAnimacoesPlayer(this);
 
-    // =====================================================
-    // PERSONAGEM
-    // =====================================================
-
     criarPlayer(this);
 
     // =====================================================
-    // VIDA E ESTAMINA
+    // STATUS
     // =====================================================
 
     criarStatusPlayer(this);
-
-    // =====================================================
-    // INIMIGO DE TESTE
-    // =====================================================
-
-    criarInimigoTeste(this);
 
     // =====================================================
     // CONTROLES
     // =====================================================
 
     criarControles(this);
+
+    // =====================================================
+    // INIMIGO
+    // =====================================================
+
+    criarInimigoTeste(this);
 
     // =====================================================
     // CÂMERA
@@ -97,7 +80,7 @@ class Level1 extends Phaser.Scene {
     this.cameras.main.setZoom(1);
 
     // =====================================================
-    // TEXTO DAS COORDENADAS
+    // COORDENADAS
     // =====================================================
 
     this.textoCoordenadas = this.add.text(10, 78, "", {
@@ -107,7 +90,6 @@ class Level1 extends Phaser.Scene {
 
       padding: {
         x: 6,
-
         y: 4,
       },
     });
@@ -119,11 +101,15 @@ class Level1 extends Phaser.Scene {
     // =====================================================
 
     this.teclaR = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R);
-
-    console.log("Respawn atual:", this.respawnX, this.respawnY);
   }
 
   update(time, delta) {
+    // =====================================================
+    // CONTROLES
+    // =====================================================
+
+    atualizarControles(this);
+
     // =====================================================
     // VIDA E ESTAMINA
     // =====================================================
@@ -131,13 +117,13 @@ class Level1 extends Phaser.Scene {
     atualizarStatusPlayer(this, delta);
 
     // =====================================================
-    // INIMIGO DE TESTE
+    // INIMIGO
     // =====================================================
 
-    atualizarInimigoTeste(this);
+    atualizarInimigoTeste(this, time);
 
     // =====================================================
-    // COORDENADAS DO PERSONAGEM
+    // COORDENADAS
     // =====================================================
 
     const x = Math.round(this.player.x);
@@ -147,7 +133,7 @@ class Level1 extends Phaser.Scene {
     this.textoCoordenadas.setText("X: " + x + "  Y: " + y);
 
     // =====================================================
-    // R = RESPAWN
+    // RESPAWN
     // =====================================================
 
     if (Phaser.Input.Keyboard.JustDown(this.teclaR)) {

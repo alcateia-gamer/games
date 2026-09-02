@@ -43,9 +43,9 @@ function criarInimigoTeste(scene) {
 
   scene.inimigoTeste.velocidade = 80;
 
-  scene.inimigoTeste.distanciaDeteccao = 350;
+  scene.inimigoTeste.distanciaDeteccao = 500;
 
-  scene.inimigoTeste.distanciaAtaque = 150;
+  scene.inimigoTeste.distanciaAtaque = 300;
 
   scene.inimigoTeste.direcaoAtual = "down";
 
@@ -53,7 +53,7 @@ function criarInimigoTeste(scene) {
   // CONFIGURAÇÕES DO ATAQUE
   // =====================================================
 
-  scene.inimigoTeste.tempoEntreTiros = 2000;
+  scene.inimigoTeste.tempoEntreTiros = 400;
 
   scene.inimigoTeste.ultimoTiro = 0;
 
