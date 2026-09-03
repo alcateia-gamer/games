@@ -2,6 +2,10 @@ import { gastarEstamina } from "./PlayerStatus.js";
 
 import { causarDanoInimigo } from "../enemies/EnemyTest.js";
 
+// =====================================================
+// CRIA PLAYER
+// =====================================================
+
 function criarPlayer(scene) {
   // =====================================================
   // PERSONAGEM
@@ -19,26 +23,24 @@ function criarPlayer(scene) {
   scene.player.setDepth(12);
 
   // =====================================================
-  // HITBOX DE COLISÃO
+  // HITBOX DE COLISÃO - WALK 64x64
   // =====================================================
 
-  scene.player.body.setSize(30, 15);
-
-  scene.player.body.setOffset(18, 50);
+  configurarHitboxWalk(scene);
 
   // =====================================================
   // HITBOX DE DANO
   // =====================================================
 
   scene.hitboxDanoPlayer = new Phaser.Geom.Rectangle(
-    scene.player.x - 22,
-    scene.player.y - 32,
-    44,
-    58,
+    scene.player.x - 19,
+    scene.player.y + 26 - 46,
+    38,
+    46,
   );
 
   // =====================================================
-  // DEBUG VISUAL DA HITBOX DE DANO
+  // DEBUG DA HITBOX DE DANO
   // =====================================================
 
   scene.debugHitboxDanoPlayer = scene.add.graphics();
@@ -46,7 +48,7 @@ function criarPlayer(scene) {
   scene.debugHitboxDanoPlayer.setDepth(100);
 
   // =====================================================
-  // POSIÇÃO INICIAL DA HITBOX
+  // ATUALIZA POSIÇÃO INICIAL
   // =====================================================
 
   atualizarHitboxDanoPlayer(scene);
@@ -59,6 +61,10 @@ function criarPlayer(scene) {
     if (!animation.key.startsWith("attack-")) {
       return;
     }
+
+    // =================================================
+    // ATAQUE TERMINOU
+    // =================================================
 
     scene.atacando = false;
 
@@ -75,7 +81,57 @@ function criarPlayer(scene) {
     } else if (scene.direcaoAtual === "right") {
       scene.player.setTexture("walk", 39);
     }
+
+    // =================================================
+    // RESTAURA HITBOX PARA WALK 64x64
+    // =================================================
+
+    configurarHitboxWalk(scene);
   });
+}
+
+// =====================================================
+// HITBOX DE COLISÃO - WALK
+// =====================================================
+// SPRITE: 64x64
+// =====================================================
+
+function configurarHitboxWalk(scene) {
+  if (!scene.player || !scene.player.body) {
+    return;
+  }
+
+  scene.player.body.setSize(30, 15);
+
+  scene.player.body.setOffset(18, 50);
+}
+
+// =====================================================
+// HITBOX DE COLISÃO - ATAQUE
+// =====================================================
+// WALK = 64x64
+// ATAQUE = 128x128
+//
+// DIFERENÇA:
+// (128 - 64) / 2 = 32
+//
+// OFFSET WALK:
+// X = 18
+// Y = 50
+//
+// OFFSET ATAQUE:
+// X = 18 + 32 = 50
+// Y = 50 + 32 = 82
+// =====================================================
+
+function configurarHitboxAtaque(scene) {
+  if (!scene.player || !scene.player.body) {
+    return;
+  }
+
+  scene.player.body.setSize(30, 15);
+
+  scene.player.body.setOffset(50, 82);
 }
 
 // =====================================================
@@ -83,19 +139,15 @@ function criarPlayer(scene) {
 // =====================================================
 
 function atualizarHitboxDanoPlayer(scene) {
-  if (
-    !scene.player ||
-    !scene.player.active ||
-    !scene.hitboxDanoPlayer
-  ) {
+  if (!scene.player || !scene.player.active || !scene.hitboxDanoPlayer) {
     return;
   }
 
   // =====================================================
-  // TAMANHO DA HITBOX
+  // TAMANHO
   // =====================================================
 
-  const largura = 36;
+  const largura = 38;
 
   const altura = 46;
 
@@ -105,157 +157,160 @@ function atualizarHitboxDanoPlayer(scene) {
 
   const centroX = scene.player.x;
 
-  // PARTE DE BAIXO DA HITBOX
-  // FICA FIXA NOS PÉS DO PERSONAGEM
-
   const baseY = scene.player.y + 26;
 
   // =====================================================
-  // ATUALIZA HITBOX
+  // ATUALIZA RETÂNGULO
   // =====================================================
 
   scene.hitboxDanoPlayer.setTo(
     centroX - largura / 2,
-
-    // A HITBOX CRESCE PARA CIMA A PARTIR DA BASE
     baseY - altura,
-
     largura,
     altura,
   );
 
   // =====================================================
-  // DEBUG VISUAL
+  // DEBUG
   // =====================================================
 
   if (scene.debugHitboxDanoPlayer) {
     scene.debugHitboxDanoPlayer.clear();
 
-    scene.debugHitboxDanoPlayer.lineStyle(
-      2,
-      0xff0000,
-      1,
-    );
+    scene.debugHitboxDanoPlayer.lineStyle(2, 0xff0000, 1);
 
-    scene.debugHitboxDanoPlayer.fillStyle(
-      0xff0000,
-      0.08,
-    );
+    scene.debugHitboxDanoPlayer.fillStyle(0xff0000, 0.08);
 
-    scene.debugHitboxDanoPlayer.fillRectShape(
-      scene.hitboxDanoPlayer,
-    );
+    scene.debugHitboxDanoPlayer.fillRectShape(scene.hitboxDanoPlayer);
 
-    scene.debugHitboxDanoPlayer.strokeRectShape(
-      scene.hitboxDanoPlayer,
-    );
+    scene.debugHitboxDanoPlayer.strokeRectShape(scene.hitboxDanoPlayer);
   }
 }
 
 // =====================================================
-// CRIA HITBOX DO ATAQUE
+// CRIA HITBOX DA KATANA
 // =====================================================
 
 function criarHitboxKatana(scene) {
   // =====================================================
-  // ZONA TEMPORÁRIA
+  // RETÂNGULO GEOMÉTRICO
+  //
+  // NÃO TEM CORPO ARCADE.
+  // PORTANTO NÃO INTERFERE NA COLISÃO DO MAPA.
   // =====================================================
 
-  const hitbox = scene.add.zone(scene.player.x, scene.player.y, 40, 40);
-
-  scene.physics.add.existing(hitbox);
-
-  hitbox.body.setAllowGravity(false);
-
-  hitbox.body.setImmovable(true);
+  const hitboxKatana = new Phaser.Geom.Rectangle(0, 0, 40, 40);
 
   // =====================================================
   // CONTROLE DE DANO
   // =====================================================
 
-  hitbox.jaAcertou = false;
+  let jaAcertou = false;
 
   // =====================================================
-  // ATUALIZA POSIÇÃO DA HITBOX
+  // DEBUG
   // =====================================================
 
-  const atualizarHitbox = () => {
-    if (!hitbox || !hitbox.active || !scene.player || !scene.player.active) {
+  const debugKatana = scene.add.graphics();
+
+  debugKatana.setDepth(101);
+
+  // =====================================================
+  // ATUALIZA HITBOX
+  // =====================================================
+
+  const atualizarHitboxKatana = () => {
+    if (!scene.player || !scene.player.active) {
       return;
     }
 
-    let x = scene.player.x;
+    let centroX = scene.player.x;
 
-    let y = scene.player.y;
+    let centroY = scene.player.y;
 
     let largura = 40;
 
     let altura = 40;
 
-    // ===================================================
+    // =================================================
     // CIMA
-    // ===================================================
+    // =================================================
 
     if (scene.direcaoAtual === "up") {
-      y -= 35;
+      centroY -= 35;
 
       largura = 34;
 
       altura = 42;
     }
 
-    // ===================================================
+    // =================================================
     // BAIXO
-    // ===================================================
+    // =================================================
     else if (scene.direcaoAtual === "down") {
-      y += 35;
+      centroY += 35;
 
       largura = 34;
 
       altura = 42;
     }
 
-    // ===================================================
+    // =================================================
     // ESQUERDA
-    // ===================================================
+    // =================================================
     else if (scene.direcaoAtual === "left") {
-      x -= 35;
+      centroX -= 35;
 
       largura = 42;
 
       altura = 34;
     }
 
-    // ===================================================
+    // =================================================
     // DIREITA
-    // ===================================================
+    // =================================================
     else if (scene.direcaoAtual === "right") {
-      x += 35;
+      centroX += 35;
 
       largura = 42;
 
       altura = 34;
     }
 
-    // ===================================================
-    // MOVE A HITBOX
-    // ===================================================
+    // =================================================
+    // POSICIONA
+    // =================================================
 
-    hitbox.setPosition(x, y);
+    hitboxKatana.setTo(
+      centroX - largura / 2,
+      centroY - altura / 2,
+      largura,
+      altura,
+    );
 
-    hitbox.body.setSize(largura, altura);
+    // =================================================
+    // DEBUG
+    // =================================================
 
-    hitbox.body.reset(x, y);
+    debugKatana.clear();
+
+    debugKatana.lineStyle(2, 0xffff00, 1);
+
+    debugKatana.fillStyle(0xffff00, 0.08);
+
+    debugKatana.fillRectShape(hitboxKatana);
+
+    debugKatana.strokeRectShape(hitboxKatana);
   };
 
   // =====================================================
   // POSIÇÃO INICIAL
   // =====================================================
 
-  atualizarHitbox();
+  atualizarHitboxKatana();
 
   // =====================================================
-  // ATUALIZA ENQUANTO O ATAQUE EXISTIR
+  // ATUALIZA DURANTE O ATAQUE
   // =====================================================
 
   const eventoHitbox = scene.time.addEvent({
@@ -264,32 +319,64 @@ function criarHitboxKatana(scene) {
     loop: true,
 
     callback: () => {
-      atualizarHitbox();
+      atualizarHitboxKatana();
 
-      // =================================================
-      // VERIFICA DANO
-      // =================================================
+      // ===============================================
+      // JÁ ACERTOU
+      // ===============================================
+
+      if (jaAcertou) {
+        return;
+      }
+
+      // ===============================================
+      // INIMIGO NÃO EXISTE
+      // ===============================================
 
       if (
-        !hitbox.jaAcertou &&
-        scene.inimigoTeste &&
-        scene.inimigoTeste.active
+        !scene.inimigoTeste ||
+        !scene.inimigoTeste.active ||
+        !scene.inimigoTeste.body
       ) {
-        scene.physics.overlap(hitbox, scene.inimigoTeste, () => {
-          if (hitbox.jaAcertou) {
-            return;
-          }
-
-          hitbox.jaAcertou = true;
-
-          causarDanoInimigo(scene, 25);
-        });
+        return;
       }
+
+      // ===============================================
+      // HITBOX DO INIMIGO
+      // ===============================================
+
+      const hitboxInimigo = new Phaser.Geom.Rectangle(
+        scene.inimigoTeste.body.x,
+        scene.inimigoTeste.body.y,
+        scene.inimigoTeste.body.width,
+        scene.inimigoTeste.body.height,
+      );
+
+      // ===============================================
+      // KATANA X INIMIGO
+      // ===============================================
+
+      const acertou = Phaser.Geom.Intersects.RectangleToRectangle(
+        hitboxKatana,
+        hitboxInimigo,
+      );
+
+      if (!acertou) {
+        return;
+      }
+
+      // ===============================================
+      // DANO UMA VEZ
+      // ===============================================
+
+      jaAcertou = true;
+
+      causarDanoInimigo(scene, 25);
     },
   });
 
   // =====================================================
-  // DESTRÓI A HITBOX
+  // REMOVE HITBOX APÓS 140ms
   // =====================================================
 
   scene.time.delayedCall(140, () => {
@@ -297,8 +384,8 @@ function criarHitboxKatana(scene) {
       eventoHitbox.remove();
     }
 
-    if (hitbox && hitbox.active) {
-      hitbox.destroy();
+    if (debugKatana) {
+      debugKatana.destroy();
     }
   });
 }
@@ -333,7 +420,7 @@ function atacar(scene) {
   scene.atacando = true;
 
   // =====================================================
-  // CRIA HITBOX
+  // HITBOX DA KATANA
   // =====================================================
 
   criarHitboxKatana(scene);
@@ -351,6 +438,16 @@ function atacar(scene) {
   } else if (scene.direcaoAtual === "right") {
     scene.player.anims.play("attack-right", true);
   }
+
+  // =====================================================
+  // IMPORTANTE
+  //
+  // A TEXTURA AGORA É 128x128.
+  // COMPENSA O OFFSET PARA A COLISÃO CONTINUAR
+  // EXATAMENTE NA REGIÃO DOS PÉS.
+  // =====================================================
+
+  configurarHitboxAtaque(scene);
 }
 
 // =====================================================
@@ -358,7 +455,15 @@ function atacar(scene) {
 // =====================================================
 
 function respawnPlayer(scene) {
+  // =====================================================
+  // PARA MOVIMENTO
+  // =====================================================
+
   scene.player.setVelocity(0, 0);
+
+  // =====================================================
+  // RESETA ESTADO
+  // =====================================================
 
   scene.atacando = false;
 
@@ -366,24 +471,38 @@ function respawnPlayer(scene) {
 
   scene.player.anims.stop();
 
+  // =====================================================
+  // VOLTA PARA WALK
+  // =====================================================
+
   scene.player.setTexture("walk", 26);
+
+  // =====================================================
+  // POSIÇÃO
+  // =====================================================
 
   scene.player.setPosition(scene.respawnX, scene.respawnY);
 
   // =====================================================
-  // ATUALIZA HITBOX DE DANO
+  // RESTAURA HITBOX WALK
+  // =====================================================
+
+  configurarHitboxWalk(scene);
+
+  // =====================================================
+  // HITBOX DE DANO
   // =====================================================
 
   atualizarHitboxDanoPlayer(scene);
 
   // =====================================================
-  // RECUPERA VIDA
+  // VIDA
   // =====================================================
 
   scene.vida = scene.vidaMaxima;
 
   // =====================================================
-  // RECUPERA ESTAMINA
+  // ESTAMINA
   // =====================================================
 
   scene.estamina = scene.estaminaMaxima;

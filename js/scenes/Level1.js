@@ -23,6 +23,10 @@ import {
   atualizarInimigoTeste,
 } from "../enemies/EnemyTest.js";
 
+// =====================================================
+// LEVEL 1
+// =====================================================
+
 class Level1 extends Phaser.Scene {
   constructor() {
     super("Level1");
@@ -50,6 +54,10 @@ class Level1 extends Phaser.Scene {
     this.respawnY = 454;
   }
 
+  // =====================================================
+  // CREATE
+  // =====================================================
+
   create() {
     // =====================================================
     // MAPA
@@ -58,28 +66,32 @@ class Level1 extends Phaser.Scene {
     this.map = criarLevel1Map(this);
 
     // =====================================================
-    // PLAYER
+    // ANIMAÇÕES DO PLAYER
     // =====================================================
 
     criarAnimacoesPlayer(this);
 
+    // =====================================================
+    // PLAYER
+    // =====================================================
+
     criarPlayer(this);
-
-    // =====================================================
-    // HITBOX DE DANO
-    // =====================================================
-    // ATUALIZA DEPOIS DO PASSO DO JOGO
-    // =====================================================
-
-    this.events.on(Phaser.Scenes.Events.POST_UPDATE, () => {
-      atualizarHitboxDanoPlayer(this);
-    });
 
     // =====================================================
     // COLISÃO DO PLAYER COM O MAPA
     // =====================================================
 
     this.physics.add.collider(this.player, this.collisionGroup);
+
+    // =====================================================
+    // HITBOX DE DANO DO PLAYER
+    //
+    // ATUALIZA DEPOIS DA FÍSICA
+    // =====================================================
+
+    this.events.on(Phaser.Scenes.Events.POST_UPDATE, () => {
+      atualizarHitboxDanoPlayer(this);
+    });
 
     // =====================================================
     // STATUS
@@ -130,6 +142,10 @@ class Level1 extends Phaser.Scene {
 
     this.teclaR = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R);
   }
+
+  // =====================================================
+  // UPDATE
+  // =====================================================
 
   update(time, delta) {
     // =====================================================
