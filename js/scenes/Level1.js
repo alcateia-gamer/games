@@ -2,7 +2,11 @@ import criarLevel1Map from "../map/Level1Map.js";
 
 import criarAnimacoesPlayer from "../player/PlayerAnimations.js";
 
-import { criarPlayer, respawnPlayer } from "../player/Player.js";
+import {
+  criarPlayer,
+  respawnPlayer,
+  atualizarHitboxDanoPlayer,
+} from "../player/Player.js";
 
 import {
   criarControles,
@@ -23,6 +27,10 @@ class Level1 extends Phaser.Scene {
   constructor() {
     super("Level1");
 
+    // =====================================================
+    // MOVIMENTO
+    // =====================================================
+
     this.threshold = 0.1;
 
     this.speed = 400;
@@ -32,6 +40,10 @@ class Level1 extends Phaser.Scene {
     this.direcaoAtual = "down";
 
     this.atacando = false;
+
+    // =====================================================
+    // RESPAWN
+    // =====================================================
 
     this.respawnX = -1440;
 
@@ -45,7 +57,6 @@ class Level1 extends Phaser.Scene {
 
     this.map = criarLevel1Map(this);
 
-  
     // =====================================================
     // PLAYER
     // =====================================================
@@ -53,6 +64,20 @@ class Level1 extends Phaser.Scene {
     criarAnimacoesPlayer(this);
 
     criarPlayer(this);
+
+    // =====================================================
+    // HITBOX DE DANO
+    // =====================================================
+    // ATUALIZA DEPOIS DO PASSO DO JOGO
+    // =====================================================
+
+    this.events.on(Phaser.Scenes.Events.POST_UPDATE, () => {
+      atualizarHitboxDanoPlayer(this);
+    });
+
+    // =====================================================
+    // COLISÃO DO PLAYER COM O MAPA
+    // =====================================================
 
     this.physics.add.collider(this.player, this.collisionGroup);
 

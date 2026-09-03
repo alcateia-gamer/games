@@ -18,9 +18,38 @@ function criarPlayer(scene) {
 
   scene.player.setDepth(12);
 
+  // =====================================================
+  // HITBOX DE COLISÃO
+  // =====================================================
+
   scene.player.body.setSize(30, 15);
 
   scene.player.body.setOffset(18, 50);
+
+  // =====================================================
+  // HITBOX DE DANO
+  // =====================================================
+
+  scene.hitboxDanoPlayer = new Phaser.Geom.Rectangle(
+    scene.player.x - 22,
+    scene.player.y - 32,
+    44,
+    58,
+  );
+
+  // =====================================================
+  // DEBUG VISUAL DA HITBOX DE DANO
+  // =====================================================
+
+  scene.debugHitboxDanoPlayer = scene.add.graphics();
+
+  scene.debugHitboxDanoPlayer.setDepth(100);
+
+  // =====================================================
+  // POSIÇÃO INICIAL DA HITBOX
+  // =====================================================
+
+  atualizarHitboxDanoPlayer(scene);
 
   // =====================================================
   // FIM DO ATAQUE
@@ -47,6 +76,80 @@ function criarPlayer(scene) {
       scene.player.setTexture("walk", 39);
     }
   });
+}
+
+// =====================================================
+// ATUALIZA HITBOX DE DANO
+// =====================================================
+
+function atualizarHitboxDanoPlayer(scene) {
+  if (
+    !scene.player ||
+    !scene.player.active ||
+    !scene.hitboxDanoPlayer
+  ) {
+    return;
+  }
+
+  // =====================================================
+  // TAMANHO DA HITBOX
+  // =====================================================
+
+  const largura = 36;
+
+  const altura = 46;
+
+  // =====================================================
+  // POSIÇÃO
+  // =====================================================
+
+  const centroX = scene.player.x;
+
+  // PARTE DE BAIXO DA HITBOX
+  // FICA FIXA NOS PÉS DO PERSONAGEM
+
+  const baseY = scene.player.y + 26;
+
+  // =====================================================
+  // ATUALIZA HITBOX
+  // =====================================================
+
+  scene.hitboxDanoPlayer.setTo(
+    centroX - largura / 2,
+
+    // A HITBOX CRESCE PARA CIMA A PARTIR DA BASE
+    baseY - altura,
+
+    largura,
+    altura,
+  );
+
+  // =====================================================
+  // DEBUG VISUAL
+  // =====================================================
+
+  if (scene.debugHitboxDanoPlayer) {
+    scene.debugHitboxDanoPlayer.clear();
+
+    scene.debugHitboxDanoPlayer.lineStyle(
+      2,
+      0xff0000,
+      1,
+    );
+
+    scene.debugHitboxDanoPlayer.fillStyle(
+      0xff0000,
+      0.08,
+    );
+
+    scene.debugHitboxDanoPlayer.fillRectShape(
+      scene.hitboxDanoPlayer,
+    );
+
+    scene.debugHitboxDanoPlayer.strokeRectShape(
+      scene.hitboxDanoPlayer,
+    );
+  }
 }
 
 // =====================================================
@@ -141,6 +244,8 @@ function criarHitboxKatana(scene) {
     hitbox.setPosition(x, y);
 
     hitbox.body.setSize(largura, altura);
+
+    hitbox.body.reset(x, y);
   };
 
   // =====================================================
@@ -266,6 +371,12 @@ function respawnPlayer(scene) {
   scene.player.setPosition(scene.respawnX, scene.respawnY);
 
   // =====================================================
+  // ATUALIZA HITBOX DE DANO
+  // =====================================================
+
+  atualizarHitboxDanoPlayer(scene);
+
+  // =====================================================
   // RECUPERA VIDA
   // =====================================================
 
@@ -278,4 +389,8 @@ function respawnPlayer(scene) {
   scene.estamina = scene.estaminaMaxima;
 }
 
-export { criarPlayer, atacar, respawnPlayer };
+// =====================================================
+// EXPORTA
+// =====================================================
+
+export { criarPlayer, atacar, respawnPlayer, atualizarHitboxDanoPlayer };

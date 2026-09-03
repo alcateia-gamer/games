@@ -26,7 +26,7 @@ function criarInimigoTeste(scene) {
   scene.inimigoTeste.setDepth(50);
 
   // =====================================================
-  // TAMANHO
+  // TAMANHO VISUAL
   // =====================================================
 
   scene.inimigoTeste.setScale(0.75);
@@ -36,6 +36,14 @@ function criarInimigoTeste(scene) {
   // =====================================================
 
   scene.inimigoTeste.body.setAllowGravity(false);
+
+  // =====================================================
+  // HITBOX DO ROBÔ
+  // =====================================================
+
+  scene.inimigoTeste.body.setSize(80, 125);
+
+  scene.inimigoTeste.body.setOffset(6, 6);
 
   // =====================================================
   // CONFIGURAÇÕES DA IA
@@ -80,18 +88,6 @@ function criarInimigoTeste(scene) {
   // =====================================================
 
   scene.player.invulneravel = false;
-
-  // =====================================================
-  // COLISÃO LASER X PLAYER
-  // =====================================================
-
-  scene.physics.add.overlap(
-    scene.lasersInimigo,
-    scene.player,
-    (player, laser) => {
-      acertarPlayerComLaser(scene, laser);
-    },
-  );
 
   // =====================================================
   // BARRA DE VIDA
@@ -228,6 +224,12 @@ function atualizarInimigoTeste(scene, time) {
   atualizarIAInimigo(scene, time);
 
   // =====================================================
+  // LASERS X HITBOX DE DANO
+  // =====================================================
+
+  verificarLasersNoPlayer(scene);
+
+  // =====================================================
   // POSIÇÃO DA BARRA DE VIDA
   // =====================================================
 
@@ -297,21 +299,9 @@ function atualizarIAInimigo(scene, time) {
   // =====================================================
 
   if (distancia <= inimigo.distanciaAtaque) {
-    // ===================================================
-    // PARA
-    // ===================================================
-
     inimigo.setVelocity(0, 0);
 
-    // ===================================================
-    // OLHA PARA O PLAYER
-    // ===================================================
-
     pararAnimacaoInimigo(inimigo);
-
-    // ===================================================
-    // ATIRA
-    // ===================================================
 
     tentarDispararLaser(scene, time);
 
@@ -389,32 +379,13 @@ function tocarAnimacaoInimigo(inimigo) {
 function pararAnimacaoInimigo(inimigo) {
   inimigo.anims.stop();
 
-  // =====================================================
-  // FRENTE
-  // =====================================================
-
   if (inimigo.direcaoAtual === "down") {
     inimigo.setFrame(0);
-  }
-
-  // =====================================================
-  // ESQUERDA
-  // =====================================================
-  else if (inimigo.direcaoAtual === "left") {
+  } else if (inimigo.direcaoAtual === "left") {
     inimigo.setFrame(3);
-  }
-
-  // =====================================================
-  // DIREITA
-  // =====================================================
-  else if (inimigo.direcaoAtual === "right") {
+  } else if (inimigo.direcaoAtual === "right") {
     inimigo.setFrame(6);
-  }
-
-  // =====================================================
-  // COSTAS
-  // =====================================================
-  else if (inimigo.direcaoAtual === "up") {
+  } else if (inimigo.direcaoAtual === "up") {
     inimigo.setFrame(9);
   }
 }
@@ -529,6 +500,35 @@ function dispararLaser(scene) {
 }
 
 // =====================================================
+// VERIFICA LASERS NA HITBOX DE DANO
+// =====================================================
+
+function verificarLasersNoPlayer(scene) {
+  if (!scene.hitboxDanoPlayer || !scene.lasersInimigo) {
+    return;
+  }
+
+  const lasers = scene.lasersInimigo.getChildren();
+
+  for (const laser of lasers) {
+    if (!laser || !laser.active) {
+      continue;
+    }
+
+    const boundsLaser = laser.getBounds();
+
+    const acertou = Phaser.Geom.Intersects.RectangleToRectangle(
+      scene.hitboxDanoPlayer,
+      boundsLaser,
+    );
+
+    if (acertou) {
+      acertarPlayerComLaser(scene, laser);
+    }
+  }
+}
+
+// =====================================================
 // LASER ACERTA PLAYER
 // =====================================================
 
@@ -542,7 +542,7 @@ function acertarPlayerComLaser(scene, laser) {
   }
 
   // =====================================================
-  // DESTRÓI LASER IMEDIATAMENTE
+  // DESTRÓI SOMENTE O LASER
   // =====================================================
 
   laser.destroy();
@@ -618,6 +618,25 @@ function respawnPlayerPorLaser(scene) {
   // =====================================================
 
   scene.player.setPosition(scene.respawnX, scene.respawnY);
+
+  // =====================================================
+  // ATUALIZA HITBOX DE DANO
+  // =====================================================
+
+  if (scene.hitboxDanoPlayer) {
+    const largura = 38;
+
+    const altura = 46;
+
+    const baseY = scene.respawnY + 26;
+
+    scene.hitboxDanoPlayer.setTo(
+      scene.respawnX - largura / 2,
+      baseY - altura,
+      largura,
+      altura,
+    );
+  }
 
   // =====================================================
   // RECUPERA VIDA
