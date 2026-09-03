@@ -147,7 +147,7 @@ function atualizarHitboxDanoPlayer(scene) {
   // TAMANHO
   // =====================================================
 
-  const largura = 38;
+  const largura = 30;
 
   const altura = 46;
 
