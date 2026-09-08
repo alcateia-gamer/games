@@ -175,8 +175,15 @@ function criarLevel1Map(scene) {
   // Cerca da torre
   const camadaCercaTorre = map.createLayer("CercaTorre", tilesets);
 
+  const camadaCercaCimaTorre = map.createLayer("CercaCimaTorre", tilesets);
+
+  // Objetos da Torre
+  const camadaContainerTorre = map.createLayer("ContainerTorre", tilesets);
+
   // Teto dos prédios
   const camadaTetoPredios = map.createLayer("TetoPredio", tilesets);
+
+  const camadaAntenaTorre = map.createLayer("AntenaTorre", tilesets);
 
   // Prédios
   const camadaPredios = map.createLayer("Prédios", tilesets);
@@ -229,7 +236,6 @@ function criarLevel1Map(scene) {
   //
   // =====================================================
 
-  // Chão
   camadaChao?.setDepth(1);
 
   // Rua
@@ -240,26 +246,25 @@ function criarLevel1Map(scene) {
   camadaVehicles?.setDepth(4);
 
   // Construções
-  camadaCercaTorre?.setDepth(14);
-  camadaTetoPredios?.setDepth(15);
-  camadaPredios?.setDepth(6);
-  camadaFrenteVaranda?.setDepth(7);
-  camadaDetalhesPredios?.setDepth(8);
-
-  // Objetos
-  camadaParedes?.setDepth(9);
-  camadaObjetos2?.setDepth(10);
+  camadaCercaTorre?.setDepth(5);
+  camadaTetoPredios?.setDepth(6);
+  camadaPredios?.setDepth(7);
+  camadaFrenteVaranda?.setDepth(8);
+  camadaDetalhesPredios?.setDepth(9);
+  camadaParedes?.setDepth(10);
+  camadaObjetos2?.setDepth(11);
+  camadaCercaCimaTorre?.setDepth(13);
+  camadaAntenaTorre?.setDepth(14);
+  camadaContainerTorre?.setDepth(15);
   camadaObjetos?.setDepth(11);
-  camadaObjAcimaPerso?.setDepth(16);
-  camadaPostes?.setDepth(15);
-  camadaCercas?.setDepth(16);
+  camadaPostes?.setDepth(17);
+  camadaCercas?.setDepth(18);
+  camadaObjAcimaPerso?.setDepth(19);
+  camadaSombra3?.setDepth(20);
+  camadaSombra2?.setDepth(21);
+  camadaSombra?.setDepth(22);
+  camadaSombraGeral?.setDepth(23);
 
-  // Sombras
-  camadaSombra3?.setDepth(17);
-  camadaSombra2?.setDepth(18);
-  camadaSombra?.setDepth(19);
-  camadaSombraGeral?.setDepth(20);
-  
 
   // =====================================================
   // DEBUG

@@ -103,7 +103,7 @@ function configurarHitboxWalk(scene) {
 
   scene.player.body.setSize(30, 15);
 
-  scene.player.body.setOffset(18, 50);
+  scene.player.body.setOffset(18, 45);
 }
 
 // =====================================================
