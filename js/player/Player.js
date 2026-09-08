@@ -117,11 +117,11 @@ function configurarHitboxWalk(scene) {
 //
 // OFFSET WALK:
 // X = 18
-// Y = 50
+// Y = 45
 //
 // OFFSET ATAQUE:
 // X = 18 + 32 = 50
-// Y = 50 + 32 = 82
+// Y = 45 + 32 = 77
 // =====================================================
 
 function configurarHitboxAtaque(scene) {
@@ -131,7 +131,7 @@ function configurarHitboxAtaque(scene) {
 
   scene.player.body.setSize(30, 15);
 
-  scene.player.body.setOffset(50, 82);
+  scene.player.body.setOffset(50, 77);
 }
 
 // =====================================================

@@ -96,6 +96,8 @@ class Preloader extends Phaser.Scene {
 
     this.load.tilemapTiledJSON("mapa", "map/InicioFase1 (1).json");
 
+    this.load.tilemapTiledJSON("mapaParte2", "map/parte2-fase1.json");
+
     // =====================================================
     // PERSONAGEM - CAMINHADA
     // =====================================================
@@ -222,6 +224,65 @@ this.load.spritesheet(
       "ModernInsideFactoryA1",
       "../Tilesets/Industrial/A1_Modern_Inside_Factory_Rasak.png",
     );
+
+    this.load.image(
+      "factoryInsideA1",
+      "../Tilesets/Industrial/A1_Modern_Inside_Factory_Rasak.png",
+    );
+
+    this.load.image(
+      "industrialA2",
+      "../Tilesets/Industrial/A2_Industrial_Rasak.png",
+    );
+
+    this.load.image(
+      "industrialA4",
+      "../Tilesets/Industrial/A4_Modern_Industrial_Rasak.png",
+    );
+
+    this.load.image(
+      "industrialA5",
+      "../Tilesets/Industrial/A5_SciFi_Industrial_Rasak.png",
+    );
+
+    this.load.image(
+      "industrial1",
+      "../Tilesets/Industrial/Tileset_Modern_Industrial_1_Rasak.png",
+    );
+
+    this.load.image(
+      "industrial3",
+      "../Tilesets/Industrial/Tileset_Modern_Industrial_3_Rasak.png",
+    );
+
+    this.load.image(
+      "entertainingDistrict",
+      "../Tilesets/Entertaining_District/Tileset_ModernSciFi_Entertaining_District_Rasak.png",
+    );
+
+    this.load.image(
+      "insideA4",
+      "../Tilesets/Inside/A4_SciFi_Inside_Rasak.png",
+    );
+
+    this.load.image(
+      "insideA5",
+      "../Tilesets/Inside/A5_SciFi_Inside_Rasak.png",
+    );
+
+    this.load.image(
+      "a2Outside",
+      "../Tilesets/City/A2_Scifi_Outside_Rasak.png",
+    );
+
+    this.load.image(
+      "insideA3",
+      "../Tilesets/Inside/A3_SciFi_Inside_Rasak.png",
+    );
+
+    this.load.image("wallBorders", "../parede-borda.png");
+
+    this.load.image("wallBorder", "../parede-borda.png");
 
     // =====================================================
     // TILESETS - VEÍCULOS
