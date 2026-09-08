@@ -1281,7 +1281,7 @@
         {
          "columns":3,
          "firstgid":3217,
-         "image":"..\/games\/parede-borda.png",
+         "image":"..\/games\/Tilesets\/extras\/parede-borda.png",
          "imageheight":144,
          "imagewidth":144,
          "margin":0,
@@ -1294,7 +1294,7 @@
         {
          "columns":3,
          "firstgid":3226,
-         "image":"..\/games\/parede-borda.png",
+         "image":"..\/games\/Tilesets\/extras\/parede-borda.png",
          "imageheight":144,
          "imagewidth":144,
          "margin":0,

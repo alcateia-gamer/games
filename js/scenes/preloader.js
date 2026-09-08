@@ -264,9 +264,9 @@ class Preloader extends Phaser.Scene {
 
     this.load.image("insideA3", "../Tilesets/Inside/A3_SciFi_Inside_Rasak.png");
 
-    this.load.image("wallBorders", "../parede-borda.png");
+    this.load.image("wallBorders", "../Tilesets/extras/parede-borda.png");
 
-    this.load.image("wallBorder", "../parede-borda.png");
+    this.load.image("wallBorder", "../Tilesets/extras/parede-borda.png");
 
     // =====================================================
     // TILESETS - VEÍCULOS
