@@ -1,11 +1,14 @@
 import criarLevel1Parte2Map from "../map/Level1Parte2Map.js";
 import criarAnimacoesPlayer from "../player/PlayerAnimations.js";
+import { criarPlayer, atualizarHitboxDanoPlayer } from "../player/Player.js";
 import {
-  criarPlayer,
-  atualizarHitboxDanoPlayer,
-} from "../player/Player.js";
-import { criarControles, atualizarControles } from "../controls/PlayerControls.js";
-import { criarStatusPlayer, atualizarStatusPlayer } from "../player/PlayerStatus.js";
+  criarControles,
+  atualizarControles,
+} from "../controls/PlayerControls.js";
+import {
+  criarStatusPlayer,
+  atualizarStatusPlayer,
+} from "../player/PlayerStatus.js";
 
 class Level1Parte2 extends Phaser.Scene {
   constructor() {
@@ -64,12 +67,13 @@ class Level1Parte2 extends Phaser.Scene {
 
     this.textoCoordenadas.setText("X: " + x + "  Y: " + y);
 
-    this.pertoDoBlocoRetorno = Phaser.Math.Distance.Between(
-      this.player.x,
-      this.player.y,
-      this.blocoRetornoParte1.x,
-      this.blocoRetornoParte1.y,
-    ) <= 64;
+    this.pertoDoBlocoRetorno =
+      Phaser.Math.Distance.Between(
+        this.player.x,
+        this.player.y,
+        this.blocoRetornoParte1.x,
+        this.blocoRetornoParte1.y,
+      ) <= 64;
 
     if (
       this.pertoDoBlocoRetorno &&
@@ -106,11 +110,13 @@ class Level1Parte2 extends Phaser.Scene {
       Phaser.Input.Keyboard.KeyCodes.E,
     );
 
-    this.physics.world.enable(this.blocoRetornoParte1, Phaser.Physics.Arcade.STATIC_BODY);
+    this.physics.world.enable(
+      this.blocoRetornoParte1,
+      Phaser.Physics.Arcade.STATIC_BODY,
+    );
     this.blocoRetornoParte1.body.setSize(tamanho, tamanho);
 
     this.pertoDoBlocoRetorno = false;
-
   }
 }
 

@@ -175,6 +175,8 @@ class Level1 extends Phaser.Scene {
 
     atualizarStatusPlayer(this, delta);
 
+    this.atualizarProfundidadeCerca();
+
     // =====================================================
     // INIMIGO
     // =====================================================
@@ -191,12 +193,13 @@ class Level1 extends Phaser.Scene {
 
     this.textoCoordenadas.setText("X: " + x + "  Y: " + y);
 
-    const pertoDoBlocoParte2 = Phaser.Math.Distance.Between(
-      this.player.x,
-      this.player.y,
-      this.blocoParte2.x,
-      this.blocoParte2.y,
-    ) <= 64;
+    const pertoDoBlocoParte2 =
+      Phaser.Math.Distance.Between(
+        this.player.x,
+        this.player.y,
+        this.blocoParte2.x,
+        this.blocoParte2.y,
+      ) <= 64;
 
     if (
       pertoDoBlocoParte2 &&
@@ -240,6 +243,24 @@ class Level1 extends Phaser.Scene {
     this.teclaInteracaoParte2 = this.input.keyboard.addKey(
       Phaser.Input.Keyboard.KeyCodes.E,
     );
+  }
+
+  atualizarProfundidadeCerca() {
+    if (!this.camadaCercas || !this.camadaCercaSpawn || !this.player?.body) {
+      return;
+    }
+
+    if (this.player.y <= 586) {
+      this.camadaCercaSpawn.setDepth(11);
+    } else {
+      this.camadaCercaSpawn.setDepth(13);
+    }
+
+    if (this.player.y >= -207) {
+      this.camadaCercas.setDepth(11);
+    } else if (this.player.y <= -225) {
+      this.camadaCercas.setDepth(13);
+    }
   }
 }
 

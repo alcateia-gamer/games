@@ -116,19 +116,15 @@ class Preloader extends Phaser.Scene {
       frameHeight: 128,
     });
 
-// =====================================================
-// INIMIGO DE TESTE
-// =====================================================
+    // =====================================================
+    // INIMIGO DE TESTE
+    // =====================================================
 
-this.load.spritesheet(
-  "robo-teste",
-  "personagem/inimigos/robo_teste.png",
-  {
-    frameWidth: 96,
-    frameHeight: 130,
-  },
-);
-// =====================================================
+    this.load.spritesheet("robo-teste", "personagem/inimigos/robo_teste.png", {
+      frameWidth: 96,
+      frameHeight: 130,
+    });
+    // =====================================================
     // JOYSTICK
     // =====================================================
 
@@ -260,25 +256,13 @@ this.load.spritesheet(
       "../Tilesets/Entertaining_District/Tileset_ModernSciFi_Entertaining_District_Rasak.png",
     );
 
-    this.load.image(
-      "insideA4",
-      "../Tilesets/Inside/A4_SciFi_Inside_Rasak.png",
-    );
+    this.load.image("insideA4", "../Tilesets/Inside/A4_SciFi_Inside_Rasak.png");
 
-    this.load.image(
-      "insideA5",
-      "../Tilesets/Inside/A5_SciFi_Inside_Rasak.png",
-    );
+    this.load.image("insideA5", "../Tilesets/Inside/A5_SciFi_Inside_Rasak.png");
 
-    this.load.image(
-      "a2Outside",
-      "../Tilesets/City/A2_Scifi_Outside_Rasak.png",
-    );
+    this.load.image("a2Outside", "../Tilesets/City/A2_Scifi_Outside_Rasak.png");
 
-    this.load.image(
-      "insideA3",
-      "../Tilesets/Inside/A3_SciFi_Inside_Rasak.png",
-    );
+    this.load.image("insideA3", "../Tilesets/Inside/A3_SciFi_Inside_Rasak.png");
 
     this.load.image("wallBorders", "../parede-borda.png");
 

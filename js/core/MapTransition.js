@@ -1,5 +1,6 @@
 function criarTransicaoParaParte2(scene) {
-  const camadaTransicao = scene.map.getObjectLayer("Transitions") ||
+  const camadaTransicao =
+    scene.map.getObjectLayer("Transitions") ||
     scene.map.getObjectLayer("Transicoes") ||
     scene.map.getObjectLayer("Portas");
 
@@ -24,7 +25,10 @@ function criarTransicaoParaParte2(scene) {
     altura,
   );
 
-  scene.physics.world.enable(scene.entradaFabrica, Phaser.Physics.Arcade.STATIC_BODY);
+  scene.physics.world.enable(
+    scene.entradaFabrica,
+    Phaser.Physics.Arcade.STATIC_BODY,
+  );
   scene.entradaFabrica.body.setSize(largura, altura);
   scene.entradaFabrica.body.setAllowGravity(false);
 
