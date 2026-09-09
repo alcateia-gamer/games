@@ -2,6 +2,10 @@ import { gastarEstamina } from "./PlayerStatus.js";
 
 import { causarDanoInimigo } from "../enemies/EnemyTest.js";
 
+function debugHitboxesAtivado(scene) {
+  return !!scene?.game?.config?.physics?.arcade?.debug;
+}
+
 // =====================================================
 // CRIA PLAYER
 // =====================================================
@@ -46,6 +50,7 @@ function criarPlayer(scene) {
   scene.debugHitboxDanoPlayer = scene.add.graphics();
 
   scene.debugHitboxDanoPlayer.setDepth(100);
+  scene.debugHitboxDanoPlayer.setVisible(debugHitboxesAtivado(scene));
 
   // =====================================================
   // ATUALIZA POSIÇÃO INICIAL
@@ -175,6 +180,14 @@ function atualizarHitboxDanoPlayer(scene) {
   // =====================================================
 
   if (scene.debugHitboxDanoPlayer) {
+    const debugAtivado = debugHitboxesAtivado(scene);
+
+    scene.debugHitboxDanoPlayer.setVisible(debugAtivado);
+
+    if (!debugAtivado) {
+      return;
+    }
+
     scene.debugHitboxDanoPlayer.clear();
 
     scene.debugHitboxDanoPlayer.lineStyle(2, 0xff0000, 1);
@@ -214,6 +227,7 @@ function criarHitboxKatana(scene) {
   const debugKatana = scene.add.graphics();
 
   debugKatana.setDepth(101);
+  debugKatana.setVisible(debugHitboxesAtivado(scene));
 
   // =====================================================
   // ATUALIZA HITBOX
@@ -223,6 +237,10 @@ function criarHitboxKatana(scene) {
     if (!scene.player || !scene.player.active) {
       return;
     }
+
+    const debugAtivado = debugHitboxesAtivado(scene);
+
+    debugKatana.setVisible(debugAtivado);
 
     let centroX = scene.player.x;
 
@@ -291,6 +309,10 @@ function criarHitboxKatana(scene) {
     // =================================================
     // DEBUG
     // =================================================
+
+    if (!debugAtivado) {
+      return;
+    }
 
     debugKatana.clear();
 

@@ -245,21 +245,34 @@ class Level1 extends Phaser.Scene {
     );
   }
 
+  // =====================================================
+  // PROFUNDIDADE DAS CERCA
+  // =====================================================
+  // Cerca do spawn: sempre fica na frente do personagem.
+  // Camada "Cercas":
+  //   y >= -207 -> fica atrás do personagem
+  //   y <= -225 -> fica na frente do personagem
+  //   entre esses valores -> continua atrás
+  // =====================================================
   atualizarProfundidadeCerca() {
-    if (!this.camadaCercas || !this.camadaCercaSpawn || !this.player?.body) {
+    if (!this.player?.body) {
       return;
     }
 
-    if (this.player.y <= 586) {
-      this.camadaCercaSpawn.setDepth(11);
-    } else {
+    if (this.camadaCercaSpawn) {
       this.camadaCercaSpawn.setDepth(13);
+    }
+
+    if (!this.camadaCercas) {
+      return;
     }
 
     if (this.player.y >= -207) {
       this.camadaCercas.setDepth(11);
     } else if (this.player.y <= -225) {
       this.camadaCercas.setDepth(13);
+    } else {
+      this.camadaCercas.setDepth(11);
     }
   }
 }

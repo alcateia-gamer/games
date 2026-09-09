@@ -213,35 +213,8 @@ function criarLevel1Map(scene) {
   // Cercas
   const camadaCercas = map.createLayer("Cercas", tilesets);
 
-  const camadaCercaSpawn = map.createBlankLayer(
-    "CercasSpawn",
-    tilesets,
-    -1920,
-    480,
-    64,
-    4,
-  );
-
-  map
-    .getTilesWithinWorldXY(
-      -1920,
-      480,
-      3072,
-      192,
-      false,
-      undefined,
-      camadaCercas,
-    )
-    .forEach((tile) => {
-      if (tile.index >= 0) {
-        camadaCercaSpawn?.putTileAtWorldXY(
-          tile.index,
-          tile.pixelX,
-          tile.pixelY,
-          false,
-        );
-      }
-    });
+  // Cerca do spawn separada no próprio mapa
+  const camadaCercaSpawn = map.createLayer("CercaSpawn", tilesets);
 
   // =====================================================
   // CAMADAS - SOMBRAS
@@ -297,7 +270,7 @@ function criarLevel1Map(scene) {
 
   scene.camadaCercas = camadaCercas;
   scene.camadaCercaSpawn = camadaCercaSpawn;
-  camadaCercaSpawn?.setDepth(11);
+  camadaCercaSpawn?.setDepth(13);
 
   // =====================================================
   // DEBUG
