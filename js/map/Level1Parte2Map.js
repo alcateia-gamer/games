@@ -39,10 +39,33 @@ function criarLevel1Parte2Map(scene) {
     .filter(Boolean);
 
   map.layers.forEach((layerData, index) => {
-    map.createLayer(layerData.name, tilesets)?.setDepth(index + 1);
+    const camada = map.createLayer(layerData.name, tilesets);
+
+    camada?.setDepth(index + 1);
+
+    if (layerData.name === "parede-baixo 1") {
+      scene.camadaParedeBaixo1 = camada;
+    }
+
+    if (layerData.name === "parede-baixo 2") {
+      scene.camadaParedeBaixo2 = camada;
+    }
+
+    if (layerData.name === "parede-cima 1") {
+      scene.camadaParedeCima1 = camada;
+    }
+
+    if (layerData.name === "parede-cima 2") {
+      scene.camadaParedeCima2 = camada;
+    }
   });
 
-  const collisionLayer = map.getObjectLayer("Collision");
+  scene.camadaParedeCima2?.setDepth(6);
+  scene.camadaParedeCima1?.setDepth(7);
+  scene.camadaParedeBaixo2?.setDepth(13);
+  scene.camadaParedeBaixo1?.setDepth(14);
+
+  const collisionLayer = map.getObjectLayer("collision");
 
   if (collisionLayer) {
     scene.collisionGroup = scene.physics.add.staticGroup();
