@@ -183,6 +183,7 @@ class Level1 extends Phaser.Scene {
     atualizarStatusPlayer(this, delta);
 
     this.atualizarProfundidadeCerca();
+    this.atualizarProfundidadePostes();
 
     // =====================================================
     // INIMIGO
@@ -197,7 +198,11 @@ class Level1 extends Phaser.Scene {
 
     const robosEliminados = !!this.registry?.get("robosEliminados");
 
-    if (!this.grupoRobosAtivado && !robosEliminados && distanciaAoPontoSpawn <= 450) {
+    if (
+      !this.grupoRobosAtivado &&
+      !robosEliminados &&
+      distanciaAoPontoSpawn <= 450
+    ) {
       criarGrupoRobos(this, -295, 1284);
       this.grupoRobosAtivado = true;
     }
@@ -281,7 +286,7 @@ class Level1 extends Phaser.Scene {
     }
 
     if (this.camadaCercaSpawn) {
-      this.camadaCercaSpawn.setDepth(13);
+      this.camadaCercaSpawn.setDepth(14);
     }
 
     if (!this.camadaCercas) {
@@ -291,9 +296,48 @@ class Level1 extends Phaser.Scene {
     if (this.player.y >= -207) {
       this.camadaCercas.setDepth(11);
     } else if (this.player.y <= -225) {
-      this.camadaCercas.setDepth(13);
+      this.camadaCercas.setDepth(14);
     } else {
       this.camadaCercas.setDepth(11);
+    }
+  }
+
+  atualizarProfundidadePostes() {
+    if (!this.player || !Array.isArray(this.poleBases) || this.poleBases.length === 0) {
+      return;
+    }
+
+    let baseMaisProxima = null;
+    let menorDistancia = Infinity;
+
+    for (const base of this.poleBases) {
+      const baseY = base.y;
+      const distancia = Math.abs(this.player.y - baseY);
+
+      if (distancia < menorDistancia) {
+        menorDistancia = distancia;
+        baseMaisProxima = base;
+      }
+    }
+
+    if (!baseMaisProxima) {
+      return;
+    }
+
+    const baseY = baseMaisProxima.y;
+    const jogadorNaFrente = this.player.y >= baseY;
+
+    this.player.setDepth(jogadorNaFrente ? 13 : 12);
+
+    if (Array.isArray(this.inimigos)) {
+      this.inimigos.forEach((inimigo) => {
+        if (!inimigo || !inimigo.active) {
+          return;
+        }
+
+        const inimigoNaFrente = inimigo.y >= baseY;
+        inimigo.setDepth(inimigoNaFrente ? 13 : 12);
+      });
     }
   }
 }

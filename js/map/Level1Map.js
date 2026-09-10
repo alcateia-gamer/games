@@ -256,21 +256,21 @@ function criarLevel1Map(scene) {
   camadaDetalhesPredios?.setDepth(9);
   camadaParedes?.setDepth(10);
   camadaObjetos2?.setDepth(11);
-  camadaCercaCimaTorre?.setDepth(13);
-  camadaAntenaTorre?.setDepth(14);
-  camadaContainerTorre?.setDepth(15);
+  camadaCercaCimaTorre?.setDepth(14);
+  camadaAntenaTorre?.setDepth(15);
+  camadaContainerTorre?.setDepth(16);
   camadaObjetos?.setDepth(11);
-  camadaPostes?.setDepth(17);
-  camadaCercas?.setDepth(18);
-  camadaObjAcimaPerso?.setDepth(19);
-  camadaSombra3?.setDepth(20);
-  camadaSombra2?.setDepth(21);
-  camadaSombra?.setDepth(22);
-  camadaSombraGeral?.setDepth(23);
+  camadaPostes?.setDepth(18);
+  camadaCercas?.setDepth(19);
+  camadaObjAcimaPerso?.setDepth(20);
+  camadaSombra3?.setDepth(21);
+  camadaSombra2?.setDepth(22);
+  camadaSombra?.setDepth(23);
+  camadaSombraGeral?.setDepth(24);
 
   scene.camadaCercas = camadaCercas;
   scene.camadaCercaSpawn = camadaCercaSpawn;
-  camadaCercaSpawn?.setDepth(13);
+  camadaCercaSpawn?.setDepth(14);
 
   // =====================================================
   // DEBUG
@@ -303,6 +303,7 @@ function criarLevel1Map(scene) {
 
   if (collisionLayer) {
     scene.collisionGroup = scene.physics.add.staticGroup();
+    scene.poleBases = [];
 
     collisionLayer.objects.forEach((obj) => {
       const collision = scene.collisionGroup.create(
@@ -312,6 +313,21 @@ function criarLevel1Map(scene) {
 
       collision.setSize(obj.width, obj.height);
       collision.setVisible(false);
+
+      const eBaseDePoste =
+        Number(obj.width ?? 0) <= 80 &&
+        Number(obj.height ?? 0) <= 80 &&
+        Number(obj.width ?? 0) > 0 &&
+        Number(obj.height ?? 0) > 0;
+
+      if (eBaseDePoste) {
+        scene.poleBases.push({
+          x: obj.x + obj.width / 2,
+          y: obj.y + obj.height / 2,
+          width: obj.width,
+          height: obj.height,
+        });
+      }
     });
   }
 

@@ -31,7 +31,9 @@ function criarControles(scene) {
     direita: Phaser.Input.Keyboard.KeyCodes.D,
   });
 
-  scene.teclaShift = scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
+  scene.teclaShift = scene.input.keyboard.addKey(
+    Phaser.Input.Keyboard.KeyCodes.SHIFT,
+  );
 
   scene.developerMode = !!scene.developerMode;
 

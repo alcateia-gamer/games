@@ -10,7 +10,7 @@ function criarInimigoTeste(scene, config = {}) {
 
   const inimigo = scene.physics.add.sprite(x, y, "robo-teste", 0);
 
-  inimigo.setDepth(50);
+  inimigo.setDepth(12);
   inimigo.setScale(0.75);
   inimigo.body.setAllowGravity(false);
 
@@ -24,16 +24,13 @@ function criarInimigoTeste(scene, config = {}) {
   inimigo.tempoPatrulha = Number(config.tempoPatrulha ?? 1500);
   inimigo.ultimoMovimentoPatrulha = 0;
 
-  inimigo.hitboxDano = new Phaser.Geom.Rectangle(
-    x - 32,
-    y - 44,
-    64,
-    96,
-  );
+  inimigo.hitboxDano = new Phaser.Geom.Rectangle(x - 32, y - 44, 64, 96);
 
   inimigo.debugHitboxDano = scene.add.graphics();
   inimigo.debugHitboxDano.setDepth(200);
-  inimigo.debugHitboxDano.setVisible(Boolean(scene.game?.config?.physics?.arcade?.debug));
+  inimigo.debugHitboxDano.setVisible(
+    Boolean(scene.game?.config?.physics?.arcade?.debug),
+  );
 
   inimigo.velocidade = Number(config.velocidade ?? 50);
   inimigo.orbitaAngulo = Math.random() * Math.PI * 2;
@@ -42,7 +39,8 @@ function criarInimigoTeste(scene, config = {}) {
   inimigo.distanciaGrupo = Number(config.distanciaGrupo ?? 180);
   inimigo.danoBase = Number(config.danoLaser ?? 5);
   const direcoes = ["down", "left", "right", "up"];
-  const direcaoAleatoria = direcoes[Math.floor(Math.random() * direcoes.length)];
+  const direcaoAleatoria =
+    direcoes[Math.floor(Math.random() * direcoes.length)];
 
   inimigo.direcaoAtual = config.direcaoAtual ?? direcaoAleatoria;
 
@@ -181,7 +179,9 @@ function criarGrupoRobos(scene, centroX = -295, centroY = 1284) {
       distanciaGrupo: 220,
       tempoEntreTiros: 680 - index * 40,
       tempoPatrulha: 1200 + index * 120,
-      direcaoAtual: ["down", "left", "right", "up"][Math.floor(Math.random() * 4)],
+      direcaoAtual: ["down", "left", "right", "up"][
+        Math.floor(Math.random() * 4)
+      ],
     });
   });
 
@@ -214,8 +214,16 @@ function atualizarHitboxDanoInimigo(inimigo) {
   const offsetX = inimigo.x - largura / 2 + 12 - 8;
   const offsetY = inimigo.y - altura / 2 + 6;
 
-  if (!inimigo.hitboxDano || !(inimigo.hitboxDano instanceof Phaser.Geom.Rectangle)) {
-    inimigo.hitboxDano = new Phaser.Geom.Rectangle(offsetX, offsetY, largura, altura);
+  if (
+    !inimigo.hitboxDano ||
+    !(inimigo.hitboxDano instanceof Phaser.Geom.Rectangle)
+  ) {
+    inimigo.hitboxDano = new Phaser.Geom.Rectangle(
+      offsetX,
+      offsetY,
+      largura,
+      altura,
+    );
     return;
   }
 
@@ -227,27 +235,21 @@ function atualizarHitboxDanoInimigo(inimigo) {
     inimigo.debugHitboxDano.fillStyle(0x00ff00, 0.18);
     inimigo.debugHitboxDano.fillRectShape(inimigo.hitboxDano);
     inimigo.debugHitboxDano.strokeRectShape(inimigo.hitboxDano);
-    inimigo.debugHitboxDano.setVisible(Boolean(inimigo.scene?.game?.config?.physics?.arcade?.debug));
+    inimigo.debugHitboxDano.setVisible(
+      Boolean(inimigo.scene?.game?.config?.physics?.arcade?.debug),
+    );
   }
 }
 
 function atualizarDepthInimigo(inimigo, scene) {
-  if (!inimigo || !scene?.player || !scene.player.active) {
+  if (!inimigo || !scene || !scene.player || !scene.player.active) {
     return;
   }
 
-  const playerCenterY = scene.player.getCenter().y;
-  const enemyCenterY = inimigo.getCenter().y;
+  const playerNaFrente = scene.player.y >= inimigo.y;
 
-  const baseDepth = 12;
-  const diferenca = (enemyCenterY - playerCenterY) * 0.03;
-  const novaDepth = Phaser.Math.Clamp(baseDepth + diferenca, 10, 18);
-
-  inimigo.setDepth(novaDepth);
-
-  if (scene.player && scene.player.active) {
-    scene.player.setDepth(baseDepth);
-  }
+  scene.player.setDepth(playerNaFrente ? 13 : 12);
+  inimigo.setDepth(playerNaFrente ? 12 : 13);
 }
 
 function aplicarSeparacaoGrupo(inimigo, scene) {
@@ -357,11 +359,16 @@ function temVisaoDoPlayer(scene, inimigo) {
     return false;
   }
 
-  const frenteX = inimigo.x + Math.cos(anguloDirecao(inimigo.direcaoAtual)) * 120;
-  const frenteY = inimigo.y + Math.sin(anguloDirecao(inimigo.direcaoAtual)) * 120;
+  const frenteX =
+    inimigo.x + Math.cos(anguloDirecao(inimigo.direcaoAtual)) * 120;
+  const frenteY =
+    inimigo.y + Math.sin(anguloDirecao(inimigo.direcaoAtual)) * 120;
   const linha = new Phaser.Geom.Line(inimigo.x, inimigo.y, frenteX, frenteY);
 
-  const dot = (dx * Math.cos(anguloDirecao(inimigo.direcaoAtual)) + dy * Math.sin(anguloDirecao(inimigo.direcaoAtual))) / distancia;
+  const dot =
+    (dx * Math.cos(anguloDirecao(inimigo.direcaoAtual)) +
+      dy * Math.sin(anguloDirecao(inimigo.direcaoAtual))) /
+    distancia;
   if (dot < 0.2) {
     return false;
   }
@@ -372,7 +379,12 @@ function temVisaoDoPlayer(scene, inimigo) {
   };
 
   const playerDentroCono =
-    Phaser.Math.Distance.Between(inimigo.x, inimigo.y, centroPlayer.x, centroPlayer.y) <= inimigo.distanciaDeteccao;
+    Phaser.Math.Distance.Between(
+      inimigo.x,
+      inimigo.y,
+      centroPlayer.x,
+      centroPlayer.y,
+    ) <= inimigo.distanciaDeteccao;
 
   if (!playerDentroCono) {
     return false;
@@ -436,8 +448,7 @@ function notificarGrupo(scene, inimigoAlvo, origem = "dano") {
     );
 
     const podeAlerta =
-      distanciaAliado <= inimigoAlvo.distanciaGrupo * 1.5 ||
-      origem === "visao";
+      distanciaAliado <= inimigoAlvo.distanciaGrupo * 1.5 || origem === "visao";
 
     if (podeAlerta) {
       aliado.alerta = true;
@@ -476,7 +487,9 @@ function atualizarInimigoTeste(scene, time) {
     inimigo.bordaVida.setPosition(x, y);
 
     if (inimigo.debugHitboxDano) {
-      inimigo.debugHitboxDano.setVisible(Boolean(inimigo.scene?.game?.config?.physics?.arcade?.debug));
+      inimigo.debugHitboxDano.setVisible(
+        Boolean(inimigo.scene?.game?.config?.physics?.arcade?.debug),
+      );
     }
 
     const porcentagemVida = inimigo.vida / inimigo.vidaMaxima;
@@ -516,12 +529,21 @@ function atualizarIAInimigo(scene, time, inimigo = scene.inimigoTeste) {
   }
 
   if (inimigo.alerta || viuPlayer || foiFerido) {
-    const raioOrbit = 120 + inimigo.formacaoIndex * 30 + (inimigo.distanciaGrupo || 180) * 0.2;
-    const anguloOrbit = (time * 0.0015) + inimigo.orbitaAngulo + inimigo.formacaoIndex * (Math.PI / 2.1);
+    const raioOrbit =
+      120 + inimigo.formacaoIndex * 30 + (inimigo.distanciaGrupo || 180) * 0.2;
+    const anguloOrbit =
+      time * 0.0015 +
+      inimigo.orbitaAngulo +
+      inimigo.formacaoIndex * (Math.PI / 2.1);
     const alvoOrbitX = scene.player.x + Math.cos(anguloOrbit) * raioOrbit;
     const alvoOrbitY = scene.player.y + Math.sin(anguloOrbit) * raioOrbit;
 
-    scene.physics.moveTo(inimigo, alvoOrbitX, alvoOrbitY, inimigo.velocidade * 1.75);
+    scene.physics.moveTo(
+      inimigo,
+      alvoOrbitX,
+      alvoOrbitY,
+      inimigo.velocidade * 1.75,
+    );
     atualizarDirecaoInimigo(scene, inimigo);
     aplicarSeparacaoGrupo(inimigo, scene);
     tocarAnimacaoInimigo(inimigo);
@@ -544,7 +566,7 @@ function atualizarIAInimigo(scene, time, inimigo = scene.inimigoTeste) {
     );
 
     const deslocamento =
-      (time * 0.0009) + inimigo.formacaoIndex * (Math.PI / 2.2);
+      time * 0.0009 + inimigo.formacaoIndex * (Math.PI / 2.2);
 
     const patrolX =
       inimigo.patrolCenter.x +
@@ -787,9 +809,10 @@ function acertarPlayerComLaser(scene, laser) {
 
   scene.player.invulneravel = true;
 
-  const danoLaser = Array.isArray(scene.inimigos) && scene.inimigos.length > 0
-    ? scene.inimigos[0].danoLaser
-    : scene.inimigoTeste?.danoLaser ?? 5;
+  const danoLaser =
+    Array.isArray(scene.inimigos) && scene.inimigos.length > 0
+      ? scene.inimigos[0].danoLaser
+      : (scene.inimigoTeste?.danoLaser ?? 5);
 
   scene.vida -= danoLaser;
   scene.vida = Phaser.Math.Clamp(scene.vida, 0, scene.vidaMaxima);
@@ -847,7 +870,7 @@ function causarDanoInimigo(scene, alvoOuQuantidade, quantidadeOpcional) {
   const quantidade =
     typeof alvoOuQuantidade === "number"
       ? alvoOuQuantidade
-      : quantidadeOpcional ?? 25;
+      : (quantidadeOpcional ?? 25);
 
   if (!alvo || !alvo.active) {
     return;
