@@ -2,124 +2,241 @@
 // CRIA INIMIGO
 // =====================================================
 
-function criarInimigoTeste(scene) {
-  // =====================================================
-  // ANIMAÇÕES
-  // =====================================================
-
+function criarInimigoTeste(scene, config = {}) {
   criarAnimacoesInimigo(scene);
 
-  // =====================================================
-  // POSIÇÃO
-  // =====================================================
+  const x = Number(config.x ?? scene.respawnX + 180);
+  const y = Number(config.y ?? scene.respawnY);
 
-  const x = scene.respawnX + 180;
+  const inimigo = scene.physics.add.sprite(x, y, "robo-teste", 0);
 
-  const y = scene.respawnY;
+  inimigo.setDepth(50);
+  inimigo.setScale(0.75);
+  inimigo.body.setAllowGravity(false);
 
-  // =====================================================
-  // INIMIGO
-  // =====================================================
+  configurarHitboxPeInimigo(inimigo);
 
-  scene.inimigoTeste = scene.physics.add.sprite(x, y, "robo-teste", 0);
+  inimigo.formacaoIndex = Number(config.formacaoIndex ?? 0);
+  inimigo.patrolCenter = {
+    x: Number(config.x ?? x),
+    y: Number(config.y ?? y),
+  };
+  inimigo.tempoPatrulha = Number(config.tempoPatrulha ?? 1500);
+  inimigo.ultimoMovimentoPatrulha = 0;
 
-  scene.inimigoTeste.setDepth(50);
-
-  // =====================================================
-  // TAMANHO VISUAL
-  // =====================================================
-
-  scene.inimigoTeste.setScale(0.75);
-
-  // =====================================================
-  // FÍSICA
-  // =====================================================
-
-  scene.inimigoTeste.body.setAllowGravity(false);
-
-  // =====================================================
-  // HITBOX DO ROBÔ
-  // =====================================================
-
-  scene.inimigoTeste.body.setSize(80, 125);
-
-  scene.inimigoTeste.body.setOffset(6, 6);
-
-  // =====================================================
-  // CONFIGURAÇÕES DA IA
-  // =====================================================
-
-  scene.inimigoTeste.velocidade = 80;
-
-  scene.inimigoTeste.distanciaDeteccao = 500;
-
-  scene.inimigoTeste.distanciaAtaque = 300;
-
-  scene.inimigoTeste.direcaoAtual = "down";
-
-  // =====================================================
-  // CONFIGURAÇÕES DO ATAQUE
-  // =====================================================
-
-  scene.inimigoTeste.tempoEntreTiros = 400;
-
-  scene.inimigoTeste.ultimoTiro = 0;
-
-  scene.inimigoTeste.velocidadeLaser = 250;
-
-  scene.inimigoTeste.danoLaser = 5;
-
-  // =====================================================
-  // VIDA
-  // =====================================================
-
-  scene.inimigoTeste.vidaMaxima = 100;
-
-  scene.inimigoTeste.vida = 100;
-
-  // =====================================================
-  // GRUPO DE LASERS
-  // =====================================================
-
-  scene.lasersInimigo = scene.physics.add.group();
-
-  // =====================================================
-  // INVULNERABILIDADE DO PLAYER
-  // =====================================================
-
-  scene.player.invulneravel = false;
-
-  // =====================================================
-  // BARRA DE VIDA
-  // =====================================================
-
-  scene.inimigoTeste.larguraBarra = 60;
-
-  scene.inimigoTeste.fundoVida = scene.add.rectangle(
-    x,
-    y - 65,
-    60,
-    6,
-    0x111111,
-    0.9,
+  inimigo.hitboxDano = new Phaser.Geom.Rectangle(
+    x - 32,
+    y - 44,
+    64,
+    96,
   );
 
-  scene.inimigoTeste.fundoVida.setDepth(60);
+  inimigo.debugHitboxDano = scene.add.graphics();
+  inimigo.debugHitboxDano.setDepth(200);
+  inimigo.debugHitboxDano.setVisible(Boolean(scene.game?.config?.physics?.arcade?.debug));
 
-  scene.inimigoTeste.barraVida = scene.add.rectangle(
-    x - 30,
-    y - 65,
-    60,
-    6,
-    0xe52b2b,
-    1,
-  );
+  inimigo.velocidade = Number(config.velocidade ?? 50);
+  inimigo.orbitaAngulo = Math.random() * Math.PI * 2;
+  inimigo.distanciaDeteccao = Number(config.distanciaDeteccao ?? 220);
+  inimigo.distanciaAtaque = Number(config.distanciaAtaque ?? 180);
+  inimigo.distanciaGrupo = Number(config.distanciaGrupo ?? 180);
+  const direcoes = ["down", "left", "right", "up"];
+  const direcaoAleatoria = direcoes[Math.floor(Math.random() * direcoes.length)];
 
-  scene.inimigoTeste.barraVida.setOrigin(0, 0.5).setDepth(61);
+  inimigo.direcaoAtual = config.direcaoAtual ?? direcaoAleatoria;
 
-  scene.inimigoTeste.bordaVida = scene.add.rectangle(x, y - 65, 60, 6);
+  inimigo.tempoEntreTiros = Number(config.tempoEntreTiros ?? 720);
+  inimigo.ultimoTiro = 0;
+  inimigo.velocidadeLaser = Number(config.velocidadeLaser ?? 250);
+  inimigo.danoLaser = Number(config.danoLaser ?? 5) * 1.3;
+  inimigo.ultimoLadoTiro = Math.random() > 0.5 ? "right" : "left";
 
-  scene.inimigoTeste.bordaVida.setStrokeStyle(1, 0xffffff, 0.7).setDepth(62);
+  inimigo.vidaMaxima = Number(config.vidaMaxima ?? 100);
+  inimigo.vida = inimigo.vidaMaxima;
+
+  inimigo.alerta = false;
+  inimigo.foiFerido = false;
+  inimigo.estado = "idle";
+
+  scene.lasersInimigo = scene.lasersInimigo || scene.physics.add.group();
+
+  if (scene.player && scene.player.active) {
+    scene.player.invulneravel = false;
+  }
+
+  inimigo.larguraBarra = 60;
+  inimigo.fundoVida = scene.add.rectangle(x, y - 65, 60, 6, 0x111111, 0.9);
+  inimigo.fundoVida.setDepth(60);
+
+  inimigo.barraVida = scene.add.rectangle(x - 30, y - 65, 60, 6, 0xe52b2b, 1);
+  inimigo.barraVida.setOrigin(0, 0.5).setDepth(61);
+
+  inimigo.bordaVida = scene.add.rectangle(x, y - 65, 60, 6);
+  inimigo.bordaVida.setStrokeStyle(1, 0xffffff, 0.7).setDepth(62);
+
+  if (!Array.isArray(scene.inimigos)) {
+    scene.inimigos = [];
+  }
+
+  scene.inimigos.push(inimigo);
+  scene.inimigoTeste = inimigo;
+
+  return inimigo;
+}
+
+function criarGrupoRobos(scene, centroX = -295, centroY = 1284) {
+  if (!scene) {
+    return [];
+  }
+
+  if (!Array.isArray(scene.inimigos)) {
+    scene.inimigos = [];
+  }
+
+  if (scene.grupoRobosAtivado && scene.inimigos.length > 0) {
+    return scene.inimigos;
+  }
+
+  if (Array.isArray(scene.inimigos) && scene.inimigos.length > 0) {
+    scene.inimigos.forEach((robo) => {
+      if (robo && robo.active) {
+        robo.destroy();
+      }
+    });
+    scene.inimigos = [];
+  }
+
+  scene.grupoRobosAtivado = true;
+
+  const offsets = [
+    { angulo: 0.2, raio: 62 },
+    { angulo: 1.7, raio: 84 },
+    { angulo: 3.1, raio: 72 },
+    { angulo: 4.5, raio: 96 },
+    { angulo: 5.7, raio: 78 },
+  ];
+
+  offsets.forEach(({ angulo, raio }, index) => {
+    const x = centroX + Math.cos(angulo) * raio + (Math.random() - 0.5) * 18;
+    const y = centroY + Math.sin(angulo) * raio + (Math.random() - 0.5) * 18;
+
+    criarInimigoTeste(scene, {
+      x,
+      y,
+      formacaoIndex: index,
+      velocidade: 50,
+      distanciaDeteccao: 260,
+      distanciaAtaque: 180,
+      distanciaGrupo: 220,
+      tempoEntreTiros: 680 - index * 40,
+      tempoPatrulha: 1200 + index * 120,
+      direcaoAtual: ["down", "left", "right", "up"][Math.floor(Math.random() * 4)],
+    });
+  });
+
+  if (scene.physics && scene.inimigos && scene.inimigos.length > 0) {
+    scene.physics.add.collider(scene.inimigos, scene.inimigos);
+    if (scene.collisionGroup) {
+      scene.physics.add.collider(scene.inimigos, scene.collisionGroup);
+    }
+  }
+
+  return scene.inimigos;
+}
+
+function configurarHitboxPeInimigo(inimigo) {
+  if (!inimigo || !inimigo.body) {
+    return;
+  }
+
+  inimigo.body.setSize(74, 26);
+  inimigo.body.setOffset(12, 100);
+}
+
+function atualizarHitboxDanoInimigo(inimigo) {
+  if (!inimigo || !inimigo.body) {
+    return;
+  }
+
+  const largura = 80;
+  const altura = 120;
+  const offsetX = inimigo.x - largura / 2 + 12 - 8;
+  const offsetY = inimigo.y - altura / 2 + 6;
+
+  if (!inimigo.hitboxDano || !(inimigo.hitboxDano instanceof Phaser.Geom.Rectangle)) {
+    inimigo.hitboxDano = new Phaser.Geom.Rectangle(offsetX, offsetY, largura, altura);
+    return;
+  }
+
+  inimigo.hitboxDano.setTo(offsetX, offsetY, largura, altura);
+
+  if (inimigo.debugHitboxDano) {
+    inimigo.debugHitboxDano.clear();
+    inimigo.debugHitboxDano.lineStyle(2, 0x00ff00, 1);
+    inimigo.debugHitboxDano.fillStyle(0x00ff00, 0.18);
+    inimigo.debugHitboxDano.fillRectShape(inimigo.hitboxDano);
+    inimigo.debugHitboxDano.strokeRectShape(inimigo.hitboxDano);
+    inimigo.debugHitboxDano.setVisible(Boolean(inimigo.scene?.game?.config?.physics?.arcade?.debug));
+  }
+}
+
+function atualizarDepthInimigo(inimigo, scene) {
+  if (!inimigo || !scene?.player || !scene.player.active) {
+    return;
+  }
+
+  const playerCenterY = scene.player.getCenter().y;
+  const enemyCenterY = inimigo.getCenter().y;
+
+  const baseDepth = 12;
+  const diferenca = (enemyCenterY - playerCenterY) * 0.03;
+  const novaDepth = Phaser.Math.Clamp(baseDepth + diferenca, 10, 18);
+
+  inimigo.setDepth(novaDepth);
+
+  if (scene.player && scene.player.active) {
+    scene.player.setDepth(baseDepth);
+  }
+}
+
+function aplicarSeparacaoGrupo(inimigo, scene) {
+  if (!Array.isArray(scene.inimigos)) {
+    return;
+  }
+
+  const minDist = 90;
+  const fator = 0.24;
+
+  for (const aliado of scene.inimigos) {
+    if (!aliado || !aliado.active || aliado === inimigo) {
+      continue;
+    }
+
+    const distancia = Phaser.Math.Distance.Between(
+      inimigo.x,
+      inimigo.y,
+      aliado.x,
+      aliado.y,
+    );
+
+    if (distancia >= minDist) {
+      continue;
+    }
+
+    const angulo = Phaser.Math.Angle.Between(
+      aliado.x,
+      aliado.y,
+      inimigo.x,
+      inimigo.y,
+    );
+
+    const empurrar = (minDist - distancia) * fator;
+    const deslocamentoX = Math.cos(angulo) * empurrar;
+    const deslocamentoY = Math.sin(angulo) * empurrar;
+
+    inimigo.x += deslocamentoX;
+    inimigo.y += deslocamentoY;
+  }
 }
 
 // =====================================================
@@ -127,84 +244,158 @@ function criarInimigoTeste(scene) {
 // =====================================================
 
 function criarAnimacoesInimigo(scene) {
-  // =====================================================
-  // FRENTE / BAIXO
-  // FRAMES 0 - 2
-  // =====================================================
-
   if (!scene.anims.exists("robo-down")) {
     scene.anims.create({
       key: "robo-down",
-
       frames: scene.anims.generateFrameNumbers("robo-teste", {
         start: 0,
         end: 2,
       }),
-
       frameRate: 6,
-
       repeat: -1,
     });
   }
-
-  // =====================================================
-  // ESQUERDA
-  // FRAMES 3 - 5
-  // =====================================================
 
   if (!scene.anims.exists("robo-left")) {
     scene.anims.create({
       key: "robo-left",
-
       frames: scene.anims.generateFrameNumbers("robo-teste", {
         start: 3,
         end: 5,
       }),
-
       frameRate: 6,
-
       repeat: -1,
     });
   }
-
-  // =====================================================
-  // DIREITA
-  // FRAMES 6 - 8
-  // =====================================================
 
   if (!scene.anims.exists("robo-right")) {
     scene.anims.create({
       key: "robo-right",
-
       frames: scene.anims.generateFrameNumbers("robo-teste", {
         start: 6,
         end: 8,
       }),
-
       frameRate: 6,
-
       repeat: -1,
     });
   }
 
-  // =====================================================
-  // COSTAS / CIMA
-  // FRAMES 9 - 11
-  // =====================================================
-
   if (!scene.anims.exists("robo-up")) {
     scene.anims.create({
       key: "robo-up",
-
       frames: scene.anims.generateFrameNumbers("robo-teste", {
         start: 9,
         end: 11,
       }),
-
       frameRate: 6,
-
       repeat: -1,
     });
+  }
+}
+
+function temVisaoDoPlayer(scene, inimigo) {
+  if (!scene.player || !scene.player.active || !inimigo || !inimigo.active) {
+    return false;
+  }
+
+  const dx = scene.player.x - inimigo.x;
+  const dy = scene.player.y - inimigo.y;
+  const distancia = Math.hypot(dx, dy);
+
+  if (distancia > inimigo.distanciaDeteccao) {
+    return false;
+  }
+
+  const frenteX = inimigo.x + Math.cos(anguloDirecao(inimigo.direcaoAtual)) * 120;
+  const frenteY = inimigo.y + Math.sin(anguloDirecao(inimigo.direcaoAtual)) * 120;
+  const linha = new Phaser.Geom.Line(inimigo.x, inimigo.y, frenteX, frenteY);
+
+  const dot = (dx * Math.cos(anguloDirecao(inimigo.direcaoAtual)) + dy * Math.sin(anguloDirecao(inimigo.direcaoAtual))) / distancia;
+  if (dot < 0.2) {
+    return false;
+  }
+
+  const centroPlayer = {
+    x: scene.player.x,
+    y: scene.player.y,
+  };
+
+  const playerDentroCono =
+    Phaser.Math.Distance.Between(inimigo.x, inimigo.y, centroPlayer.x, centroPlayer.y) <= inimigo.distanciaDeteccao;
+
+  if (!playerDentroCono) {
+    return false;
+  }
+
+  const linhaParaPlayer = new Phaser.Geom.Line(
+    inimigo.x,
+    inimigo.y,
+    scene.player.x,
+    scene.player.y,
+  );
+
+  if (!scene.collisionGroup || !scene.collisionGroup.getChildren) {
+    return true;
+  }
+
+  const blocos = scene.collisionGroup.getChildren();
+
+  for (const bloco of blocos) {
+    if (!bloco || !bloco.body) {
+      continue;
+    }
+
+    const rect = new Phaser.Geom.Rectangle(
+      bloco.body.x,
+      bloco.body.y,
+      bloco.body.width,
+      bloco.body.height,
+    );
+
+    if (Phaser.Geom.Intersects.LineToRectangle(linhaParaPlayer, rect)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function anguloDirecao(direcao) {
+  if (direcao === "left") return Math.PI;
+  if (direcao === "right") return 0;
+  if (direcao === "up") return -Math.PI / 2;
+  return Math.PI / 2;
+}
+
+function notificarGrupo(scene, inimigoAlvo, origem = "dano") {
+  if (!Array.isArray(scene.inimigos)) {
+    return;
+  }
+
+  for (const aliado of scene.inimigos) {
+    if (!aliado || !aliado.active || aliado === inimigoAlvo) {
+      continue;
+    }
+
+    const distanciaAliado = Phaser.Math.Distance.Between(
+      aliado.x,
+      aliado.y,
+      inimigoAlvo.x,
+      inimigoAlvo.y,
+    );
+
+    const podeAlerta =
+      distanciaAliado <= inimigoAlvo.distanciaGrupo * 1.5 ||
+      origem === "visao";
+
+    if (podeAlerta) {
+      aliado.alerta = true;
+      aliado.estado = "alerta";
+
+      if (origem === "dano") {
+        aliado.foiFerido = true;
+      }
+    }
   }
 }
 
@@ -213,61 +404,46 @@ function criarAnimacoesInimigo(scene) {
 // =====================================================
 
 function atualizarInimigoTeste(scene, time) {
-  if (!scene.inimigoTeste || !scene.inimigoTeste.active) {
+  if (!Array.isArray(scene.inimigos) || scene.inimigos.length === 0) {
     return;
   }
 
-  // =====================================================
-  // IA
-  // =====================================================
+  for (const inimigo of scene.inimigos) {
+    if (!inimigo || !inimigo.active) {
+      continue;
+    }
 
-  atualizarIAInimigo(scene, time);
+    atualizarIAInimigo(scene, time, inimigo);
+    atualizarHitboxDanoInimigo(inimigo);
+    atualizarDepthInimigo(inimigo, scene);
 
-  // =====================================================
-  // LASERS X HITBOX DE DANO
-  // =====================================================
+    const x = inimigo.x;
+    const y = inimigo.y - 65;
 
+    inimigo.fundoVida.setPosition(x, y);
+    inimigo.barraVida.setPosition(x - 30, y);
+    inimigo.bordaVida.setPosition(x, y);
+
+    if (inimigo.debugHitboxDano) {
+      inimigo.debugHitboxDano.setVisible(Boolean(inimigo.scene?.game?.config?.physics?.arcade?.debug));
+    }
+
+    const porcentagemVida = inimigo.vida / inimigo.vidaMaxima;
+    inimigo.barraVida.width = inimigo.larguraBarra * porcentagemVida;
+  }
+
+  verificarLasersNoMapa(scene);
   verificarLasersNoPlayer(scene);
-
-  // =====================================================
-  // POSIÇÃO DA BARRA DE VIDA
-  // =====================================================
-
-  const x = scene.inimigoTeste.x;
-
-  const y = scene.inimigoTeste.y - 65;
-
-  scene.inimigoTeste.fundoVida.setPosition(x, y);
-
-  scene.inimigoTeste.barraVida.setPosition(x - 30, y);
-
-  scene.inimigoTeste.bordaVida.setPosition(x, y);
-
-  // =====================================================
-  // TAMANHO DA BARRA
-  // =====================================================
-
-  const porcentagemVida =
-    scene.inimigoTeste.vida / scene.inimigoTeste.vidaMaxima;
-
-  scene.inimigoTeste.barraVida.width =
-    scene.inimigoTeste.larguraBarra * porcentagemVida;
 }
 
 // =====================================================
 // IA DO INIMIGO
 // =====================================================
 
-function atualizarIAInimigo(scene, time) {
-  if (!scene.player || !scene.player.active) {
+function atualizarIAInimigo(scene, time, inimigo = scene.inimigoTeste) {
+  if (!scene.player || !scene.player.active || !inimigo || !inimigo.active) {
     return;
   }
-
-  const inimigo = scene.inimigoTeste;
-
-  // =====================================================
-  // DISTÂNCIA ATÉ O PLAYER
-  // =====================================================
 
   const distancia = Phaser.Math.Distance.Between(
     inimigo.x,
@@ -276,48 +452,79 @@ function atualizarIAInimigo(scene, time) {
     scene.player.y,
   );
 
-  // =====================================================
-  // PLAYER FORA DA DETECÇÃO
-  // =====================================================
+  const viuPlayer = temVisaoDoPlayer(scene, inimigo);
+  const foiFerido = inimigo.foiFerido && inimigo.vida < inimigo.vidaMaxima;
 
-  if (distancia > inimigo.distanciaDeteccao) {
-    inimigo.setVelocity(0, 0);
+  if (viuPlayer) {
+    notificarGrupo(scene, inimigo, "visao");
+  }
 
-    pararAnimacaoInimigo(inimigo);
+  if (foiFerido || inimigo.alerta || viuPlayer) {
+    inimigo.alerta = true;
+    inimigo.estado = "alerta";
+  }
+
+  if (inimigo.alerta || viuPlayer || foiFerido) {
+    const raioOrbit = 120 + inimigo.formacaoIndex * 30 + (inimigo.distanciaGrupo || 180) * 0.2;
+    const anguloOrbit = (time * 0.0015) + inimigo.orbitaAngulo + inimigo.formacaoIndex * (Math.PI / 2.1);
+    const alvoOrbitX = scene.player.x + Math.cos(anguloOrbit) * raioOrbit;
+    const alvoOrbitY = scene.player.y + Math.sin(anguloOrbit) * raioOrbit;
+
+    scene.physics.moveTo(inimigo, alvoOrbitX, alvoOrbitY, inimigo.velocidade * 1.75);
+    atualizarDirecaoInimigo(scene, inimigo);
+    aplicarSeparacaoGrupo(inimigo, scene);
+    tocarAnimacaoInimigo(inimigo);
+
+    if (distancia <= inimigo.distanciaAtaque) {
+      inimigo.setVelocity(0, 0);
+      pararAnimacaoInimigo(inimigo);
+      tentarDispararLaser(scene, time, inimigo);
+    }
 
     return;
   }
 
-  // =====================================================
-  // ATUALIZA DIREÇÃO
-  // =====================================================
+  if (!inimigo.alerta && !viuPlayer && !foiFerido) {
+    const distPatrulha = Phaser.Math.Distance.Between(
+      inimigo.x,
+      inimigo.y,
+      inimigo.patrolCenter.x,
+      inimigo.patrolCenter.y,
+    );
 
-  atualizarDirecaoInimigo(scene);
+    const deslocamento =
+      (time * 0.0009) + inimigo.formacaoIndex * (Math.PI / 2.2);
 
-  // =====================================================
-  // PLAYER NA DISTÂNCIA DE ATAQUE
-  // =====================================================
+    const patrolX =
+      inimigo.patrolCenter.x +
+      Math.cos(deslocamento) * (inimigo.distanciaGrupo * 0.7);
+    const patrolY =
+      inimigo.patrolCenter.y +
+      Math.sin(deslocamento) * (inimigo.distanciaGrupo * 0.55);
+
+    if (distPatrulha > 10) {
+      scene.physics.moveTo(inimigo, patrolX, patrolY, inimigo.velocidade * 0.7);
+      aplicarSeparacaoGrupo(inimigo, scene);
+      tocarAnimacaoInimigo(inimigo);
+    } else {
+      inimigo.setVelocity(0, 0);
+      pararAnimacaoInimigo(inimigo);
+    }
+
+    return;
+  }
+
+  atualizarDirecaoInimigo(scene, inimigo);
 
   if (distancia <= inimigo.distanciaAtaque) {
     inimigo.setVelocity(0, 0);
-
     pararAnimacaoInimigo(inimigo);
-
-    tentarDispararLaser(scene, time);
-
+    tentarDispararLaser(scene, time, inimigo);
     return;
   }
 
-  // =====================================================
-  // PERSEGUE PLAYER
-  // =====================================================
-
+  aplicarSeparacaoGrupo(inimigo, scene);
   scene.physics.moveToObject(inimigo, scene.player, inimigo.velocidade);
-
-  // =====================================================
-  // ANIMAÇÃO
-  // =====================================================
-
   tocarAnimacaoInimigo(inimigo);
 }
 
@@ -325,34 +532,27 @@ function atualizarIAInimigo(scene, time) {
 // DIREÇÃO DO INIMIGO
 // =====================================================
 
-function atualizarDirecaoInimigo(scene) {
-  const inimigo = scene.inimigoTeste;
+function atualizarDirecaoInimigo(scene, inimigo = scene.inimigoTeste) {
+  const velocidadeX = inimigo.body ? inimigo.body.velocity.x : 0;
+  const velocidadeY = inimigo.body ? inimigo.body.velocity.y : 0;
+  const velocidadeTotal = Math.hypot(velocidadeX, velocidadeY);
 
-  const diferencaX = scene.player.x - inimigo.x;
-
-  const diferencaY = scene.player.y - inimigo.y;
-
-  // =====================================================
-  // HORIZONTAL
-  // =====================================================
-
-  if (Math.abs(diferencaX) > Math.abs(diferencaY)) {
-    if (diferencaX < 0) {
-      inimigo.direcaoAtual = "left";
+  if (velocidadeTotal > 8) {
+    if (Math.abs(velocidadeX) > Math.abs(velocidadeY)) {
+      inimigo.direcaoAtual = velocidadeX < 0 ? "left" : "right";
     } else {
-      inimigo.direcaoAtual = "right";
+      inimigo.direcaoAtual = velocidadeY < 0 ? "up" : "down";
     }
+    return;
   }
 
-  // =====================================================
-  // VERTICAL
-  // =====================================================
-  else {
-    if (diferencaY < 0) {
-      inimigo.direcaoAtual = "up";
-    } else {
-      inimigo.direcaoAtual = "down";
-    }
+  const diferencaX = scene.player.x - inimigo.x;
+  const diferencaY = scene.player.y - inimigo.y;
+
+  if (Math.abs(diferencaX) > Math.abs(diferencaY)) {
+    inimigo.direcaoAtual = diferencaX < 0 ? "left" : "right";
+  } else {
+    inimigo.direcaoAtual = diferencaY < 0 ? "up" : "down";
   }
 }
 
@@ -377,7 +577,9 @@ function tocarAnimacaoInimigo(inimigo) {
 // =====================================================
 
 function pararAnimacaoInimigo(inimigo) {
-  inimigo.anims.stop();
+  if (inimigo.anims && inimigo.anims.isPlaying) {
+    inimigo.anims.stop();
+  }
 
   if (inimigo.direcaoAtual === "down") {
     inimigo.setFrame(0);
@@ -394,44 +596,27 @@ function pararAnimacaoInimigo(inimigo) {
 // TENTA DISPARAR LASER
 // =====================================================
 
-function tentarDispararLaser(scene, time) {
-  const inimigo = scene.inimigoTeste;
-
-  // =====================================================
-  // COOLDOWN
-  // =====================================================
+function tentarDispararLaser(scene, time, inimigo = scene.inimigoTeste) {
+  if (!inimigo || !inimigo.active) {
+    return;
+  }
 
   if (time < inimigo.ultimoTiro + inimigo.tempoEntreTiros) {
     return;
   }
 
-  // =====================================================
-  // REGISTRA TIRO
-  // =====================================================
-
   inimigo.ultimoTiro = time;
-
-  // =====================================================
-  // DISPARA
-  // =====================================================
-
-  dispararLaser(scene);
+  dispararLaser(scene, inimigo);
 }
 
 // =====================================================
 // DISPARA LASER
 // =====================================================
 
-function dispararLaser(scene) {
-  const inimigo = scene.inimigoTeste;
-
+function dispararLaser(scene, inimigo = scene.inimigoTeste) {
   if (!inimigo || !inimigo.active || !scene.player || !scene.player.active) {
     return;
   }
-
-  // =====================================================
-  // ÂNGULO ATÉ O PLAYER
-  // =====================================================
 
   const angulo = Phaser.Math.Angle.Between(
     inimigo.x,
@@ -440,57 +625,29 @@ function dispararLaser(scene) {
     scene.player.y,
   );
 
-  // =====================================================
-  // POSIÇÃO DE SAÍDA
-  // =====================================================
+  const lado = inimigo.ultimoLadoTiro === "right" ? "right" : "left";
+  inimigo.ultimoLadoTiro = lado === "right" ? "left" : "right";
 
-  const distanciaSaida = 55;
+  const offsetX = (lado === "right" ? 26 : -26) - 10;
+  const offsetY = 12;
+  const distanciaSaida = 34;
 
-  const laserX = inimigo.x + Math.cos(angulo) * distanciaSaida;
-
-  const laserY = inimigo.y + Math.sin(angulo) * distanciaSaida;
-
-  // =====================================================
-  // CRIA PROJÉTIL
-  // =====================================================
+  const laserX = inimigo.x + Math.cos(angulo) * distanciaSaida + offsetX * 0.5;
+  const laserY = inimigo.y + Math.sin(angulo) * distanciaSaida + offsetY;
 
   const laser = scene.add.circle(laserX, laserY, 4, 0xff0000, 1);
-
   laser.setDepth(55);
-
-  // =====================================================
-  // BRILHO
-  // =====================================================
-
   laser.setStrokeStyle(2, 0xff8888, 1);
 
-  // =====================================================
-  // FÍSICA
-  // =====================================================
-
   scene.physics.add.existing(laser);
-
   laser.body.setAllowGravity(false);
-
-  // =====================================================
-  // ADICIONA AO GRUPO
-  // =====================================================
-
   scene.lasersInimigo.add(laser);
-
-  // =====================================================
-  // VELOCIDADE
-  // =====================================================
 
   scene.physics.velocityFromRotation(
     angulo,
-    inimigo.velocidadeLaser,
+    inimigo.velocidadeLaser + 30,
     laser.body.velocity,
   );
-
-  // =====================================================
-  // DESTRÓI APÓS 2 SEGUNDOS
-  // =====================================================
 
   scene.time.delayedCall(2000, () => {
     if (laser && laser.active) {
@@ -502,6 +659,41 @@ function dispararLaser(scene) {
 // =====================================================
 // VERIFICA LASERS NA HITBOX DE DANO
 // =====================================================
+
+function verificarLasersNoMapa(scene) {
+  if (!scene.collisionGroup || !scene.lasersInimigo) {
+    return;
+  }
+
+  const blocos = scene.collisionGroup.getChildren();
+  const lasers = scene.lasersInimigo.getChildren();
+
+  for (const laser of lasers) {
+    if (!laser || !laser.active) {
+      continue;
+    }
+
+    const boundsLaser = laser.getBounds();
+
+    for (const bloco of blocos) {
+      if (!bloco || !bloco.body) {
+        continue;
+      }
+
+      const rectBloco = new Phaser.Geom.Rectangle(
+        bloco.body.x,
+        bloco.body.y,
+        bloco.body.width,
+        bloco.body.height,
+      );
+
+      if (Phaser.Geom.Intersects.RectangleToRectangle(rectBloco, boundsLaser)) {
+        laser.destroy();
+        break;
+      }
+    }
+  }
+}
 
 function verificarLasersNoPlayer(scene) {
   if (!scene.hitboxDanoPlayer || !scene.lasersInimigo) {
@@ -516,7 +708,6 @@ function verificarLasersNoPlayer(scene) {
     }
 
     const boundsLaser = laser.getBounds();
-
     const acertou = Phaser.Geom.Intersects.RectangleToRectangle(
       scene.hitboxDanoPlayer,
       boundsLaser,
@@ -533,69 +724,33 @@ function verificarLasersNoPlayer(scene) {
 // =====================================================
 
 function acertarPlayerComLaser(scene, laser) {
-  // =====================================================
-  // LASER NÃO EXISTE MAIS
-  // =====================================================
-
   if (!laser || !laser.active) {
     return;
   }
 
-  // =====================================================
-  // DESTRÓI SOMENTE O LASER
-  // =====================================================
-
   laser.destroy();
-
-  // =====================================================
-  // PLAYER ESTÁ INVULNERÁVEL
-  // =====================================================
 
   if (scene.player.invulneravel) {
     return;
   }
 
-  // =====================================================
-  // ATIVA INVULNERABILIDADE
-  // =====================================================
-
   scene.player.invulneravel = true;
 
-  // =====================================================
-  // DANO
-  // =====================================================
+  const danoLaser = Array.isArray(scene.inimigos) && scene.inimigos.length > 0
+    ? scene.inimigos[0].danoLaser
+    : scene.inimigoTeste?.danoLaser ?? 5;
 
-  scene.vida -= scene.inimigoTeste.danoLaser;
-
+  scene.vida -= danoLaser;
   scene.vida = Phaser.Math.Clamp(scene.vida, 0, scene.vidaMaxima);
 
-  // =====================================================
-  // DEBUG
-  // =====================================================
-
-  console.log("LASER ACERTOU - VIDA:", scene.vida);
-
-  // =====================================================
-  // EFEITO DE DANO
-  // =====================================================
-
   scene.player.setTint(0xff5555);
-
-  // =====================================================
-  // REMOVE INVULNERABILIDADE
-  // =====================================================
 
   scene.time.delayedCall(500, () => {
     if (scene.player && scene.player.active) {
       scene.player.invulneravel = false;
-
       scene.player.clearTint();
     }
   });
-
-  // =====================================================
-  // MORTE
-  // =====================================================
 
   if (scene.vida <= 0) {
     respawnPlayerPorLaser(scene);
@@ -607,27 +762,12 @@ function acertarPlayerComLaser(scene, laser) {
 // =====================================================
 
 function respawnPlayerPorLaser(scene) {
-  // =====================================================
-  // PARA PLAYER
-  // =====================================================
-
   scene.player.setVelocity(0, 0);
-
-  // =====================================================
-  // VOLTA PARA RESPAWN
-  // =====================================================
-
   scene.player.setPosition(scene.respawnX, scene.respawnY);
-
-  // =====================================================
-  // ATUALIZA HITBOX DE DANO
-  // =====================================================
 
   if (scene.hitboxDanoPlayer) {
     const largura = 38;
-
     const altura = 46;
-
     const baseY = scene.respawnY + 26;
 
     scene.hitboxDanoPlayer.setTo(
@@ -638,22 +778,8 @@ function respawnPlayerPorLaser(scene) {
     );
   }
 
-  // =====================================================
-  // RECUPERA VIDA
-  // =====================================================
-
   scene.vida = scene.vidaMaxima;
-
-  // =====================================================
-  // RECUPERA ESTAMINA
-  // =====================================================
-
   scene.estamina = scene.estaminaMaxima;
-
-  // =====================================================
-  // REMOVE INVULNERABILIDADE
-  // =====================================================
-
   scene.player.invulneravel = false;
 }
 
@@ -661,41 +787,40 @@ function respawnPlayerPorLaser(scene) {
 // DANO NO INIMIGO
 // =====================================================
 
-function causarDanoInimigo(scene, quantidade) {
-  if (!scene.inimigoTeste || !scene.inimigoTeste.active) {
+function causarDanoInimigo(scene, alvoOuQuantidade, quantidadeOpcional) {
+  const alvo =
+    typeof alvoOuQuantidade === "object" && alvoOuQuantidade
+      ? alvoOuQuantidade
+      : scene.inimigoTeste;
+
+  const quantidade =
+    typeof alvoOuQuantidade === "number"
+      ? alvoOuQuantidade
+      : quantidadeOpcional ?? 25;
+
+  if (!alvo || !alvo.active) {
     return;
   }
 
-  // =====================================================
-  // REMOVE VIDA
-  // =====================================================
+  alvo.vida -= quantidade;
+  alvo.vida = Phaser.Math.Clamp(alvo.vida, 0, alvo.vidaMaxima);
+  alvo.foiFerido = true;
+  alvo.alerta = true;
+  alvo.estado = "alerta";
 
-  scene.inimigoTeste.vida -= quantidade;
+  if (scene.time) {
+    alvo.setTint(0xff5555);
+    scene.time.delayedCall(100, () => {
+      if (alvo && alvo.active) {
+        alvo.clearTint();
+      }
+    });
+  }
 
-  scene.inimigoTeste.vida = Phaser.Math.Clamp(
-    scene.inimigoTeste.vida,
-    0,
-    scene.inimigoTeste.vidaMaxima,
-  );
+  notificarGrupo(scene, alvo);
 
-  // =====================================================
-  // EFEITO DE DANO
-  // =====================================================
-
-  scene.inimigoTeste.setTint(0xff5555);
-
-  scene.time.delayedCall(100, () => {
-    if (scene.inimigoTeste && scene.inimigoTeste.active) {
-      scene.inimigoTeste.clearTint();
-    }
-  });
-
-  // =====================================================
-  // MORTE
-  // =====================================================
-
-  if (scene.inimigoTeste.vida <= 0) {
-    destruirInimigoTeste(scene);
+  if (alvo.vida <= 0) {
+    destruirInimigoTeste(scene, alvo);
   }
 }
 
@@ -703,30 +828,58 @@ function causarDanoInimigo(scene, quantidade) {
 // DESTRÓI INIMIGO
 // =====================================================
 
-function destruirInimigoTeste(scene) {
-  if (!scene.inimigoTeste) {
+function destruirInimigoTeste(scene, inimigo = scene.inimigoTeste) {
+  if (!inimigo || !scene) {
     return;
   }
 
-  // =====================================================
-  // BARRA DE VIDA
-  // =====================================================
+  if (inimigo.debugHitboxDano) {
+    inimigo.debugHitboxDano.destroy();
+    inimigo.debugHitboxDano = null;
+  }
 
-  scene.inimigoTeste.fundoVida.destroy();
+  if (inimigo.fundoVida) {
+    inimigo.fundoVida.destroy();
+    inimigo.fundoVida = null;
+  }
 
-  scene.inimigoTeste.barraVida.destroy();
+  if (inimigo.barraVida) {
+    inimigo.barraVida.destroy();
+    inimigo.barraVida = null;
+  }
 
-  scene.inimigoTeste.bordaVida.destroy();
+  if (inimigo.bordaVida) {
+    inimigo.bordaVida.destroy();
+    inimigo.bordaVida = null;
+  }
 
-  // =====================================================
-  // ROBÔ
-  // =====================================================
+  inimigo.hitboxDano = null;
+  inimigo.active = false;
+  inimigo.setVisible(false);
+  inimigo.setActive(false);
 
-  scene.inimigoTeste.destroy();
+  if (Array.isArray(scene.inimigos)) {
+    scene.inimigos = scene.inimigos.filter((robo) => robo !== inimigo);
+  }
+
+  if (scene.inimigoTeste === inimigo) {
+    scene.inimigoTeste = scene.inimigos?.[0] ?? null;
+  }
+
+  if (inimigo.body) {
+    inimigo.body.enable = false;
+  }
+
+  inimigo.destroy();
 }
 
 // =====================================================
 // EXPORTA
 // =====================================================
 
-export { criarInimigoTeste, atualizarInimigoTeste, causarDanoInimigo };
+export {
+  criarInimigoTeste,
+  criarGrupoRobos,
+  atualizarInimigoTeste,
+  causarDanoInimigo,
+};

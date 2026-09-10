@@ -246,53 +246,53 @@ function criarHitboxKatana(scene) {
 
     let centroY = scene.player.y;
 
-    let largura = 40;
+    let largura = 54;
 
-    let altura = 40;
+    let altura = 54;
 
     // =================================================
     // CIMA
     // =================================================
 
     if (scene.direcaoAtual === "up") {
-      centroY -= 35;
+      centroY -= 26;
 
-      largura = 34;
+      largura = 90;
 
-      altura = 42;
+      altura = 44;
     }
 
     // =================================================
     // BAIXO
     // =================================================
     else if (scene.direcaoAtual === "down") {
-      centroY += 35;
+      centroY += 26;
 
-      largura = 34;
+      largura = 90;
 
-      altura = 42;
+      altura = 44;
     }
 
     // =================================================
     // ESQUERDA
     // =================================================
     else if (scene.direcaoAtual === "left") {
-      centroX -= 35;
+      centroX -= 30;
 
-      largura = 42;
+      largura = 44;
 
-      altura = 34;
+      altura = 90;
     }
 
     // =================================================
     // DIREITA
     // =================================================
     else if (scene.direcaoAtual === "right") {
-      centroX += 35;
+      centroX += 30;
 
-      largura = 42;
+      largura = 44;
 
-      altura = 34;
+      altura = 90;
     }
 
     // =================================================
@@ -351,49 +351,42 @@ function criarHitboxKatana(scene) {
         return;
       }
 
-      // ===============================================
-      // INIMIGO NÃO EXISTE
-      // ===============================================
+      const alvos = Array.isArray(scene.inimigos)
+        ? scene.inimigos.filter((inimigo) => inimigo && inimigo.active)
+        : scene.inimigoTeste && scene.inimigoTeste.active
+          ? [scene.inimigoTeste]
+          : [];
 
-      if (
-        !scene.inimigoTeste ||
-        !scene.inimigoTeste.active ||
-        !scene.inimigoTeste.body
-      ) {
+      if (alvos.length === 0) {
         return;
       }
 
-      // ===============================================
-      // HITBOX DO INIMIGO
-      // ===============================================
+      let acertouAlgum = false;
 
-      const hitboxInimigo = new Phaser.Geom.Rectangle(
-        scene.inimigoTeste.body.x,
-        scene.inimigoTeste.body.y,
-        scene.inimigoTeste.body.width,
-        scene.inimigoTeste.body.height,
-      );
+      for (const inimigo of alvos) {
+        const hitboxInimigo = inimigo.hitboxDano || new Phaser.Geom.Rectangle(
+          inimigo.body.x,
+          inimigo.body.y,
+          inimigo.body.width,
+          inimigo.body.height,
+        );
 
-      // ===============================================
-      // KATANA X INIMIGO
-      // ===============================================
+        const acertou = Phaser.Geom.Intersects.RectangleToRectangle(
+          hitboxKatana,
+          hitboxInimigo,
+        );
 
-      const acertou = Phaser.Geom.Intersects.RectangleToRectangle(
-        hitboxKatana,
-        hitboxInimigo,
-      );
+        if (!acertou) {
+          continue;
+        }
 
-      if (!acertou) {
-        return;
+        acertouAlgum = true;
+        causarDanoInimigo(scene, inimigo, 25);
       }
 
-      // ===============================================
-      // DANO UMA VEZ
-      // ===============================================
-
-      jaAcertou = true;
-
-      causarDanoInimigo(scene, 25);
+      if (acertouAlgum) {
+        jaAcertou = true;
+      }
     },
   });
 

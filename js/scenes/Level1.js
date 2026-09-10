@@ -21,7 +21,7 @@ import {
 } from "../player/PlayerStatus.js";
 
 import {
-  criarInimigoTeste,
+  criarGrupoRobos,
   atualizarInimigoTeste,
 } from "../enemies/EnemyTest.js";
 
@@ -39,7 +39,7 @@ class Level1 extends Phaser.Scene {
 
     this.threshold = 0.1;
 
-    this.speed = 400;
+    this.speed = 200;
 
     this.direction = undefined;
 
@@ -59,6 +59,8 @@ class Level1 extends Phaser.Scene {
   init(data) {
     this.respawnX = data.spawnX ?? -1440;
     this.respawnY = data.spawnY ?? 454;
+    this.inimigos = [];
+    this.grupoRobosAtivado = false;
   }
 
   // =====================================================
@@ -124,7 +126,8 @@ class Level1 extends Phaser.Scene {
     // INIMIGO
     // =====================================================
 
-    criarInimigoTeste(this);
+    this.inimigos = [];
+    this.grupoRobosAtivado = false;
 
     // =====================================================
     // CÂMERA
@@ -180,6 +183,18 @@ class Level1 extends Phaser.Scene {
     // =====================================================
     // INIMIGO
     // =====================================================
+
+    const distanciaAoPontoSpawn = Phaser.Math.Distance.Between(
+      this.player.x,
+      this.player.y,
+      -295,
+      1284,
+    );
+
+    if (!this.grupoRobosAtivado && distanciaAoPontoSpawn <= 450) {
+      criarGrupoRobos(this, -295, 1284);
+      this.grupoRobosAtivado = true;
+    }
 
     atualizarInimigoTeste(this, time);
 
