@@ -1,5 +1,21 @@
 import { atacar } from "../player/Player.js";
 
+function atualizarVelocidadeAnimacao(scene) {
+  if (!scene.player || !scene.player.anims) {
+    return;
+  }
+
+  const velocidadeBase = scene.speed ?? 200;
+  const velocidadeTurbo = scene.speedTurbo ?? 400;
+  const velocidadeAtual =
+    scene.developerMode && scene.teclaShift && scene.teclaShift.isDown
+      ? velocidadeTurbo
+      : velocidadeBase;
+
+  scene.player.anims.timeScale =
+    velocidadeAtual > velocidadeBase ? velocidadeAtual / velocidadeBase : 1;
+}
+
 function criarControles(scene) {
   // =====================================================
   // TECLAS WASD
@@ -14,6 +30,47 @@ function criarControles(scene) {
 
     direita: Phaser.Input.Keyboard.KeyCodes.D,
   });
+
+  scene.teclaShift = scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
+
+  scene.developerMode = !!scene.developerMode;
+
+  // =====================================================
+  // BOTÃO DE DESENVOLVEDOR
+  // =====================================================
+
+  scene.botaoDesenvolvedor = scene.add
+    .rectangle(760, 24, 80, 30, 0x1f2937, 0.9)
+    .setStrokeStyle(2, 0x6ee7b7, 1)
+    .setScrollFactor(0)
+    .setDepth(200)
+    .setInteractive({ useHandCursor: true });
+
+  scene.textoBotaoDesenvolvedor = scene.add
+    .text(760, 24, "DEV", {
+      fontSize: "14px",
+      color: "#e5e7eb",
+      fontStyle: "bold",
+      fontFamily: "monospace",
+    })
+    .setOrigin(0.5)
+    .setScrollFactor(0)
+    .setDepth(201);
+
+  const atualizarEstadoBotaoDesenvolvedor = () => {
+    const ligado = !!scene.developerMode;
+
+    scene.botaoDesenvolvedor.setFillStyle(ligado ? 0x166534 : 0x1f2937, 0.9);
+    scene.botaoDesenvolvedor.setStrokeStyle(2, ligado ? 0x86efac : 0x6ee7b7, 1);
+    scene.textoBotaoDesenvolvedor.setText(ligado ? "DEV ON" : "DEV");
+  };
+
+  scene.botaoDesenvolvedor.on("pointerdown", () => {
+    scene.developerMode = !scene.developerMode;
+    atualizarEstadoBotaoDesenvolvedor();
+  });
+
+  atualizarEstadoBotaoDesenvolvedor();
 
   // =====================================================
   // JOYSTICK
@@ -250,6 +307,12 @@ function atualizarControles(scene) {
     movimentoY = Math.sin(angle);
   }
 
+  const velocidadeBase = scene.speed ?? 200;
+  const velocidadeTurbo = scene.speedTurbo ?? 400;
+  const usandoTurbo =
+    !!scene.developerMode && !!scene.teclaShift && scene.teclaShift.isDown;
+  const velocidadeAtual = usandoTurbo ? velocidadeTurbo : velocidadeBase;
+
   // =====================================================
   // ESTÁ SE MOVENDO
   // =====================================================
@@ -262,10 +325,12 @@ function atualizarControles(scene) {
     // ===================================================
 
     scene.player.setVelocity(
-      direcao.x * scene.speed,
+      direcao.x * velocidadeAtual,
 
-      direcao.y * scene.speed,
+      direcao.y * velocidadeAtual,
     );
+
+    atualizarVelocidadeAnimacao(scene);
 
     // ===================================================
     // HORIZONTAL
@@ -330,6 +395,7 @@ function atualizarControles(scene) {
   // =====================================================
   else {
     scene.player.setVelocity(0, 0);
+    scene.player.anims.timeScale = 1;
 
     // ===================================================
     // NÃO INTERROMPE ATAQUE

@@ -15,7 +15,9 @@ class Level1Parte2 extends Phaser.Scene {
     super("Level1Parte2");
 
     this.threshold = 0.1;
-    this.speed = 400;
+    this.speed = 200;
+    this.speedTurbo = 400;
+    this.developerMode = false;
     this.direcaoAtual = "down";
     this.atacando = false;
   }
@@ -23,6 +25,9 @@ class Level1Parte2 extends Phaser.Scene {
   init(data) {
     this.respawnX = data.spawnX ?? 50;
     this.respawnY = data.spawnY ?? -1087;
+    this.inimigos = [];
+    this.grupoRobosAtivado = false;
+    this.inimigoTeste = null;
   }
 
   create() {
@@ -56,6 +61,10 @@ class Level1Parte2 extends Phaser.Scene {
 
     this.cameras.main.startFollow(this.player, true);
     this.cameras.main.setZoom(1);
+
+    this.inimigos = [];
+    this.grupoRobosAtivado = false;
+    this.inimigoTeste = null;
   }
 
   update(time, delta) {

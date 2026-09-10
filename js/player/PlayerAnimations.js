@@ -9,7 +9,7 @@ function criarAnimacoesPlayer(scene) {
       start: 0,
       end: 8,
     }),
-    frameRate: 12,
+    frameRate: 20,
     repeat: -1,
   });
 
@@ -19,7 +19,7 @@ function criarAnimacoesPlayer(scene) {
       start: 13,
       end: 21,
     }),
-    frameRate: 12,
+    frameRate: 20,
     repeat: -1,
   });
 
@@ -29,7 +29,7 @@ function criarAnimacoesPlayer(scene) {
       start: 26,
       end: 34,
     }),
-    frameRate: 12,
+    frameRate: 20,
     repeat: -1,
   });
 
@@ -39,7 +39,7 @@ function criarAnimacoesPlayer(scene) {
       start: 39,
       end: 47,
     }),
-    frameRate: 12,
+    frameRate: 20,
     repeat: -1,
   });
 
@@ -53,7 +53,7 @@ function criarAnimacoesPlayer(scene) {
       start: 0,
       end: 5,
     }),
-    frameRate: 12,
+    frameRate: 20,
     repeat: 0,
   });
 
@@ -63,7 +63,7 @@ function criarAnimacoesPlayer(scene) {
       start: 6,
       end: 11,
     }),
-    frameRate: 12,
+    frameRate: 20,
     repeat: 0,
   });
 
@@ -73,7 +73,7 @@ function criarAnimacoesPlayer(scene) {
       start: 12,
       end: 17,
     }),
-    frameRate: 12,
+    frameRate: 20,
     repeat: 0,
   });
 
@@ -83,7 +83,7 @@ function criarAnimacoesPlayer(scene) {
       start: 18,
       end: 23,
     }),
-    frameRate: 12,
+    frameRate: 20,
     repeat: 0,
   });
 }

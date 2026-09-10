@@ -40,6 +40,7 @@ function criarInimigoTeste(scene, config = {}) {
   inimigo.distanciaDeteccao = Number(config.distanciaDeteccao ?? 220);
   inimigo.distanciaAtaque = Number(config.distanciaAtaque ?? 180);
   inimigo.distanciaGrupo = Number(config.distanciaGrupo ?? 180);
+  inimigo.danoBase = Number(config.danoLaser ?? 5);
   const direcoes = ["down", "left", "right", "up"];
   const direcaoAleatoria = direcoes[Math.floor(Math.random() * direcoes.length)];
 
@@ -48,7 +49,7 @@ function criarInimigoTeste(scene, config = {}) {
   inimigo.tempoEntreTiros = Number(config.tempoEntreTiros ?? 720);
   inimigo.ultimoTiro = 0;
   inimigo.velocidadeLaser = Number(config.velocidadeLaser ?? 250);
-  inimigo.danoLaser = Number(config.danoLaser ?? 5) * 1.3;
+  inimigo.danoLaser = inimigo.danoBase * 1.3 * 0.8;
   inimigo.ultimoLadoTiro = Math.random() > 0.5 ? "right" : "left";
 
   inimigo.vidaMaxima = Number(config.vidaMaxima ?? 100);
@@ -84,26 +85,76 @@ function criarInimigoTeste(scene, config = {}) {
   return inimigo;
 }
 
+function limparGrupoRobos(scene) {
+  if (!scene || !Array.isArray(scene.inimigos)) {
+    return;
+  }
+
+  scene.inimigos.forEach((robo) => {
+    if (!robo) {
+      return;
+    }
+
+    if (robo.debugHitboxDano) {
+      robo.debugHitboxDano.destroy();
+      robo.debugHitboxDano = null;
+    }
+
+    if (robo.fundoVida) {
+      robo.fundoVida.destroy();
+      robo.fundoVida = null;
+    }
+
+    if (robo.barraVida) {
+      robo.barraVida.destroy();
+      robo.barraVida = null;
+    }
+
+    if (robo.bordaVida) {
+      robo.bordaVida.destroy();
+      robo.bordaVida = null;
+    }
+
+    if (robo.body) {
+      robo.body.enable = false;
+    }
+
+    if (robo.active) {
+      robo.setVisible(false);
+      robo.setActive(false);
+    }
+
+    if (robo.destroy) {
+      robo.destroy();
+    }
+  });
+
+  scene.inimigos = [];
+  scene.inimigoTeste = null;
+  scene.grupoRobosAtivado = false;
+}
+
 function criarGrupoRobos(scene, centroX = -295, centroY = 1284) {
   if (!scene) {
     return [];
+  }
+
+  const robosEliminados = !!scene.registry?.get("robosEliminados");
+
+  if (robosEliminados) {
+    return scene.inimigos ?? [];
   }
 
   if (!Array.isArray(scene.inimigos)) {
     scene.inimigos = [];
   }
 
-  if (scene.grupoRobosAtivado && scene.inimigos.length > 0) {
+  if (scene.grupoRobosAtivado) {
     return scene.inimigos;
   }
 
   if (Array.isArray(scene.inimigos) && scene.inimigos.length > 0) {
-    scene.inimigos.forEach((robo) => {
-      if (robo && robo.active) {
-        robo.destroy();
-      }
-    });
-    scene.inimigos = [];
+    limparGrupoRobos(scene);
   }
 
   scene.grupoRobosAtivado = true;
@@ -864,6 +915,11 @@ function destruirInimigoTeste(scene, inimigo = scene.inimigoTeste) {
 
   if (scene.inimigoTeste === inimigo) {
     scene.inimigoTeste = scene.inimigos?.[0] ?? null;
+  }
+
+  if (Array.isArray(scene.inimigos) && scene.inimigos.length === 0) {
+    scene.grupoRobosAtivado = true;
+    scene.registry?.set("robosEliminados", true);
   }
 
   if (inimigo.body) {

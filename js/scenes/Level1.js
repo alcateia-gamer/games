@@ -40,6 +40,8 @@ class Level1 extends Phaser.Scene {
     this.threshold = 0.1;
 
     this.speed = 200;
+    this.speedTurbo = 400;
+    this.developerMode = false;
 
     this.direction = undefined;
 
@@ -61,6 +63,7 @@ class Level1 extends Phaser.Scene {
     this.respawnY = data.spawnY ?? 454;
     this.inimigos = [];
     this.grupoRobosAtivado = false;
+    this.inimigoTeste = null;
   }
 
   // =====================================================
@@ -128,6 +131,7 @@ class Level1 extends Phaser.Scene {
 
     this.inimigos = [];
     this.grupoRobosAtivado = false;
+    this.inimigoTeste = null;
 
     // =====================================================
     // CÂMERA
@@ -191,7 +195,9 @@ class Level1 extends Phaser.Scene {
       1284,
     );
 
-    if (!this.grupoRobosAtivado && distanciaAoPontoSpawn <= 450) {
+    const robosEliminados = !!this.registry?.get("robosEliminados");
+
+    if (!this.grupoRobosAtivado && !robosEliminados && distanciaAoPontoSpawn <= 450) {
       criarGrupoRobos(this, -295, 1284);
       this.grupoRobosAtivado = true;
     }
