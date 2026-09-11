@@ -21,6 +21,54 @@ class Preloader extends Phaser.Scene {
     this.add.rectangle(400, 225, 800, 450, 0x000000, 0.3);
 
     // =====================================================
+    // BOTÃO JOGAR INICIAL
+    // =====================================================
+
+    // Caixa do botão
+    const botaoFundo = this.add
+      .rectangle(400, 300, 200, 60, 0x00d9ff, 0.2)
+      .setStrokeStyle(2, 0x00d9ff, 1)
+      .setInteractive({ useHandCursor: true });
+
+    // Texto do botão
+    const botaoTexto = this.add.text(400, 300, "JOGAR", {
+      fontFamily: "monospace",
+      fontSize: "24px",
+      fontStyle: "bold",
+      color: "#00d9ff",
+    });
+    botaoTexto.setOrigin(0.5, 0.5);
+
+    // Efeito de hover
+    botaoFundo.on("pointerover", () => {
+      botaoFundo.setFillStyle(0x00d9ff, 0.4);
+      botaoTexto.setColor("#ffffff");
+    });
+
+    botaoFundo.on("pointerout", () => {
+      botaoFundo.setFillStyle(0x00d9ff, 0.2);
+      botaoTexto.setColor("#00d9ff");
+    });
+
+    // Ao clicar, inicia o carregamento
+    botaoFundo.on("pointerdown", () => {
+      botaoFundo.destroy();
+      botaoTexto.destroy();
+      this.iniciarCarregamento();
+    });
+
+    // Flag para controlar se deve carregar os assets
+    this.carregandoAtivos = false;
+  }
+
+  // =====================================================
+  // INICIAR CARREGAMENTO
+  // =====================================================
+
+  iniciarCarregamento() {
+    this.carregandoAtivos = true;
+
+    // =====================================================
     // PAINEL PRINCIPAL
     // =====================================================
 
@@ -32,7 +80,7 @@ class Preloader extends Phaser.Scene {
     // STATUS
     // =====================================================
 
-    this.textoStatus = this.add.text(200, 280, "INICIANDO O JOGO...", {
+    this.textoStatus = this.add.text(200, 280, "CARREGANDO ASSETS...", {
       fontFamily: "monospace",
       fontSize: "13px",
       color: "#a8f3ff",
@@ -77,6 +125,20 @@ class Preloader extends Phaser.Scene {
       // Atualiza a porcentagem
       this.porcentagem.setText(Math.floor(progress * 100) + "%");
     });
+
+    // =====================================================
+    // QUANDO TERMINAR O CARREGAMENTO
+    // =====================================================
+
+    this.load.once("complete", () => {
+      this.finalizarCarregamento();
+    });
+
+    // Carrega todos os assets
+    this.carregarAssets();
+
+    // Inicia o carregamento
+    this.load.start();
   }
 
   // =====================================================
@@ -84,6 +146,30 @@ class Preloader extends Phaser.Scene {
   // =====================================================
 
   preload() {
+    // O carregamento é iniciado manualmente após clicar no botão "JOGAR"
+  }
+
+  // =====================================================
+  // FINALIZAR CARREGAMENTO
+  // =====================================================
+
+  finalizarCarregamento() {
+    // Atualiza a barra para 100%
+    this.barra.width = 392;
+    this.porcentagem.setText("100%");
+    this.textoStatus.setText("INCURSÃO PRONTA");
+
+    // Inicia o Level 1 após 1.5 segundos
+    this.time.delayedCall(1500, () => {
+      this.scene.start("Level1");
+    });
+  }
+
+  // =====================================================
+  // CARREGAR ASSETS
+  // =====================================================
+
+  carregarAssets() {
     // =====================================================
     // CAMINHO DOS ASSETS
     // =====================================================
@@ -316,19 +402,8 @@ class Preloader extends Phaser.Scene {
   // =====================================================
 
   create() {
-    // =====================================================
-    // FINALIZA A BARRA
-    // =====================================================
-
-    this.barra.width = 392;
-    this.porcentagem.setText("100%");
-    this.textoStatus.setText("INCURSÃO PRONTA");
-
-    // =====================================================
-    // INICIA O LEVEL 1
-    // =====================================================
-
-    this.scene.start("Level1");
+    // Não é necessário fazer nada aqui, pois o carregamento
+    // e a transição para Level1 são feitos em finalizarCarregamento()
   }
 }
 
