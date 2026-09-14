@@ -374,7 +374,8 @@ class Preloader extends Phaser.Scene {
 
   create() {
     this.cameras.main.setBackgroundColor("#000000");
-    this.personagemSelecionada = this.scene.settings.data?.personagem || "standard";
+    this.personagemSelecionada =
+      this.scene.settings.data?.personagem || "standard";
     this.iniciarCarregamento();
   }
 }

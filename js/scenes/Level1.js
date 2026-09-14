@@ -315,7 +315,11 @@ class Level1 extends Phaser.Scene {
   }
 
   atualizarProfundidadePostes() {
-    if (!this.player || !Array.isArray(this.poleBases) || this.poleBases.length === 0) {
+    if (
+      !this.player ||
+      !Array.isArray(this.poleBases) ||
+      this.poleBases.length === 0
+    ) {
       return;
     }
 

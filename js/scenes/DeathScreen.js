@@ -41,8 +41,9 @@ function mostrarTelaMorte(scene) {
 
   const criarFalha = () => {
     const mensagem = mensagens[Phaser.Math.Between(0, mensagens.length - 1)];
-    const texto = Array.from({ length: Phaser.Math.Between(4, 14) }, () =>
-      simbolos[Phaser.Math.Between(0, simbolos.length - 1)],
+    const texto = Array.from(
+      { length: Phaser.Math.Between(4, 14) },
+      () => simbolos[Phaser.Math.Between(0, simbolos.length - 1)],
     ).join("");
     const falha = scene.add
       .text(

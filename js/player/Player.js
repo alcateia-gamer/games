@@ -399,12 +399,14 @@ function criarHitboxKatana(scene) {
       let acertouAlgum = false;
 
       for (const inimigo of alvos) {
-        const hitboxInimigo = inimigo.hitboxDano || new Phaser.Geom.Rectangle(
-          inimigo.body.x,
-          inimigo.body.y,
-          inimigo.body.width,
-          inimigo.body.height,
-        );
+        const hitboxInimigo =
+          inimigo.hitboxDano ||
+          new Phaser.Geom.Rectangle(
+            inimigo.body.x,
+            inimigo.body.y,
+            inimigo.body.width,
+            inimigo.body.height,
+          );
 
         const acertou = Phaser.Geom.Intersects.RectangleToRectangle(
           hitboxKatana,

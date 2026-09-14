@@ -429,7 +429,10 @@ class Start extends Phaser.Scene {
   }
 
   update(time, delta) {
-    if (!this.rainStartedAt || (this.mode === "intro" && !this.sequenceStarted)) {
+    if (
+      !this.rainStartedAt ||
+      (this.mode === "intro" && !this.sequenceStarted)
+    ) {
       return;
     }
 
