@@ -6,7 +6,7 @@ var config = {
     target: 30,
     forceSetTimeOut: true,
   },
-  parent: "gamer-container",
+  parent: "game-container",
   physics: {
     default: "arcade",
     arcade: {

@@ -4,64 +4,6 @@ class Preloader extends Phaser.Scene {
   }
 
   // =====================================================
-  // INIT
-  // =====================================================
-
-  init() {
-    // =====================================================
-    // FUNDO
-    // =====================================================
-
-    this.add.image(400, 225, "start-background");
-
-    // =====================================================
-    // ESCURECIMENTO DO FUNDO
-    // =====================================================
-
-    this.add.rectangle(400, 225, 800, 450, 0x000000, 0.3);
-
-    // =====================================================
-    // BOTÃO JOGAR INICIAL
-    // =====================================================
-
-    // Caixa do botão
-    const botaoFundo = this.add
-      .rectangle(400, 300, 200, 60, 0x00d9ff, 0.2)
-      .setStrokeStyle(2, 0x00d9ff, 1)
-      .setInteractive({ useHandCursor: true });
-
-    // Texto do botão
-    const botaoTexto = this.add.text(400, 300, "JOGAR", {
-      fontFamily: "monospace",
-      fontSize: "24px",
-      fontStyle: "bold",
-      color: "#00d9ff",
-    });
-    botaoTexto.setOrigin(0.5, 0.5);
-
-    // Efeito de hover
-    botaoFundo.on("pointerover", () => {
-      botaoFundo.setFillStyle(0x00d9ff, 0.4);
-      botaoTexto.setColor("#ffffff");
-    });
-
-    botaoFundo.on("pointerout", () => {
-      botaoFundo.setFillStyle(0x00d9ff, 0.2);
-      botaoTexto.setColor("#00d9ff");
-    });
-
-    // Ao clicar, inicia o carregamento
-    botaoFundo.on("pointerdown", () => {
-      botaoFundo.destroy();
-      botaoTexto.destroy();
-      this.iniciarCarregamento();
-    });
-
-    // Flag para controlar se deve carregar os assets
-    this.carregandoAtivos = false;
-  }
-
-  // =====================================================
   // INICIAR CARREGAMENTO
   // =====================================================
 
@@ -402,8 +344,8 @@ class Preloader extends Phaser.Scene {
   // =====================================================
 
   create() {
-    // Não é necessário fazer nada aqui, pois o carregamento
-    // e a transição para Level1 são feitos em finalizarCarregamento()
+    this.cameras.main.setBackgroundColor("#000000");
+    this.iniciarCarregamento();
   }
 }
 
