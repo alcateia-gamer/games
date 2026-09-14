@@ -404,7 +404,11 @@ function atualizarControles(scene) {
     // ===================================================
 
     if (!scene.atacando) {
-      scene.player.anims.stop();
+      if (scene.personagemSelecionada === "personagem2") {
+        scene.player.anims.play(`idle-${scene.direcaoAtual}`, true);
+      } else {
+        scene.player.anims.stop();
+      }
     }
   }
 }

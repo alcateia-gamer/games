@@ -23,6 +23,14 @@ class Start extends Phaser.Scene {
         frameHeight: 64,
       },
     );
+    this.load.spritesheet(
+      "start-character-2",
+      "assets/personagem/personagem 2/Idle.png",
+      {
+        frameWidth: 48,
+        frameHeight: 64,
+      },
+    );
   }
 
   create() {
@@ -31,6 +39,13 @@ class Start extends Phaser.Scene {
     this.height = this.scale.height;
     this.columns = [];
     this.sequenceStarted = false;
+    this.selectedCharacter = "standard";
+
+    if (this.scene.settings.data?.abrirMenu) {
+      this.mode = "menu";
+      this.showMainMenu();
+      return;
+    }
 
     this.createStartButton();
   }
@@ -61,7 +76,7 @@ class Start extends Phaser.Scene {
     const button = this.add.container(x, y, [background, text]);
     button.background = background;
     button.label = text;
-    button.setAngle(-1);
+    button.setAngle(0);
     background.on("pointerover", () => {
       background.setFillStyle(0x0b5429, 0.95);
       text.setColor("#e4ffeb");
@@ -207,6 +222,22 @@ class Start extends Phaser.Scene {
 
   finishSequence() {
     this.mode = "menu";
+    this.rainStartedAt = this.time.now;
+    this.columns.forEach((column, index) => {
+      column.frozen = false;
+      column.speed = Phaser.Math.Between(18, 36);
+      column.brightness = Phaser.Math.FloatBetween(0.18, 0.42);
+      column.y = Phaser.Math.Between(-this.height, this.height);
+      column.glyphs.forEach((glyph, glyphIndex) => {
+        glyph.setDepth(4);
+        glyph.setAlpha(
+          Math.max(0.04, column.brightness * (1 - glyphIndex / column.length)),
+        );
+      });
+      if (index % 2 === 0) {
+        column.nextChange = this.time.now;
+      }
+    });
     this.showMainMenu();
   }
 
@@ -311,21 +342,42 @@ class Start extends Phaser.Scene {
         fontStyle: "bold",
       })
       .setOrigin(0.5);
-    const portraitFrame = this.add
-      .rectangle(this.width / 2, 205, 112, 112, 0x062b16, 0.95)
-      .setStrokeStyle(2, 0x42ff84, 1)
-      .setInteractive({ useHandCursor: true });
-    const portrait = this.add
-      .image(this.width / 2, 205, "start-character", 26)
-      .setScale(1.45)
-      .setInteractive({ useHandCursor: true });
-    const name = this.add
-      .text(this.width / 2, 285, "OPERADOR // 01", {
-        color: "#9dffb9",
-        fontFamily: "monospace",
-        fontSize: "13px",
-      })
-      .setOrigin(0.5);
+    const characters = [
+      {
+        id: "standard",
+        x: this.width / 2 - 92,
+        texture: "start-character",
+        frame: 26,
+        scale: 1.45,
+        name: "OPERADOR // 01",
+      },
+      {
+        id: "personagem2",
+        x: this.width / 2 + 92,
+        texture: "start-character-2",
+        frame: 0,
+        scale: 1.9,
+        name: "OPERADORA // 02",
+      },
+    ];
+    const characterViews = characters.map((character) => {
+      const frame = this.add
+        .rectangle(character.x, 205, 112, 112, 0x062b16, 0.95)
+        .setStrokeStyle(2, 0x1b6b3b, 1)
+        .setInteractive({ useHandCursor: true });
+      const portrait = this.add
+        .image(character.x, 205, character.texture, character.frame)
+        .setScale(character.scale)
+        .setInteractive({ useHandCursor: true });
+      const name = this.add
+        .text(character.x, 285, character.name, {
+          color: "#9dffb9",
+          fontFamily: "monospace",
+          fontSize: "11px",
+        })
+        .setOrigin(0.5);
+      return { ...character, frame, portrait, name };
+    });
     const choose = this.createButton(
       this.width / 2,
       350,
@@ -338,15 +390,30 @@ class Start extends Phaser.Scene {
     this.soloLayer.add([
       shade,
       title,
-      portraitFrame,
-      portrait,
-      name,
+      ...characterViews.flatMap(({ frame, portrait, name }) => [
+        frame,
+        portrait,
+        name,
+      ]),
       choose,
       back,
     ]);
-    const selectPortrait = () => this.startSoloGame();
-    portraitFrame.on("pointerdown", selectPortrait);
-    portrait.on("pointerdown", selectPortrait);
+    const selectCharacter = (character) => {
+      this.selectedCharacter = character.id;
+      characterViews.forEach((view) =>
+        view.frame.setStrokeStyle(
+          2,
+          view.id === this.selectedCharacter ? 0x42ff84 : 0x1b6b3b,
+          1,
+        ),
+      );
+      this.menuStatus.setText(`${character.name} // SELECIONADA`);
+    };
+    characterViews.forEach((character) => {
+      character.frame.on("pointerdown", () => selectCharacter(character));
+      character.portrait.on("pointerdown", () => selectCharacter(character));
+    });
+    selectCharacter(characterViews[0]);
     choose.on("buttondown", () => this.startSoloGame());
     back.on("buttondown", () => {
       this.soloLayer.destroy();
@@ -356,14 +423,13 @@ class Start extends Phaser.Scene {
   }
 
   startSoloGame() {
-    this.scene.start("preloader");
+    this.scene.start("preloader", {
+      personagem: this.selectedCharacter,
+    });
   }
 
   update(time, delta) {
-    if (
-      !this.rainStartedAt ||
-      (this.mode === "intro" && !this.sequenceStarted)
-    ) {
+    if (!this.rainStartedAt || (this.mode === "intro" && !this.sequenceStarted)) {
       return;
     }
 
@@ -419,12 +485,7 @@ class Start extends Phaser.Scene {
     }
 
     if (this.mode === "intro" && elapsed > 4450) {
-      this.columns.forEach((column) =>
-        column.glyphs.forEach((glyph) => glyph.destroy()),
-      );
-      this.columns = [];
       this.finishSequence();
-      this.rainStartedAt = 0;
     }
   }
 }

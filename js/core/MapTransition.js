@@ -45,6 +45,7 @@ function criarTransicaoParaParte2(scene) {
       scene.scene.start("Level1Parte2", {
         spawnX: 240,
         spawnY: 240,
+        personagem: scene.personagemSelecionada,
       });
     });
   });

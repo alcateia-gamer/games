@@ -1,90 +1,56 @@
 function criarAnimacoesPlayer(scene) {
-  // =====================================================
-  // CAMINHADA
-  // =====================================================
+  const personagem2 = scene.personagemSelecionada === "personagem2";
+  const walkTexture = personagem2 ? "personagem2-walk" : "walk";
+  const attackTexture = personagem2 ? "personagem2-attack" : "attack";
+  const idleTexture = personagem2 ? "personagem2-idle" : walkTexture;
+  const walkFrames = personagem2
+    ? { up: [24, 31], left: [8, 15], down: [0, 7], right: [40, 47] }
+    : { up: [0, 8], left: [13, 21], down: [26, 34], right: [39, 47] };
+  const attackFrames = personagem2
+    ? walkFrames
+    : { up: [0, 5], left: [6, 11], down: [12, 17], right: [18, 23] };
 
-  scene.anims.create({
-    key: "walk-up",
-    frames: scene.anims.generateFrameNumbers("walk", {
-      start: 0,
-      end: 8,
-    }),
-    frameRate: 20,
-    repeat: -1,
+  [
+    "walk-up",
+    "walk-left",
+    "walk-down",
+    "walk-right",
+    "attack-up",
+    "attack-left",
+    "attack-down",
+    "attack-right",
+    "idle-up",
+    "idle-left",
+    "idle-down",
+    "idle-right",
+  ].forEach((key) => {
+    if (scene.anims.exists(key)) {
+      scene.anims.remove(key);
+    }
   });
 
-  scene.anims.create({
-    key: "walk-left",
-    frames: scene.anims.generateFrameNumbers("walk", {
-      start: 13,
-      end: 21,
-    }),
-    frameRate: 20,
-    repeat: -1,
+  Object.entries(walkFrames).forEach(([direcao, [start, end]]) => {
+    scene.anims.create({
+      key: `walk-${direcao}`,
+      frames: scene.anims.generateFrameNumbers(walkTexture, { start, end }),
+      frameRate: 20,
+      repeat: -1,
+    });
+    scene.anims.create({
+      key: `idle-${direcao}`,
+      frames: scene.anims.generateFrameNumbers(idleTexture, { start, end }),
+      frameRate: 8,
+      repeat: -1,
+    });
   });
 
-  scene.anims.create({
-    key: "walk-down",
-    frames: scene.anims.generateFrameNumbers("walk", {
-      start: 26,
-      end: 34,
-    }),
-    frameRate: 20,
-    repeat: -1,
-  });
-
-  scene.anims.create({
-    key: "walk-right",
-    frames: scene.anims.generateFrameNumbers("walk", {
-      start: 39,
-      end: 47,
-    }),
-    frameRate: 20,
-    repeat: -1,
-  });
-
-  // =====================================================
-  // ATAQUE
-  // =====================================================
-
-  scene.anims.create({
-    key: "attack-up",
-    frames: scene.anims.generateFrameNumbers("attack", {
-      start: 0,
-      end: 5,
-    }),
-    frameRate: 20,
-    repeat: 0,
-  });
-
-  scene.anims.create({
-    key: "attack-left",
-    frames: scene.anims.generateFrameNumbers("attack", {
-      start: 6,
-      end: 11,
-    }),
-    frameRate: 20,
-    repeat: 0,
-  });
-
-  scene.anims.create({
-    key: "attack-down",
-    frames: scene.anims.generateFrameNumbers("attack", {
-      start: 12,
-      end: 17,
-    }),
-    frameRate: 20,
-    repeat: 0,
-  });
-
-  scene.anims.create({
-    key: "attack-right",
-    frames: scene.anims.generateFrameNumbers("attack", {
-      start: 18,
-      end: 23,
-    }),
-    frameRate: 20,
-    repeat: 0,
+  Object.entries(attackFrames).forEach(([direcao, [start, end]]) => {
+    scene.anims.create({
+      key: `attack-${direcao}`,
+      frames: scene.anims.generateFrameNumbers(attackTexture, { start, end }),
+      frameRate: 20,
+      repeat: 0,
+    });
   });
 }
 

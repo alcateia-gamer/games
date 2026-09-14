@@ -61,6 +61,8 @@ class Level1 extends Phaser.Scene {
   init(data) {
     this.respawnX = data.spawnX ?? -1440;
     this.respawnY = data.spawnY ?? 454;
+    this.personagemSelecionada = data.personagem || "standard";
+    this.morteEmAndamento = false;
     this.inimigos = [];
     this.grupoRobosAtivado = false;
     this.inimigoTeste = null;
@@ -71,6 +73,11 @@ class Level1 extends Phaser.Scene {
   // =====================================================
 
   create() {
+    this.physics.resume();
+    this.physics.world.resume();
+    this.input.keyboard.enabled = true;
+    this.input.keyboard.resetKeys();
+
     // =====================================================
     // MAPA
     // =====================================================
@@ -170,6 +177,10 @@ class Level1 extends Phaser.Scene {
   // =====================================================
 
   update(time, delta) {
+    if (this.morteEmAndamento) {
+      return;
+    }
+
     // =====================================================
     // CONTROLES
     // =====================================================
@@ -234,6 +245,7 @@ class Level1 extends Phaser.Scene {
       this.scene.start("Level1Parte2", {
         spawnX: 50,
         spawnY: -1087,
+        personagem: this.personagemSelecionada,
       });
     }
 

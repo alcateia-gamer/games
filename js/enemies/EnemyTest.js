@@ -2,6 +2,8 @@
 // CRIA INIMIGO
 // =====================================================
 
+import mostrarTelaMorte from "../scenes/DeathScreen.js";
+
 function criarInimigoTeste(scene, config = {}) {
   criarAnimacoesInimigo(scene);
 
@@ -482,9 +484,15 @@ function atualizarInimigoTeste(scene, time) {
     const x = inimigo.x;
     const y = inimigo.y - 65;
 
-    inimigo.fundoVida.setPosition(x, y);
-    inimigo.barraVida.setPosition(x - 30, y);
-    inimigo.bordaVida.setPosition(x, y);
+    if (inimigo.fundoVida?.active) {
+      inimigo.fundoVida.setPosition(x, y);
+    }
+    if (inimigo.barraVida?.active) {
+      inimigo.barraVida.setPosition(x - 30, y);
+    }
+    if (inimigo.bordaVida?.active) {
+      inimigo.bordaVida.setPosition(x, y);
+    }
 
     if (inimigo.debugHitboxDano) {
       inimigo.debugHitboxDano.setVisible(
@@ -492,8 +500,10 @@ function atualizarInimigoTeste(scene, time) {
       );
     }
 
-    const porcentagemVida = inimigo.vida / inimigo.vidaMaxima;
-    inimigo.barraVida.width = inimigo.larguraBarra * porcentagemVida;
+    if (inimigo.barraVida?.active) {
+      const porcentagemVida = inimigo.vida / inimigo.vidaMaxima;
+      inimigo.barraVida.width = inimigo.larguraBarra * porcentagemVida;
+    }
   }
 
   verificarLasersNoMapa(scene);
@@ -801,6 +811,11 @@ function acertarPlayerComLaser(scene, laser) {
     return;
   }
 
+  if (scene.morteEmAndamento) {
+    laser.destroy();
+    return;
+  }
+
   laser.destroy();
 
   if (scene.player.invulneravel) {
@@ -827,7 +842,7 @@ function acertarPlayerComLaser(scene, laser) {
   });
 
   if (scene.vida <= 0) {
-    respawnPlayerPorLaser(scene);
+    mostrarTelaMorte(scene);
   }
 }
 

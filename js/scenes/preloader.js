@@ -103,7 +103,9 @@ class Preloader extends Phaser.Scene {
 
     // Inicia o Level 1 após 1.5 segundos
     this.time.delayedCall(1500, () => {
-      this.scene.start("Level1");
+      this.scene.start("Level1", {
+        personagem: this.personagemSelecionada,
+      });
     });
   }
 
@@ -134,6 +136,33 @@ class Preloader extends Phaser.Scene {
       frameWidth: 64,
       frameHeight: 64,
     });
+
+    this.load.spritesheet(
+      "personagem2-walk",
+      "personagem/personagem 2/walk.png",
+      {
+        frameWidth: 48,
+        frameHeight: 64,
+      },
+    );
+
+    this.load.spritesheet(
+      "personagem2-attack",
+      "personagem/personagem 2/Dash.png",
+      {
+        frameWidth: 48,
+        frameHeight: 64,
+      },
+    );
+
+    this.load.spritesheet(
+      "personagem2-idle",
+      "personagem/personagem 2/Idle.png",
+      {
+        frameWidth: 48,
+        frameHeight: 64,
+      },
+    );
 
     // =====================================================
     // PERSONAGEM - ATAQUE
@@ -345,6 +374,7 @@ class Preloader extends Phaser.Scene {
 
   create() {
     this.cameras.main.setBackgroundColor("#000000");
+    this.personagemSelecionada = this.scene.settings.data?.personagem || "standard";
     this.iniciarCarregamento();
   }
 }

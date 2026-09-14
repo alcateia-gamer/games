@@ -6,6 +6,26 @@ function debugHitboxesAtivado(scene) {
   return !!scene?.game?.config?.physics?.arcade?.debug;
 }
 
+function personagem2Ativa(scene) {
+  return scene.personagemSelecionada === "personagem2";
+}
+
+function configurarFiltroPersonagem2(scene) {
+  ["personagem2-walk", "personagem2-attack", "personagem2-idle"].forEach(
+    (textureKey) => {
+      const texture = scene.textures.get(textureKey);
+      texture?.setFilter(Phaser.Textures.FilterMode.NEAREST);
+    },
+  );
+}
+
+function frameParado(scene, direcao = scene.direcaoAtual) {
+  const frames = personagem2Ativa(scene)
+    ? { up: 24, left: 8, down: 0, right: 40 }
+    : { up: 0, left: 13, down: 26, right: 39 };
+  return frames[direcao] ?? frames.down;
+}
+
 // =====================================================
 // CRIA PLAYER
 // =====================================================
@@ -18,9 +38,22 @@ function criarPlayer(scene) {
   scene.player = scene.physics.add.sprite(
     scene.respawnX,
     scene.respawnY,
-    "walk",
-    26,
+    personagem2Ativa(scene) ? "personagem2-walk" : "walk",
+    frameParado(scene, "down"),
   );
+
+  if (personagem2Ativa(scene)) {
+    configurarFiltroPersonagem2(scene);
+    scene.player.setScale(1.6, 1.6);
+  }
+
+  scene.player.setAlpha(1).clearTint().setBlendMode(Phaser.BlendModes.NORMAL);
+
+  scene.player.invulneravel = false;
+
+  if (personagem2Ativa(scene)) {
+    scene.player.anims.play("idle-down", true);
+  }
 
   scene.player.body.setAllowGravity(false);
 
@@ -77,15 +110,10 @@ function criarPlayer(scene) {
     // VOLTA PARA WALK
     // =================================================
 
-    if (scene.direcaoAtual === "up") {
-      scene.player.setTexture("walk", 0);
-    } else if (scene.direcaoAtual === "left") {
-      scene.player.setTexture("walk", 13);
-    } else if (scene.direcaoAtual === "down") {
-      scene.player.setTexture("walk", 26);
-    } else if (scene.direcaoAtual === "right") {
-      scene.player.setTexture("walk", 39);
-    }
+    scene.player.setTexture(
+      personagem2Ativa(scene) ? "personagem2-walk" : "walk",
+      frameParado(scene),
+    );
 
     // =================================================
     // RESTAURA HITBOX PARA WALK 64x64
@@ -106,8 +134,12 @@ function configurarHitboxWalk(scene) {
     return;
   }
 
+  if (personagem2Ativa(scene)) {
+    scene.player.body.setSize(23, 11);
+    scene.player.body.setOffset(13, 34);
+    return;
+  }
   scene.player.body.setSize(30, 15);
-
   scene.player.body.setOffset(18, 45);
 }
 
@@ -134,8 +166,11 @@ function configurarHitboxAtaque(scene) {
     return;
   }
 
+  if (personagem2Ativa(scene)) {
+    configurarHitboxWalk(scene);
+    return;
+  }
   scene.player.body.setSize(30, 15);
-
   scene.player.body.setOffset(50, 77);
 }
 
@@ -490,7 +525,10 @@ function respawnPlayer(scene) {
   // VOLTA PARA WALK
   // =====================================================
 
-  scene.player.setTexture("walk", 26);
+  scene.player.setTexture(
+    personagem2Ativa(scene) ? "personagem2-walk" : "walk",
+    frameParado(scene, "down"),
+  );
 
   // =====================================================
   // POSIÇÃO
