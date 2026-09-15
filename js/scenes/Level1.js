@@ -8,6 +8,7 @@ import {
   criarPlayer,
   respawnPlayer,
   atualizarHitboxDanoPlayer,
+  atualizarDepthPlayer,
 } from "../player/Player.js";
 
 import {
@@ -32,6 +33,8 @@ import {
 class Level1 extends Phaser.Scene {
   constructor() {
     super("Level1");
+
+    this.DEBUG_DEPTH_SORTING = false;
 
     // =====================================================
     // MOVIMENTO
@@ -95,6 +98,8 @@ class Level1 extends Phaser.Scene {
     // =====================================================
 
     criarPlayer(this);
+
+    this.atualizarProfundidadePostes();
 
     this.criarBlocoParte2();
 
@@ -315,35 +320,23 @@ class Level1 extends Phaser.Scene {
   }
 
   atualizarProfundidadePostes() {
-    if (
-      !this.player ||
-      !Array.isArray(this.poleBases) ||
-      this.poleBases.length === 0
-    ) {
+    if (!this.player?.active) {
       return;
     }
 
-    let baseMaisProxima = null;
-    let menorDistancia = Infinity;
+    atualizarDepthPlayer(this);
 
-    for (const base of this.poleBases) {
-      const baseY = base.y;
-      const distancia = Math.abs(this.player.y - baseY);
+    if (Array.isArray(this.poleBaseObjects)) {
+      this.poleBaseObjects.forEach((base) => {
+        if (!base?.active) {
+          return;
+        }
 
-      if (distancia < menorDistancia) {
-        menorDistancia = distancia;
-        baseMaisProxima = base;
-      }
+        const baseDepth = this.calcularDepthMundo(base.getData("worldY"));
+
+        base.setDepth(baseDepth);
+      });
     }
-
-    if (!baseMaisProxima) {
-      return;
-    }
-
-    const baseY = baseMaisProxima.y;
-    const jogadorNaFrente = this.player.y >= baseY;
-
-    this.player.setDepth(jogadorNaFrente ? 13 : 12);
 
     if (Array.isArray(this.inimigos)) {
       this.inimigos.forEach((inimigo) => {
@@ -351,8 +344,8 @@ class Level1 extends Phaser.Scene {
           return;
         }
 
-        const inimigoNaFrente = inimigo.y >= baseY;
-        inimigo.setDepth(inimigoNaFrente ? 13 : 12);
+        const footY = inimigo.body?.bottom ?? inimigo.getBounds().bottom;
+        inimigo.setDepth(this.calcularDepthMundo(footY));
       });
     }
   }

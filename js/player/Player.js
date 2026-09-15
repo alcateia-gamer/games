@@ -26,6 +26,31 @@ function frameParado(scene, direcao = scene.direcaoAtual) {
   return frames[direcao] ?? frames.down;
 }
 
+function calcularFootYPlayer(scene) {
+  if (!scene?.player?.body) {
+    return scene?.player?.getBounds().bottom ?? 0;
+  }
+
+  return scene.player.body.bottom;
+}
+
+function atualizarDepthPlayer(scene) {
+  if (!scene?.player?.active) {
+    return;
+  }
+
+  const footY = calcularFootYPlayer(scene);
+  const depth = scene.calcularDepthMundo
+    ? scene.calcularDepthMundo(footY)
+    : 12.5 + footY * 0.0003;
+
+  scene.player.setDepth(depth);
+
+  if (scene.DEBUG_DEPTH_SORTING) {
+    console.log({ playerY: scene.player.y, footY, depth });
+  }
+}
+
 // =====================================================
 // CRIA PLAYER
 // =====================================================
@@ -57,8 +82,6 @@ function criarPlayer(scene) {
 
   scene.player.body.setAllowGravity(false);
 
-  scene.player.setDepth(12);
-
   // =====================================================
   // HITBOX DE COLISÃO - WALK 64x64
   // =====================================================
@@ -89,6 +112,7 @@ function criarPlayer(scene) {
   // ATUALIZA POSIÇÃO INICIAL
   // =====================================================
 
+  atualizarDepthPlayer(scene);
   atualizarHitboxDanoPlayer(scene);
 
   // =====================================================
@@ -578,4 +602,10 @@ function respawnPlayer(scene) {
 // EXPORTA
 // =====================================================
 
-export { criarPlayer, atacar, respawnPlayer, atualizarHitboxDanoPlayer };
+export {
+  criarPlayer,
+  atacar,
+  respawnPlayer,
+  atualizarHitboxDanoPlayer,
+  atualizarDepthPlayer,
+};

@@ -1,3 +1,158 @@
+const DEPTHS = {
+  worldBase: 12.5,
+  worldScale: 0.0003,
+  alwaysAboveWorld: 18,
+  overlayAboveWorld: 20,
+};
+
+function depthFromWorldY(y) {
+  return DEPTHS.worldBase + Number(y) * DEPTHS.worldScale;
+}
+
+function obterTilesetDoGid(map, gid) {
+  return [...map.tilesets]
+    .reverse()
+    .find((tileset) => Number(gid) >= Number(tileset.firstgid));
+}
+
+function criarBaseVisual(scene, map, object, textureKeyByTilesetName) {
+  const rawGid = Number(object.gid ?? 0) >>> 0;
+  const gid = rawGid & 0x1fffffff;
+
+  if (scene.DEBUG_DEPTH_SORTING) {
+    console.log("PostesObjetos objeto:", {
+      gid: object.gid,
+      x: object.x,
+      y: object.y,
+      width: object.width,
+      height: object.height,
+      visible: object.visible,
+    });
+  }
+
+  if (!gid) {
+    console.warn(`PostesObjetos: objeto ${object.id} não possui GID.`);
+    return null;
+  }
+
+  const tileset = obterTilesetDoGid(map, gid);
+
+  if (!tileset) {
+    console.warn(`PostesObjetos: GID ${gid} não pôde ser associado a um tileset.`);
+    return null;
+  }
+
+  const textureKey = textureKeyByTilesetName.get(tileset.name);
+
+  if (!textureKey) {
+    console.warn(
+      `PostesObjetos: nenhum texture key foi encontrado para o tileset "${tileset.name}" (GID ${gid}).`,
+    );
+    return null;
+  }
+
+  const texture = scene.textures.get(textureKey);
+
+  if (!texture || !texture.source?.[0]?.width) {
+    console.warn(
+      `PostesObjetos: texture key "${textureKey}" não foi encontrada para o GID ${gid}.`,
+    );
+    return null;
+  }
+
+  const tileWidth = Number(tileset.tileWidth || map.tileWidth);
+  const tileHeight = Number(tileset.tileHeight || map.tileHeight);
+  const margin = Number(tileset.tileMargin || 0);
+  const spacing = Number(tileset.tileSpacing || 0);
+  const textureWidth = texture.source[0].width;
+  const columns = Number(
+    tileset.columns ||
+      Math.floor((textureWidth - margin * 2 + spacing) / (tileWidth + spacing)),
+  );
+
+  if (!columns) {
+    console.warn(
+      `PostesObjetos: não foi possível calcular as colunas do tileset "${tileset.name}".`,
+    );
+    return null;
+  }
+
+  const tileIndex = gid - Number(tileset.firstgid);
+  const sourceX = margin + (tileIndex % columns) * (tileWidth + spacing);
+  const sourceY = margin + Math.floor(tileIndex / columns) * (tileHeight + spacing);
+  const width = Number(object.width || tileWidth);
+  const height = Number(object.height || tileHeight);
+  const frameName = `postes-objetos-${tileset.name}-${tileIndex}`;
+
+  if (!texture.frames[frameName]) {
+    texture.add(
+      frameName,
+      0,
+      sourceX,
+      sourceY,
+      tileWidth,
+      tileHeight,
+    );
+  }
+
+  // Tile Objects usam x como a borda esquerda e y como a borda inferior.
+  const base = scene.add
+    .image(Number(object.x) + width / 2, Number(object.y), textureKey, frameName)
+    .setOrigin(0.5, 1)
+    .setScale(width / tileWidth, height / tileHeight)
+    .setDepth(depthFromWorldY(object.y));
+
+  base.setFlipX(Boolean(object.flippedHorizontal));
+  base.setFlipY(Boolean(object.flippedVertical));
+  base.setVisible(object.visible !== false);
+  base.setAlpha(Number.isFinite(object.opacity) ? object.opacity : 1);
+
+  if (Number.isFinite(object.rotation)) {
+    base.setAngle(object.rotation);
+  }
+
+  if (object.flippedAntiDiagonal) {
+    base.setAngle(base.angle + 90);
+  }
+
+  base.setData("worldY", Number(object.y));
+  base.setData("tiledObjectId", object.id);
+
+  if (scene.DEBUG_DEPTH_SORTING) {
+    console.log({
+      rawGid,
+      cleanGid: gid,
+      tileset: tileset.name,
+      firstgid: tileset.firstgid,
+      localFrame: tileIndex,
+      textureKey,
+    });
+  }
+
+  return base;
+}
+
+function criarBasesPostes(scene, map, textureKeyByTilesetName) {
+  const objectLayer = map.getObjectLayer("PostesObjetos");
+
+  if (!objectLayer) {
+    console.warn('Object Layer "PostesObjetos" não existe no mapa.');
+    scene.poleBaseObjects = [];
+    return;
+  }
+
+  if (scene.DEBUG_DEPTH_SORTING) {
+    console.log("PostesObjetos:", objectLayer);
+    console.log("Quantidade:", objectLayer.objects?.length ?? 0);
+  }
+
+  scene.poleBaseObjects = objectLayer.objects
+    .map((object) =>
+      criarBaseVisual(scene, map, object, textureKeyByTilesetName),
+    )
+    .filter(Boolean);
+}
+
 function criarLevel1Map(scene) {
   // =====================================================
   // MAPA
@@ -149,6 +304,28 @@ function criarLevel1Map(scene) {
     transporterPoliceSwat,
   ].filter(Boolean);
 
+  const textureKeyByTilesetName = new Map([
+    ["Tileset_SciFi_CityShopping_Rasak", "cityShopping"],
+    ["Tileset_SciFi_Street_Rasak_DUP", "street"],
+    ["Tileset_SciFi_Garbage_Rasak", "garbage"],
+    ["A5_Street_Rasak", "a5Street"],
+    ["Tileset_SciFi_Slums_Rasak", "slums"],
+    ["Tileset_SciFi_PublicTransportation_Slums_Rasak.png", "publicTransportation"],
+    ["A4_SciFi_Outside_Rasak", "a4Outside"],
+    ["A3_SciFi_Outside_Rasak", "a3Outside"],
+    ["A5_SciFi_Outside_Rasak", "A5_SciFi_Outside_Rasak"],
+    ["Tileset_SciFi_BuildingExtras", "buildingExtras"],
+    ["TorreTileset", "torre"],
+    ["Tileset_SciFi_Arpartment_2_Rasak", "apartment2"],
+    ["Tileset_Modern_Industrial_2_Rasak", "ModernIndustrial2"],
+    ["A1_Modern_Inside_Factory_Rasak", "ModernInsideFactoryA1"],
+    ["Speeder_civil5", "VehiclesSpeederCivil5"],
+    ["Speeder_civil2", "Speeder_civil2"],
+    ["Transporter_Private", "Transporter_Private"],
+    ["Transporter_Ambulance", "Transporter_Ambulance"],
+    ["Transporter_PoliceSwat", "Transporter_PoliceSwat"],
+  ]);
+
   // =====================================================
   // CAMADAS - CHÃO
   // =====================================================
@@ -260,17 +437,28 @@ function criarLevel1Map(scene) {
   camadaAntenaTorre?.setDepth(15);
   camadaContainerTorre?.setDepth(16);
   camadaObjetos?.setDepth(11);
-  camadaPostes?.setDepth(18);
+  // A parte alta dos postes é uma TilemapLayer única e sempre cobre o mundo dinâmico.
+  camadaPostes?.setDepth(DEPTHS.alwaysAboveWorld);
   camadaCercas?.setDepth(19);
-  camadaObjAcimaPerso?.setDepth(20);
+  camadaObjAcimaPerso?.setDepth(DEPTHS.overlayAboveWorld);
   camadaSombra3?.setDepth(21);
   camadaSombra2?.setDepth(22);
   camadaSombra?.setDepth(23);
   camadaSombraGeral?.setDepth(24);
 
+  // Restaura as opacidades originais definidas no mapa Tiled.
+  camadaSombra3?.setAlpha(0.6);
+  camadaSombra2?.setAlpha(1);
+  camadaSombra?.setAlpha(1);
+  camadaSombraGeral?.setAlpha(0.7);
+
   scene.camadaCercas = camadaCercas;
   scene.camadaCercaSpawn = camadaCercaSpawn;
+  scene.depths = DEPTHS;
+  scene.calcularDepthMundo = depthFromWorldY;
   camadaCercaSpawn?.setDepth(14);
+
+  criarBasesPostes(scene, map, textureKeyByTilesetName);
 
   // =====================================================
   // DEBUG
@@ -303,8 +491,6 @@ function criarLevel1Map(scene) {
 
   if (collisionLayer) {
     scene.collisionGroup = scene.physics.add.staticGroup();
-    scene.poleBases = [];
-
     collisionLayer.objects.forEach((obj) => {
       const collision = scene.collisionGroup.create(
         obj.x + obj.width / 2,
@@ -314,20 +500,6 @@ function criarLevel1Map(scene) {
       collision.setSize(obj.width, obj.height);
       collision.setVisible(false);
 
-      const eBaseDePoste =
-        Number(obj.width ?? 0) <= 80 &&
-        Number(obj.height ?? 0) <= 80 &&
-        Number(obj.width ?? 0) > 0 &&
-        Number(obj.height ?? 0) > 0;
-
-      if (eBaseDePoste) {
-        scene.poleBases.push({
-          x: obj.x + obj.width / 2,
-          y: obj.y + obj.height / 2,
-          width: obj.width,
-          height: obj.height,
-        });
-      }
     });
   }
 

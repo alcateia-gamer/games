@@ -248,10 +248,12 @@ function atualizarDepthInimigo(inimigo, scene) {
     return;
   }
 
-  const playerNaFrente = scene.player.y >= inimigo.y;
+  const inimigoFootY = inimigo.body?.bottom ?? inimigo.getBounds().bottom;
+  const calcularDepth =
+    scene.calcularDepthMundo || ((worldY) => 12.5 + worldY * 0.0003);
 
-  scene.player.setDepth(playerNaFrente ? 13 : 12);
-  inimigo.setDepth(playerNaFrente ? 12 : 13);
+  // O player é ordenado pela cena; este sistema só atualiza o inimigo.
+  inimigo.setDepth(calcularDepth(inimigoFootY));
 }
 
 function aplicarSeparacaoGrupo(inimigo, scene) {
