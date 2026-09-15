@@ -1,3 +1,5 @@
+import { limparGrupoRobos } from "../enemies/EnemyTest.js";
+
 function criarTransicaoParaParte2(scene) {
   const camadaTransicao =
     scene.map.getObjectLayer("Transitions") ||
@@ -42,6 +44,7 @@ function criarTransicaoParaParte2(scene) {
     scene.cameras.main.fadeOut(250, 0, 0, 0);
 
     scene.cameras.main.once("camerafadeoutcomplete", () => {
+      limparGrupoRobos(scene);
       scene.scene.start("Level1Parte2", {
         spawnX: 240,
         spawnY: 240,

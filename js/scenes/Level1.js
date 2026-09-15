@@ -21,7 +21,11 @@ import {
   atualizarStatusPlayer,
 } from "../player/PlayerStatus.js";
 
-import { criarRobos, atualizarInimigoTeste } from "../enemies/EnemyTest.js";
+import {
+  criarRobos,
+  atualizarInimigoTeste,
+  limparGrupoRobos,
+} from "../enemies/EnemyTest.js";
 
 // =====================================================
 // LEVEL 1
@@ -104,7 +108,9 @@ class Level1 extends Phaser.Scene {
     // COLISÃO DO PLAYER COM O MAPA
     // =====================================================
 
-    this.physics.add.collider(this.player, this.collisionGroup);
+    if (this.collisionGroup) {
+      this.physics.add.collider(this.player, this.collisionGroup);
+    }
 
     // =====================================================
     // PORTA PARA A PARTE 2
@@ -242,6 +248,7 @@ class Level1 extends Phaser.Scene {
       pertoDoBlocoParte2 &&
       Phaser.Input.Keyboard.JustDown(this.teclaInteracaoParte2)
     ) {
+      limparGrupoRobos(this);
       this.scene.start("Level1Parte2", {
         spawnX: 50,
         spawnY: -1087,

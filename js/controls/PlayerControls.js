@@ -326,8 +326,6 @@ function atualizarControles(scene) {
   // =====================================================
 
   if (movimentoX !== 0 || movimentoY !== 0) {
-    atualizarSomCorrida(scene, true);
-
     const direcao = new Phaser.Math.Vector2(movimentoX, movimentoY).normalize();
 
     // ===================================================
@@ -339,6 +337,8 @@ function atualizarControles(scene) {
 
       direcao.y * velocidadeAtual,
     );
+
+    atualizarSomCorrida(scene, true);
 
     atualizarVelocidadeAnimacao(scene);
 

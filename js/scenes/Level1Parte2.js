@@ -9,6 +9,11 @@ import {
   criarStatusPlayer,
   atualizarStatusPlayer,
 } from "../player/PlayerStatus.js";
+import {
+  criarRobos,
+  atualizarInimigoTeste,
+  limparGrupoRobos,
+} from "../enemies/EnemyTest.js";
 
 class Level1Parte2 extends Phaser.Scene {
   constructor() {
@@ -37,6 +42,15 @@ class Level1Parte2 extends Phaser.Scene {
     this.physics.world.resume();
     this.input.keyboard.enabled = true;
     this.input.keyboard.resetKeys();
+    this.teclaSpawnRobo1 = this.input.keyboard.addKey(
+      Phaser.Input.Keyboard.KeyCodes.ONE,
+    );
+    this.teclaSpawnRobo2 = this.input.keyboard.addKey(
+      Phaser.Input.Keyboard.KeyCodes.TWO,
+    );
+    this.teclaSpawnRobo3 = this.input.keyboard.addKey(
+      Phaser.Input.Keyboard.KeyCodes.THREE,
+    );
 
     this.map = criarLevel1Parte2Map(this);
     criarAnimacoesPlayer(this);
@@ -82,6 +96,16 @@ class Level1Parte2 extends Phaser.Scene {
     atualizarControles(this);
     atualizarStatusPlayer(this, delta);
 
+    if (Phaser.Input.Keyboard.JustDown(this.teclaSpawnRobo1)) {
+      criarRobos(this, 1);
+    } else if (Phaser.Input.Keyboard.JustDown(this.teclaSpawnRobo2)) {
+      criarRobos(this, 2);
+    } else if (Phaser.Input.Keyboard.JustDown(this.teclaSpawnRobo3)) {
+      criarRobos(this, 3);
+    }
+
+    atualizarInimigoTeste(this, time);
+
     const x = Math.round(this.player.x);
     const y = Math.round(this.player.y);
 
@@ -99,6 +123,7 @@ class Level1Parte2 extends Phaser.Scene {
       this.pertoDoBlocoRetorno &&
       Phaser.Input.Keyboard.JustDown(this.teclaInteracao)
     ) {
+      limparGrupoRobos(this);
       this.scene.start("Level1", {
         spawnX: -107,
         spawnY: 454,

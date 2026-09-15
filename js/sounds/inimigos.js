@@ -1,12 +1,13 @@
 // Volume máximo do passo do robô. A distância reduz este valor até zero.
-const VOLUME_PASSO_ROBO_MAXIMO = 0.4;
+const VOLUME_PASSO_ROBO_MAXIMO = 0.3;
+const DISTANCIA_FADE_PASSO_ROBO = 240;
 
 // Volume fixo do disparo de laser dos inimigos.
 const VOLUME_TIRO_LASER = 0.02;
 
 function carregarSonsInimigos(loader) {
   loader.audio("tiro-laser", "sounds.mp3/tiro_laser.mp3");
-  loader.audio("robot-walk", "sounds.mp3/robot_walk_2.mp3");
+  loader.audio("robot-walk", "sounds.mp3/robot_walk_3.mp3");
 }
 
 function atualizarSomPassoRobo(
@@ -16,17 +17,28 @@ function atualizarSomPassoRobo(
   distancia,
   estaSeMovendo,
 ) {
-  const podeTocar = viuPlayer && estaSeMovendo;
-  const volume =
-    Phaser.Math.Clamp(1 - distancia / inimigo.distanciaDeteccao, 0, 1) *
-    VOLUME_PASSO_ROBO_MAXIMO;
+  const podeTocar = estaSeMovendo;
+  const distanciaInicioFade = inimigo.distanciaDeteccao;
+  const distanciaFimFade = distanciaInicioFade + DISTANCIA_FADE_PASSO_ROBO;
+  const volumeRelativo =
+    distancia <= distanciaInicioFade
+      ? Math.max(1 - distancia / distanciaInicioFade, 0.2)
+      : Phaser.Math.Clamp(
+          0.2 * ((distanciaFimFade - distancia) / DISTANCIA_FADE_PASSO_ROBO),
+          0,
+          0.2,
+        );
+  const volume = volumeRelativo * VOLUME_PASSO_ROBO_MAXIMO;
+  const podeOuvir = volume > 0;
 
   inimigo.podeTocarPasso = podeTocar;
   inimigo.volumePasso = volume;
 
   if (inimigo.somPassoRobo) {
-    if (!podeTocar) {
+    if (!podeTocar || !podeOuvir) {
       inimigo.somPassoRobo.stop();
+    } else if (!inimigo.somPassoRobo.isPlaying) {
+      inimigo.somPassoRobo.play({ volume });
     } else if (inimigo.somPassoRobo.isPlaying) {
       inimigo.somPassoRobo.setVolume(volume);
     }
@@ -36,25 +48,16 @@ function atualizarSomPassoRobo(
 function configurarSomPassoRobo(scene, inimigo) {
   // Cada robô possui uma instância própria para que todos possam caminhar
   // e tocar seus passos simultaneamente sem bloquear os demais.
-  inimigo.somPassoRobo = scene.sound.add("robot-walk", { loop: false });
+  inimigo.somPassoRobo = scene.sound.add("robot-walk", { loop: true });
 
-  const tocarPasso = (animation) => {
-    if (!animation.key.startsWith("robo-") || !inimigo.podeTocarPasso) {
+  scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+    if (!inimigo.somPassoRobo) {
       return;
     }
 
-    // Um disparo no início e em cada repetição mantém um passo por ciclo.
-    // O volume é calculado pela distância em atualizarSomPassoRobo().
-    inimigo.somPassoRobo.play({ volume: inimigo.volumePasso });
-  };
-
-  inimigo.on("animationstart", tocarPasso);
-  inimigo.on("animationrepeat", tocarPasso);
-  scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-    inimigo.off("animationstart", tocarPasso);
-    inimigo.off("animationrepeat", tocarPasso);
     inimigo.somPassoRobo.stop();
     inimigo.somPassoRobo.destroy();
+    inimigo.somPassoRobo = null;
   });
 }
 

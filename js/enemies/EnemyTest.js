@@ -41,7 +41,7 @@ function criarInimigoTeste(scene, config = {}) {
 
   inimigo.velocidade = Number(config.velocidade ?? 50);
   inimigo.orbitaAngulo = Math.random() * Math.PI * 2;
-  inimigo.distanciaDeteccao = Number(config.distanciaDeteccao ?? 450);
+  inimigo.distanciaDeteccao = Number(config.distanciaDeteccao ?? 550);
   inimigo.distanciaAtaque = Number(config.distanciaAtaque ?? 180);
   inimigo.distanciaGrupo = Number(config.distanciaGrupo ?? 180);
   inimigo.danoBase = Number(config.danoLaser ?? 5);
@@ -93,7 +93,21 @@ function criarInimigoTeste(scene, config = {}) {
 }
 
 function limparGrupoRobos(scene) {
-  if (!scene || !Array.isArray(scene.inimigos)) {
+  if (!scene) {
+    return;
+  }
+
+  if (scene.lasersInimigo) {
+    if (scene.lasersInimigo.clear) {
+      scene.lasersInimigo.clear(true, true);
+    }
+    if (scene.lasersInimigo.destroy) {
+      scene.lasersInimigo.destroy(true);
+    }
+    scene.lasersInimigo = null;
+  }
+
+  if (!Array.isArray(scene.inimigos)) {
     return;
   }
 
@@ -180,7 +194,7 @@ function criarRobos(
       y,
       formacaoIndex: robosExistentes + index,
       velocidade: 50,
-      distanciaDeteccao: 450,
+      distanciaDeteccao: 550,
       distanciaAtaque: 180,
       distanciaGrupo: 220,
       tempoEntreTiros: 680 - index * 40,
@@ -193,16 +207,24 @@ function criarRobos(
   }
 
   if (scene.physics && robosCriados.length > 0) {
-    for (const robo of robosCriados) {
-      for (const aliado of scene.inimigos) {
-        if (robo !== aliado) {
-          scene.physics.add.collider(robo, aliado);
-        }
+    const aliadosExistentes = scene.inimigos.slice(0, robosExistentes);
+
+    for (let index = 0; index < robosCriados.length; index += 1) {
+      const robo = robosCriados[index];
+
+      for (const aliado of aliadosExistentes) {
+        scene.physics.add.collider(robo, aliado);
+      }
+
+      for (let aliadoIndex = 0; aliadoIndex < index; aliadoIndex += 1) {
+        scene.physics.add.collider(robo, robosCriados[aliadoIndex]);
       }
     }
 
     if (scene.collisionGroup) {
-      scene.physics.add.collider(robosCriados, scene.collisionGroup);
+      for (const robo of robosCriados) {
+        scene.physics.add.collider(robo, scene.collisionGroup);
+      }
     }
   }
 
@@ -417,7 +439,7 @@ function temVisaoDoPlayer(scene, inimigo) {
     return true;
   }
 
-  const blocos = scene.collisionGroup.getChildren();
+  const blocos = obterFilhosGrupoSeguro(scene.collisionGroup);
 
   for (const bloco of blocos) {
     if (!bloco || !bloco.body) {
@@ -745,6 +767,10 @@ function dispararLaser(scene, inimigo = scene.inimigoTeste) {
 
   scene.physics.add.existing(laser);
   laser.body.setAllowGravity(false);
+  if (!scene.lasersInimigo?.add) {
+    laser.destroy();
+    return;
+  }
   scene.lasersInimigo.add(laser);
 
   tocarSomTiroLaser(scene);
@@ -767,12 +793,19 @@ function dispararLaser(scene, inimigo = scene.inimigoTeste) {
 // =====================================================
 
 function verificarLasersNoMapa(scene) {
-  if (!scene.collisionGroup || !scene.lasersInimigo) {
+  if (
+    !scene?.collisionGroup?.getChildren ||
+    !scene?.lasersInimigo?.getChildren
+  ) {
     return;
   }
 
-  const blocos = scene.collisionGroup.getChildren();
-  const lasers = scene.lasersInimigo.getChildren();
+  const blocos = obterFilhosGrupoSeguro(scene.collisionGroup);
+  const lasers = obterFilhosGrupoSeguro(scene.lasersInimigo);
+
+  if (blocos.length === 0 || lasers.length === 0) {
+    return;
+  }
 
   for (const laser of lasers) {
     if (!laser || !laser.active) {
@@ -801,12 +834,25 @@ function verificarLasersNoMapa(scene) {
   }
 }
 
+function obterFilhosGrupoSeguro(grupo) {
+  if (!grupo?.getChildren) {
+    return [];
+  }
+
+  try {
+    const filhos = grupo.getChildren();
+    return Array.isArray(filhos) ? filhos : [];
+  } catch {
+    return [];
+  }
+}
+
 function verificarLasersNoPlayer(scene) {
   if (!scene.hitboxDanoPlayer || !scene.lasersInimigo) {
     return;
   }
 
-  const lasers = scene.lasersInimigo.getChildren();
+  const lasers = obterFilhosGrupoSeguro(scene.lasersInimigo);
 
   for (const laser of lasers) {
     if (!laser || !laser.active) {
@@ -1005,4 +1051,5 @@ export {
   criarRobos,
   atualizarInimigoTeste,
   causarDanoInimigo,
+  limparGrupoRobos,
 };

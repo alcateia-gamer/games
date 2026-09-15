@@ -7,35 +7,40 @@ function carregarSonsPersonagem(loader) {
 
 function configurarSomCorrida(scene) {
   scene.somCorrida = scene.sound.add("running", {
-    loop: false,
+    loop: true,
     // Configuração do volume do áudio de corrida do personagem.
     volume: VOLUME_CORRIDA,
   });
 
-  scene.player.on("animationupdate", (animation, frame) => {
-    if (!animation.key.startsWith("walk-")) {
-      return;
-    }
+  const iniciarSomCorrida = (event) => {
+    const teclasDirecao = scene.teclasWASD;
+    const teclaDirecional = Object.values(teclasDirecao || {}).some(
+      (tecla) => tecla.keyCode === event.keyCode,
+    );
 
-    if (
-      (frame.index === 0 || frame.index === 4) &&
-      !scene.somCorrida.isPlaying
-    ) {
+    if (teclaDirecional && !scene.somCorrida.isPlaying) {
       scene.somCorrida.play({ volume: VOLUME_CORRIDA });
     }
-  });
+  };
+
+  scene.input.keyboard.on("keydown", iniciarSomCorrida);
 
   scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+    scene.input.keyboard.off("keydown", iniciarSomCorrida);
     scene.somCorrida.stop();
   });
 }
 
 function atualizarSomCorrida(scene, estaSeMovendo) {
-  if (!scene.somCorrida || estaSeMovendo) {
+  if (!scene.somCorrida) {
     return;
   }
 
-  if (scene.somCorrida.isPlaying) {
+  if (estaSeMovendo) {
+    if (!scene.somCorrida.isPlaying) {
+      scene.somCorrida.play({ volume: VOLUME_CORRIDA });
+    }
+  } else if (scene.somCorrida.isPlaying) {
     scene.somCorrida.stop();
   }
 }
