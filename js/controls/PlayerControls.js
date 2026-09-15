@@ -16,6 +16,42 @@ function atualizarVelocidadeAnimacao(scene) {
     velocidadeAtual > velocidadeBase ? velocidadeAtual / velocidadeBase : 1;
 }
 
+function configurarSomCorrida(scene) {
+  scene.somCorrida = scene.sound.add("running", {
+    loop: false,
+  });
+
+  scene.player.on("animationupdate", (animation, frame) => {
+    if (!animation.key.startsWith("walk-")) {
+      return;
+    }
+
+    if (frame.index === 0 || frame.index === 4) {
+      if (!scene.somCorrida.isPlaying) {
+        scene.somCorrida.play();
+      }
+    }
+  });
+
+  scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+    scene.somCorrida.stop();
+  });
+}
+
+function atualizarSomCorrida(scene, estaSeMovendo) {
+  if (!scene.somCorrida) {
+    return;
+  }
+
+  if (estaSeMovendo) {
+    return;
+  }
+
+  if (scene.somCorrida.isPlaying) {
+    scene.somCorrida.stop();
+  }
+}
+
 function criarControles(scene) {
   // =====================================================
   // TECLAS WASD
@@ -36,6 +72,8 @@ function criarControles(scene) {
   );
 
   scene.developerMode = !!scene.developerMode;
+
+  configurarSomCorrida(scene);
 
   // =====================================================
   // BOTÃO DE DESENVOLVEDOR
@@ -320,6 +358,8 @@ function atualizarControles(scene) {
   // =====================================================
 
   if (movimentoX !== 0 || movimentoY !== 0) {
+    atualizarSomCorrida(scene, true);
+
     const direcao = new Phaser.Math.Vector2(movimentoX, movimentoY).normalize();
 
     // ===================================================
@@ -396,6 +436,8 @@ function atualizarControles(scene) {
   // PARADO
   // =====================================================
   else {
+    atualizarSomCorrida(scene, false);
+
     scene.player.setVelocity(0, 0);
     scene.player.anims.timeScale = 1;
 

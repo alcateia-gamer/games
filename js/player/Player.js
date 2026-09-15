@@ -254,6 +254,7 @@ function criarHitboxKatana(scene) {
   // =====================================================
 
   let jaAcertou = false;
+  let somAtaqueTocado = false;
 
   // =====================================================
   // DEBUG
@@ -418,6 +419,12 @@ function criarHitboxKatana(scene) {
         }
 
         acertouAlgum = true;
+
+        if (!somAtaqueTocado) {
+          scene.sound.play("katana-ataque");
+          somAtaqueTocado = true;
+        }
+
         causarDanoInimigo(scene, inimigo, 25);
       }
 
@@ -438,6 +445,10 @@ function criarHitboxKatana(scene) {
 
     if (debugKatana) {
       debugKatana.destroy();
+    }
+
+    if (!jaAcertou && !somAtaqueTocado) {
+      scene.sound.play("ataque-no-ar");
     }
   });
 }
