@@ -147,47 +147,38 @@ function limparGrupoRobos(scene) {
   scene.grupoRobosAtivado = false;
 }
 
-function criarGrupoRobos(scene, centroX = -295, centroY = 1284) {
+function criarRobos(
+  scene,
+  quantidade = 1,
+  centroX = scene.player?.x ?? scene.respawnX,
+  centroY = scene.player?.y ?? scene.respawnY,
+) {
   if (!scene) {
     return [];
-  }
-
-  const robosEliminados = !!scene.registry?.get("robosEliminados");
-
-  if (robosEliminados) {
-    return scene.inimigos ?? [];
   }
 
   if (!Array.isArray(scene.inimigos)) {
     scene.inimigos = [];
   }
 
-  if (scene.grupoRobosAtivado) {
-    return scene.inimigos;
-  }
+  const quantidadeSolicitada = Phaser.Math.Clamp(
+    Math.floor(Number(quantidade) || 1),
+    1,
+    3,
+  );
+  const robosExistentes = scene.inimigos.length;
+  const robosCriados = [];
 
-  if (Array.isArray(scene.inimigos) && scene.inimigos.length > 0) {
-    limparGrupoRobos(scene);
-  }
-
-  scene.grupoRobosAtivado = true;
-
-  const offsets = [
-    { angulo: 0.2, raio: 62 },
-    { angulo: 1.7, raio: 84 },
-    { angulo: 3.1, raio: 72 },
-    { angulo: 4.5, raio: 96 },
-    { angulo: 5.7, raio: 78 },
-  ];
-
-  offsets.forEach(({ angulo, raio }, index) => {
+  for (let index = 0; index < quantidadeSolicitada; index += 1) {
+    const angulo = (Math.PI * 2 * index) / quantidadeSolicitada;
+    const raio = 120 + index * 25;
     const x = centroX + Math.cos(angulo) * raio + (Math.random() - 0.5) * 18;
     const y = centroY + Math.sin(angulo) * raio + (Math.random() - 0.5) * 18;
 
-    criarInimigoTeste(scene, {
+    const robo = criarInimigoTeste(scene, {
       x,
       y,
-      formacaoIndex: index,
+      formacaoIndex: robosExistentes + index,
       velocidade: 50,
       distanciaDeteccao: 450,
       distanciaAtaque: 180,
@@ -198,12 +189,20 @@ function criarGrupoRobos(scene, centroX = -295, centroY = 1284) {
         Math.floor(Math.random() * 4)
       ],
     });
-  });
+    robosCriados.push(robo);
+  }
 
-  if (scene.physics && scene.inimigos && scene.inimigos.length > 0) {
-    scene.physics.add.collider(scene.inimigos, scene.inimigos);
+  if (scene.physics && robosCriados.length > 0) {
+    for (const robo of robosCriados) {
+      for (const aliado of scene.inimigos) {
+        if (robo !== aliado) {
+          scene.physics.add.collider(robo, aliado);
+        }
+      }
+    }
+
     if (scene.collisionGroup) {
-      scene.physics.add.collider(scene.inimigos, scene.collisionGroup);
+      scene.physics.add.collider(robosCriados, scene.collisionGroup);
     }
   }
 
@@ -1003,7 +1002,7 @@ function destruirInimigoTeste(scene, inimigo = scene.inimigoTeste) {
 
 export {
   criarInimigoTeste,
-  criarGrupoRobos,
+  criarRobos,
   atualizarInimigoTeste,
   causarDanoInimigo,
 };

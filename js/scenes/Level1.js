@@ -22,7 +22,7 @@ import {
 } from "../player/PlayerStatus.js";
 
 import {
-  criarGrupoRobos,
+  criarRobos,
   atualizarInimigoTeste,
 } from "../enemies/EnemyTest.js";
 
@@ -138,12 +138,20 @@ class Level1 extends Phaser.Scene {
     criarControles(this);
 
     // =====================================================
-    // INIMIGO
+    // COMANDOS DE SPAWN DOS ROBÔS
     // =====================================================
 
     this.inimigos = [];
-    this.grupoRobosAtivado = false;
     this.inimigoTeste = null;
+    this.teclaSpawnRobo1 = this.input.keyboard.addKey(
+      Phaser.Input.Keyboard.KeyCodes.ONE,
+    );
+    this.teclaSpawnRobo2 = this.input.keyboard.addKey(
+      Phaser.Input.Keyboard.KeyCodes.TWO,
+    );
+    this.teclaSpawnRobo3 = this.input.keyboard.addKey(
+      Phaser.Input.Keyboard.KeyCodes.THREE,
+    );
 
     // =====================================================
     // CÂMERA
@@ -205,22 +213,12 @@ class Level1 extends Phaser.Scene {
     // INIMIGO
     // =====================================================
 
-    const distanciaAoPontoSpawn = Phaser.Math.Distance.Between(
-      this.player.x,
-      this.player.y,
-      -295,
-      1284,
-    );
-
-    const robosEliminados = !!this.registry?.get("robosEliminados");
-
-    if (
-      !this.grupoRobosAtivado &&
-      !robosEliminados &&
-      distanciaAoPontoSpawn <= 450
-    ) {
-      criarGrupoRobos(this, -295, 1284);
-      this.grupoRobosAtivado = true;
+    if (Phaser.Input.Keyboard.JustDown(this.teclaSpawnRobo1)) {
+      criarRobos(this, 1);
+    } else if (Phaser.Input.Keyboard.JustDown(this.teclaSpawnRobo2)) {
+      criarRobos(this, 2);
+    } else if (Phaser.Input.Keyboard.JustDown(this.teclaSpawnRobo3)) {
+      criarRobos(this, 3);
     }
 
     atualizarInimigoTeste(this, time);
