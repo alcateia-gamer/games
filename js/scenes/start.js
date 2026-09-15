@@ -31,6 +31,18 @@ class Start extends Phaser.Scene {
         frameHeight: 64,
       },
     );
+    this.load.spritesheet(
+      "start-character-3",
+      "assets/personagem/personagem 3/darkhatman_idle_sheet_64x64.png",
+      {
+        frameWidth: 64,
+        frameHeight: 64,
+      },
+    );
+    this.load.image(
+      "start-character-4",
+      "assets/personagem/personagem 4/personagem 4.png",
+    );
   }
 
   create() {
@@ -345,7 +357,7 @@ class Start extends Phaser.Scene {
     const characters = [
       {
         id: "standard",
-        x: this.width / 2 - 92,
+        x: this.width / 2 - 276,
         texture: "start-character",
         frame: 26,
         scale: 1.45,
@@ -353,11 +365,27 @@ class Start extends Phaser.Scene {
       },
       {
         id: "personagem2",
-        x: this.width / 2 + 92,
+        x: this.width / 2 - 92,
         texture: "start-character-2",
         frame: 0,
         scale: 1.9,
         name: "OPERADORA // 02",
+      },
+      {
+        id: "personagem3",
+        x: this.width / 2 + 92,
+        texture: "start-character-3",
+        frame: 0,
+        scale: 1.45,
+        name: "OPERADOR // 03",
+      },
+      {
+        id: "personagem4",
+        x: this.width / 2 + 276,
+        texture: "start-character-4",
+        frame: 0,
+        scale: 1,
+        name: "OPERADORA // 04",
       },
     ];
     const characterViews = characters.map((character) => {

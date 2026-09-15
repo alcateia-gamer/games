@@ -10,6 +10,24 @@ function personagem2Ativa(scene) {
   return scene.personagemSelecionada === "personagem2";
 }
 
+function personagem3Ativa(scene) {
+  return scene.personagemSelecionada === "personagem3";
+}
+
+function personagem4Ativa(scene) {
+  return scene.personagemSelecionada === "personagem4";
+}
+
+function texturaWalk(scene, direcao = scene.direcaoAtual) {
+  if (personagem4Ativa(scene)) {
+    return "personagem4";
+  }
+  if (personagem3Ativa(scene)) {
+    return "personagem3-walk";
+  }
+  return personagem2Ativa(scene) ? "personagem2-walk" : "walk";
+}
+
 function configurarFiltroPersonagem2(scene) {
   ["personagem2-walk", "personagem2-attack", "personagem2-idle"].forEach(
     (textureKey) => {
@@ -20,9 +38,13 @@ function configurarFiltroPersonagem2(scene) {
 }
 
 function frameParado(scene, direcao = scene.direcaoAtual) {
-  const frames = personagem2Ativa(scene)
-    ? { up: 24, left: 8, down: 0, right: 40 }
-    : { up: 0, left: 13, down: 26, right: 39 };
+  const frames = personagem4Ativa(scene)
+    ? { down: 0, up: 0, left: 0, right: 0 }
+    : personagem3Ativa(scene)
+    ? { down: 0, up: 1, left: 3, right: 2 }
+    : personagem2Ativa(scene)
+      ? { up: 24, left: 8, down: 0, right: 40 }
+      : { up: 0, left: 13, down: 26, right: 39 };
   return frames[direcao] ?? frames.down;
 }
 
@@ -63,7 +85,7 @@ function criarPlayer(scene) {
   scene.player = scene.physics.add.sprite(
     scene.respawnX,
     scene.respawnY,
-    personagem2Ativa(scene) ? "personagem2-walk" : "walk",
+    texturaWalk(scene, "down"),
     frameParado(scene, "down"),
   );
 
@@ -76,7 +98,7 @@ function criarPlayer(scene) {
 
   scene.player.invulneravel = false;
 
-  if (personagem2Ativa(scene)) {
+  if (personagem2Ativa(scene) || personagem3Ativa(scene)) {
     scene.player.anims.play("idle-down", true);
   }
 
@@ -135,7 +157,7 @@ function criarPlayer(scene) {
     // =================================================
 
     scene.player.setTexture(
-      personagem2Ativa(scene) ? "personagem2-walk" : "walk",
+      texturaWalk(scene),
       frameParado(scene),
     );
 
@@ -161,6 +183,11 @@ function configurarHitboxWalk(scene) {
   if (personagem2Ativa(scene)) {
     scene.player.body.setSize(23, 11);
     scene.player.body.setOffset(13, 34);
+    return;
+  }
+  if (personagem3Ativa(scene)) {
+    scene.player.body.setSize(30, 15);
+    scene.player.body.setOffset(18, 41);
     return;
   }
   scene.player.body.setSize(30, 15);
@@ -190,7 +217,7 @@ function configurarHitboxAtaque(scene) {
     return;
   }
 
-  if (personagem2Ativa(scene)) {
+  if (personagem2Ativa(scene) || personagem3Ativa(scene)) {
     configurarHitboxWalk(scene);
     return;
   }
@@ -516,6 +543,11 @@ function atacar(scene) {
   // ANIMAÇÃO
   // =====================================================
 
+  if (personagem4Ativa(scene)) {
+    scene.atacando = false;
+    return;
+  }
+
   if (scene.direcaoAtual === "up") {
     scene.player.anims.play("attack-up", true);
   } else if (scene.direcaoAtual === "left") {
@@ -563,7 +595,7 @@ function respawnPlayer(scene) {
   // =====================================================
 
   scene.player.setTexture(
-    personagem2Ativa(scene) ? "personagem2-walk" : "walk",
+    texturaWalk(scene, "down"),
     frameParado(scene, "down"),
   );
 

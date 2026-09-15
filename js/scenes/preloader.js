@@ -169,6 +169,38 @@ class Preloader extends Phaser.Scene {
       },
     );
 
+    this.load.spritesheet(
+      "personagem3-idle",
+      "personagem/personagem 3/darkhatman_idle_sheet_64x64.png",
+      {
+        frameWidth: 64,
+        frameHeight: 64,
+      },
+    );
+
+    this.load.spritesheet(
+      "personagem3-walk",
+      "personagem/personagem 3/darkhatman_walk_sheet_64x64.png",
+      {
+        frameWidth: 64,
+        frameHeight: 64,
+      },
+    );
+
+    this.load.spritesheet(
+      "personagem3-attack",
+      "personagem/personagem 3/darkhatman_attack_sheet_64x64.png",
+      {
+        frameWidth: 64,
+        frameHeight: 64,
+      },
+    );
+
+    this.load.image(
+      "personagem4",
+      "personagem/personagem 4/personagem 4.png",
+    );
+
     // =====================================================
     // PERSONAGEM - ATAQUE
     // =====================================================
