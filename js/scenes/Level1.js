@@ -21,10 +21,7 @@ import {
   atualizarStatusPlayer,
 } from "../player/PlayerStatus.js";
 
-import {
-  criarRobos,
-  atualizarInimigoTeste,
-} from "../enemies/EnemyTest.js";
+import { criarRobos, atualizarInimigoTeste } from "../enemies/EnemyTest.js";
 
 // =====================================================
 // LEVEL 1
