@@ -3,7 +3,7 @@ function criarAnimacoesPlayer(scene) {
     indices.map((frame) => ({ key: texture, frame }));
 
   const personagem2 = scene.personagemSelecionada === "personagem2";
-    const personagem3 = scene.personagemSelecionada === "personagem3";
+  const personagem3 = scene.personagemSelecionada === "personagem3";
   const personagem4 = scene.personagemSelecionada === "personagem4";
 
   if (personagem4) {
@@ -11,20 +11,20 @@ function criarAnimacoesPlayer(scene) {
   }
   const walkFrames = personagem3
     ? {
-      down: [0, 4, 8, 12],
-      up: [1, 5, 9, 13],
-      left: [3, 7, 11, 15],
-      right: [2, 6, 10, 14],
+        down: [0, 4, 8, 12],
+        up: [1, 5, 9, 13],
+        left: [3, 7, 11, 15],
+        right: [2, 6, 10, 14],
       }
     : personagem2
       ? { up: [24, 31], left: [8, 15], down: [0, 7], right: [40, 47] }
       : { up: [0, 8], left: [13, 21], down: [26, 34], right: [39, 47] };
   const idleFrames = personagem3
     ? {
-      down: [0, 4, 8, 12],
-      up: [1, 5, 9, 13],
-      left: [3, 7, 11, 15],
-      right: [2, 6, 10, 14],
+        down: [0, 4, 8, 12],
+        up: [1, 5, 9, 13],
+        left: [3, 7, 11, 15],
+        right: [2, 6, 10, 14],
       }
     : walkFrames;
   const walkTexture = personagem3

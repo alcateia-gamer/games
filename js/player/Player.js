@@ -41,10 +41,10 @@ function frameParado(scene, direcao = scene.direcaoAtual) {
   const frames = personagem4Ativa(scene)
     ? { down: 0, up: 0, left: 0, right: 0 }
     : personagem3Ativa(scene)
-    ? { down: 0, up: 1, left: 3, right: 2 }
-    : personagem2Ativa(scene)
-      ? { up: 24, left: 8, down: 0, right: 40 }
-      : { up: 0, left: 13, down: 26, right: 39 };
+      ? { down: 0, up: 1, left: 3, right: 2 }
+      : personagem2Ativa(scene)
+        ? { up: 24, left: 8, down: 0, right: 40 }
+        : { up: 0, left: 13, down: 26, right: 39 };
   return frames[direcao] ?? frames.down;
 }
 
@@ -156,10 +156,7 @@ function criarPlayer(scene) {
     // VOLTA PARA WALK
     // =================================================
 
-    scene.player.setTexture(
-      texturaWalk(scene),
-      frameParado(scene),
-    );
+    scene.player.setTexture(texturaWalk(scene), frameParado(scene));
 
     // =================================================
     // RESTAURA HITBOX PARA WALK 64x64

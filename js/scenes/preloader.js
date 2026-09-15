@@ -196,10 +196,7 @@ class Preloader extends Phaser.Scene {
       },
     );
 
-    this.load.image(
-      "personagem4",
-      "personagem/personagem 4/personagem 4.png",
-    );
+    this.load.image("personagem4", "personagem/personagem 4/personagem 4.png");
 
     // =====================================================
     // PERSONAGEM - ATAQUE
