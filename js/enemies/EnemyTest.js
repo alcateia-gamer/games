@@ -726,6 +726,8 @@ function dispararLaser(scene, inimigo = scene.inimigoTeste) {
   laser.body.setAllowGravity(false);
   scene.lasersInimigo.add(laser);
 
+  scene.sound.play("tiro-laser", { volume: 0.1 });
+
   scene.physics.velocityFromRotation(
     angulo,
     inimigo.velocidadeLaser + 30,
