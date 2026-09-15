@@ -3,6 +3,11 @@
 // =====================================================
 
 import mostrarTelaMorte from "../scenes/DeathScreen.js";
+import {
+  configurarSomPassoRobo,
+  atualizarSomPassoRobo,
+  tocarSomTiroLaser,
+} from "../sounds/inimigos.js";
 
 function criarInimigoTeste(scene, config = {}) {
   criarAnimacoesInimigo(scene);
@@ -36,7 +41,7 @@ function criarInimigoTeste(scene, config = {}) {
 
   inimigo.velocidade = Number(config.velocidade ?? 50);
   inimigo.orbitaAngulo = Math.random() * Math.PI * 2;
-  inimigo.distanciaDeteccao = Number(config.distanciaDeteccao ?? 220);
+  inimigo.distanciaDeteccao = Number(config.distanciaDeteccao ?? 450);
   inimigo.distanciaAtaque = Number(config.distanciaAtaque ?? 180);
   inimigo.distanciaGrupo = Number(config.distanciaGrupo ?? 180);
   inimigo.danoBase = Number(config.danoLaser ?? 5);
@@ -45,6 +50,8 @@ function criarInimigoTeste(scene, config = {}) {
     direcoes[Math.floor(Math.random() * direcoes.length)];
 
   inimigo.direcaoAtual = config.direcaoAtual ?? direcaoAleatoria;
+
+  configurarSomPassoRobo(scene, inimigo);
 
   inimigo.tempoEntreTiros = Number(config.tempoEntreTiros ?? 720);
   inimigo.ultimoTiro = 0;
@@ -115,6 +122,12 @@ function limparGrupoRobos(scene) {
       robo.bordaVida = null;
     }
 
+    if (robo.somPassoRobo) {
+      robo.somPassoRobo.stop();
+      robo.somPassoRobo.destroy();
+      robo.somPassoRobo = null;
+    }
+
     if (robo.body) {
       robo.body.enable = false;
     }
@@ -176,7 +189,7 @@ function criarGrupoRobos(scene, centroX = -295, centroY = 1284) {
       y,
       formacaoIndex: index,
       velocidade: 50,
-      distanciaDeteccao: 260,
+      distanciaDeteccao: 450,
       distanciaAtaque: 180,
       distanciaGrupo: 220,
       tempoEntreTiros: 680 - index * 40,
@@ -558,12 +571,15 @@ function atualizarIAInimigo(scene, time, inimigo = scene.inimigoTeste) {
     );
     atualizarDirecaoInimigo(scene, inimigo);
     aplicarSeparacaoGrupo(inimigo, scene);
-    tocarAnimacaoInimigo(inimigo);
 
     if (distancia <= inimigo.distanciaAtaque) {
       inimigo.setVelocity(0, 0);
       pararAnimacaoInimigo(inimigo);
+      atualizarSomPassoRobo(scene, inimigo, viuPlayer, distancia, false);
       tentarDispararLaser(scene, time, inimigo);
+    } else {
+      atualizarSomPassoRobo(scene, inimigo, viuPlayer, distancia, true);
+      tocarAnimacaoInimigo(inimigo);
     }
 
     return;
@@ -590,10 +606,12 @@ function atualizarIAInimigo(scene, time, inimigo = scene.inimigoTeste) {
     if (distPatrulha > 10) {
       scene.physics.moveTo(inimigo, patrolX, patrolY, inimigo.velocidade * 0.7);
       aplicarSeparacaoGrupo(inimigo, scene);
+      atualizarSomPassoRobo(scene, inimigo, viuPlayer, distancia, true);
       tocarAnimacaoInimigo(inimigo);
     } else {
       inimigo.setVelocity(0, 0);
       pararAnimacaoInimigo(inimigo);
+      atualizarSomPassoRobo(scene, inimigo, viuPlayer, distancia, false);
     }
 
     return;
@@ -604,12 +622,14 @@ function atualizarIAInimigo(scene, time, inimigo = scene.inimigoTeste) {
   if (distancia <= inimigo.distanciaAtaque) {
     inimigo.setVelocity(0, 0);
     pararAnimacaoInimigo(inimigo);
+    atualizarSomPassoRobo(scene, inimigo, viuPlayer, distancia, false);
     tentarDispararLaser(scene, time, inimigo);
     return;
   }
 
   aplicarSeparacaoGrupo(inimigo, scene);
   scene.physics.moveToObject(inimigo, scene.player, inimigo.velocidade);
+  atualizarSomPassoRobo(scene, inimigo, viuPlayer, distancia, true);
   tocarAnimacaoInimigo(inimigo);
 }
 
@@ -728,7 +748,7 @@ function dispararLaser(scene, inimigo = scene.inimigoTeste) {
   laser.body.setAllowGravity(false);
   scene.lasersInimigo.add(laser);
 
-  scene.sound.play("tiro-laser", { volume: 0.1 });
+  tocarSomTiroLaser(scene);
 
   scene.physics.velocityFromRotation(
     angulo,
@@ -944,6 +964,12 @@ function destruirInimigoTeste(scene, inimigo = scene.inimigoTeste) {
   if (inimigo.bordaVida) {
     inimigo.bordaVida.destroy();
     inimigo.bordaVida = null;
+  }
+
+  if (inimigo.somPassoRobo) {
+    inimigo.somPassoRobo.stop();
+    inimigo.somPassoRobo.destroy();
+    inimigo.somPassoRobo = null;
   }
 
   inimigo.hitboxDano = null;

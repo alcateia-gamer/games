@@ -1,6 +1,7 @@
 import { gastarEstamina } from "./PlayerStatus.js";
 
 import { causarDanoInimigo } from "../enemies/EnemyTest.js";
+import { tocarSomKatanaAcerto, tocarSomKatanaErro } from "../sounds/katana.js";
 
 function debugHitboxesAtivado(scene) {
   return !!scene?.game?.config?.physics?.arcade?.debug;
@@ -469,7 +470,7 @@ function criarHitboxKatana(scene) {
         acertouAlgum = true;
 
         if (!somAtaqueTocado) {
-          scene.sound.play("katana-ataque");
+          tocarSomKatanaAcerto(scene);
           somAtaqueTocado = true;
         }
 
@@ -496,7 +497,7 @@ function criarHitboxKatana(scene) {
     }
 
     if (!jaAcertou && !somAtaqueTocado) {
-      scene.sound.play("ataque-no-ar");
+      tocarSomKatanaErro(scene);
     }
   });
 }

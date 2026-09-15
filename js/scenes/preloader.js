@@ -1,3 +1,7 @@
+import { carregarSonsInimigos } from "../sounds/inimigos.js";
+import { carregarSonsKatana } from "../sounds/katana.js";
+import { carregarSonsPersonagem } from "../sounds/personagem.js";
+
 class Preloader extends Phaser.Scene {
   constructor() {
     super("preloader");
@@ -120,10 +124,9 @@ class Preloader extends Phaser.Scene {
 
     this.load.setPath("./assets/");
 
-    this.load.audio("running", "sounds.mp3/running.mp3");
-    this.load.audio("katana-ataque", "sounds.mp3/katana_ataque.mp3");
-    this.load.audio("ataque-no-ar", "sounds.mp3/ataque_no_ar.mp3");
-    this.load.audio("tiro-laser", "sounds.mp3/tiro_laser.mp3");
+    carregarSonsPersonagem(this.load);
+    carregarSonsKatana(this.load);
+    carregarSonsInimigos(this.load);
 
     // =====================================================
     // MAPA
