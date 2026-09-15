@@ -1,12 +1,12 @@
 // Volume máximo do passo do robô. A distância reduz este valor até zero.
-const VOLUME_PASSO_ROBO_MAXIMO = 0.35;
+const VOLUME_PASSO_ROBO_MAXIMO = 0.25;
 
 // Volume fixo do disparo de laser dos inimigos.
-const VOLUME_TIRO_LASER = 0.05;
+const VOLUME_TIRO_LASER = 0.02;
 
 function carregarSonsInimigos(loader) {
   loader.audio("tiro-laser", "sounds.mp3/tiro_laser.mp3");
-  loader.audio("robot-walk", "sounds.mp3/robot_walk.mp3");
+  loader.audio("robot-walk", "sounds.mp3/robot_walk_2.mp3");
 }
 
 function atualizarSomPassoRobo(
@@ -42,9 +42,11 @@ function configurarSomPassoRobo(scene, inimigo) {
     if (
       animation.key.startsWith("robo-") &&
       (frame.index === 0 || frame.index === 2) &&
-      inimigo.podeTocarPasso &&
-      !inimigo.somPassoRobo.isPlaying
+      inimigo.podeTocarPasso
     ) {
+      // Reinicia no contato do pé para manter cada passo sincronizado,
+      // mesmo quando o áudio anterior ainda não terminou.
+      inimigo.somPassoRobo.stop();
       // O volume é calculado pela distância em atualizarSomPassoRobo().
       inimigo.somPassoRobo.play({ volume: inimigo.volumePasso });
     }
