@@ -1,4 +1,4 @@
-import { atacar } from "../player/Player.js";
+import { atacar, soltarAtaque } from "../player/Player.js";
 import {
   configurarSomCorrida,
   atualizarSomCorrida,
@@ -219,13 +219,18 @@ function criarControles(scene) {
     scene.iconeAtaque.setScale(1);
   };
 
+  const soltarAtaqueAtual = () => {
+    soltarBotao();
+    soltarAtaque(scene);
+  };
+
   // =====================================================
   // BOTÃO NA TELA
   // =====================================================
 
   scene.botaoAtaque.on("pointerdown", apertarBotao);
 
-  scene.botaoAtaque.on("pointerup", soltarBotao);
+  scene.botaoAtaque.on("pointerup", soltarAtaqueAtual);
 
   scene.botaoAtaque.on("pointerout", soltarBotao);
 
@@ -235,7 +240,7 @@ function criarControles(scene) {
 
   scene.iconeAtaque.on("pointerdown", apertarBotao);
 
-  scene.iconeAtaque.on("pointerup", soltarBotao);
+  scene.iconeAtaque.on("pointerup", soltarAtaqueAtual);
 
   scene.iconeAtaque.on("pointerout", soltarBotao);
 
@@ -262,6 +267,8 @@ function criarControles(scene) {
 
     atacar(scene);
   });
+
+  scene.input.on("pointerup", soltarAtaqueAtual);
 }
 
 // =====================================================
@@ -354,7 +361,7 @@ function atualizarControles(scene) {
       if (direcao.x > 0) {
         scene.direcaoAtual = "right";
 
-        if (!scene.atacando && scene.personagemSelecionada !== "personagem4") {
+        if (!scene.atacando) {
           scene.player.anims.play("walk-right", true);
         }
       }
@@ -365,7 +372,7 @@ function atualizarControles(scene) {
       else {
         scene.direcaoAtual = "left";
 
-        if (!scene.atacando && scene.personagemSelecionada !== "personagem4") {
+        if (!scene.atacando) {
           scene.player.anims.play("walk-left", true);
         }
       }
@@ -382,7 +389,7 @@ function atualizarControles(scene) {
       if (direcao.y > 0) {
         scene.direcaoAtual = "down";
 
-        if (!scene.atacando && scene.personagemSelecionada !== "personagem4") {
+        if (!scene.atacando) {
           scene.player.anims.play("walk-down", true);
         }
       }
@@ -393,7 +400,7 @@ function atualizarControles(scene) {
       else {
         scene.direcaoAtual = "up";
 
-        if (!scene.atacando && scene.personagemSelecionada !== "personagem4") {
+        if (!scene.atacando) {
           scene.player.anims.play("walk-up", true);
         }
       }
@@ -416,7 +423,9 @@ function atualizarControles(scene) {
     if (!scene.atacando) {
       if (scene.personagemSelecionada === "personagem2") {
         scene.player.anims.play(`idle-${scene.direcaoAtual}`, true);
-      } else if (scene.personagemSelecionada !== "personagem4") {
+      } else if (scene.personagemSelecionada === "personagem4") {
+        scene.player.anims.play(`idle-${scene.direcaoAtual}`, true);
+      } else {
         scene.player.anims.stop();
       }
     }

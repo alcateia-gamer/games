@@ -199,7 +199,23 @@ class Preloader extends Phaser.Scene {
       },
     );
 
-    this.load.image("personagem4", "personagem/personagem 4/personagem 4.png");
+    this.load.spritesheet(
+      "personagem4-walk",
+      "personagem/personagem 4/Girl-Sheet.png",
+      {
+        frameWidth: 24,
+        frameHeight: 24,
+      },
+    );
+    this.load.spritesheet(
+      "personagem4-bow",
+      "personagem/personagem 4/Bow.png",
+      {
+        frameWidth: 48,
+        frameHeight: 48,
+      },
+    );
+    this.load.image("personagem4-arrow", "personagem/personagem 4/Arrow.png");
 
     // =====================================================
     // PERSONAGEM - ATAQUE

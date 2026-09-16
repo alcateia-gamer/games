@@ -2,6 +2,10 @@ import { gastarEstamina } from "./PlayerStatus.js";
 
 import { causarDanoInimigo } from "../enemies/EnemyTest.js";
 import { tocarSomKatanaAcerto, tocarSomKatanaErro } from "../sounds/katana.js";
+import {
+  iniciarCargaArco,
+  dispararFlecha,
+} from "./archer/Archer.js";
 
 function debugHitboxesAtivado(scene) {
   return !!scene?.game?.config?.physics?.arcade?.debug;
@@ -21,7 +25,7 @@ function personagem4Ativa(scene) {
 
 function texturaWalk(scene, direcao = scene.direcaoAtual) {
   if (personagem4Ativa(scene)) {
-    return "personagem4";
+    return "personagem4-walk";
   }
   if (personagem3Ativa(scene)) {
     return "personagem3-walk";
@@ -40,7 +44,7 @@ function configurarFiltroPersonagem2(scene) {
 
 function frameParado(scene, direcao = scene.direcaoAtual) {
   const frames = personagem4Ativa(scene)
-    ? { down: 0, up: 0, left: 0, right: 0 }
+    ? { down: 0, up: 12, left: 4, right: 8 }
     : personagem3Ativa(scene)
       ? { down: 0, up: 1, left: 3, right: 2 }
       : personagem2Ativa(scene)
@@ -99,7 +103,9 @@ function criarPlayer(scene) {
 
   scene.player.invulneravel = false;
 
-  if (personagem2Ativa(scene) || personagem3Ativa(scene)) {
+  scene.player.setScale(personagem4Ativa(scene) ? 1 : 1);
+
+  if (personagem2Ativa(scene) || personagem3Ativa(scene) || personagem4Ativa(scene)) {
     scene.player.anims.play("idle-down", true);
   }
 
@@ -186,6 +192,11 @@ function configurarHitboxWalk(scene) {
   if (personagem3Ativa(scene)) {
     scene.player.body.setSize(30, 15);
     scene.player.body.setOffset(18, 41);
+    return;
+  }
+  if (personagem4Ativa(scene)) {
+    scene.player.body.setSize(12, 7);
+    scene.player.body.setOffset(6, 15);
     return;
   }
   scene.player.body.setSize(30, 15);
@@ -507,6 +518,11 @@ function criarHitboxKatana(scene) {
 // =====================================================
 
 function atacar(scene) {
+  if (personagem4Ativa(scene)) {
+    iniciarCargaArco(scene);
+    return;
+  }
+
   // =====================================================
   // JÁ ESTÁ ATACANDO
   // =====================================================
@@ -541,11 +557,6 @@ function atacar(scene) {
   // ANIMAÇÃO
   // =====================================================
 
-  if (personagem4Ativa(scene)) {
-    scene.atacando = false;
-    return;
-  }
-
   if (scene.direcaoAtual === "up") {
     scene.player.anims.play("attack-up", true);
   } else if (scene.direcaoAtual === "left") {
@@ -565,6 +576,12 @@ function atacar(scene) {
   // =====================================================
 
   configurarHitboxAtaque(scene);
+}
+
+function soltarAtaque(scene) {
+  if (personagem4Ativa(scene)) {
+    dispararFlecha(scene);
+  }
 }
 
 // =====================================================
@@ -635,6 +652,7 @@ function respawnPlayer(scene) {
 export {
   criarPlayer,
   atacar,
+  soltarAtaque,
   respawnPlayer,
   atualizarHitboxDanoPlayer,
   atualizarDepthPlayer,

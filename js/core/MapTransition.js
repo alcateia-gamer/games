@@ -6,14 +6,15 @@ function criarTransicaoParaParte2(scene) {
     scene.map.getObjectLayer("Transicoes") ||
     scene.map.getObjectLayer("Portas");
 
-  const entrada = camadaTransicao?.objects.find(
+  if (!camadaTransicao || !Array.isArray(camadaTransicao.objects)) {
+    return;
+  }
+
+  const entrada = camadaTransicao.objects.find(
     (obj) => obj.name === "EntradaFabrica" || obj.type === "EntradaFabrica",
   );
 
   if (!entrada) {
-    console.warn(
-      'Transição ausente: crie no Tiled um objeto chamado "EntradaFabrica" em uma camada "Transitions", "Transicoes" ou "Portas".',
-    );
     return;
   }
 

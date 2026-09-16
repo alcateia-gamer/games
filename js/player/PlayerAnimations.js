@@ -7,6 +7,30 @@ function criarAnimacoesPlayer(scene) {
   const personagem4 = scene.personagemSelecionada === "personagem4";
 
   if (personagem4) {
+    const direcoesPersonagem4 = {
+      down: { idle: [0, 3], walk: [16, 21] },
+      left: { idle: [4, 7], walk: [22, 27] },
+      right: { idle: [8, 11], walk: [28, 33] },
+      up: { idle: [12, 15], walk: [34, 39] },
+    };
+
+    ["walk", "idle"].forEach((tipo) => {
+      Object.entries(direcoesPersonagem4).forEach(([direcao, ciclos]) => {
+        const chave = `${tipo}-${direcao}`;
+        if (scene.anims.exists(chave)) {
+          scene.anims.remove(chave);
+        }
+        scene.anims.create({
+          key: chave,
+          frames: scene.anims.generateFrameNumbers("personagem4-walk", {
+            start: ciclos[tipo][0],
+            end: ciclos[tipo][1],
+          }),
+          frameRate: tipo === "idle" ? 4 : 12,
+          repeat: -1,
+        });
+      });
+    });
     return;
   }
   const walkFrames = personagem3

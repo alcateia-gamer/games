@@ -9,6 +9,7 @@ import {
   criarStatusPlayer,
   atualizarStatusPlayer,
 } from "../player/PlayerStatus.js";
+import { prepararArqueira } from "../player/archer/Archer.js";
 import {
   criarRobos,
   atualizarInimigoTeste,
@@ -55,6 +56,7 @@ class Level1Parte2 extends Phaser.Scene {
     this.map = criarLevel1Parte2Map(this);
     criarAnimacoesPlayer(this);
     criarPlayer(this);
+    prepararArqueira(this);
 
     this.criarBlocoRetornoParte1();
 
