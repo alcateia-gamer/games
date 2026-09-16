@@ -19,8 +19,8 @@ class Preloader extends Phaser.Scene {
     // =====================================================
 
     this.add
-      .rectangle(400, 305, 440, 115, 0x050914, 0.88)
-      .setStrokeStyle(2, 0x00d9ff, 0.8);
+      .rectangle(400, 305, 440, 115, 0x000000, 1)
+      .setStrokeStyle(2, 0x00ff66, 0.8);
 
     // =====================================================
     // STATUS
@@ -29,7 +29,7 @@ class Preloader extends Phaser.Scene {
     this.textoStatus = this.add.text(200, 280, "CARREGANDO ASSETS...", {
       fontFamily: "monospace",
       fontSize: "13px",
-      color: "#a8f3ff",
+      color: "#00ff66",
     });
 
     // =====================================================
@@ -37,15 +37,15 @@ class Preloader extends Phaser.Scene {
     // =====================================================
 
     this.add
-      .rectangle(400, 315, 404, 26, 0x02040a, 0.95)
-      .setStrokeStyle(2, 0x00d9ff, 1);
+      .rectangle(400, 315, 404, 26, 0x000000, 1)
+      .setStrokeStyle(2, 0x00ff66, 1);
 
     // =====================================================
     // BARRA DE CARREGAMENTO
     // =====================================================
 
     this.barra = this.add
-      .rectangle(204, 315, 0, 12, 0x00d9ff, 1)
+      .rectangle(204, 315, 0, 12, 0x00ff66, 1)
       .setOrigin(0, 0.5);
 
     // =====================================================
@@ -56,7 +56,7 @@ class Preloader extends Phaser.Scene {
       .text(600, 342, "0%", {
         fontFamily: "monospace",
         fontSize: "14px",
-        color: "#ffffff",
+        color: "#42ff84",
       })
       .setOrigin(1, 0.5);
 
