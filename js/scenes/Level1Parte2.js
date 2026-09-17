@@ -127,8 +127,8 @@ class Level1Parte2 extends Phaser.Scene {
     ) {
       limparGrupoRobos(this);
       this.scene.start("Level1", {
-        spawnX: -107,
-        spawnY: 454,
+        spawnX: 99,
+        spawnY: -2203,
         personagem: this.personagemSelecionada,
       });
     }

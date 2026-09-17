@@ -268,8 +268,8 @@ class Level1 extends Phaser.Scene {
   }
 
   criarBlocoParte2() {
-    const x = -107;
-    const y = 454;
+    const x = 99;
+    const y = -2203;
     const tamanho = 48;
 
     this.blocoParte2 = this.add
@@ -311,15 +311,27 @@ class Level1 extends Phaser.Scene {
     }
 
     if (!this.camadaCercas) {
-      return;
+      if (!this.camadaCercaFabrica) {
+        return;
+      }
     }
 
     if (this.player.y >= -207) {
-      this.camadaCercas.setDepth(11);
+      this.camadaCercas?.setDepth(11);
     } else if (this.player.y <= -225) {
-      this.camadaCercas.setDepth(14);
+      this.camadaCercas?.setDepth(14);
     } else {
-      this.camadaCercas.setDepth(11);
+      this.camadaCercas?.setDepth(11);
+    }
+
+    if (this.camadaCercaFabrica) {
+      if (this.player.y <= -1660) {
+        this.camadaCercaFabrica.setDepth(14);
+      } else if (this.player.y >= -1646) {
+        this.camadaCercaFabrica.setDepth(11);
+      } else {
+        this.camadaCercaFabrica.setDepth(11);
+      }
     }
   }
 

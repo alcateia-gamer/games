@@ -243,6 +243,12 @@ function criarLevel1Map(scene) {
     "ModernInsideFactoryA1",
   );
 
+  // Bordas das paredes
+  const wallBorder = map.addTilesetImage("parede-borda", "wallBorder");
+
+  // Porta da loja
+  const shopDoor = map.addTilesetImage("!ShopDoor", "shopDoor");
+
   // =====================================================
   // TILESETS - VEÍCULOS
   // =====================================================
@@ -296,6 +302,8 @@ function criarLevel1Map(scene) {
 
     modernIndustrial2,
     modernInsideFactoryA1,
+    wallBorder,
+    shopDoor,
 
     vehiclesSpeederCivil5,
     speederCivil2,
@@ -319,6 +327,8 @@ function criarLevel1Map(scene) {
     ["Tileset_SciFi_Arpartment_2_Rasak", "apartment2"],
     ["Tileset_Modern_Industrial_2_Rasak", "ModernIndustrial2"],
     ["A1_Modern_Inside_Factory_Rasak", "ModernInsideFactoryA1"],
+    ["parede-borda", "wallBorder"],
+    ["!ShopDoor", "shopDoor"],
     ["Speeder_civil5", "VehiclesSpeederCivil5"],
     ["Speeder_civil2", "Speeder_civil2"],
     ["Transporter_Private", "Transporter_Private"],
@@ -393,6 +403,11 @@ function criarLevel1Map(scene) {
   // Cerca do spawn separada no próprio mapa
   const camadaCercaSpawn = map.createLayer("CercaSpawn", tilesets);
 
+  // Cercas da fábrica
+  const camadaCercaFabrica2 = map.createLayer("CercaFabrica2", tilesets);
+
+  const camadaCercaFabrica = map.createLayer("CercaFabrica", tilesets);
+
   // =====================================================
   // CAMADAS - SOMBRAS
   // =====================================================
@@ -441,19 +456,23 @@ function criarLevel1Map(scene) {
   camadaPostes?.setDepth(DEPTHS.alwaysAboveWorld);
   camadaCercas?.setDepth(19);
   camadaObjAcimaPerso?.setDepth(DEPTHS.overlayAboveWorld);
+  // Fica acima dos objetos, mas abaixo dos personagens dinâmicos.
+  camadaCercaFabrica2?.setDepth(11.5);
+  camadaCercaFabrica?.setDepth(13);
   camadaSombra3?.setDepth(21);
   camadaSombra2?.setDepth(22);
   camadaSombra?.setDepth(23);
   camadaSombraGeral?.setDepth(24);
 
   // Restaura as opacidades originais definidas no mapa Tiled.
-  camadaSombra3?.setAlpha(0.6);
+  camadaSombra3?.setAlpha(1);
   camadaSombra2?.setAlpha(1);
   camadaSombra?.setAlpha(1);
   camadaSombraGeral?.setAlpha(0.7);
 
   scene.camadaCercas = camadaCercas;
   scene.camadaCercaSpawn = camadaCercaSpawn;
+  scene.camadaCercaFabrica = camadaCercaFabrica;
   scene.depths = DEPTHS;
   scene.calcularDepthMundo = depthFromWorldY;
   camadaCercaSpawn?.setDepth(14);

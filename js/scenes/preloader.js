@@ -378,6 +378,8 @@ class Preloader extends Phaser.Scene {
 
     this.load.image("wallBorder", "../Tilesets/extras/parede-borda.png");
 
+    this.load.image("shopDoor", "../Tilesets/Animations/Doors/!ShopDoor.png");
+
     // =====================================================
     // TILESETS - VEÍCULOS
     // =====================================================
