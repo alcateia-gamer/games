@@ -47,8 +47,8 @@ function criarTransicaoParaParte2(scene) {
     scene.cameras.main.once("camerafadeoutcomplete", () => {
       limparGrupoRobos(scene);
       scene.scene.start("Level1Parte2", {
-        spawnX: 50,
-        spawnY: -1087,
+        spawnX: 97,
+        spawnY: -995,
         personagem: scene.personagemSelecionada,
       });
     });

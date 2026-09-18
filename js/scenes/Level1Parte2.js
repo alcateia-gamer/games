@@ -29,8 +29,8 @@ class Level1Parte2 extends Phaser.Scene {
   }
 
   init(data) {
-    this.respawnX = data.spawnX ?? 50;
-    this.respawnY = data.spawnY ?? -1087;
+    this.respawnX = data.spawnX ?? 97;
+    this.respawnY = data.spawnY ?? -995;
     this.personagemSelecionada = data.personagem || "standard";
     this.morteEmAndamento = false;
     this.inimigos = [];
@@ -136,13 +136,13 @@ class Level1Parte2 extends Phaser.Scene {
   }
 
   criarBlocoRetornoParte1() {
-    const x = 50;
-    const y = -1087;
+    const x = 97;
+    const y = -995;
     const tamanho = 48;
 
     this.blocoRetornoParte1 = this.add
-      .rectangle(x, y, tamanho, tamanho, 0x00d9ff, 0.85)
-      .setStrokeStyle(3, 0xffffff, 1)
+      .rectangle(x, y, tamanho, tamanho, "0xff0000", 0.85)
+      .setStrokeStyle(3, "0xffffff", 1)
       .setDepth(12);
 
     this.blocoRetornoParte1Label = this.add

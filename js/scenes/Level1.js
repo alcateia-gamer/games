@@ -64,8 +64,8 @@ class Level1 extends Phaser.Scene {
   }
 
   init(data) {
-    this.respawnX = data.spawnX ?? -1440;
-    this.respawnY = data.spawnY ?? 454;
+    this.respawnX = data.spawnX ?? 99;
+    this.respawnY = data.spawnY ?? -2200;
     this.personagemSelecionada = data.personagem || "standard";
     this.morteEmAndamento = false;
     this.inimigos = [];
@@ -252,8 +252,8 @@ class Level1 extends Phaser.Scene {
     ) {
       limparGrupoRobos(this);
       this.scene.start("Level1Parte2", {
-        spawnX: 50,
-        spawnY: -1087,
+        spawnX: 97,
+        spawnY: -995,
         personagem: this.personagemSelecionada,
       });
     }
