@@ -374,6 +374,36 @@ class Preloader extends Phaser.Scene {
 
     this.load.image("insideA3", "../Tilesets/Inside/A3_SciFi_Inside_Rasak.png");
 
+    this.load.image(
+      "apartment1",
+      "../Tilesets/Inside/Tileset_SciFi_Arpartment_1_Rasak.png",
+    );
+
+    this.load.image(
+      "securityDoor",
+      "../Tilesets/Animations/Doors/!Security Door.png",
+    );
+
+    this.load.image(
+      "industrialGate",
+      "../Tilesets/Animations/Doors/!Industrial Gate.png",
+    );
+
+    this.load.image(
+      "industrialControls",
+      "../Tilesets/Animations/Industrial and Security/!$Controlls.png",
+    );
+
+    this.load.image(
+      "industrialMachines",
+      "../Tilesets/Animations/Industrial and Security/!Industrial mashines.png",
+    );
+
+    this.load.image(
+      "supercomputer",
+      "../Tilesets/Animations/Industrial and Security/Supercomputer.png",
+    );
+
     this.load.image("wallBorders", "../Tilesets/extras/parede-borda.png");
 
     this.load.image("wallBorder", "../Tilesets/extras/parede-borda.png");

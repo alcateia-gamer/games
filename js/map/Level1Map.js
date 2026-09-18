@@ -237,6 +237,12 @@ function criarLevel1Map(scene) {
     "ModernIndustrial2",
   );
 
+  // Industrial 3
+  const modernIndustrial3 = map.addTilesetImage(
+    "Tileset_Modern_Industrial_3_Rasak",
+    "industrial3",
+  );
+
   // Interior da fábrica
   const modernInsideFactoryA1 = map.addTilesetImage(
     "A1_Modern_Inside_Factory_Rasak",
@@ -301,6 +307,7 @@ function criarLevel1Map(scene) {
     apartment2,
 
     modernIndustrial2,
+    modernIndustrial3,
     modernInsideFactoryA1,
     wallBorder,
     shopDoor,
@@ -326,6 +333,7 @@ function criarLevel1Map(scene) {
     ["TorreTileset", "torre"],
     ["Tileset_SciFi_Arpartment_2_Rasak", "apartment2"],
     ["Tileset_Modern_Industrial_2_Rasak", "ModernIndustrial2"],
+    ["Tileset_Modern_Industrial_3_Rasak", "industrial3"],
     ["A1_Modern_Inside_Factory_Rasak", "ModernInsideFactoryA1"],
     ["parede-borda", "wallBorder"],
     ["!ShopDoor", "shopDoor"],

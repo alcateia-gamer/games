@@ -20,8 +20,19 @@ function criarLevel1Parte2Map(scene) {
     ["A5_SciFi_Inside_Rasak", "insideA5"],
     ["A2_Scifi_Outside_Rasak", "a2Outside"],
     ["A3_SciFi_Inside_Rasak", "insideA3"],
-    ["bordasparede", "wallBorders"],
-    ["parede-borda", "wallBorder"],
+    ["parede-borda(3)", "wallBorders"],
+    ["Tileset_SciFi_Arpartment_1_Rasak", "apartment1"],
+    ["Tileset_SciFi_Arpartment_2_Rasak", "apartment2"],
+    ["Tileset_SciFi_CityShopping_Rasak", "cityShopping"],
+    ["Tileset_SciFi_Slums_Rasak", "slums"],
+    ["Tileset_SciFi_Garbage_Rasak", "garbage"],
+    ["A4_SciFi_Inside_Rasak", "insideA4"],
+    ["!Security Door", "securityDoor"],
+    ["!Industrial Gate", "industrialGate"],
+    ["!$Controlls", "industrialControls"],
+    ["!Industrial mashines", "industrialMachines"],
+    ["Supercomputer", "supercomputer"],
+    ["Tileset_Modern_Industrial_3_Rasak", "industrial3"],
   ];
 
   const tilesets = registrosTilesets
@@ -38,32 +49,40 @@ function criarLevel1Parte2Map(scene) {
     })
     .filter(Boolean);
 
-  map.layers.forEach((layerData, index) => {
-    const camada = map.createLayer(layerData.name, tilesets);
+  const camadasMapa = [
+    ["chão", 1],
+    ["detalhes do chão", 2],
+    ["Sujeira", 3],
+    ["ObjetoAbaixoParede", 4],
+    ["ParedeAcimaPerso", 10],
+    ["ParedeAbaixoPerso", 6],
+    ["Objetos2", 7],
+    ["Portas", 8],
+    ["Objetos1", 9],
+    ["BordaAlta", 11],
+    ["BordaCurvas", 12],
+    ["objetos 2", 9],
+    ["objetos 3", 10],
+  ];
 
-    camada?.setDepth(index + 1);
+  camadasMapa.forEach(([nome, profundidade]) => {
+    const camada = map.createLayer(nome, tilesets);
 
-    if (layerData.name === "parede-baixo 1") {
-      scene.camadaParedeBaixo1 = camada;
+    if (!camada) {
+      console.error(`Camada de tiles não criada no mapa parte 2: "${nome}"`);
+      return;
     }
 
-    if (layerData.name === "parede-baixo 2") {
-      scene.camadaParedeBaixo2 = camada;
+    camada.setDepth(profundidade);
+
+    if (nome === "ParedeAbaixoPerso") {
+      scene.camadaParedeAbaixoPerso = camada;
     }
 
-    if (layerData.name === "parede-cima 1") {
-      scene.camadaParedeCima1 = camada;
-    }
-
-    if (layerData.name === "parede-cima 2") {
-      scene.camadaParedeCima2 = camada;
+    if (nome === "ParedeAcimaPerso") {
+      scene.camadaParedeAcimaPerso = camada;
     }
   });
-
-  scene.camadaParedeCima2?.setDepth(6);
-  scene.camadaParedeCima1?.setDepth(7);
-  scene.camadaParedeBaixo2?.setDepth(13);
-  scene.camadaParedeBaixo1?.setDepth(14);
 
   const collisionLayer = map.getObjectLayer("collision");
 

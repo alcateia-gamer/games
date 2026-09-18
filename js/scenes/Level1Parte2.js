@@ -41,6 +41,7 @@ class Level1Parte2 extends Phaser.Scene {
   create() {
     this.physics.resume();
     this.physics.world.resume();
+    this.cameras.main.fadeIn(250, 0, 0, 0);
     this.input.keyboard.enabled = true;
     this.input.keyboard.resetKeys();
     this.teclaSpawnRobo1 = this.input.keyboard.addKey(
