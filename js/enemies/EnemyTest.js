@@ -714,17 +714,22 @@ function atualizarEstadoVisualRobo(inimigo) {
   const novoEstado = emAlerta ? "alerta" : "normal";
   const texturaAlvo = emAlerta ? "robo-teste" : "robo-teste-normal";
 
-  if (inimigo.visualAtual === novoEstado && inimigo.texture?.key === texturaAlvo) {
+  if (
+    inimigo.visualAtual === novoEstado &&
+    inimigo.texture?.key === texturaAlvo
+  ) {
     return;
   }
 
   inimigo.visualAtual = novoEstado;
-  const frameAtual = inimigo.anims?.currentFrame?.index ?? inimigo.frame?.name ?? 0;
+  const frameAtual =
+    inimigo.anims?.currentFrame?.index ?? inimigo.frame?.name ?? 0;
   inimigo.setTexture(texturaAlvo, frameAtual);
 }
 
 function tocarAnimacaoInimigo(inimigo) {
-  const animacaoBase = inimigo.visualAtual === "alerta" ? "robo-alerta" : "robo";
+  const animacaoBase =
+    inimigo.visualAtual === "alerta" ? "robo-alerta" : "robo";
 
   if (inimigo.direcaoAtual === "down") {
     inimigo.anims.play(`${animacaoBase}-down`, true);
