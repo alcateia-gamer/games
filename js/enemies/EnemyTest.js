@@ -3,6 +3,7 @@
 // =====================================================
 
 import mostrarTelaMorte from "../scenes/DeathScreen.js";
+import { tomarDano } from "../player/PlayerStatus.js";
 import {
   configurarSomPassoRobo,
   atualizarSomPassoRobo,
@@ -898,8 +899,7 @@ function acertarPlayerComLaser(scene, laser) {
       ? scene.inimigos[0].danoLaser
       : (scene.inimigoTeste?.danoLaser ?? 5);
 
-  scene.vida -= danoLaser;
-  scene.vida = Phaser.Math.Clamp(scene.vida, 0, scene.vidaMaxima);
+  tomarDano(scene, danoLaser);
 
   scene.player.setTint(0xff5555);
 

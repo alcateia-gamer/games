@@ -5,6 +5,9 @@ function criarStatusPlayer(scene) {
 
   scene.vidaMaxima = 100;
   scene.vida = 100;
+  scene.regeneracaoVida = 4;
+  scene.tempoSemDanoParaRegen = 4;
+  scene.tempoSemDano = 0;
 
   // =====================================================
   // ESTAMINA
@@ -164,6 +167,17 @@ function atualizarStatusPlayer(scene, delta) {
   }
 
   // =====================================================
+  // REGENERAÇÃO DA VIDA
+  // =====================================================
+
+  scene.tempoSemDano += delta;
+
+  if (scene.tempoSemDano >= scene.tempoSemDanoParaRegen * 1000) {
+    scene.vida += scene.regeneracaoVida * (delta / 1000);
+    scene.vida = Math.min(scene.vida, scene.vidaMaxima);
+  }
+
+  // =====================================================
   // ATUALIZA VIDA
   // =====================================================
 
@@ -203,6 +217,7 @@ function gastarEstamina(scene, quantidade) {
 // =====================================================
 
 function tomarDano(scene, quantidade) {
+  scene.tempoSemDano = 0;
   scene.vida -= quantidade;
 
   scene.vida = Phaser.Math.Clamp(scene.vida, 0, scene.vidaMaxima);
