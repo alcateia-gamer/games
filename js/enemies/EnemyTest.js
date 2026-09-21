@@ -16,11 +16,14 @@ function criarInimigoTeste(scene, config = {}) {
   const x = Number(config.x ?? scene.respawnX + 180);
   const y = Number(config.y ?? scene.respawnY);
 
-  const inimigo = scene.physics.add.sprite(x, y, "robo-teste", 0);
+  const inimigo = scene.physics.add.sprite(x, y, "robo-teste-normal", 0);
 
   inimigo.setDepth(12);
   inimigo.setScale(0.23);
   inimigo.body.setAllowGravity(false);
+
+  inimigo.visualAtual = "normal";
+  atualizarEstadoVisualRobo(inimigo);
 
   // Mantém a mesma área física do robô antigo e reposiciona a hitbox para o
   // novo sprite maior sem alterar a lógica do inimigo.
@@ -340,52 +343,61 @@ function aplicarSeparacaoGrupo(inimigo, scene) {
 // =====================================================
 
 function criarAnimacoesInimigo(scene) {
-  if (!scene.anims.exists("robo-down")) {
-    scene.anims.create({
-      key: "robo-down",
-      frames: scene.anims.generateFrameNumbers("robo-teste", {
-        start: 0,
-        end: 2,
-      }),
-      frameRate: 6,
-      repeat: -1,
-    });
-  }
+  const estados = [
+    { key: "normal", texture: "robo-teste-normal" },
+    { key: "alerta", texture: "robo-teste" },
+  ];
 
-  if (!scene.anims.exists("robo-left")) {
-    scene.anims.create({
-      key: "robo-left",
-      frames: scene.anims.generateFrameNumbers("robo-teste", {
-        start: 3,
-        end: 5,
-      }),
-      frameRate: 6,
-      repeat: -1,
-    });
-  }
+  for (const estado of estados) {
+    const prefixo = estado.key === "alerta" ? "robo-alerta" : "robo";
 
-  if (!scene.anims.exists("robo-right")) {
-    scene.anims.create({
-      key: "robo-right",
-      frames: scene.anims.generateFrameNumbers("robo-teste", {
-        start: 6,
-        end: 8,
-      }),
-      frameRate: 6,
-      repeat: -1,
-    });
-  }
+    if (!scene.anims.exists(`${prefixo}-down`)) {
+      scene.anims.create({
+        key: `${prefixo}-down`,
+        frames: scene.anims.generateFrameNumbers(estado.texture, {
+          start: 0,
+          end: 2,
+        }),
+        frameRate: 6,
+        repeat: -1,
+      });
+    }
 
-  if (!scene.anims.exists("robo-up")) {
-    scene.anims.create({
-      key: "robo-up",
-      frames: scene.anims.generateFrameNumbers("robo-teste", {
-        start: 9,
-        end: 11,
-      }),
-      frameRate: 6,
-      repeat: -1,
-    });
+    if (!scene.anims.exists(`${prefixo}-left`)) {
+      scene.anims.create({
+        key: `${prefixo}-left`,
+        frames: scene.anims.generateFrameNumbers(estado.texture, {
+          start: 3,
+          end: 5,
+        }),
+        frameRate: 6,
+        repeat: -1,
+      });
+    }
+
+    if (!scene.anims.exists(`${prefixo}-right`)) {
+      scene.anims.create({
+        key: `${prefixo}-right`,
+        frames: scene.anims.generateFrameNumbers(estado.texture, {
+          start: 6,
+          end: 8,
+        }),
+        frameRate: 6,
+        repeat: -1,
+      });
+    }
+
+    if (!scene.anims.exists(`${prefixo}-up`)) {
+      scene.anims.create({
+        key: `${prefixo}-up`,
+        frames: scene.anims.generateFrameNumbers(estado.texture, {
+          start: 9,
+          end: 11,
+        }),
+        frameRate: 6,
+        repeat: -1,
+      });
+    }
   }
 }
 
@@ -579,6 +591,8 @@ function atualizarIAInimigo(scene, time, inimigo = scene.inimigoTeste) {
     inimigo.estado = "alerta";
   }
 
+  atualizarEstadoVisualRobo(inimigo);
+
   if (inimigo.alerta || viuPlayer || foiFerido) {
     const raioOrbit =
       120 + inimigo.formacaoIndex * 30 + (inimigo.distanciaGrupo || 180) * 0.2;
@@ -691,15 +705,35 @@ function atualizarDirecaoInimigo(scene, inimigo = scene.inimigoTeste) {
 // TOCA ANIMAÇÃO
 // =====================================================
 
+function atualizarEstadoVisualRobo(inimigo) {
+  if (!inimigo) {
+    return;
+  }
+
+  const emAlerta = Boolean(inimigo.alerta || inimigo.estado === "alerta");
+  const novoEstado = emAlerta ? "alerta" : "normal";
+  const texturaAlvo = emAlerta ? "robo-teste" : "robo-teste-normal";
+
+  if (inimigo.visualAtual === novoEstado && inimigo.texture?.key === texturaAlvo) {
+    return;
+  }
+
+  inimigo.visualAtual = novoEstado;
+  const frameAtual = inimigo.anims?.currentFrame?.index ?? inimigo.frame?.name ?? 0;
+  inimigo.setTexture(texturaAlvo, frameAtual);
+}
+
 function tocarAnimacaoInimigo(inimigo) {
+  const animacaoBase = inimigo.visualAtual === "alerta" ? "robo-alerta" : "robo";
+
   if (inimigo.direcaoAtual === "down") {
-    inimigo.anims.play("robo-down", true);
+    inimigo.anims.play(`${animacaoBase}-down`, true);
   } else if (inimigo.direcaoAtual === "left") {
-    inimigo.anims.play("robo-left", true);
+    inimigo.anims.play(`${animacaoBase}-left`, true);
   } else if (inimigo.direcaoAtual === "right") {
-    inimigo.anims.play("robo-right", true);
+    inimigo.anims.play(`${animacaoBase}-right`, true);
   } else if (inimigo.direcaoAtual === "up") {
-    inimigo.anims.play("robo-up", true);
+    inimigo.anims.play(`${animacaoBase}-up`, true);
   }
 }
 
@@ -712,8 +746,10 @@ function pararAnimacaoInimigo(inimigo) {
     inimigo.anims.stop();
   }
 
+  const frameBase = inimigo.visualAtual === "alerta" ? 0 : 0;
+
   if (inimigo.direcaoAtual === "down") {
-    inimigo.setFrame(0);
+    inimigo.setFrame(frameBase);
   } else if (inimigo.direcaoAtual === "left") {
     inimigo.setFrame(3);
   } else if (inimigo.direcaoAtual === "right") {

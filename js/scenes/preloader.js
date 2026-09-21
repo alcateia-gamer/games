@@ -238,6 +238,15 @@ class Preloader extends Phaser.Scene {
         frameHeight: 421,
       },
     );
+
+    this.load.spritesheet(
+      "robo-teste-normal",
+      "personagem/inimigos/robo_teste_3.png",
+      {
+        frameWidth: 311,
+        frameHeight: 421,
+      },
+    );
     // =====================================================
     // JOYSTICK
     // =====================================================
