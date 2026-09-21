@@ -19,9 +19,11 @@ function criarInimigoTeste(scene, config = {}) {
   const inimigo = scene.physics.add.sprite(x, y, "robo-teste", 0);
 
   inimigo.setDepth(12);
-  inimigo.setScale(0.75);
+  inimigo.setScale(0.23);
   inimigo.body.setAllowGravity(false);
 
+  // Mantém a mesma área física do robô antigo e reposiciona a hitbox para o
+  // novo sprite maior sem alterar a lógica do inimigo.
   configurarHitboxPeInimigo(inimigo);
 
   inimigo.formacaoIndex = Number(config.formacaoIndex ?? 0);
@@ -237,8 +239,10 @@ function configurarHitboxPeInimigo(inimigo) {
     return;
   }
 
+  // Mantém exatamente a área de colisão antiga (74x26) e reposiciona a hitbox
+  // proporcionalmente ao sprite maior, sem aumentar a área física do inimigo.
   inimigo.body.setSize(74, 26);
-  inimigo.body.setOffset(12, 100);
+  inimigo.body.setOffset(39, 325);
 }
 
 function atualizarHitboxDanoInimigo(inimigo) {
