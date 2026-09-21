@@ -230,10 +230,14 @@ class Preloader extends Phaser.Scene {
     // INIMIGO DE TESTE
     // =====================================================
 
-    this.load.spritesheet("robo-teste", "personagem/inimigos/robo_teste_2.png", {
-      frameWidth: 311,
-      frameHeight: 421,
-    });
+    this.load.spritesheet(
+      "robo-teste",
+      "personagem/inimigos/robo_teste_2.png",
+      {
+        frameWidth: 311,
+        frameHeight: 421,
+      },
+    );
     // =====================================================
     // JOYSTICK
     // =====================================================
