@@ -239,10 +239,10 @@ function configurarHitboxPeInimigo(inimigo) {
     return;
   }
 
-  // Mantém exatamente a área de colisão antiga (74x26) e reposiciona a hitbox
-  // proporcionalmente ao sprite maior, sem aumentar a área física do inimigo.
-  inimigo.body.setSize(74, 26);
-  inimigo.body.setOffset(39, 325);
+  // Physics body pequeno na base do robô: o corpo visual continua grande, mas a
+  // colisão com cenário acontece somente na região dos pés.
+  inimigo.body.setSize(180, 110);
+  inimigo.body.setOffset(65, 270);
 }
 
 function atualizarHitboxDanoInimigo(inimigo) {
