@@ -1692,9 +1692,7 @@ function destruirInimigoTeste(scene, inimigo = scene.inimigoTeste) {
     scene.inimigoTeste = scene.inimigos?.[0] ?? null;
   }
 
-  const direcao = ["down", "left", "right", "up"].includes(
-    inimigo.direcaoMorte,
-  )
+  const direcao = ["down", "left", "right", "up"].includes(inimigo.direcaoMorte)
     ? inimigo.direcaoMorte
     : "down";
 
