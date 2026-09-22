@@ -22,11 +22,8 @@ import {
 } from "../player/PlayerStatus.js";
 import { prepararArqueira } from "../player/archer/Archer.js";
 
-import {
-  criarRobos,
-  atualizarInimigoTeste,
-  limparGrupoRobos,
-} from "../enemies/EnemyTest.js";
+import { criarRobos, atualizarInimigoTeste } from "../enemies/EnemyTest.js";
+import { atualizarTransicaoParaParte2 } from "../core/MapTransition.js";
 
 // =====================================================
 // LEVEL 1
@@ -65,8 +62,10 @@ class Level1 extends Phaser.Scene {
 
   init(data) {
     this.respawnX = data.spawnX ?? 99;
-    this.respawnY = data.spawnY ?? -2200;
+    this.respawnY = data.spawnY ?? -2127;
     this.personagemSelecionada = data.personagem || "standard";
+    this.portaAbertaAoEntrar = data.portaAberta === true;
+    this.entradaComFade = data.transicao === true;
     this.morteEmAndamento = false;
     this.inimigos = [];
     this.grupoRobosAtivado = false;
@@ -80,6 +79,9 @@ class Level1 extends Phaser.Scene {
   create() {
     this.physics.resume();
     this.physics.world.resume();
+    if (this.entradaComFade) {
+      this.cameras.main.fadeIn(250, 0, 0, 0);
+    }
     this.input.keyboard.enabled = true;
     this.input.keyboard.resetKeys();
 
@@ -103,8 +105,6 @@ class Level1 extends Phaser.Scene {
     prepararArqueira(this);
 
     this.atualizarProfundidadePostes();
-
-    this.criarBlocoParte2();
 
     // =====================================================
     // COLISÃO DO PLAYER COM O MAPA
@@ -210,6 +210,7 @@ class Level1 extends Phaser.Scene {
     // =====================================================
 
     atualizarStatusPlayer(this, delta);
+    atualizarTransicaoParaParte2(this);
 
     this.atualizarProfundidadeCerca();
     this.atualizarProfundidadePostes();
@@ -238,26 +239,6 @@ class Level1 extends Phaser.Scene {
 
     this.textoCoordenadas.setText("X: " + x + "  Y: " + y);
 
-    const pertoDoBlocoParte2 =
-      Phaser.Math.Distance.Between(
-        this.player.x,
-        this.player.y,
-        this.blocoParte2.x,
-        this.blocoParte2.y,
-      ) <= 64;
-
-    if (
-      pertoDoBlocoParte2 &&
-      Phaser.Input.Keyboard.JustDown(this.teclaInteracaoParte2)
-    ) {
-      limparGrupoRobos(this);
-      this.scene.start("Level1Parte2", {
-        spawnX: 97,
-        spawnY: -995,
-        personagem: this.personagemSelecionada,
-      });
-    }
-
     // =====================================================
     // RESPAWN
     // =====================================================
@@ -265,31 +246,6 @@ class Level1 extends Phaser.Scene {
     if (Phaser.Input.Keyboard.JustDown(this.teclaR)) {
       respawnPlayer(this);
     }
-  }
-
-  criarBlocoParte2() {
-    const x = 99;
-    const y = -2203;
-    const tamanho = 48;
-
-    this.blocoParte2 = this.add
-      .rectangle(x, y, tamanho, tamanho, 0xffc107, 0.9)
-      .setStrokeStyle(3, 0xffffff, 1)
-      .setDepth(12);
-
-    this.blocoParte2Label = this.add
-      .text(x, y, "E", {
-        color: "#241700",
-        fontFamily: "monospace",
-        fontSize: "22px",
-        fontStyle: "bold",
-      })
-      .setOrigin(0.5)
-      .setDepth(13);
-
-    this.teclaInteracaoParte2 = this.input.keyboard.addKey(
-      Phaser.Input.Keyboard.KeyCodes.E,
-    );
   }
 
   // =====================================================

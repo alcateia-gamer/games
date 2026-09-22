@@ -30,12 +30,14 @@ class Level1Parte2 extends Phaser.Scene {
 
   init(data) {
     this.respawnX = data.spawnX ?? 97;
-    this.respawnY = data.spawnY ?? -995;
+    this.respawnY = data.spawnY ?? -980;
     this.personagemSelecionada = data.personagem || "standard";
     this.morteEmAndamento = false;
     this.inimigos = [];
     this.grupoRobosAtivado = false;
     this.inimigoTeste = null;
+    this.teleporteRetornoLiberado = false;
+    this.transicaoRetornoEmAndamento = false;
   }
 
   create() {
@@ -59,7 +61,7 @@ class Level1Parte2 extends Phaser.Scene {
     criarPlayer(this);
     prepararArqueira(this);
 
-    this.criarBlocoRetornoParte1();
+    this.criarTeleporteRetornoParte1();
 
     if (this.collisionGroup) {
       this.physics.add.collider(this.player, this.collisionGroup);
@@ -114,58 +116,52 @@ class Level1Parte2 extends Phaser.Scene {
 
     this.textoCoordenadas.setText("X: " + x + "  Y: " + y);
 
-    this.pertoDoBlocoRetorno =
-      Phaser.Math.Distance.Between(
-        this.player.x,
-        this.player.y,
-        this.blocoRetornoParte1.x,
-        this.blocoRetornoParte1.y,
-      ) <= 64;
-
     if (
-      this.pertoDoBlocoRetorno &&
-      Phaser.Input.Keyboard.JustDown(this.teclaInteracao)
+      !this.teleporteRetornoLiberado &&
+      Phaser.Math.Distance.Between(this.player.x, this.player.y, 97, -995) > 24
     ) {
-      limparGrupoRobos(this);
-      this.scene.start("Level1", {
-        spawnX: 99,
-        spawnY: -2203,
-        personagem: this.personagemSelecionada,
-      });
+      this.teleporteRetornoLiberado = true;
     }
   }
 
-  criarBlocoRetornoParte1() {
+  criarTeleporteRetornoParte1() {
     const x = 97;
     const y = -995;
-    const tamanho = 48;
+    const largura = 16;
+    const altura = 8;
 
-    this.blocoRetornoParte1 = this.add
-      .rectangle(x, y, tamanho, tamanho, "0xff0000", 0.85)
-      .setStrokeStyle(3, "0xffffff", 1)
-      .setDepth(12);
-
-    this.blocoRetornoParte1Label = this.add
-      .text(x, y, "E", {
-        color: "#06131f",
-        fontFamily: "monospace",
-        fontSize: "22px",
-        fontStyle: "bold",
-      })
-      .setOrigin(0.5)
-      .setDepth(13);
-
-    this.teclaInteracao = this.input.keyboard.addKey(
-      Phaser.Input.Keyboard.KeyCodes.E,
-    );
+    this.teleporteRetornoParte1 = this.add.zone(x, y, largura, altura);
 
     this.physics.world.enable(
-      this.blocoRetornoParte1,
+      this.teleporteRetornoParte1,
       Phaser.Physics.Arcade.STATIC_BODY,
     );
-    this.blocoRetornoParte1.body.setSize(tamanho, tamanho);
+    this.teleporteRetornoParte1.body.setSize(largura, altura);
 
-    this.pertoDoBlocoRetorno = false;
+    this.physics.add.overlap(this.player, this.teleporteRetornoParte1, () => {
+      if (
+        this.transicaoRetornoEmAndamento ||
+        (!this.teleporteRetornoLiberado &&
+          (this.player.body?.velocity?.y ?? 0) >= 0)
+      ) {
+        return;
+      }
+
+      this.transicaoRetornoEmAndamento = true;
+      this.physics.pause();
+      this.cameras.main.fadeOut(250, 0, 0, 0);
+
+      this.cameras.main.once("camerafadeoutcomplete", () => {
+        limparGrupoRobos(this);
+        this.scene.start("Level1", {
+          spawnX: 72,
+          spawnY: -2160,
+          portaAberta: true,
+          transicao: true,
+          personagem: this.personagemSelecionada,
+        });
+      });
+    });
   }
 }
 
