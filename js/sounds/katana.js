@@ -10,10 +10,18 @@ function carregarSonsKatana(loader) {
 }
 
 function tocarSomKatanaAcerto(scene) {
+  if (scene.morteEmAndamento) {
+    return;
+  }
+
   scene.sound.play("katana-ataque", { volume: VOLUME_KATANA_ACERTO });
 }
 
 function tocarSomKatanaErro(scene) {
+  if (scene.morteEmAndamento) {
+    return;
+  }
+
   scene.sound.play("ataque-no-ar", { volume: VOLUME_KATANA_ERRO });
 }
 

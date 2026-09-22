@@ -19,6 +19,13 @@ function atualizarSomPassoRobo(
   distancia,
   estaSeMovendo,
 ) {
+  if (scene.morteEmAndamento) {
+    if (inimigo.somPassoRobo?.isPlaying) {
+      inimigo.somPassoRobo.stop();
+    }
+    return;
+  }
+
   const podeTocar = estaSeMovendo;
   const distanciaInicioFade = inimigo.distanciaDeteccao;
   const distanciaFimFade = distanciaInicioFade + DISTANCIA_FADE_PASSO_ROBO;
@@ -64,11 +71,20 @@ function configurarSomPassoRobo(scene, inimigo) {
 }
 
 function tocarSomTiroLaser(scene) {
+  if (scene.morteEmAndamento) {
+    return;
+  }
+
   scene.sound.play("tiro-laser", { volume: VOLUME_TIRO_LASER });
 }
 
 function tocarSomMorteRobo(scene, inimigo) {
-  if (!scene?.sound || !inimigo || inimigo.somMorteTocado) {
+  if (
+    !scene?.sound ||
+    scene.morteEmAndamento ||
+    !inimigo ||
+    inimigo.somMorteTocado
+  ) {
     return;
   }
 

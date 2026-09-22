@@ -4,6 +4,7 @@ function mostrarTelaMorte(scene) {
   }
 
   scene.morteEmAndamento = true;
+  scene.sound?.stopAll();
   scene.player.invulneravel = true;
   scene.player.setVelocity(0, 0);
   scene.physics.pause();

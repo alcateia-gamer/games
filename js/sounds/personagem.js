@@ -13,6 +13,10 @@ function configurarSomCorrida(scene) {
   });
 
   const iniciarSomCorrida = (event) => {
+    if (scene.morteEmAndamento) {
+      return;
+    }
+
     const teclasDirecao = scene.teclasWASD;
     const teclaDirecional = Object.values(teclasDirecao || {}).some(
       (tecla) => tecla.keyCode === event.keyCode,
@@ -33,6 +37,13 @@ function configurarSomCorrida(scene) {
 
 function atualizarSomCorrida(scene, estaSeMovendo) {
   if (!scene.somCorrida) {
+    return;
+  }
+
+  if (scene.morteEmAndamento) {
+    if (scene.somCorrida.isPlaying) {
+      scene.somCorrida.stop();
+    }
     return;
   }
 
