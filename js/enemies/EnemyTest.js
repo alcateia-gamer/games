@@ -21,6 +21,11 @@ function criarInimigoTeste(scene, config = {}) {
 
   inimigo.setDepth(12);
   inimigo.setScale(0.23);
+  inimigo.setAlpha(1);
+  if (inimigo.postFX) {
+    inimigo.efeitoCores = inimigo.postFX.addColorMatrix();
+    inimigo.efeitoCores.saturate(1.05).contrast(0.28).brightness(1.65);
+  }
   inimigo.body.setAllowGravity(false);
 
   inimigo.visualAtual = "normal";
@@ -1737,8 +1742,22 @@ function destruirInimigoTeste(scene, inimigo = scene.inimigoTeste) {
     inimigo.originX,
     origemYAntesDaMorte - deslocamentoBaseMorte,
   );
+  inimigo.setAlpha(1);
+  if (inimigo.efeitoCores) {
+    inimigo.efeitoCores.reset().saturate(1.3).contrast(0.38).brightness(1.9);
+  }
   inimigo.anims.play(`robo-morte-${direcao}`);
   tocarSomMorteRobo(scene, inimigo);
+  scene.time.delayedCall(70, () => {
+    if (inimigo.active && inimigo.morto && inimigo.efeitoCores) {
+      inimigo.efeitoCores.reset().saturate(1.8).contrast(0.55).brightness(2.5);
+    }
+  });
+  scene.time.delayedCall(160, () => {
+    if (inimigo.active && inimigo.morto && inimigo.efeitoCores) {
+      inimigo.efeitoCores.reset().saturate(0.5).contrast(0.1).brightness(1.2);
+    }
+  });
   inimigo.once("animationcomplete", () =>
     finalizarDestruicaoInimigo(scene, inimigo),
   );
