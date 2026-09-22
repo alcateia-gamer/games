@@ -8,6 +8,7 @@ import {
   configurarSomPassoRobo,
   atualizarSomPassoRobo,
   tocarSomTiroLaser,
+  tocarSomMorteRobo,
 } from "../sounds/inimigos.js";
 
 function criarInimigoTeste(scene, config = {}) {
@@ -420,11 +421,12 @@ function criarAnimacoesInimigo(scene) {
     if (!scene.anims.exists(chave)) {
       scene.anims.create({
         key: chave,
-        frames: scene.anims.generateFrameNumbers("robo-morte", {
-          start: direcao.start,
-          end: direcao.end,
-        }),
-        frameRate: 7,
+        frames: [
+          { key: "robo-morte", frame: direcao.start, duration: 70 },
+          { key: "robo-morte", frame: direcao.start + 1, duration: 90 },
+          { key: "robo-morte", frame: direcao.end, duration: 230 },
+        ],
+        frameRate: 10,
         repeat: 0,
       });
     }
@@ -1642,6 +1644,9 @@ function destruirInimigoTeste(scene, inimigo = scene.inimigoTeste) {
     return;
   }
 
+  const larguraVisualAntesDaMorte = inimigo.displayWidth;
+  const alturaVisualAntesDaMorte = inimigo.displayHeight;
+
   inimigo.morto = true;
   inimigo.direcaoMorte = inimigo.direcaoAtual;
   inimigo.estado = "morto";
@@ -1695,11 +1700,45 @@ function destruirInimigoTeste(scene, inimigo = scene.inimigoTeste) {
   const direcao = ["down", "left", "right", "up"].includes(inimigo.direcaoMorte)
     ? inimigo.direcaoMorte
     : "down";
+  const escalaVisualMorte = {
+    down: { x: 311 / 292, y: 421 / 367 },
+    left: { x: 238 / 239, y: 421 / 387 },
+    right: { x: 292 / 242, y: 421 / 393 },
+    up: { x: 311 / 283, y: 409 / 364 },
+  }[direcao];
+  const baseVisualVivo = {
+    down: 420,
+    left: 420,
+    right: 420,
+    up: 408,
+  }[direcao];
+  const baseVisualMorte = {
+    down: 397,
+    left: 396,
+    right: 406,
+    up: 382,
+  }[direcao];
+  const origemYAntesDaMorte = inimigo.originY;
+  const escalaVivaY = alturaVisualAntesDaMorte / 421;
+  const escalaMorteY = escalaVivaY * escalaVisualMorte.y;
+  const deslocamentoBaseMorte =
+    ((baseVisualVivo - origemYAntesDaMorte * 421) * escalaVivaY -
+      (baseVisualMorte - origemYAntesDaMorte * 421) * escalaMorteY) /
+    (421 * escalaMorteY);
 
   inimigo.anims.stop();
   inimigo.clearTint();
   inimigo.setTexture("robo-morte", 0);
+  inimigo.setScale(
+    (larguraVisualAntesDaMorte / 311) * escalaVisualMorte.x,
+    (alturaVisualAntesDaMorte / 421) * escalaVisualMorte.y,
+  );
+  inimigo.setOrigin(
+    inimigo.originX,
+    origemYAntesDaMorte - deslocamentoBaseMorte,
+  );
   inimigo.anims.play(`robo-morte-${direcao}`);
+  tocarSomMorteRobo(scene, inimigo);
   inimigo.once("animationcomplete", () =>
     finalizarDestruicaoInimigo(scene, inimigo),
   );

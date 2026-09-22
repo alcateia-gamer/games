@@ -4,10 +4,12 @@ const DISTANCIA_FADE_PASSO_ROBO = 240;
 
 // Volume fixo do disparo de laser dos inimigos.
 const VOLUME_TIRO_LASER = 0.02;
+const VOLUME_MORTE_ROBO = 0.3;
 
 function carregarSonsInimigos(loader) {
   loader.audio("tiro-laser", "sounds.mp3/tiro_laser.mp3");
   loader.audio("robot-walk", "sounds.mp3/robot_walk_3.mp3");
+  loader.audio("robo-explodindo", "sounds.mp3/robo_explodindo.mp3");
 }
 
 function atualizarSomPassoRobo(
@@ -65,9 +67,19 @@ function tocarSomTiroLaser(scene) {
   scene.sound.play("tiro-laser", { volume: VOLUME_TIRO_LASER });
 }
 
+function tocarSomMorteRobo(scene, inimigo) {
+  if (!scene?.sound || !inimigo || inimigo.somMorteTocado) {
+    return;
+  }
+
+  inimigo.somMorteTocado = true;
+  scene.sound.play("robo-explodindo", { volume: VOLUME_MORTE_ROBO });
+}
+
 export {
   carregarSonsInimigos,
   configurarSomPassoRobo,
   atualizarSomPassoRobo,
   tocarSomTiroLaser,
+  tocarSomMorteRobo,
 };
