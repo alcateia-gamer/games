@@ -406,6 +406,29 @@ function criarAnimacoesInimigo(scene) {
       });
     }
   }
+
+  const direcoes = [
+    { key: "down", start: 0, end: 2 },
+    { key: "left", start: 3, end: 5 },
+    { key: "right", start: 6, end: 8 },
+    { key: "up", start: 9, end: 11 },
+  ];
+
+  for (const direcao of direcoes) {
+    const chave = `robo-morte-${direcao.key}`;
+
+    if (!scene.anims.exists(chave)) {
+      scene.anims.create({
+        key: chave,
+        frames: scene.anims.generateFrameNumbers("robo-morte", {
+          start: direcao.start,
+          end: direcao.end,
+        }),
+        frameRate: 7,
+        repeat: 0,
+      });
+    }
+  }
 }
 
 function temVisaoDoPlayer(scene, inimigo) {
@@ -1584,7 +1607,7 @@ function causarDanoInimigo(scene, alvoOuQuantidade, quantidadeOpcional) {
       ? alvoOuQuantidade
       : (quantidadeOpcional ?? 25);
 
-  if (!alvo || !alvo.active) {
+  if (!alvo || !alvo.active || alvo.morto) {
     return;
   }
 
@@ -1615,7 +1638,77 @@ function causarDanoInimigo(scene, alvoOuQuantidade, quantidadeOpcional) {
 // =====================================================
 
 function destruirInimigoTeste(scene, inimigo = scene.inimigoTeste) {
-  if (!inimigo || !scene) {
+  if (!inimigo || !scene || inimigo.morto) {
+    return;
+  }
+
+  inimigo.morto = true;
+  inimigo.direcaoMorte = inimigo.direcaoAtual;
+  inimigo.estado = "morto";
+  inimigo.alerta = false;
+  inimigo.foiFerido = false;
+  inimigo.rotaAtual = [];
+  inimigo.indiceRota = 0;
+  inimigo.ultimoTiro = Number.POSITIVE_INFINITY;
+  inimigo.setVelocity(0, 0);
+
+  if (inimigo.body) {
+    inimigo.body.enable = false;
+  }
+
+  if (inimigo.debugHitboxDano) {
+    inimigo.debugHitboxDano.destroy();
+    inimigo.debugHitboxDano = null;
+  }
+
+  inimigo.hitboxDano = null;
+
+  if (inimigo.fundoVida) {
+    inimigo.fundoVida.destroy();
+    inimigo.fundoVida = null;
+  }
+
+  if (inimigo.barraVida) {
+    inimigo.barraVida.destroy();
+    inimigo.barraVida = null;
+  }
+
+  if (inimigo.bordaVida) {
+    inimigo.bordaVida.destroy();
+    inimigo.bordaVida = null;
+  }
+
+  if (inimigo.somPassoRobo) {
+    inimigo.somPassoRobo.stop();
+    inimigo.somPassoRobo.destroy();
+    inimigo.somPassoRobo = null;
+  }
+
+  if (Array.isArray(scene.inimigos)) {
+    scene.inimigos = scene.inimigos.filter((robo) => robo !== inimigo);
+  }
+
+  if (scene.inimigoTeste === inimigo) {
+    scene.inimigoTeste = scene.inimigos?.[0] ?? null;
+  }
+
+  const direcao = ["down", "left", "right", "up"].includes(
+    inimigo.direcaoMorte,
+  )
+    ? inimigo.direcaoMorte
+    : "down";
+
+  inimigo.anims.stop();
+  inimigo.clearTint();
+  inimigo.setTexture("robo-morte", 0);
+  inimigo.anims.play(`robo-morte-${direcao}`);
+  inimigo.once("animationcomplete", () =>
+    finalizarDestruicaoInimigo(scene, inimigo),
+  );
+}
+
+function finalizarDestruicaoInimigo(scene, inimigo) {
+  if (!inimigo || !scene || !inimigo.active) {
     return;
   }
 
@@ -1645,7 +1738,6 @@ function destruirInimigoTeste(scene, inimigo = scene.inimigoTeste) {
     inimigo.somPassoRobo = null;
   }
 
-  inimigo.hitboxDano = null;
   inimigo.active = false;
   inimigo.setVisible(false);
   inimigo.setActive(false);

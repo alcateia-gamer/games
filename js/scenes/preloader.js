@@ -247,6 +247,15 @@ class Preloader extends Phaser.Scene {
         frameHeight: 421,
       },
     );
+
+    this.load.spritesheet(
+      "robo-morte",
+      "personagem/inimigos/robo_morte.png",
+      {
+        frameWidth: 311,
+        frameHeight: 421,
+      },
+    );
     // =====================================================
     // JOYSTICK
     // =====================================================
