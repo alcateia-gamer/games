@@ -2,10 +2,7 @@ import { gastarEstamina } from "./PlayerStatus.js";
 
 import { causarDanoInimigo } from "../enemies/EnemyTest.js";
 import { tocarSomKatanaAcerto, tocarSomKatanaErro } from "../sounds/katana.js";
-import {
-  iniciarCargaArco,
-  dispararFlecha,
-} from "./archer/Archer.js";
+import { iniciarAtaqueNyx } from "./NyxAttack.js";
 
 function debugHitboxesAtivado(scene) {
   return !!scene?.game?.config?.physics?.arcade?.debug;
@@ -44,7 +41,7 @@ function configurarFiltroPersonagem2(scene) {
 
 function frameParado(scene, direcao = scene.direcaoAtual) {
   const frames = personagem4Ativa(scene)
-    ? { down: 0, up: 12, left: 4, right: 8 }
+    ? { down: 0, up: 27, left: 18, right: 9 }
     : personagem3Ativa(scene)
       ? { down: 0, up: 1, left: 3, right: 2 }
       : personagem2Ativa(scene)
@@ -102,8 +99,6 @@ function criarPlayer(scene) {
   scene.player.setAlpha(1).clearTint().setBlendMode(Phaser.BlendModes.NORMAL);
 
   scene.player.invulneravel = false;
-
-  scene.player.setScale(personagem4Ativa(scene) ? 1 : 1);
 
   if (personagem2Ativa(scene) || personagem3Ativa(scene) || personagem4Ativa(scene)) {
     scene.player.anims.play("idle-down", true);
@@ -164,6 +159,7 @@ function criarPlayer(scene) {
     // =================================================
 
     scene.player.setTexture(texturaWalk(scene), frameParado(scene));
+    scene.player.setOrigin(0.5, 0.5);
 
     // =================================================
     // RESTAURA HITBOX PARA WALK 64x64
@@ -519,7 +515,7 @@ function criarHitboxKatana(scene) {
 
 function atacar(scene) {
   if (personagem4Ativa(scene)) {
-    iniciarCargaArco(scene);
+    iniciarAtaqueNyx(scene);
     return;
   }
 
@@ -578,12 +574,6 @@ function atacar(scene) {
   configurarHitboxAtaque(scene);
 }
 
-function soltarAtaque(scene) {
-  if (personagem4Ativa(scene)) {
-    dispararFlecha(scene);
-  }
-}
-
 // =====================================================
 // RESPAWN
 // =====================================================
@@ -604,6 +594,7 @@ function respawnPlayer(scene) {
   scene.direcaoAtual = "down";
 
   scene.player.anims.stop();
+  scene.player.setOrigin(0.5, 0.5);
 
   // =====================================================
   // VOLTA PARA WALK
@@ -652,7 +643,6 @@ function respawnPlayer(scene) {
 export {
   criarPlayer,
   atacar,
-  soltarAtaque,
   respawnPlayer,
   atualizarHitboxDanoPlayer,
   atualizarDepthPlayer,

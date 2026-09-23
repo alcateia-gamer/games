@@ -41,10 +41,10 @@ class Start extends Phaser.Scene {
     );
     this.load.spritesheet(
       "start-character-4",
-      "assets/personagem/personagem 4/Girl-Sheet.png",
+      "assets/personagem/nyx_walk.png",
       {
-        frameWidth: 24,
-        frameHeight: 24,
+        frameWidth: 64,
+        frameHeight: 64,
       },
     );
   }
@@ -388,7 +388,7 @@ class Start extends Phaser.Scene {
         x: this.width / 2 + 276,
         texture: "start-character-4",
         frame: 0,
-        scale: 3,
+        scale: 1.5,
         name: "OPERADORA // 04",
       },
     ];

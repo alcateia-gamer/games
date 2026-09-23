@@ -1,8 +1,20 @@
-import { atacar, soltarAtaque } from "../player/Player.js";
+import { atacar } from "../player/Player.js";
 import {
   configurarSomCorrida,
   atualizarSomCorrida,
 } from "../sounds/personagem.js";
+
+function tocarAnimacaoSeNecessario(scene, chave) {
+  if (
+    !scene.player?.anims ||
+    (scene.atacando && !chave.startsWith("attack-")) ||
+    scene.player.anims.currentAnim?.key === chave
+  ) {
+    return;
+  }
+
+  scene.player.anims.play(chave);
+}
 
 function atualizarVelocidadeAnimacao(scene) {
   if (!scene.player || !scene.player.anims) {
@@ -221,7 +233,6 @@ function criarControles(scene) {
 
   const soltarAtaqueAtual = () => {
     soltarBotao();
-    soltarAtaque(scene);
   };
 
   // =====================================================
@@ -361,9 +372,7 @@ function atualizarControles(scene) {
       if (direcao.x > 0) {
         scene.direcaoAtual = "right";
 
-        if (!scene.atacando) {
-          scene.player.anims.play("walk-right", true);
-        }
+        tocarAnimacaoSeNecessario(scene, "walk-right");
       }
 
       // =================================================
@@ -372,9 +381,7 @@ function atualizarControles(scene) {
       else {
         scene.direcaoAtual = "left";
 
-        if (!scene.atacando) {
-          scene.player.anims.play("walk-left", true);
-        }
+        tocarAnimacaoSeNecessario(scene, "walk-left");
       }
     }
 
@@ -389,9 +396,7 @@ function atualizarControles(scene) {
       if (direcao.y > 0) {
         scene.direcaoAtual = "down";
 
-        if (!scene.atacando) {
-          scene.player.anims.play("walk-down", true);
-        }
+        tocarAnimacaoSeNecessario(scene, "walk-down");
       }
 
       // =================================================
@@ -400,9 +405,7 @@ function atualizarControles(scene) {
       else {
         scene.direcaoAtual = "up";
 
-        if (!scene.atacando) {
-          scene.player.anims.play("walk-up", true);
-        }
+        tocarAnimacaoSeNecessario(scene, "walk-up");
       }
     }
   }
@@ -422,9 +425,9 @@ function atualizarControles(scene) {
 
     if (!scene.atacando) {
       if (scene.personagemSelecionada === "personagem2") {
-        scene.player.anims.play(`idle-${scene.direcaoAtual}`, true);
+        tocarAnimacaoSeNecessario(scene, `idle-${scene.direcaoAtual}`);
       } else if (scene.personagemSelecionada === "personagem4") {
-        scene.player.anims.play(`idle-${scene.direcaoAtual}`, true);
+        tocarAnimacaoSeNecessario(scene, `idle-${scene.direcaoAtual}`);
       } else {
         scene.player.anims.stop();
       }
