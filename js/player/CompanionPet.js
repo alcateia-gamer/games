@@ -34,7 +34,7 @@ function criarAnimacoesCompanionPet(scene) {
         start: frames[0],
         end: frames[1],
       }),
-      frameRate: 7,
+      frameRate: 12,
       repeat: -1,
     });
   });
@@ -394,8 +394,7 @@ function aplicarVelocidadeSuave(pet, alvoX, alvoY, delta) {
 
 function atualizarOlharOcioso(pet, delta) {
   if (!pet.olharAtivo && pet.tempoParado < pet.config.idleLookDelay) {
-    pet.anims.stop();
-    pet.setFrame({ down: 0, left: 13, right: 26, up: 39 }[pet.direcaoRepouso]);
+    pet.anims.play(`companion-pet-walk-${pet.direcaoRepouso}`, true);
     return;
   }
 
@@ -411,10 +410,7 @@ function atualizarOlharOcioso(pet, delta) {
       pet.olharAtivo = false;
       pet.tempoParado = 0;
       pet.tempoOlhar = 0;
-      pet.anims.stop();
-      pet.setFrame(
-        { down: 0, left: 13, right: 26, up: 39 }[pet.direcaoRepouso],
-      );
+      pet.anims.play(`companion-pet-walk-${pet.direcaoRepouso}`, true);
       return;
     }
   }
