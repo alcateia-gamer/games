@@ -24,6 +24,11 @@ import { prepararArqueira } from "../player/archer/Archer.js";
 
 import { criarRobos, atualizarInimigoTeste } from "../enemies/EnemyTest.js";
 import { atualizarTransicaoParaParte2 } from "../core/MapTransition.js";
+import {
+  criarCompanionPet,
+  atualizarCompanionPet,
+  atualizarDepthCompanionPet,
+} from "../player/CompanionPet.js";
 
 // =====================================================
 // LEVEL 1
@@ -102,6 +107,7 @@ class Level1 extends Phaser.Scene {
     // =====================================================
 
     criarPlayer(this);
+    criarCompanionPet(this);
     prepararArqueira(this);
 
     this.atualizarProfundidadePostes();
@@ -228,6 +234,7 @@ class Level1 extends Phaser.Scene {
     }
 
     atualizarInimigoTeste(this, time);
+    atualizarCompanionPet(this, time, delta);
 
     // =====================================================
     // COORDENADAS
@@ -297,6 +304,7 @@ class Level1 extends Phaser.Scene {
     }
 
     atualizarDepthPlayer(this);
+    atualizarDepthCompanionPet(this);
 
     if (Array.isArray(this.poleBaseObjects)) {
       this.poleBaseObjects.forEach((base) => {

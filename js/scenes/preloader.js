@@ -252,6 +252,10 @@ class Preloader extends Phaser.Scene {
       frameWidth: 311,
       frameHeight: 421,
     });
+    this.load.spritesheet("robo-pet", "personagem/inimigos/robo_pet.png", {
+      frameWidth: 354,
+      frameHeight: 256,
+    });
     // =====================================================
     // JOYSTICK
     // =====================================================

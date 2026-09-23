@@ -15,6 +15,11 @@ import {
   atualizarInimigoTeste,
   limparGrupoRobos,
 } from "../enemies/EnemyTest.js";
+import {
+  criarCompanionPet,
+  atualizarCompanionPet,
+  atualizarDepthCompanionPet,
+} from "../player/CompanionPet.js";
 
 class Level1Parte2 extends Phaser.Scene {
   constructor() {
@@ -59,6 +64,7 @@ class Level1Parte2 extends Phaser.Scene {
     this.map = criarLevel1Parte2Map(this);
     criarAnimacoesPlayer(this);
     criarPlayer(this);
+    criarCompanionPet(this);
     prepararArqueira(this);
 
     this.criarTeleporteRetornoParte1();
@@ -110,6 +116,8 @@ class Level1Parte2 extends Phaser.Scene {
     }
 
     atualizarInimigoTeste(this, time);
+    atualizarCompanionPet(this, time, delta);
+    atualizarDepthCompanionPet(this);
 
     const x = Math.round(this.player.x);
     const y = Math.round(this.player.y);
