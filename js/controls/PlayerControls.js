@@ -8,8 +8,8 @@ function tocarAnimacaoSeNecessario(scene, chave) {
   if (
     !scene.player?.anims ||
     (scene.atacando && !chave.startsWith("attack-")) ||
-    scene.player.anims.currentAnim?.key === chave &&
-    scene.player.anims.isPlaying
+    (scene.player.anims.currentAnim?.key === chave &&
+      scene.player.anims.isPlaying)
   ) {
     return;
   }

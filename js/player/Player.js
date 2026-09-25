@@ -40,7 +40,7 @@ function frameParado(scene, direcao = scene.direcaoAtual) {
     : personagem3Ativa(scene)
       ? { down: 0, up: 1, left: 3, right: 2 }
       : personagem2Ativa(scene)
-          ? { up: 24, left: 8, down: 0, right: 40 }
+        ? { up: 24, left: 8, down: 0, right: 40 }
         : { up: 0, left: 13, down: 26, right: 39 };
   return frames[direcao] ?? frames.down;
 }

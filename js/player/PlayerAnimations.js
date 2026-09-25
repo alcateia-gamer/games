@@ -17,7 +17,7 @@ function criarAnimacoesPlayer(scene) {
       ? { up: [24, 31], left: [8, 15], down: [0, 7], right: [40, 47] }
       : personagem4
         ? { up: [0, 8], left: [9, 17], down: [18, 26], right: [27, 35] }
-      : { up: [0, 8], left: [13, 21], down: [26, 34], right: [39, 47] };
+        : { up: [0, 8], left: [13, 21], down: [26, 34], right: [39, 47] };
   const idleFrames = personagem3
     ? {
         down: [0, 4, 8, 12],
@@ -27,28 +27,28 @@ function criarAnimacoesPlayer(scene) {
       }
     : personagem4
       ? { up: [0, 0], left: [9, 9], down: [18, 18], right: [27, 27] }
-    : walkFrames;
+      : walkFrames;
   const walkTexture = personagem3
     ? "personagem3-walk"
     : personagem2
       ? "personagem2-walk"
       : personagem4
         ? "personagem4-walk"
-          : "walk";
+        : "walk";
   const idleTexture = personagem3
     ? "personagem3-idle"
     : personagem2
       ? "personagem2-walk"
       : personagem4
         ? "personagem4-walk"
-          : "walk";
+        : "walk";
   const attackTexture = personagem3
     ? "personagem3-attack"
     : personagem2
       ? "personagem2-walk"
       : personagem4
         ? "personagem4-attack"
-      : "attack";
+        : "attack";
 
   [
     "walk-up",
@@ -97,16 +97,17 @@ function criarAnimacoesPlayer(scene) {
     });
   });
 
-  const attackFrames = personagem3 || personagem2
-    ? walkFrames
-    : personagem4
-    ? {
-        up: [0, 1, 2, 3, 4, 5],
-        left: [6, 7, 8, 9, 10, 11],
-        down: [12, 13, 14, 15, 16, 17],
-        right: [18, 19, 20, 21, 22, 23],
-      }
-      : { up: [0, 5], left: [6, 11], down: [12, 17], right: [18, 23] };
+  const attackFrames =
+    personagem3 || personagem2
+      ? walkFrames
+      : personagem4
+        ? {
+            up: [0, 1, 2, 3, 4, 5],
+            left: [6, 7, 8, 9, 10, 11],
+            down: [12, 13, 14, 15, 16, 17],
+            right: [18, 19, 20, 21, 22, 23],
+          }
+        : { up: [0, 5], left: [6, 11], down: [12, 17], right: [18, 23] };
 
   Object.entries(attackFrames).forEach(([direcao, frames]) => {
     scene.anims.create({
