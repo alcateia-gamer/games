@@ -173,24 +173,6 @@ class Preloader extends Phaser.Scene {
     );
 
     this.load.spritesheet(
-      "personagem3-idle",
-      "personagem/personagem 3/darkhatman_idle_sheet_64x64.png",
-      {
-        frameWidth: 64,
-        frameHeight: 64,
-      },
-    );
-
-    this.load.spritesheet(
-      "personagem3-walk",
-      "personagem/personagem 3/darkhatman_walk_sheet_64x64.png",
-      {
-        frameWidth: 64,
-        frameHeight: 64,
-      },
-    );
-
-    this.load.spritesheet(
       "personagem3-attack",
       "personagem/personagem 3/darkhatman_attack_sheet_64x64.png",
       {
@@ -201,16 +183,20 @@ class Preloader extends Phaser.Scene {
 
     this.load.spritesheet(
       "personagem4-walk",
-      "personagem/nyx_walk.png",
+      "personagem/PERSONAGENS PRICIPAIS/NYX_4/nyx_walk.png",
       {
         frameWidth: 64,
         frameHeight: 64,
       },
     );
-    this.load.spritesheet("personagem4-attack", "personagem/nyx_ataque.png", {
-      frameWidth: 192,
-      frameHeight: 192,
-    });
+    this.load.spritesheet(
+      "personagem4-attack",
+      "personagem/PERSONAGENS PRICIPAIS/NYX_4/nyx_ataque.png",
+      {
+        frameWidth: 128,
+        frameHeight: 128,
+      },
+    );
 
     // =====================================================
     // PERSONAGEM - ATAQUE

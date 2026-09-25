@@ -27,7 +27,7 @@ class Start extends Phaser.Scene {
       "start-character-2",
       "assets/personagem/personagem 2/Idle.png",
       {
-        frameWidth: 48,
+        frameWidth: 64,
         frameHeight: 64,
       },
     );
@@ -41,7 +41,7 @@ class Start extends Phaser.Scene {
     );
     this.load.spritesheet(
       "start-character-4",
-      "assets/personagem/nyx_walk.png",
+      "assets/personagem/PERSONAGENS PRICIPAIS/NYX_4/nyx_walk.png",
       {
         frameWidth: 64,
         frameHeight: 64,
@@ -371,7 +371,7 @@ class Start extends Phaser.Scene {
         id: "personagem2",
         x: this.width / 2 - 92,
         texture: "start-character-2",
-        frame: 0,
+        frame: 19,
         scale: 1.9,
         name: "OPERADORA // 02",
       },

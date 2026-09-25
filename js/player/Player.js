@@ -2,7 +2,6 @@ import { gastarEstamina } from "./PlayerStatus.js";
 
 import { causarDanoInimigo } from "../enemies/EnemyTest.js";
 import { tocarSomKatanaAcerto, tocarSomKatanaErro } from "../sounds/katana.js";
-import { iniciarAtaqueNyx } from "./NyxAttack.js";
 
 function debugHitboxesAtivado(scene) {
   return !!scene?.game?.config?.physics?.arcade?.debug;
@@ -31,21 +30,17 @@ function texturaWalk(scene, direcao = scene.direcaoAtual) {
 }
 
 function configurarFiltroPersonagem2(scene) {
-  ["personagem2-walk", "personagem2-attack", "personagem2-idle"].forEach(
-    (textureKey) => {
-      const texture = scene.textures.get(textureKey);
-      texture?.setFilter(Phaser.Textures.FilterMode.NEAREST);
-    },
-  );
+  const texture = scene.textures.get("personagem2-walk");
+  texture?.setFilter(Phaser.Textures.FilterMode.NEAREST);
 }
 
 function frameParado(scene, direcao = scene.direcaoAtual) {
   const frames = personagem4Ativa(scene)
-    ? { down: 0, up: 27, left: 18, right: 9 }
+    ? { down: 18, up: 0, left: 9, right: 27 }
     : personagem3Ativa(scene)
       ? { down: 0, up: 1, left: 3, right: 2 }
       : personagem2Ativa(scene)
-        ? { up: 24, left: 8, down: 0, right: 40 }
+          ? { up: 24, left: 8, down: 0, right: 40 }
         : { up: 0, left: 13, down: 26, right: 39 };
   return frames[direcao] ?? frames.down;
 }
@@ -93,14 +88,13 @@ function criarPlayer(scene) {
 
   if (personagem2Ativa(scene)) {
     configurarFiltroPersonagem2(scene);
-    scene.player.setScale(1.6, 1.6);
   }
 
   scene.player.setAlpha(1).clearTint().setBlendMode(Phaser.BlendModes.NORMAL);
 
   scene.player.invulneravel = false;
 
-  if (personagem2Ativa(scene) || personagem3Ativa(scene) || personagem4Ativa(scene)) {
+  if (personagem3Ativa(scene) || personagem4Ativa(scene)) {
     scene.player.anims.play("idle-down", true);
   }
 
@@ -158,7 +152,11 @@ function criarPlayer(scene) {
     // VOLTA PARA WALK
     // =================================================
 
-    scene.player.setTexture(texturaWalk(scene), frameParado(scene));
+    const direcaoAtaque = scene.direcaoAtual;
+    scene.player.setTexture(
+      texturaWalk(scene, direcaoAtaque),
+      frameParado(scene, direcaoAtaque),
+    );
     scene.player.setOrigin(0.5, 0.5);
 
     // =================================================
@@ -188,11 +186,6 @@ function configurarHitboxWalk(scene) {
   if (personagem3Ativa(scene)) {
     scene.player.body.setSize(30, 15);
     scene.player.body.setOffset(18, 41);
-    return;
-  }
-  if (personagem4Ativa(scene)) {
-    scene.player.body.setSize(12, 7);
-    scene.player.body.setOffset(6, 15);
     return;
   }
   scene.player.body.setSize(30, 15);
@@ -514,11 +507,6 @@ function criarHitboxKatana(scene) {
 // =====================================================
 
 function atacar(scene) {
-  if (personagem4Ativa(scene)) {
-    iniciarAtaqueNyx(scene);
-    return;
-  }
-
   // =====================================================
   // JÁ ESTÁ ATACANDO
   // =====================================================
@@ -542,6 +530,8 @@ function atacar(scene) {
   // =====================================================
 
   scene.atacando = true;
+  scene.direcaoAtaque = scene.direcaoAtual;
+  scene.player.setOrigin(0.5, 0.5);
 
   // =====================================================
   // HITBOX DA KATANA
@@ -553,15 +543,8 @@ function atacar(scene) {
   // ANIMAÇÃO
   // =====================================================
 
-  if (scene.direcaoAtual === "up") {
-    scene.player.anims.play("attack-up", true);
-  } else if (scene.direcaoAtual === "left") {
-    scene.player.anims.play("attack-left", true);
-  } else if (scene.direcaoAtual === "down") {
-    scene.player.anims.play("attack-down", true);
-  } else if (scene.direcaoAtual === "right") {
-    scene.player.anims.play("attack-right", true);
-  }
+  const chaveAtaque = `attack-${scene.direcaoAtaque}`;
+  scene.player.anims.play(chaveAtaque, false);
 
   // =====================================================
   // IMPORTANTE

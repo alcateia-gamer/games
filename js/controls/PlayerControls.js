@@ -8,7 +8,8 @@ function tocarAnimacaoSeNecessario(scene, chave) {
   if (
     !scene.player?.anims ||
     (scene.atacando && !chave.startsWith("attack-")) ||
-    scene.player.anims.currentAnim?.key === chave
+    scene.player.anims.currentAnim?.key === chave &&
+    scene.player.anims.isPlaying
   ) {
     return;
   }
@@ -425,7 +426,9 @@ function atualizarControles(scene) {
 
     if (!scene.atacando) {
       if (scene.personagemSelecionada === "personagem2") {
-        tocarAnimacaoSeNecessario(scene, `idle-${scene.direcaoAtual}`);
+        const framesParados = { up: 0, left: 9, down: 18, right: 27 };
+        scene.player.anims.stop();
+        scene.player.setFrame(framesParados[scene.direcaoAtual] ?? 18);
       } else if (scene.personagemSelecionada === "personagem4") {
         tocarAnimacaoSeNecessario(scene, `idle-${scene.direcaoAtual}`);
       } else {

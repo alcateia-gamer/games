@@ -6,56 +6,6 @@ function criarAnimacoesPlayer(scene) {
   const personagem3 = scene.personagemSelecionada === "personagem3";
   const personagem4 = scene.personagemSelecionada === "personagem4";
 
-  if (personagem4) {
-    const direcoesPersonagem4 = {
-      down: { idle: 0, walk: [0, 8] },
-      left: { idle: 18, walk: [18, 26] },
-      right: { idle: 9, walk: [9, 17] },
-      up: { idle: 27, walk: [27, 35] },
-    };
-
-    ["walk", "idle"].forEach((tipo) => {
-      Object.entries(direcoesPersonagem4).forEach(([direcao, ciclos]) => {
-        const chave = `${tipo}-${direcao}`;
-        if (scene.anims.exists(chave)) {
-          scene.anims.remove(chave);
-        }
-        scene.anims.create({
-          key: chave,
-          frames: scene.anims.generateFrameNumbers("personagem4-walk", {
-            start: tipo === "idle" ? ciclos.idle : ciclos.walk[0],
-            end: tipo === "idle" ? ciclos.idle : ciclos.walk[1],
-          }),
-          frameRate: tipo === "idle" ? 4 : 12,
-          repeat: -1,
-        });
-      });
-    });
-
-    const ataquesPersonagem4 = {
-      down: [0, 5],
-      left: [6, 11],
-      right: [12, 17],
-      up: [18, 23],
-    };
-
-    Object.entries(ataquesPersonagem4).forEach(([direcao, frames]) => {
-        const chave = `attack-${direcao}`;
-        if (scene.anims.exists(chave)) {
-          scene.anims.remove(chave);
-        }
-        scene.anims.create({
-          key: chave,
-          frames: scene.anims.generateFrameNumbers("personagem4-attack", {
-            start: frames[0],
-            end: frames[1],
-          }),
-          frameRate: 12,
-          repeat: 0,
-        });
-    });
-    return;
-  }
   const walkFrames = personagem3
     ? {
         down: [0, 4, 8, 12],
@@ -65,6 +15,8 @@ function criarAnimacoesPlayer(scene) {
       }
     : personagem2
       ? { up: [24, 31], left: [8, 15], down: [0, 7], right: [40, 47] }
+      : personagem4
+        ? { up: [0, 8], left: [9, 17], down: [18, 26], right: [27, 35] }
       : { up: [0, 8], left: [13, 21], down: [26, 34], right: [39, 47] };
   const idleFrames = personagem3
     ? {
@@ -73,21 +25,29 @@ function criarAnimacoesPlayer(scene) {
         left: [3, 7, 11, 15],
         right: [2, 6, 10, 14],
       }
+    : personagem4
+      ? { up: [0, 0], left: [9, 9], down: [18, 18], right: [27, 27] }
     : walkFrames;
   const walkTexture = personagem3
     ? "personagem3-walk"
     : personagem2
       ? "personagem2-walk"
-      : "walk";
+      : personagem4
+        ? "personagem4-walk"
+          : "walk";
   const idleTexture = personagem3
     ? "personagem3-idle"
     : personagem2
-      ? "personagem2-idle"
-      : "walk";
+      ? "personagem2-walk"
+      : personagem4
+        ? "personagem4-walk"
+          : "walk";
   const attackTexture = personagem3
     ? "personagem3-attack"
     : personagem2
-      ? "personagem2-attack"
+      ? "personagem2-walk"
+      : personagem4
+        ? "personagem4-attack"
       : "attack";
 
   [
@@ -137,10 +97,15 @@ function criarAnimacoesPlayer(scene) {
     });
   });
 
-  const attackFrames = personagem3
+  const attackFrames = personagem3 || personagem2
     ? walkFrames
-    : personagem2
-      ? walkFrames
+    : personagem4
+    ? {
+        up: [0, 1, 2, 3, 4, 5],
+        left: [6, 7, 8, 9, 10, 11],
+        down: [12, 13, 14, 15, 16, 17],
+        right: [18, 19, 20, 21, 22, 23],
+      }
       : { up: [0, 5], left: [6, 11], down: [12, 17], right: [18, 23] };
 
   Object.entries(attackFrames).forEach(([direcao, frames]) => {
@@ -149,8 +114,9 @@ function criarAnimacoesPlayer(scene) {
       frames: personagem3
         ? criarFramesIntercalados(attackTexture, frames)
         : scene.anims.generateFrameNumbers(attackTexture, {
-            start: frames[0],
-            end: frames[1],
+            ...(personagem4
+              ? { frames }
+              : { start: frames[0], end: frames[1] }),
           }),
       frameRate: 20,
       repeat: 0,
