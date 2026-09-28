@@ -1,4 +1,5 @@
 import { gastarEstamina } from "./PlayerStatus.js";
+import { dispararProjetil } from "./PlayerProjectiles.js";
 
 import { causarDanoInimigo } from "../enemies/EnemyTest.js";
 import { tocarSomKatanaAcerto, tocarSomKatanaErro } from "../sounds/katana.js";
@@ -19,6 +20,13 @@ function personagem4Ativa(scene) {
   return scene.personagemSelecionada === "personagem4";
 }
 
+const framesCarregadosAria = {
+  up: 8,
+  left: 21,
+  down: 34,
+  right: 47,
+};
+
 function texturaWalk(scene, direcao = scene.direcaoAtual) {
   if (personagem4Ativa(scene)) {
     return "personagem4-walk";
@@ -38,9 +46,9 @@ function frameParado(scene, direcao = scene.direcaoAtual) {
   const frames = personagem4Ativa(scene)
     ? { down: 18, up: 0, left: 9, right: 27 }
     : personagem3Ativa(scene)
-      ? { down: 0, up: 1, left: 3, right: 2 }
+      ? { up: 0, left: 9, down: 18, right: 27 }
       : personagem2Ativa(scene)
-        ? { up: 24, left: 8, down: 0, right: 40 }
+        ? { up: 0, left: 9, down: 18, right: 27 }
         : { up: 0, left: 13, down: 26, right: 39 };
   return frames[direcao] ?? frames.down;
 }
@@ -138,7 +146,17 @@ function criarPlayer(scene) {
   // =====================================================
 
   scene.player.on("animationcomplete", (animation) => {
-    if (!animation.key.startsWith("attack-")) {
+    if (animation.key.startsWith("aria-charge-")) {
+      if (scene.ariaAtaqueCarregando) {
+        scene.player.anims.stop();
+      }
+      return;
+    }
+
+    if (
+      !animation.key.startsWith("attack-") &&
+      !animation.key.startsWith("aria-release-")
+    ) {
       return;
     }
 
@@ -152,7 +170,7 @@ function criarPlayer(scene) {
     // VOLTA PARA WALK
     // =================================================
 
-    const direcaoAtaque = scene.direcaoAtual;
+    const direcaoAtaque = scene.direcaoAtaque ?? scene.direcaoAtual;
     scene.player.setTexture(
       texturaWalk(scene, direcaoAtaque),
       frameParado(scene, direcaoAtaque),
@@ -164,6 +182,8 @@ function criarPlayer(scene) {
     // =================================================
 
     configurarHitboxWalk(scene);
+    scene.direcaoAtaque = null;
+    scene.ariaAtaqueCarregando = false;
   });
 }
 
@@ -185,7 +205,7 @@ function configurarHitboxWalk(scene) {
   }
   if (personagem3Ativa(scene)) {
     scene.player.body.setSize(30, 15);
-    scene.player.body.setOffset(18, 41);
+    scene.player.body.setOffset(50, 73);
     return;
   }
   scene.player.body.setSize(30, 15);
@@ -196,18 +216,18 @@ function configurarHitboxWalk(scene) {
 // HITBOX DE COLISÃO - ATAQUE
 // =====================================================
 // WALK = 64x64
-// ATAQUE = 128x128
+// ATAQUE = 192x192
 //
 // DIFERENÇA:
-// (128 - 64) / 2 = 32
+// (192 - 64) / 2 = 64
 //
 // OFFSET WALK:
 // X = 18
 // Y = 45
 //
 // OFFSET ATAQUE:
-// X = 18 + 32 = 50
-// Y = 45 + 32 = 77
+// X = 18 + 64 = 82
+// Y = 45 + 64 = 109
 // =====================================================
 
 function configurarHitboxAtaque(scene) {
@@ -215,12 +235,34 @@ function configurarHitboxAtaque(scene) {
     return;
   }
 
-  if (personagem2Ativa(scene) || personagem3Ativa(scene)) {
+  if (personagem2Ativa(scene)) {
     configurarHitboxWalk(scene);
     return;
   }
+  if (personagem3Ativa(scene)) {
+    scene.player.body.setSize(30, 15);
+    scene.player.body.setOffset(18, 41);
+    return;
+  }
   scene.player.body.setSize(30, 15);
-  scene.player.body.setOffset(50, 77);
+  scene.player.body.setOffset(82, 109);
+}
+
+function atualizarDirecaoAtaqueAria(scene, direcao) {
+  if (
+    !personagem3Ativa(scene) ||
+    !scene.atacando ||
+    !scene.ariaAtaqueCarregando ||
+    scene.direcaoAtaque === direcao
+  ) {
+    return;
+  }
+
+  scene.direcaoAtaque = direcao;
+  scene.player.anims.stop();
+  scene.player.setTexture("personagem3-attack");
+  scene.player.setFrame(framesCarregadosAria[direcao]);
+  scene.player.setOrigin(0.5, 0.5);
 }
 
 // =====================================================
@@ -339,7 +381,9 @@ function criarHitboxKatana(scene) {
     // CIMA
     // =================================================
 
-    if (scene.direcaoAtual === "up") {
+    const direcaoAtaque = scene.direcaoAtaque ?? scene.direcaoAtual;
+
+    if (direcaoAtaque === "up") {
       centroY -= 26;
 
       largura = 90;
@@ -350,7 +394,7 @@ function criarHitboxKatana(scene) {
     // =================================================
     // BAIXO
     // =================================================
-    else if (scene.direcaoAtual === "down") {
+    else if (direcaoAtaque === "down") {
       centroY += 26;
 
       largura = 90;
@@ -361,7 +405,7 @@ function criarHitboxKatana(scene) {
     // =================================================
     // ESQUERDA
     // =================================================
-    else if (scene.direcaoAtual === "left") {
+    else if (direcaoAtaque === "left") {
       centroX -= 30;
 
       largura = 44;
@@ -372,7 +416,7 @@ function criarHitboxKatana(scene) {
     // =================================================
     // DIREITA
     // =================================================
-    else if (scene.direcaoAtual === "right") {
+    else if (direcaoAtaque === "right") {
       centroX += 30;
 
       largura = 44;
@@ -533,6 +577,13 @@ function atacar(scene) {
   scene.direcaoAtaque = scene.direcaoAtual;
   scene.player.setOrigin(0.5, 0.5);
 
+  if (personagem3Ativa(scene)) {
+    scene.ariaAtaqueCarregando = true;
+    scene.player.anims.play(`aria-charge-${scene.direcaoAtaque}`, false);
+    configurarHitboxAtaque(scene);
+    return;
+  }
+
   // =====================================================
   // HITBOX DA KATANA
   // =====================================================
@@ -557,6 +608,22 @@ function atacar(scene) {
   configurarHitboxAtaque(scene);
 }
 
+function soltarAtaque(scene) {
+  if (
+    !personagem3Ativa(scene) ||
+    !scene.atacando ||
+    !scene.ariaAtaqueCarregando
+  ) {
+    return;
+  }
+
+  scene.ariaAtaqueCarregando = false;
+  dispararProjetil(scene);
+  scene.player.anims.play(`aria-release-${scene.direcaoAtaque}`, false);
+  criarHitboxKatana(scene);
+  configurarHitboxAtaque(scene);
+}
+
 // =====================================================
 // RESPAWN
 // =====================================================
@@ -573,6 +640,7 @@ function respawnPlayer(scene) {
   // =====================================================
 
   scene.atacando = false;
+  scene.ariaAtaqueCarregando = false;
 
   scene.direcaoAtual = "down";
 
@@ -626,6 +694,8 @@ function respawnPlayer(scene) {
 export {
   criarPlayer,
   atacar,
+  soltarAtaque,
+  atualizarDirecaoAtaqueAria,
   respawnPlayer,
   atualizarHitboxDanoPlayer,
   atualizarDepthPlayer,

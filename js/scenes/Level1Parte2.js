@@ -22,6 +22,10 @@ import {
   atualizarCompanionPet,
   atualizarDepthCompanionPet,
 } from "../player/CompanionPet.js";
+import {
+  criarSistemaProjeteis,
+  atualizarProjeteis,
+} from "../player/PlayerProjectiles.js";
 
 class Level1Parte2 extends Phaser.Scene {
   constructor() {
@@ -32,6 +36,7 @@ class Level1Parte2 extends Phaser.Scene {
     this.threshold = 0.1;
     this.speed = 200;
     this.speedTurbo = 400;
+    this.velocidadeProjetil = 420;
     this.developerMode = false;
     this.direcaoAtual = "down";
     this.atacando = false;
@@ -78,6 +83,7 @@ class Level1Parte2 extends Phaser.Scene {
     if (this.collisionGroup) {
       this.physics.add.collider(this.player, this.collisionGroup);
     }
+    criarSistemaProjeteis(this);
 
     this.events.on(Phaser.Scenes.Events.POST_UPDATE, () => {
       atualizarHitboxDanoPlayer(this);
@@ -125,6 +131,7 @@ class Level1Parte2 extends Phaser.Scene {
     }
 
     atualizarInimigoTeste(this, time);
+    atualizarProjeteis(this, delta);
     atualizarCompanionPet(this, time, delta);
     atualizarDepthCompanionPet(this);
 

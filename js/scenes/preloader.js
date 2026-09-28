@@ -147,19 +147,19 @@ class Preloader extends Phaser.Scene {
 
     this.load.spritesheet(
       "personagem2-walk",
-      "personagem/personagem 2/walk.png",
+      "personagem/PERSONAGENS PRICIPAIS/MAGNUS_FORCE 2/magnus_walk.png",
       {
-        frameWidth: 48,
+        frameWidth: 64,
         frameHeight: 64,
       },
     );
 
     this.load.spritesheet(
       "personagem2-attack",
-      "personagem/personagem 2/Dash.png",
+      "personagem/PERSONAGENS PRICIPAIS/MAGNUS_FORCE 2/magnus_ataque_1.png",
       {
-        frameWidth: 48,
-        frameHeight: 64,
+        frameWidth: 128,
+        frameHeight: 128,
       },
     );
 
@@ -173,8 +173,26 @@ class Preloader extends Phaser.Scene {
     );
 
     this.load.spritesheet(
+      "personagem3-walk",
+      "personagem/PERSONAGENS PRICIPAIS/ARIA_KADE 3/ARIA_WALK.png",
+      {
+        frameWidth: 128,
+        frameHeight: 128,
+      },
+    );
+
+    this.load.spritesheet(
       "personagem3-attack",
-      "personagem/personagem 3/darkhatman_attack_sheet_64x64.png",
+      "personagem/PERSONAGENS PRICIPAIS/ARIA_KADE 3/ARIA_ARCO_ATAQUE.png",
+      {
+        frameWidth: 64,
+        frameHeight: 64,
+      },
+    );
+
+    this.load.spritesheet(
+      "aria-arrow",
+      "personagem/PERSONAGENS PRICIPAIS/ARIA_KADE 3/Arrow.png",
       {
         frameWidth: 64,
         frameHeight: 64,
@@ -193,8 +211,8 @@ class Preloader extends Phaser.Scene {
       "personagem4-attack",
       "personagem/PERSONAGENS PRICIPAIS/NYX_4/nyx_ataque.png",
       {
-        frameWidth: 128,
-        frameHeight: 128,
+        frameWidth: 192,
+        frameHeight: 192,
       },
     );
 

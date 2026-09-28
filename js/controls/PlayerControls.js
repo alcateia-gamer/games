@@ -1,10 +1,23 @@
-import { atacar } from "../player/Player.js";
+import {
+  atacar,
+  soltarAtaque,
+  atualizarDirecaoAtaqueAria,
+} from "../player/Player.js";
 import {
   configurarSomCorrida,
   atualizarSomCorrida,
 } from "../sounds/personagem.js";
 
 function tocarAnimacaoSeNecessario(scene, chave) {
+  if (
+    scene.atacando &&
+    scene.ariaAtaqueCarregando &&
+    chave.startsWith("walk-")
+  ) {
+    atualizarDirecaoAtaqueAria(scene, chave.slice(5));
+    return;
+  }
+
   if (
     !scene.player?.anims ||
     (scene.atacando && !chave.startsWith("attack-")) ||
@@ -234,6 +247,7 @@ function criarControles(scene) {
 
   const soltarAtaqueAtual = () => {
     soltarBotao();
+    soltarAtaque(scene);
   };
 
   // =====================================================

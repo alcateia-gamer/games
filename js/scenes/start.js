@@ -25,7 +25,7 @@ class Start extends Phaser.Scene {
     );
     this.load.spritesheet(
       "start-character-2",
-      "assets/personagem/personagem 2/Idle.png",
+      "assets/personagem/PERSONAGENS PRICIPAIS/MAGNUS_FORCE 2/magnus_walk.png",
       {
         frameWidth: 64,
         frameHeight: 64,
@@ -33,10 +33,10 @@ class Start extends Phaser.Scene {
     );
     this.load.spritesheet(
       "start-character-3",
-      "assets/personagem/personagem 3/darkhatman_idle_sheet_64x64.png",
+      "assets/personagem/PERSONAGENS PRICIPAIS/ARIA_KADE 3/ARIA_WALK.png",
       {
-        frameWidth: 64,
-        frameHeight: 64,
+        frameWidth: 128,
+        frameHeight: 128,
       },
     );
     this.load.spritesheet(
@@ -371,23 +371,23 @@ class Start extends Phaser.Scene {
         id: "personagem2",
         x: this.width / 2 - 92,
         texture: "start-character-2",
-        frame: 19,
-        scale: 1.9,
-        name: "OPERADORA // 02",
+        frame: 18,
+        scale: 1.5,
+        name: "MAGNUS FORCE // 02",
       },
       {
         id: "personagem3",
         x: this.width / 2 + 92,
         texture: "start-character-3",
-        frame: 0,
+        frame: 18,
         scale: 1.45,
-        name: "OPERADOR // 03",
+        name: "ARIA KADE // 03",
       },
       {
         id: "personagem4",
         x: this.width / 2 + 276,
         texture: "start-character-4",
-        frame: 0,
+        frame: 18,
         scale: 1.5,
         name: "OPERADORA // 04",
       },

@@ -27,6 +27,10 @@ import {
   atualizarCompanionPet,
   atualizarDepthCompanionPet,
 } from "../player/CompanionPet.js";
+import {
+  criarSistemaProjeteis,
+  atualizarProjeteis,
+} from "../player/PlayerProjectiles.js";
 
 // =====================================================
 // LEVEL 1
@@ -46,6 +50,7 @@ class Level1 extends Phaser.Scene {
 
     this.speed = 200;
     this.speedTurbo = 400;
+    this.velocidadeProjetil = 420;
     this.developerMode = false;
 
     this.direction = undefined;
@@ -116,6 +121,7 @@ class Level1 extends Phaser.Scene {
     if (this.collisionGroup) {
       this.physics.add.collider(this.player, this.collisionGroup);
     }
+    criarSistemaProjeteis(this);
 
     // =====================================================
     // PORTA PARA A PARTE 2
@@ -231,6 +237,7 @@ class Level1 extends Phaser.Scene {
     }
 
     atualizarInimigoTeste(this, time);
+    atualizarProjeteis(this, delta);
     atualizarCompanionPet(this, time, delta);
 
     // =====================================================

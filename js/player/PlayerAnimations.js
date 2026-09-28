@@ -8,23 +8,18 @@ function criarAnimacoesPlayer(scene) {
 
   const walkFrames = personagem3
     ? {
-        down: [0, 4, 8, 12],
-        up: [1, 5, 9, 13],
-        left: [3, 7, 11, 15],
-        right: [2, 6, 10, 14],
+        up: [0, 1, 2, 3, 4, 5, 6, 7, 8],
+        left: [9, 10, 11, 12, 13, 14, 15, 16, 17],
+        down: [18, 19, 20, 21, 22, 23, 24, 25, 26],
+        right: [27, 28, 29, 30, 31, 32, 33, 34, 35],
       }
     : personagem2
-      ? { up: [24, 31], left: [8, 15], down: [0, 7], right: [40, 47] }
+      ? { up: [0, 8], left: [9, 17], down: [18, 26], right: [27, 35] }
       : personagem4
         ? { up: [0, 8], left: [9, 17], down: [18, 26], right: [27, 35] }
         : { up: [0, 8], left: [13, 21], down: [26, 34], right: [39, 47] };
   const idleFrames = personagem3
-    ? {
-        down: [0, 4, 8, 12],
-        up: [1, 5, 9, 13],
-        left: [3, 7, 11, 15],
-        right: [2, 6, 10, 14],
-      }
+    ? { up: [0, 0], left: [9, 9], down: [18, 18], right: [27, 27] }
     : personagem4
       ? { up: [0, 0], left: [9, 9], down: [18, 18], right: [27, 27] }
       : walkFrames;
@@ -36,7 +31,7 @@ function criarAnimacoesPlayer(scene) {
         ? "personagem4-walk"
         : "walk";
   const idleTexture = personagem3
-    ? "personagem3-idle"
+    ? "personagem3-walk"
     : personagem2
       ? "personagem2-walk"
       : personagem4
@@ -45,7 +40,7 @@ function criarAnimacoesPlayer(scene) {
   const attackTexture = personagem3
     ? "personagem3-attack"
     : personagem2
-      ? "personagem2-walk"
+      ? "personagem2-attack"
       : personagem4
         ? "personagem4-attack"
         : "attack";
@@ -59,6 +54,14 @@ function criarAnimacoesPlayer(scene) {
     "attack-left",
     "attack-down",
     "attack-right",
+    "aria-charge-up",
+    "aria-charge-left",
+    "aria-charge-down",
+    "aria-charge-right",
+    "aria-release-up",
+    "aria-release-left",
+    "aria-release-down",
+    "aria-release-right",
     "idle-up",
     "idle-left",
     "idle-down",
@@ -97,9 +100,15 @@ function criarAnimacoesPlayer(scene) {
     });
   });
 
-  const attackFrames =
-    personagem3 || personagem2
-      ? walkFrames
+  const attackFrames = personagem3
+    ? walkFrames
+    : personagem2
+      ? {
+          up: [0, 1, 2, 3, 4, 5, 6],
+          left: [7, 8, 9, 10, 11, 12, 13, 14, 15],
+          down: [16, 17, 18, 19, 20, 21, 22, 23, 24],
+          right: [29, 30, 31, 32, 33, 34, 35],
+        }
       : personagem4
         ? {
             up: [0, 1, 2, 3, 4, 5],
@@ -109,16 +118,54 @@ function criarAnimacoesPlayer(scene) {
           }
         : { up: [0, 5], left: [6, 11], down: [12, 17], right: [18, 23] };
 
+  if (personagem3) {
+    const ariaAttackFrames = {
+      up: {
+        charge: [0, 1, 2, 3, 4, 5, 6, 7, 8],
+        release: [9, 10, 11, 12],
+      },
+      left: {
+        charge: [13, 14, 15, 16, 17, 18, 19, 20, 21],
+        release: [22, 23, 24, 25],
+      },
+      down: {
+        charge: [26, 27, 28, 29, 30, 31, 32, 33, 34],
+        release: [35, 36, 37, 38],
+      },
+      right: {
+        charge: [39, 40, 41, 42, 43, 44, 45, 46, 47],
+        release: [48, 49, 50, 51],
+      },
+    };
+
+    Object.entries(ariaAttackFrames).forEach(([direcao, frames]) => {
+      scene.anims.create({
+        key: `aria-charge-${direcao}`,
+        frames: criarFramesIntercalados(attackTexture, frames.charge),
+        frameRate: 12,
+        repeat: 0,
+      });
+      scene.anims.create({
+        key: `aria-release-${direcao}`,
+        frames: criarFramesIntercalados(attackTexture, frames.release),
+        frameRate: 20,
+        repeat: 0,
+      });
+    });
+  }
+
   Object.entries(attackFrames).forEach(([direcao, frames]) => {
     scene.anims.create({
       key: `attack-${direcao}`,
-      frames: personagem3
-        ? criarFramesIntercalados(attackTexture, frames)
-        : scene.anims.generateFrameNumbers(attackTexture, {
-            ...(personagem4
-              ? { frames }
-              : { start: frames[0], end: frames[1] }),
-          }),
+      frames:
+        personagem2 || personagem4
+          ? criarFramesIntercalados(attackTexture, frames)
+          : personagem3
+            ? criarFramesIntercalados(attackTexture, frames)
+            : scene.anims.generateFrameNumbers(attackTexture, {
+                start: frames[0],
+                end: frames[1],
+              }),
       frameRate: 20,
       repeat: 0,
     });
