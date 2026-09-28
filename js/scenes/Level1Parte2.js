@@ -1,4 +1,7 @@
-import criarLevel1Parte2Map from "../map/Level1Parte2Map.js";
+import criarLevel1Parte2Map, {
+  atualizarDepthGarras,
+  atualizarDepthObjetosProducaoEArmazem,
+} from "../map/Level1Parte2Map.js";
 import criarAnimacoesPlayer from "../player/PlayerAnimations.js";
 import { criarPlayer, atualizarHitboxDanoPlayer } from "../player/Player.js";
 import {
@@ -24,6 +27,8 @@ class Level1Parte2 extends Phaser.Scene {
   constructor() {
     super("Level1Parte2");
 
+    this.DEBUG_MAP = true;
+    this.profundidadePersonagemParte2 = 16.5;
     this.threshold = 0.1;
     this.speed = 200;
     this.speedTurbo = 400;
@@ -35,6 +40,8 @@ class Level1Parte2 extends Phaser.Scene {
   init(data) {
     this.respawnX = data.spawnX ?? 97;
     this.respawnY = data.spawnY ?? -980;
+    this.profundidadePersonagemParte2 =
+      data.profundidadePersonagem ?? this.profundidadePersonagemParte2;
     this.personagemSelecionada = data.personagem || "standard";
     this.morteEmAndamento = false;
     this.inimigos = [];
@@ -63,6 +70,7 @@ class Level1Parte2 extends Phaser.Scene {
     this.map = criarLevel1Parte2Map(this);
     criarAnimacoesPlayer(this);
     criarPlayer(this);
+    this.definirProfundidadePersonagem(this.profundidadePersonagemParte2);
     criarCompanionPet(this);
 
     this.criarTeleporteRetornoParte1();
@@ -104,6 +112,9 @@ class Level1Parte2 extends Phaser.Scene {
 
     atualizarControles(this);
     atualizarStatusPlayer(this, delta);
+    this.definirProfundidadePersonagem(this.profundidadePersonagemParte2);
+    atualizarDepthObjetosProducaoEArmazem(this);
+    atualizarDepthGarras(this);
 
     if (Phaser.Input.Keyboard.JustDown(this.teclaSpawnRobo1)) {
       criarRobos(this, 1);
@@ -128,6 +139,17 @@ class Level1Parte2 extends Phaser.Scene {
     ) {
       this.teleporteRetornoLiberado = true;
     }
+  }
+
+  definirProfundidadePersonagem(profundidade) {
+    const valor = Number(profundidade);
+
+    if (!Number.isFinite(valor)) {
+      return;
+    }
+
+    this.profundidadePersonagemParte2 = valor;
+    this.player?.setDepth(valor);
   }
 
   criarTeleporteRetornoParte1() {

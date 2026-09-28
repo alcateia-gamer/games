@@ -403,6 +403,72 @@ class Preloader extends Phaser.Scene {
     );
 
     this.load.image(
+      "industrialSwitch",
+      "../Tilesets/Animations/Industrial and Security/!Switch_Rasak.png",
+    );
+
+    this.load.image(
+      "electricGenerator",
+      "../Tilesets/Animations/Industrial and Security/$ElectricGenerator.png",
+    );
+
+    this.load.image(
+      "generatorCharacter",
+      "../Tilesets/Animations/Industrial and Security/!$Generator_char.png",
+    );
+
+    this.load.image(
+      "satellite",
+      "../Tilesets/Animations/Industrial and Security/$Satalite.png",
+    );
+
+    this.load.image(
+      "ventilationSystem",
+      "../Tilesets/Animations/Industrial and Security/!Ventilation System.png",
+    );
+
+    this.load.image(
+      "shieldGenerator",
+      "../Tilesets/Animations/Industrial and Security/!$ShieldGenerator.png",
+    );
+
+    this.load.image(
+      "chemTank",
+      "../Tilesets/Animations/Industrial and Security/!Chem-Tank.png",
+    );
+
+    this.load.image(
+      "shieldDoorCharacter",
+      "../Tilesets/Animations/Industrial and Security/!$Shield_Door_char.png",
+    );
+
+    this.load.image(
+      "neonTubes1",
+      "../Tilesets/Animations/Lights/!$Neontubes1.png",
+    );
+
+    this.load.image(
+      "neonTubes2",
+      "../Tilesets/Animations/Lights/!$Neontubes2.png",
+    );
+
+    this.load.image(
+      "industrialLights1",
+      "../Tilesets/Animations/Lights/!Industrials_Lights1.png",
+    );
+
+    this.load.image(
+      "modernFloorLights",
+      "../Tilesets/Animations/Lights/!$ModernFloorLights.png",
+    );
+
+    this.load.image("roboPB", "../Tilesets/extras/RoboPB.png");
+
+    this.load.image("energiaBoss", "../Tilesets/extras/EnergiaBoss.png");
+
+    this.load.image("roboV", "../Tilesets/extras/RoboV.png");
+
+    this.load.image(
       "supercomputer",
       "../Tilesets/Animations/Industrial and Security/Supercomputer.png",
     );

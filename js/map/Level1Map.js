@@ -38,7 +38,9 @@ function criarBaseVisual(scene, map, object, textureKeyByTilesetName) {
   const tileset = obterTilesetDoGid(map, gid);
 
   if (!tileset) {
-    console.warn(`PostesObjetos: GID ${gid} não pôde ser associado a um tileset.`);
+    console.warn(
+      `PostesObjetos: GID ${gid} não pôde ser associado a um tileset.`,
+    );
     return null;
   }
 
@@ -79,25 +81,24 @@ function criarBaseVisual(scene, map, object, textureKeyByTilesetName) {
 
   const tileIndex = gid - Number(tileset.firstgid);
   const sourceX = margin + (tileIndex % columns) * (tileWidth + spacing);
-  const sourceY = margin + Math.floor(tileIndex / columns) * (tileHeight + spacing);
+  const sourceY =
+    margin + Math.floor(tileIndex / columns) * (tileHeight + spacing);
   const width = Number(object.width || tileWidth);
   const height = Number(object.height || tileHeight);
   const frameName = `postes-objetos-${tileset.name}-${tileIndex}`;
 
   if (!texture.frames[frameName]) {
-    texture.add(
-      frameName,
-      0,
-      sourceX,
-      sourceY,
-      tileWidth,
-      tileHeight,
-    );
+    texture.add(frameName, 0, sourceX, sourceY, tileWidth, tileHeight);
   }
 
   // Tile Objects usam x como a borda esquerda e y como a borda inferior.
   const base = scene.add
-    .image(Number(object.x) + width / 2, Number(object.y), textureKey, frameName)
+    .image(
+      Number(object.x) + width / 2,
+      Number(object.y),
+      textureKey,
+      frameName,
+    )
     .setOrigin(0.5, 1)
     .setScale(width / tileWidth, height / tileHeight)
     .setDepth(depthFromWorldY(object.y));
@@ -325,7 +326,10 @@ function criarLevel1Map(scene) {
     ["Tileset_SciFi_Garbage_Rasak", "garbage"],
     ["A5_Street_Rasak", "a5Street"],
     ["Tileset_SciFi_Slums_Rasak", "slums"],
-    ["Tileset_SciFi_PublicTransportation_Slums_Rasak.png", "publicTransportation"],
+    [
+      "Tileset_SciFi_PublicTransportation_Slums_Rasak.png",
+      "publicTransportation",
+    ],
     ["A4_SciFi_Outside_Rasak", "a4Outside"],
     ["A3_SciFi_Outside_Rasak", "a3Outside"],
     ["A5_SciFi_Outside_Rasak", "A5_SciFi_Outside_Rasak"],
@@ -526,7 +530,6 @@ function criarLevel1Map(scene) {
 
       collision.setSize(obj.width, obj.height);
       collision.setVisible(false);
-
     });
   }
 
