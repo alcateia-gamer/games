@@ -109,7 +109,7 @@ const PROFUNDIDADES_OBJETOS_PARTE2 = {
   Garras: 16.25,
   SuporteTrilho: 20,
   ObjetosBoss: 21,
-  EstátuaRobos: 27,
+  EstátuaRobos: 15,
 };
 
 function criarLevel1Parte2Map(scene) {
