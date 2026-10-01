@@ -142,7 +142,7 @@ class Level1Parte2 extends Phaser.Scene {
 
     if (
       !this.teleporteRetornoLiberado &&
-      Phaser.Math.Distance.Between(this.player.x, this.player.y, 97, -995) > 24
+      Phaser.Math.Distance.Between(this.player.x, this.player.y, 95, -965) > 24
     ) {
       this.teleporteRetornoLiberado = true;
     }
@@ -160,8 +160,8 @@ class Level1Parte2 extends Phaser.Scene {
   }
 
   criarTeleporteRetornoParte1() {
-    const x = 97;
-    const y = -995;
+    const x = 95;
+    const y = -965;
     const largura = 16;
     const altura = 8;
 

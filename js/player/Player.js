@@ -20,6 +20,14 @@ function personagem4Ativa(scene) {
   return scene.personagemSelecionada === "personagem4";
 }
 
+function personagemKaiAtiva(scene) {
+  return (
+    !personagem2Ativa(scene) &&
+    !personagem3Ativa(scene) &&
+    !personagem4Ativa(scene)
+  );
+}
+
 // Quadro exibido enquanto a Aria carrega o ataque, conforme a direção atual.
 const framesCarregadosAria = {
   up: 8,
@@ -27,6 +35,11 @@ const framesCarregadosAria = {
   down: 34,
   right: 47,
 };
+
+const KAI_ATTACK_ORIGIN_Y = 0.43;
+const MAGNUS_ATTACK_ORIGIN_Y = 0.61;
+const ARIA_ATTACK_ORIGIN_Y = 0.19;
+const NYX_ATTACK_ORIGIN_Y = 0.61;
 
 function texturaWalk(scene, direcao = scene.direcaoAtual) {
   if (personagem4Ativa(scene)) {
@@ -52,7 +65,7 @@ function frameParado(scene, direcao = scene.direcaoAtual) {
       ? { up: 0, left: 9, down: 18, right: 27 }
       : personagem2Ativa(scene)
         ? { up: 0, left: 9, down: 18, right: 27 }
-        : { up: 0, left: 13, down: 26, right: 39 };
+        : { up: 0, left: 9, down: 18, right: 27 };
   return frames[direcao] ?? frames.down;
 }
 
@@ -193,7 +206,7 @@ function criarPlayer(scene) {
 // =====================================================
 // HITBOX DE COLISÃO - WALK
 // =====================================================
-// SPRITE: 64x64
+// SPRITE: 128x128
 // =====================================================
 
 function configurarHitboxWalk(scene) {
@@ -203,7 +216,7 @@ function configurarHitboxWalk(scene) {
 
   if (personagem2Ativa(scene)) {
     scene.player.body.setSize(23, 11);
-    scene.player.body.setOffset(13, 34);
+    scene.player.body.setOffset(21, 47);
     return;
   }
   if (personagem3Ativa(scene)) {
@@ -211,26 +224,19 @@ function configurarHitboxWalk(scene) {
     scene.player.body.setOffset(50, 73);
     return;
   }
+  if (personagem4Ativa(scene)) {
+    scene.player.body.setSize(30, 15);
+    scene.player.body.setOffset(18, 45);
+    return;
+  }
   scene.player.body.setSize(30, 15);
-  scene.player.body.setOffset(18, 45);
+  scene.player.body.setOffset(49, 82);
 }
 
 // =====================================================
 // HITBOX DE COLISÃO - ATAQUE
 // =====================================================
-// WALK = 64x64
-// ATAQUE = 192x192
-//
-// DIFERENÇA:
-// (192 - 64) / 2 = 64
-//
-// OFFSET WALK:
-// X = 18
-// Y = 45
-//
-// OFFSET ATAQUE:
-// X = 18 + 64 = 82
-// Y = 45 + 64 = 109
+// Os offsets variam conforme o tamanho da folha de cada personagem.
 // =====================================================
 
 function configurarHitboxAtaque(scene) {
@@ -239,16 +245,24 @@ function configurarHitboxAtaque(scene) {
   }
 
   if (personagem2Ativa(scene)) {
-    configurarHitboxWalk(scene);
+    // O ataque usa frames 128x128 e originY=0.61. Este offset compensa
+    // apenas a origem visual para manter o mesmo body.bottom do walk.
+    scene.player.body.setSize(23, 11);
+    scene.player.body.setOffset(53, 93);
     return;
   }
   if (personagem3Ativa(scene)) {
     scene.player.body.setSize(30, 15);
-    scene.player.body.setOffset(18, 41);
+    scene.player.body.setOffset(18, 22);
+    return;
+  }
+  if (personagem4Ativa(scene)) {
+    scene.player.body.setSize(30, 15);
+    scene.player.body.setOffset(82, 130);
     return;
   }
   scene.player.body.setSize(30, 15);
-  scene.player.body.setOffset(82, 109);
+  scene.player.body.setOffset(49, 73);
 }
 
 function atualizarDirecaoAtaqueAria(scene, direcao) {
@@ -265,7 +279,7 @@ function atualizarDirecaoAtaqueAria(scene, direcao) {
   scene.player.anims.stop();
   scene.player.setTexture("personagem3-attack");
   scene.player.setFrame(framesCarregadosAria[direcao]);
-  scene.player.setOrigin(0.5, 0.5);
+  scene.player.setOrigin(0.5, ARIA_ATTACK_ORIGIN_Y);
 }
 
 // =====================================================
@@ -578,7 +592,16 @@ function atacar(scene) {
 
   scene.atacando = true;
   scene.direcaoAtaque = scene.direcaoAtual;
-  scene.player.setOrigin(0.5, 0.5);
+  const originAtaqueY = personagemKaiAtiva(scene)
+    ? KAI_ATTACK_ORIGIN_Y
+    : personagem2Ativa(scene)
+      ? MAGNUS_ATTACK_ORIGIN_Y
+      : personagem3Ativa(scene)
+        ? ARIA_ATTACK_ORIGIN_Y
+        : personagem4Ativa(scene)
+          ? NYX_ATTACK_ORIGIN_Y
+          : 0.5;
+  scene.player.setOrigin(0.5, originAtaqueY);
 
   if (personagem3Ativa(scene)) {
     scene.ariaAtaqueCarregando = true;
@@ -598,6 +621,43 @@ function atacar(scene) {
   // =====================================================
 
   const chaveAtaque = `attack-${scene.direcaoAtaque}`;
+
+  if (personagemKaiAtiva(scene)) {
+    const primeiroFrameAtaque = {
+      up: 0,
+      left: 6,
+      down: 12,
+      right: 18,
+    }[scene.direcaoAtaque];
+
+    scene.player.setTexture("attack", primeiroFrameAtaque);
+    scene.player.setOrigin(0.5, KAI_ATTACK_ORIGIN_Y);
+  }
+
+  if (personagem2Ativa(scene)) {
+    const primeiroFrameAtaque = {
+      up: 0,
+      left: 7,
+      down: 16,
+      right: 29,
+    }[scene.direcaoAtaque];
+
+    scene.player.setTexture("personagem2-attack", primeiroFrameAtaque);
+    scene.player.setOrigin(0.5, MAGNUS_ATTACK_ORIGIN_Y);
+  }
+
+  if (personagem4Ativa(scene)) {
+    const primeiroFrameAtaque = {
+      up: 0,
+      left: 6,
+      down: 12,
+      right: 18,
+    }[scene.direcaoAtaque];
+
+    scene.player.setTexture("personagem4-attack", primeiroFrameAtaque);
+    scene.player.setOrigin(0.5, NYX_ATTACK_ORIGIN_Y);
+  }
+
   scene.player.anims.play(chaveAtaque, false);
 
   // =====================================================

@@ -22,7 +22,7 @@ function criarAnimacoesPlayer(scene) {
       ? { up: [0, 8], left: [9, 17], down: [18, 26], right: [27, 35] }
       : personagem4
         ? { up: [0, 8], left: [9, 17], down: [18, 26], right: [27, 35] }
-        : { up: [0, 8], left: [13, 21], down: [26, 34], right: [39, 47] };
+        : { up: [0, 8], left: [9, 17], down: [18, 26], right: [27, 35] };
   // Quadros da pose parada por direção. Para deixar uma pose fixa, use [quadro, quadro].
   const idleFrames = personagem3
     ? { up: [0, 0], left: [9, 9], down: [18, 18], right: [27, 27] }

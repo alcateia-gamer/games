@@ -17,10 +17,10 @@ class Start extends Phaser.Scene {
   preload() {
     this.load.spritesheet(
       "start-character",
-      "assets/personagem/standard/walk.png",
+      "assets/personagem/PERSONAGENS PRICIPAIS/KAI_MERCER 1/KAI_WALK.png",
       {
-        frameWidth: 64,
-        frameHeight: 64,
+        frameWidth: 128,
+        frameHeight: 128,
       },
     );
     this.load.spritesheet(

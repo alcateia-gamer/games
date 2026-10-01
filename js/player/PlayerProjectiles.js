@@ -36,7 +36,10 @@ function destruirProjetil(projetil) {
 }
 
 function criarSistemaProjeteis(scene) {
-  if (!scene.projeteisPlayer) {
+  if (
+    !scene.projeteisPlayer?.active ||
+    !scene.projeteisPlayer.children?.entries
+  ) {
     scene.projeteisPlayer = scene.physics.add.group();
   }
 }
@@ -79,7 +82,14 @@ function dispararProjetil(scene) {
   projetil.dano = DANO_PROJETIL_ARIA;
   projetil.body.setAllowGravity(false);
   projetil.body.setImmovable(true);
-  projetil.body.setSize(24, 24, true);
+  const projetilHorizontal = direcao.x !== 0;
+  const larguraHitbox = projetilHorizontal ? 46 : 8;
+  const alturaHitbox = projetilHorizontal ? 8 : 46;
+  projetil.body.setSize(larguraHitbox, alturaHitbox, true);
+  projetil.body.setOffset(
+    (64 - larguraHitbox) / 2 - 8,
+    (64 - alturaHitbox) / 2 - 4,
+  );
   const velocidadeProjetil = scene.velocidadeProjetil ?? VELOCIDADE_PROJETIL;
   projetil.velocidade = velocidadeProjetil;
   projetil.body.setVelocity(0, 0);
@@ -102,13 +112,15 @@ function dispararProjetil(scene) {
 }
 
 function atualizarProjeteis(scene, delta = 0) {
-  if (!scene.projeteisPlayer) {
+  const grupoProjeteis = scene.projeteisPlayer;
+  if (!grupoProjeteis?.active || !grupoProjeteis.children?.entries) {
+    scene.projeteisPlayer = null;
     return;
   }
 
   const inimigos = Array.isArray(scene.inimigos) ? scene.inimigos : [];
 
-  scene.projeteisPlayer.getChildren().forEach((projetil) => {
+  grupoProjeteis.getChildren().forEach((projetil) => {
     if (!projetil?.active || projetil.acertou) {
       return;
     }

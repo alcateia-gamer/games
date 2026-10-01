@@ -62,9 +62,11 @@ function obterRetangulosObstaculos(scene) {
 function retanguloCorpo(object, x = object.x, y = object.y) {
   const largura = object.body?.width ?? 24;
   const altura = object.body?.height ?? 16;
+  const deslocamentoX = object.body ? object.body.x - object.x : -largura / 2;
+  const deslocamentoY = object.body ? object.body.y - object.y : -altura / 2;
   return new Phaser.Geom.Rectangle(
-    x - largura / 2,
-    y - altura / 2,
+    x + deslocamentoX,
+    y + deslocamentoY,
     largura,
     altura,
   );
@@ -72,15 +74,6 @@ function retanguloCorpo(object, x = object.x, y = object.y) {
 
 function posicaoLivre(scene, pet, x, y, incluirInimigos = true) {
   const bounds = retanguloCorpo(pet, x, y);
-  if (
-    Phaser.Geom.Intersects.RectangleToRectangle(
-      bounds,
-      retanguloCorpo(scene.player),
-    )
-  ) {
-    return false;
-  }
-
   if (
     obterRetangulosObstaculos(scene).some((obstaculo) =>
       Phaser.Geom.Intersects.RectangleToRectangle(bounds, obstaculo),
@@ -223,14 +216,14 @@ function criarCompanionPet(scene) {
     scene.player.y + 35,
     "robo-pet",
   );
-  pet.setScale(0.25);
+  pet.setScale(0.2);
   pet.setDepth(13);
   pet.setData("isCompanionPet", true);
   pet.config = { ...COMPANION_CONFIG };
   pet.body.setAllowGravity(false);
   pet.body.setImmovable(true);
-  pet.body.setSize(220, 80);
-  pet.body.setOffset(67, 160);
+  pet.body.setSize(110, 50);
+  pet.body.setOffset(122, 190);
   pet.orbitAngle = Math.random() * Math.PI * 2;
   pet.target = { x: pet.x, y: pet.y };
   pet.lastTargetAt = 0;
@@ -251,7 +244,6 @@ function criarCompanionPet(scene) {
   if (scene.collisionGroup) {
     scene.physics.add.collider(pet, scene.collisionGroup);
   }
-  scene.physics.add.collider(pet, scene.player);
   return pet;
 }
 

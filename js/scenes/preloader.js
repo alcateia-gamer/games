@@ -141,10 +141,14 @@ class Preloader extends Phaser.Scene {
     // =====================================================
 
     // frameWidth/frameHeight são o tamanho, em pixels, de cada célula da spritesheet.
-    this.load.spritesheet("walk", "personagem/standard/walk.png", {
-      frameWidth: 64,
-      frameHeight: 64,
-    });
+    this.load.spritesheet(
+      "walk",
+      "personagem/PERSONAGENS PRICIPAIS/KAI_MERCER 1/KAI_WALK.png",
+      {
+        frameWidth: 128,
+        frameHeight: 128,
+      },
+    );
 
     this.load.spritesheet(
       "personagem2-walk",
@@ -221,10 +225,14 @@ class Preloader extends Phaser.Scene {
     // PERSONAGEM - ATAQUE
     // =====================================================
 
-    this.load.spritesheet("attack", "personagem/katana_slash_128.png", {
-      frameWidth: 128,
-      frameHeight: 128,
-    });
+    this.load.spritesheet(
+      "attack",
+      "personagem/PERSONAGENS PRICIPAIS/KAI_MERCER 1/KAI_ATAQUE_KATANA.png",
+      {
+        frameWidth: 128,
+        frameHeight: 128,
+      },
+    );
 
     // =====================================================
     // INIMIGO DE TESTE
