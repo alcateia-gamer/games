@@ -52,9 +52,8 @@ function encontrarProjetil(primeiro, segundo) {
 }
 
 function dispararProjetil(scene) {
-  const direcaoBase = DIRECOES_PROJETIL[
-    scene.direcaoAtaque ?? scene.direcaoAtual
-  ];
+  const direcaoBase =
+    DIRECOES_PROJETIL[scene.direcaoAtaque ?? scene.direcaoAtual];
   const direcao = direcaoBase ? normalizarDirecao(direcaoBase) : null;
 
   if (!scene.player?.active || !direcao) {
