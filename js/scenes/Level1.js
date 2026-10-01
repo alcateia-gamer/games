@@ -32,6 +32,9 @@ import {
   atualizarProjeteis,
 } from "../player/PlayerProjectiles.js";
 
+const DEBUG_TELEPORTES = false
+;
+
 // =====================================================
 // LEVEL 1
 // =====================================================
@@ -63,14 +66,14 @@ class Level1 extends Phaser.Scene {
     // RESPAWN
     // =====================================================
 
-    this.respawnX = -1440;
+    this.respawnX = -490;
 
-    this.respawnY = 454;
+    this.respawnY = 8823;
   }
 
   init(data) {
-    this.respawnX = data.spawnX ?? 99;
-    this.respawnY = data.spawnY ?? -2127;
+    this.respawnX = data.spawnX ?? -490;
+    this.respawnY = data.spawnY ?? 8823;
     this.personagemSelecionada = data.personagem || "standard";
     this.portaAbertaAoEntrar = data.portaAberta === true;
     this.entradaComFade = data.transicao === true;
@@ -121,6 +124,47 @@ class Level1 extends Phaser.Scene {
     if (this.collisionGroup) {
       this.physics.add.collider(this.player, this.collisionGroup);
     }
+
+    this.canTeleport = true;
+
+    const teleporteA = this.add.zone(-436, 9000, 80, 12).setVisible(false);
+    this.physics.add.existing(teleporteA, true);
+    teleporteA.body.setSize(60, 12);
+    teleporteA.body.debugShowBody = false;
+
+    const teleporteB = this.add.zone(816, -860, 90, 12).setVisible(false);
+    this.physics.add.existing(teleporteB, true);
+    teleporteB.body.setSize(60, 12);
+    teleporteB.body.debugShowBody = false;
+
+    if (DEBUG_TELEPORTES) {
+      this.add
+        .graphics()
+        .setDepth(100)
+        .lineStyle(1, 0xff00ff, 1)
+        .strokeRect(-476, 9000, 60, 12)
+        .strokeRect(771, -866, 60, 12);
+    }
+
+    const teleportarJogador = (x, y) => {
+      if (!this.canTeleport) return;
+
+      this.canTeleport = false;
+      this.player.setPosition(x, y);
+
+      this.time.delayedCall(400, () => {
+        this.canTeleport = true;
+      });
+    };
+
+    this.physics.add.overlap(this.player, teleporteA, () => {
+      teleportarJogador(818, -848);
+    });
+
+    this.physics.add.overlap(this.player, teleporteB, () => {
+      teleportarJogador(-436, 8959);
+    });
+
     criarSistemaProjeteis(this);
 
     // =====================================================

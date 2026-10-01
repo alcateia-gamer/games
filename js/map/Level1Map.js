@@ -228,6 +228,17 @@ function criarLevel1Map(scene) {
     "apartment2",
   );
 
+  const insideA1 = map.addTilesetImage("A1_SciFi_Inside_Rasak", "insideA1");
+  const insideA2 = map.addTilesetImage("A2_SciFi_Inside_Rasak", "insideA2");
+  const insideA3 = map.addTilesetImage("A3_SciFi_Inside_Rasak", "insideA3");
+  const insideA4 = map.addTilesetImage("A4_SciFi_Inside_Rasak", "insideA4");
+  const insideA5 = map.addTilesetImage("A5_SciFi_Inside_Rasak", "insideA5");
+  const apartment1 = map.addTilesetImage(
+    "Tileset_SciFi_Arpartment_1_Rasak",
+    "apartment1",
+  );
+  const club = map.addTilesetImage("Tileset_SciFi_Club_Rasak", "club");
+
   // =====================================================
   // TILESETS - INDUSTRIAL
   // =====================================================
@@ -306,6 +317,13 @@ function criarLevel1Map(scene) {
     torre,
 
     apartment2,
+    insideA1,
+    insideA2,
+    insideA3,
+    insideA4,
+    insideA5,
+    apartment1,
+    club,
 
     modernIndustrial2,
     modernIndustrial3,
@@ -322,7 +340,8 @@ function criarLevel1Map(scene) {
 
   const textureKeyByTilesetName = new Map([
     ["Tileset_SciFi_CityShopping_Rasak", "cityShopping"],
-    ["Tileset_SciFi_Street_Rasak_DUP", "street"],
+    ["Tileset_SciFi_Street_Rasak_DUP", "street2"],
+    ["Tileset_SciFi_Street_Rasak", "street"],
     ["Tileset_SciFi_Garbage_Rasak", "garbage"],
     ["A5_Street_Rasak", "a5Street"],
     ["Tileset_SciFi_Slums_Rasak", "slums"],
@@ -336,6 +355,13 @@ function criarLevel1Map(scene) {
     ["Tileset_SciFi_BuildingExtras", "buildingExtras"],
     ["TorreTileset", "torre"],
     ["Tileset_SciFi_Arpartment_2_Rasak", "apartment2"],
+    ["A1_SciFi_Inside_Rasak", "insideA1"],
+    ["A2_SciFi_Inside_Rasak", "insideA2"],
+    ["A3_SciFi_Inside_Rasak", "insideA3"],
+    ["A4_SciFi_Inside_Rasak", "insideA4"],
+    ["A5_SciFi_Inside_Rasak", "insideA5"],
+    ["Tileset_SciFi_Arpartment_1_Rasak", "apartment1"],
+    ["Tileset_SciFi_Club_Rasak", "club"],
     ["Tileset_Modern_Industrial_2_Rasak", "ModernIndustrial2"],
     ["Tileset_Modern_Industrial_3_Rasak", "industrial3"],
     ["A1_Modern_Inside_Factory_Rasak", "ModernInsideFactoryA1"],
@@ -406,6 +432,9 @@ function criarLevel1Map(scene) {
   // Objetos
   const camadaObjetos = map.createLayer("Objetos", tilesets);
 
+  const camadaBorda = map.createLayer("Borda", tilesets);
+  const camadaBordaCurva = map.createLayer("BordaCurva", tilesets);
+
   // Postes
   const camadaPostes = map.createLayer("Postes", tilesets);
 
@@ -459,6 +488,8 @@ function criarLevel1Map(scene) {
   camadaFrenteVaranda?.setDepth(8);
   camadaDetalhesPredios?.setDepth(9);
   camadaParedes?.setDepth(10);
+  camadaBorda?.setDepth(19);
+  camadaBordaCurva?.setDepth(19);
   camadaObjetos2?.setDepth(11);
   camadaCercaCimaTorre?.setDepth(14);
   camadaAntenaTorre?.setDepth(15);
@@ -481,6 +512,15 @@ function criarLevel1Map(scene) {
   camadaSombra2?.setAlpha(1);
   camadaSombra?.setAlpha(1);
   camadaSombraGeral?.setAlpha(0.7);
+
+  const camadaNeon = map.getObjectLayer("Neon");
+  scene.neonObjects = camadaNeon
+    ? camadaNeon.objects
+        .map((object) =>
+          criarBaseVisual(scene, map, object, textureKeyByTilesetName),
+        )
+        .filter(Boolean)
+    : [];
 
   scene.camadaCercas = camadaCercas;
   scene.camadaCercaSpawn = camadaCercaSpawn;

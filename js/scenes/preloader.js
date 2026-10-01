@@ -345,6 +345,12 @@ class Preloader extends Phaser.Scene {
       "../Tilesets/Inside/Tileset_SciFi_Arpartment_2_Rasak.png",
     );
 
+    this.load.image("insideA1", "../Tilesets/Inside/A1_SciFi_Inside_Rasak.png");
+
+    this.load.image("insideA2", "../Tilesets/Inside/A2_SciFi_Inside_Rasak.png");
+
+    this.load.image("club", "../Tilesets/Inside/Tileset_SciFi_Club_Rasak.png");
+
     // =====================================================
     // TILESETS - INDUSTRIAL
     // =====================================================
