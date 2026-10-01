@@ -20,6 +20,7 @@ function personagem4Ativa(scene) {
   return scene.personagemSelecionada === "personagem4";
 }
 
+// Quadro exibido enquanto a Aria carrega o ataque, conforme a direção atual.
 const framesCarregadosAria = {
   up: 8,
   left: 21,
@@ -43,6 +44,8 @@ function configurarFiltroPersonagem2(scene) {
 }
 
 function frameParado(scene, direcao = scene.direcaoAtual) {
+  // Quadro inicial usado ao criar/retomar o personagem, por direção.
+  // Atualize junto com idleFrames em PlayerAnimations.js para manter as poses consistentes.
   const frames = personagem4Ativa(scene)
     ? { down: 18, up: 0, left: 9, right: 27 }
     : personagem3Ativa(scene)

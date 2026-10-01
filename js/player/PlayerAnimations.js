@@ -1,4 +1,6 @@
 function criarAnimacoesPlayer(scene) {
+  // Para usar uma sequência manual, informe os índices dos quadros na ordem desejada.
+  // A numeração começa em 0 e corresponde à folha carregada no preloader.
   const criarFramesIntercalados = (texture, indices) =>
     indices.map((frame) => ({ key: texture, frame }));
 
@@ -6,6 +8,9 @@ function criarAnimacoesPlayer(scene) {
   const personagem3 = scene.personagemSelecionada === "personagem3";
   const personagem4 = scene.personagemSelecionada === "personagem4";
 
+  // Caminhada por direção: up = cima, left = esquerda, down = baixo, right = direita.
+  // Nos personagens 2, 4 e padrão, cada par [início, fim] é um intervalo inclusivo.
+  // Na personagem 3, cada lista contém os índices exatos e pode ser reordenada livremente.
   const walkFrames = personagem3
     ? {
         up: [0, 1, 2, 3, 4, 5, 6, 7, 8],
@@ -18,11 +23,13 @@ function criarAnimacoesPlayer(scene) {
       : personagem4
         ? { up: [0, 8], left: [9, 17], down: [18, 26], right: [27, 35] }
         : { up: [0, 8], left: [13, 21], down: [26, 34], right: [39, 47] };
+  // Quadros da pose parada por direção. Para deixar uma pose fixa, use [quadro, quadro].
   const idleFrames = personagem3
     ? { up: [0, 0], left: [9, 9], down: [18, 18], right: [27, 27] }
     : personagem4
       ? { up: [0, 0], left: [9, 9], down: [18, 18], right: [27, 27] }
       : walkFrames;
+  // Texturas usadas por cada animação. Se trocar a textura, confira os índices abaixo.
   const walkTexture = personagem3
     ? "personagem3-walk"
     : personagem2
@@ -100,6 +107,7 @@ function criarAnimacoesPlayer(scene) {
     });
   });
 
+  // Quadros do ataque normal por direção; os índices seguem a mesma convenção da caminhada.
   const attackFrames = personagem3
     ? walkFrames
     : personagem2
@@ -119,6 +127,8 @@ function criarAnimacoesPlayer(scene) {
         : { up: [0, 5], left: [6, 11], down: [12, 17], right: [18, 23] };
 
   if (personagem3) {
+    // Sequências exclusivas da Aria: charge = carregamento; release = disparo.
+    // Cada direção aceita uma lista explícita de quadros na ordem de reprodução.
     const ariaAttackFrames = {
       up: {
         charge: [0, 1, 2, 3, 4, 5, 6, 7, 8],

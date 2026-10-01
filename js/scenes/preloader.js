@@ -140,6 +140,7 @@ class Preloader extends Phaser.Scene {
     // PERSONAGEM - CAMINHADA
     // =====================================================
 
+    // frameWidth/frameHeight são o tamanho, em pixels, de cada célula da spritesheet.
     this.load.spritesheet("walk", "personagem/standard/walk.png", {
       frameWidth: 64,
       frameHeight: 64,

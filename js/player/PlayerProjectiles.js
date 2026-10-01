@@ -1,6 +1,7 @@
 import { causarDanoInimigo } from "../enemies/EnemyTest.js";
 
 const DIRECOES_PROJETIL = {
+  // x/y definem o movimento; frame escolhe o desenho correspondente na folha da flecha.
   up: { x: 0, y: -1, frame: 0 },
   left: { x: -1, y: 0, frame: 1 },
   right: { x: 1, y: 0, frame: 2 },

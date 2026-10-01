@@ -359,6 +359,7 @@ class Start extends Phaser.Scene {
       })
       .setOrigin(0.5);
     const characters = [
+      // frame escolhe o retrato dentro da spritesheet; altere scale apenas o tamanho exibido.
       {
         id: "standard",
         x: this.width / 2 - 276,

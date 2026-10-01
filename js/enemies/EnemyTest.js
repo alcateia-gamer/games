@@ -356,6 +356,7 @@ function aplicarSeparacaoGrupo(inimigo, scene) {
 // =====================================================
 
 function criarAnimacoesInimigo(scene) {
+  // As duas texturas de inimigo usam a mesma grade de quadros por direção.
   const estados = [
     { key: "normal", texture: "robo-teste-normal" },
     { key: "alerta", texture: "robo-teste" },
@@ -368,6 +369,7 @@ function criarAnimacoesInimigo(scene) {
       scene.anims.create({
         key: `${prefixo}-down`,
         frames: scene.anims.generateFrameNumbers(estado.texture, {
+          // down = baixo; intervalo inclusivo de quadros da direção.
           start: 0,
           end: 2,
         }),
@@ -380,6 +382,7 @@ function criarAnimacoesInimigo(scene) {
       scene.anims.create({
         key: `${prefixo}-left`,
         frames: scene.anims.generateFrameNumbers(estado.texture, {
+          // left = esquerda; intervalo inclusivo de quadros da direção.
           start: 3,
           end: 5,
         }),
@@ -392,6 +395,7 @@ function criarAnimacoesInimigo(scene) {
       scene.anims.create({
         key: `${prefixo}-right`,
         frames: scene.anims.generateFrameNumbers(estado.texture, {
+          // right = direita; intervalo inclusivo de quadros da direção.
           start: 6,
           end: 8,
         }),
@@ -404,6 +408,7 @@ function criarAnimacoesInimigo(scene) {
       scene.anims.create({
         key: `${prefixo}-up`,
         frames: scene.anims.generateFrameNumbers(estado.texture, {
+          // up = cima; intervalo inclusivo de quadros da direção.
           start: 9,
           end: 11,
         }),
@@ -413,6 +418,7 @@ function criarAnimacoesInimigo(scene) {
     }
   }
 
+  // Quadros usados na animação de morte; start/end determinam a direção do robô.
   const direcoes = [
     { key: "down", start: 0, end: 2 },
     { key: "left", start: 3, end: 5 },

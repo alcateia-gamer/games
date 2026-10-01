@@ -16,6 +16,8 @@ const COMPANION_CONFIG = {
 };
 
 function criarAnimacoesCompanionPet(scene) {
+  // Intervalos inclusivos da folha robo-pet: down = baixo, left = esquerda,
+  // right = direita e up = cima. Ajuste os índices conforme a ordem da imagem.
   const animacoes = {
     down: [0, 12],
     left: [13, 25],
@@ -34,7 +36,7 @@ function criarAnimacoesCompanionPet(scene) {
         start: frames[0],
         end: frames[1],
       }),
-      frameRate: 12,
+      frameRate: 12, // Quadros por segundo da caminhada do companheiro.
       repeat: -1,
     });
   });
