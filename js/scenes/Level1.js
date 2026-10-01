@@ -32,9 +32,7 @@ import {
   atualizarProjeteis,
 } from "../player/PlayerProjectiles.js";
 
-const DEBUG_TELEPORTES = false
-;
-
+const DEBUG_TELEPORTES = false;
 // =====================================================
 // LEVEL 1
 // =====================================================

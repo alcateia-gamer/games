@@ -32,7 +32,14 @@ function criarTexturaLuzPoste(scene) {
   );
   const context = texture.getContext();
   const center = TAMANHO_TEXTURA_LUZ / 2;
-  const gradient = context.createRadialGradient(center, center, 0, center, center, center);
+  const gradient = context.createRadialGradient(
+    center,
+    center,
+    0,
+    center,
+    center,
+    center,
+  );
 
   gradient.addColorStop(0, "rgba(255, 255, 255, 0.9)");
   gradient.addColorStop(0.18, "rgba(255, 255, 255, 0.62)");
@@ -84,7 +91,12 @@ function criarTexturaFeixePoste(scene) {
   context.fillStyle = sideGradient;
   context.fillRect(0, 0, LARGURA_TEXTURA_FEIXE, ALTURA_TEXTURA_FEIXE);
 
-  const lengthGradient = context.createLinearGradient(0, 0, 0, ALTURA_TEXTURA_FEIXE);
+  const lengthGradient = context.createLinearGradient(
+    0,
+    0,
+    0,
+    ALTURA_TEXTURA_FEIXE,
+  );
   lengthGradient.addColorStop(0, "rgba(255, 255, 255, 0.14)");
   lengthGradient.addColorStop(0.12, "rgba(255, 255, 255, 0.68)");
   lengthGradient.addColorStop(0.58, "rgba(255, 255, 255, 0.48)");
