@@ -146,23 +146,30 @@ class Level1 extends Phaser.Scene {
         .strokeRect(771, -866, 60, 12);
     }
 
-    const teleportarJogador = (x, y) => {
+    const teleportarComFadeNovo = (x, y) => {
       if (!this.canTeleport) return;
 
       this.canTeleport = false;
-      this.player.setPosition(x, y);
+      const camera = this.cameras.main;
 
-      this.time.delayedCall(400, () => {
-        this.canTeleport = true;
+      camera.once("camerafadeoutcomplete", () => {
+        this.player.setPosition(x, y);
+        camera.fadeIn(250, 0, 0, 0);
+
+        this.time.delayedCall(400, () => {
+          this.canTeleport = true;
+        });
       });
+
+      camera.fadeOut(250, 0, 0, 0);
     };
 
     this.physics.add.overlap(this.player, teleporteA, () => {
-      teleportarJogador(818, -848);
+      teleportarComFadeNovo(818, -848);
     });
 
     this.physics.add.overlap(this.player, teleporteB, () => {
-      teleportarJogador(-436, 8959);
+      teleportarComFadeNovo(-436, 8959);
     });
 
     criarSistemaProjeteis(this);

@@ -1099,7 +1099,7 @@
                  "y":32
                 }, 
                 {
-                 "data":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIcEAACIBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACXBAAAmAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAKgEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+                 "data":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIcEAACIBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACXBAAAmAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAKgEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJIEAACTBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
                  "height":16,
                  "width":16,
                  "x":-16,
@@ -1353,7 +1353,7 @@
                  "y":32
                 }, 
                 {
-                 "data":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACuMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAKYEAACnBAAAhQQAAIYEAAC0BACAswQAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAC2BAAAtwQAAJUEAACWBAAAxAQAgMMEAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAuAAAAggQAAIMEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPgAAAJIEAACTBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPswAAD8MAAA\/TAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+                 "data":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACuMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAKYEAACnBAAAhQQAAIYEAAC0BACAswQAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAC2BAAAtwQAAJUEAACWBAAAxAQAgMMEAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAuAAAAggQAAIMEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPgAAACEFAAAiBQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAxBQAAMgUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPswAAD8MAAA\/TAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
                  "height":16,
                  "width":16,
                  "x":-16,
@@ -1518,6 +1518,888 @@
          "type":"tilelayer",
          "visible":true,
          "width":64,
+         "x":0,
+         "y":0
+        }, 
+        {
+         "draworder":"topdown",
+         "id":46,
+         "name":"Luzes",
+         "objects":[
+                {
+                 "height":0,
+                 "id":489,
+                 "name":"",
+                 "opacity":1,
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"Cor",
+                         "type":"string",
+                         "value":"0xffdd88"
+                        }, 
+                        {
+                         "name":"Intensidade",
+                         "type":"float",
+                         "value":0.4
+                        }, 
+                        {
+                         "name":"Raio",
+                         "type":"int",
+                         "value":180
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":-133.125,
+                 "y":648.625
+                }, 
+                {
+                 "height":0,
+                 "id":490,
+                 "name":"",
+                 "opacity":1,
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"Cor",
+                         "type":"string",
+                         "value":"0xffdd88"
+                        }, 
+                        {
+                         "name":"Intensidade",
+                         "type":"float",
+                         "value":0.4
+                        }, 
+                        {
+                         "name":"Raio",
+                         "type":"int",
+                         "value":180
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":-490.125,
+                 "y":600.125
+                }, 
+                {
+                 "height":0,
+                 "id":491,
+                 "name":"",
+                 "opacity":1,
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"Cor",
+                         "type":"string",
+                         "value":"0xffdd88"
+                        }, 
+                        {
+                         "name":"Intensidade",
+                         "type":"float",
+                         "value":0.4
+                        }, 
+                        {
+                         "name":"Raio",
+                         "type":"int",
+                         "value":180
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":-489.75,
+                 "y":1369.5
+                }, 
+                {
+                 "height":0,
+                 "id":492,
+                 "name":"",
+                 "opacity":1,
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"Cor",
+                         "type":"string",
+                         "value":"0xffdd88"
+                        }, 
+                        {
+                         "name":"Intensidade",
+                         "type":"float",
+                         "value":0.4
+                        }, 
+                        {
+                         "name":"Raio",
+                         "type":"int",
+                         "value":180
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":-133.625,
+                 "y":1464
+                }, 
+                {
+                 "height":0,
+                 "id":493,
+                 "name":"",
+                 "opacity":1,
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"Cor",
+                         "type":"string",
+                         "value":"0xffdd88"
+                        }, 
+                        {
+                         "name":"Intensidade",
+                         "type":"float",
+                         "value":0.4
+                        }, 
+                        {
+                         "name":"Raio",
+                         "type":"int",
+                         "value":180
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":25.375,
+                 "y":1412.1875
+                }, 
+                {
+                 "height":0,
+                 "id":494,
+                 "name":"",
+                 "opacity":1,
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"Cor",
+                         "type":"string",
+                         "value":"0xffdd88"
+                        }, 
+                        {
+                         "name":"Intensidade",
+                         "type":"float",
+                         "value":0.4
+                        }, 
+                        {
+                         "name":"Raio",
+                         "type":"int",
+                         "value":180
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":-134,
+                 "y":-70.75
+                }, 
+                {
+                 "height":0,
+                 "id":495,
+                 "name":"",
+                 "opacity":1,
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"Cor",
+                         "type":"string",
+                         "value":"0xffdd88"
+                        }, 
+                        {
+                         "name":"Intensidade",
+                         "type":"float",
+                         "value":0.4
+                        }, 
+                        {
+                         "name":"Raio",
+                         "type":"int",
+                         "value":180
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":-490.636363636364,
+                 "y":-72.7272727272727
+                }, 
+                {
+                 "height":0,
+                 "id":496,
+                 "name":"",
+                 "opacity":1,
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"Cor",
+                         "type":"string",
+                         "value":"0xffdd88"
+                        }, 
+                        {
+                         "name":"Intensidade",
+                         "type":"float",
+                         "value":0.4
+                        }, 
+                        {
+                         "name":"Raio",
+                         "type":"int",
+                         "value":180
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":-491.333333333333,
+                 "y":-644.333333333333
+                }, 
+                {
+                 "height":0,
+                 "id":497,
+                 "name":"",
+                 "opacity":1,
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"Cor",
+                         "type":"string",
+                         "value":"0xffdd88"
+                        }, 
+                        {
+                         "name":"Intensidade",
+                         "type":"float",
+                         "value":0.4
+                        }, 
+                        {
+                         "name":"Raio",
+                         "type":"int",
+                         "value":180
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":-133.375,
+                 "y":-647.375
+                }, 
+                {
+                 "height":0,
+                 "id":498,
+                 "name":"",
+                 "opacity":1,
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"Cor",
+                         "type":"string",
+                         "value":"0xffdd88"
+                        }, 
+                        {
+                         "name":"Intensidade",
+                         "type":"float",
+                         "value":0.4
+                        }, 
+                        {
+                         "name":"Raio",
+                         "type":"int",
+                         "value":180
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":-133.108695652174,
+                 "y":-1032.67391304348
+                }, 
+                {
+                 "height":0,
+                 "id":499,
+                 "name":"",
+                 "opacity":1,
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"Cor",
+                         "type":"string",
+                         "value":"0xffdd88"
+                        }, 
+                        {
+                         "name":"Intensidade",
+                         "type":"float",
+                         "value":0.4
+                        }, 
+                        {
+                         "name":"Raio",
+                         "type":"int",
+                         "value":180
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":-490.391304347826,
+                 "y":-1033.17391304348
+                }, 
+                {
+                 "height":0,
+                 "id":500,
+                 "name":"",
+                 "opacity":1,
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"Cor",
+                         "type":"string",
+                         "value":"0xffdd88"
+                        }, 
+                        {
+                         "name":"Intensidade",
+                         "type":"float",
+                         "value":0.4
+                        }, 
+                        {
+                         "name":"Raio",
+                         "type":"int",
+                         "value":180
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":-646,
+                 "y":-1321.63636363636
+                }, 
+                {
+                 "height":0,
+                 "id":501,
+                 "name":"",
+                 "opacity":1,
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"Cor",
+                         "type":"string",
+                         "value":"0xffdd88"
+                        }, 
+                        {
+                         "name":"Intensidade",
+                         "type":"float",
+                         "value":0.4
+                        }, 
+                        {
+                         "name":"Raio",
+                         "type":"int",
+                         "value":180
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":-934.727272727273,
+                 "y":-1321.09090909091
+                }, 
+                {
+                 "height":0,
+                 "id":502,
+                 "name":"",
+                 "opacity":1,
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"Cor",
+                         "type":"string",
+                         "value":"0xffdd88"
+                        }, 
+                        {
+                         "name":"Intensidade",
+                         "type":"float",
+                         "value":0.4
+                        }, 
+                        {
+                         "name":"Raio",
+                         "type":"int",
+                         "value":180
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":1560.90909090909,
+                 "y":-1687.63636363636
+                }, 
+                {
+                 "height":0,
+                 "id":503,
+                 "name":"",
+                 "opacity":1,
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"Cor",
+                         "type":"string",
+                         "value":"0xffdd88"
+                        }, 
+                        {
+                         "name":"Intensidade",
+                         "type":"float",
+                         "value":0.4
+                        }, 
+                        {
+                         "name":"Raio",
+                         "type":"int",
+                         "value":180
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":1561.875,
+                 "y":-1323.625
+                }, 
+                {
+                 "height":0,
+                 "id":504,
+                 "name":"",
+                 "opacity":1,
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"Cor",
+                         "type":"string",
+                         "value":"0xffdd88"
+                        }, 
+                        {
+                         "name":"Intensidade",
+                         "type":"float",
+                         "value":0.4
+                        }, 
+                        {
+                         "name":"Raio",
+                         "type":"int",
+                         "value":180
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":1402.36363636364,
+                 "y":-888
+                },
+            
+                {
+                 "height":0,
+                 "id":505,
+                 "name":"",
+                 "opacity":1,
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"Cor",
+                         "type":"string",
+                         "value":"0xffdd88"
+                        }, 
+                        {
+                         "name":"Intensidade",
+                         "type":"float",
+                         "value":0.4
+                        }, 
+                        {
+                         "name":"Raio",
+                         "type":"int",
+                         "value":180
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":1045.18181818182,
+                 "y":-985.181818181818
+                }, 
+                {
+                 "height":0,
+                 "id":506,
+                 "name":"",
+                 "opacity":1,
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"Cor",
+                         "type":"string",
+                         "value":"0xffdd88"
+                        }, 
+                        {
+                         "name":"Intensidade",
+                         "type":"float",
+                         "value":0.4
+                        }, 
+                        {
+                         "name":"Raio",
+                         "type":"int",
+                         "value":180
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":1403.36363636364,
+                 "y":-552.454545454545
+                }, 
+                {
+                 "height":0,
+                 "id":507,
+                 "name":"",
+                 "opacity":1,
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"Cor",
+                         "type":"string",
+                         "value":"0xffdd88"
+                        }, 
+                        {
+                         "name":"Intensidade",
+                         "type":"float",
+                         "value":0.4
+                        }, 
+                        {
+                         "name":"Raio",
+                         "type":"int",
+                         "value":180
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":1402.25,
+                 "y":-214
+                }, 
+                {
+                 "height":0,
+                 "id":508,
+                 "name":"",
+                 "opacity":1,
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"Cor",
+                         "type":"string",
+                         "value":"0xffdd88"
+                        }, 
+                        {
+                         "name":"Intensidade",
+                         "type":"float",
+                         "value":0.4
+                        }, 
+                        {
+                         "name":"Raio",
+                         "type":"int",
+                         "value":180
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":1403.125,
+                 "y":167.375
+                }, 
+                {
+                 "height":0,
+                 "id":509,
+                 "name":"",
+                 "opacity":1,
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"Cor",
+                         "type":"string",
+                         "value":"0xffdd88"
+                        }, 
+                        {
+                         "name":"Intensidade",
+                         "type":"float",
+                         "value":0.4
+                        }, 
+                        {
+                         "name":"Raio",
+                         "type":"int",
+                         "value":180
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":1402.125,
+                 "y":647.015625
+                }, 
+                {
+                 "height":0,
+                 "id":510,
+                 "name":"",
+                 "opacity":1,
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"Cor",
+                         "type":"string",
+                         "value":"0xffdd88"
+                        }, 
+                        {
+                         "name":"Intensidade",
+                         "type":"float",
+                         "value":0.4
+                        }, 
+                        {
+                         "name":"Raio",
+                         "type":"int",
+                         "value":180
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":1402.25,
+                 "y":982.6875
+                }, 
+                {
+                 "height":0,
+                 "id":511,
+                 "name":"",
+                 "opacity":1,
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"Cor",
+                         "type":"string",
+                         "value":"0xffdd88"
+                        }, 
+                        {
+                         "name":"Intensidade",
+                         "type":"float",
+                         "value":0.4
+                        }, 
+                        {
+                         "name":"Raio",
+                         "type":"int",
+                         "value":180
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":1045.75,
+                 "y":982.75
+                }, 
+                {
+                 "height":0,
+                 "id":512,
+                 "name":"",
+                 "opacity":1,
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"Cor",
+                         "type":"string",
+                         "value":"0xffdd88"
+                        }, 
+                        {
+                         "name":"Intensidade",
+                         "type":"float",
+                         "value":0.4
+                        }, 
+                        {
+                         "name":"Raio",
+                         "type":"int",
+                         "value":180
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":1046.75,
+                 "y":647.25
+                }, 
+                {
+                 "height":0,
+                 "id":513,
+                 "name":"",
+                 "opacity":1,
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"Cor",
+                         "type":"string",
+                         "value":"0xffdd88"
+                        }, 
+                        {
+                         "name":"Intensidade",
+                         "type":"float",
+                         "value":0.4
+                        }, 
+                        {
+                         "name":"Raio",
+                         "type":"int",
+                         "value":180
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":1046.75,
+                 "y":167.25
+                }, 
+                {
+                 "height":0,
+                 "id":514,
+                 "name":"",
+                 "opacity":1,
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"Cor",
+                         "type":"string",
+                         "value":"0xffdd88"
+                        }, 
+                        {
+                         "name":"Intensidade",
+                         "type":"float",
+                         "value":0.4
+                        }, 
+                        {
+                         "name":"Raio",
+                         "type":"int",
+                         "value":180
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":1045.54545454545,
+                 "y":-217.636363636364
+                }, 
+                {
+                 "height":0,
+                 "id":515,
+                 "name":"",
+                 "opacity":1,
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"Cor",
+                         "type":"string",
+                         "value":"0xffdd88"
+                        }, 
+                        {
+                         "name":"Intensidade",
+                         "type":"float",
+                         "value":0.4
+                        }, 
+                        {
+                         "name":"Raio",
+                         "type":"int",
+                         "value":180
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":1046,
+                 "y":-549.666666666667
+                }, 
+                {
+                 "height":0,
+                 "id":516,
+                 "name":"",
+                 "opacity":1,
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"Cor",
+                         "type":"string",
+                         "value":"0xffdd88"
+                        }, 
+                        {
+                         "name":"Intensidade",
+                         "type":"float",
+                         "value":0.4
+                        }, 
+                        {
+                         "name":"Raio",
+                         "type":"int",
+                         "value":180
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":841.454545454545,
+                 "y":1413.45454545455
+                }, 
+                {
+                 "height":0,
+                 "id":517,
+                 "name":"",
+                 "opacity":1,
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"Cor",
+                         "type":"string",
+                         "value":"0xffdd88"
+                        }, 
+                        {
+                         "name":"Intensidade",
+                         "type":"float",
+                         "value":0.4
+                        }, 
+                        {
+                         "name":"Raio",
+                         "type":"int",
+                         "value":180
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":792.727272727273,
+                 "y":1046.72727272727
+                }, 
+                {
+                 "height":0,
+                 "id":518,
+                 "name":"",
+                 "opacity":1,
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"Cor",
+                         "type":"string",
+                         "value":"0xffdd88"
+                        }, 
+                        {
+                         "name":"Intensidade",
+                         "type":"float",
+                         "value":0.4
+                        }, 
+                        {
+                         "name":"Raio",
+                         "type":"int",
+                         "value":180
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":217.625,
+                 "y":1046.9375
+                }],
+         "opacity":1,
+         "type":"objectgroup",
+         "visible":true,
          "x":0,
          "y":0
         }, 
@@ -2265,7 +3147,7 @@
                  "y":-16
                 }, 
                 {
-                 "data":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAKgEAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAC0BAAAqAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADoBAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOgEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACoBAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAKgEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA6AQCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADoBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+                 "data":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAKgEAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAqAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADoBAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOgEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACoBAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAKgEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA6AQCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADoBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
                  "height":16,
                  "width":16,
                  "x":16,
@@ -2903,10 +3785,17 @@
                  "width":16,
                  "x":32,
                  "y":32
+                }, 
+                {
+                 "data":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA+y4AAPsuAAD7LgAA+y4AAPsuAAD7LgAA+y4AAPsuAAD7LgAA+y4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPsuAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPsuAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD7LgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD7LgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA+y4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA+y4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPsuAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPsuAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD7LgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD7LgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA+y4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA+y4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPsuAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPsuAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD7LgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD7LgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA+y4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA+y4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPsuAAD7LgAA+y4AAPsuAAD7LgAA+y4AAPsuAAD7LgAA+y4AAPsuAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+                 "height":16,
+                 "width":16,
+                 "x":-16,
+                 "y":176
                 }],
          "compression":"",
          "encoding":"base64",
-         "height":112,
+         "height":256,
          "id":26,
          "name":"Sombra",
          "opacity":1,
@@ -3215,10 +4104,17 @@
                  "width":16,
                  "x":32,
                  "y":32
+                }, 
+                {
+                 "data":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJUFAACVBQAAlQUAAJUFAACVBQAAlQUAAJUFAACVBQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+                 "height":16,
+                 "width":16,
+                 "x":-16,
+                 "y":176
                 }],
          "compression":"",
          "encoding":"base64",
-         "height":112,
+         "height":256,
          "id":29,
          "name":"SombraGeral",
          "opacity":0.7,
@@ -4580,19 +5476,6 @@
                  "y":-1149.66666666667
                 }, 
                 {
-                 "height":44,
-                 "id":136,
-                 "name":"",
-                 "opacity":1,
-                 "rotation":0,
-                 "type":"",
-                 "visible":true,
-                 "width":11.3333333333334,
-                 "x":739.333333333333,
-                 "y":-1248.66666666667
-                },
-            
-                {
                  "height":62,
                  "id":137,
                  "name":"",
@@ -4603,7 +5486,8 @@
                  "width":147.333333333333,
                  "x":622,
                  "y":-1366.66666666667
-                }, 
+                },
+            
                 {
                  "height":63.3333333333333,
                  "id":138,
@@ -4783,8 +5667,7 @@
                  "width":672,
                  "x":-1246.66666666667,
                  "y":-1157
-                },
-            
+                }, 
                 {
                  "height":1350.36363636364,
                  "id":156,
@@ -4796,7 +5679,8 @@
                  "width":2.90909090909088,
                  "x":-576.927536231884,
                  "y":-1157.07378129118
-                }, 
+                },
+            
                 {
                  "height":79.3333333333333,
                  "id":160,
@@ -4976,8 +5860,7 @@
                  "width":14,
                  "x":-379.333333333333,
                  "y":296
-                },
-            
+                }, 
                 {
                  "height":14,
                  "id":175,
@@ -4989,7 +5872,8 @@
                  "width":14,
                  "x":-397.333333333333,
                  "y":297.333333333333
-                }, 
+                },
+            
                 {
                  "height":12.6666666666666,
                  "id":176,
@@ -5169,8 +6053,7 @@
                  "width":14.6666666666666,
                  "x":-590.666666666667,
                  "y":1918.66666666667
-                },
-            
+                }, 
                 {
                  "height":36,
                  "id":193,
@@ -5182,7 +6065,8 @@
                  "width":36,
                  "x":-1574.66666666667,
                  "y":420.666666666667
-                }, 
+                },
+            
                 {
                  "height":39.3333333333334,
                  "id":194,
@@ -5363,8 +6247,7 @@
                  "width":60.6666666666667,
                  "x":-438,
                  "y":1014.66666666667
-                },
-            
+                }, 
                 {
                  "height":50.6666666666666,
                  "id":215,
@@ -5376,7 +6259,8 @@
                  "width":78.6666666666667,
                  "x":1090.66666666667,
                  "y":724
-                }, 
+                },
+            
                 {
                  "height":36.6666666666666,
                  "id":216,
@@ -5556,8 +6440,7 @@
                  "width":16.6666666666667,
                  "x":167.666666666667,
                  "y":1080
-                },
-            
+                }, 
                 {
                  "height":30.6666666666665,
                  "id":231,
@@ -5569,7 +6452,8 @@
                  "width":28.6666666666667,
                  "x":206.333333333333,
                  "y":1064
-                }, 
+                },
+            
                 {
                  "height":32.6666666666667,
                  "id":232,
@@ -5749,8 +6633,7 @@
                  "width":4.66666666666663,
                  "x":810.666666666667,
                  "y":1059
-                },
-            
+                }, 
                 {
                  "height":7.66666666666674,
                  "id":249,
@@ -5762,7 +6645,8 @@
                  "width":15,
                  "x":800,
                  "y":1051.66666666667
-                }, 
+                },
+            
                 {
                  "height":11.6666666666667,
                  "id":250,
@@ -5942,8 +6826,7 @@
                  "width":25.6666666666667,
                  "x":710.333333333333,
                  "y":1803.66666666667
-                },
-            
+                }, 
                 {
                  "height":27.6666666666667,
                  "id":377,
@@ -5955,7 +6838,8 @@
                  "width":23,
                  "x":755.666666666667,
                  "y":1840.66666666667
-                }, 
+                },
+            
                 {
                  "height":71,
                  "id":378,
@@ -6135,8 +7019,7 @@
                  "width":12,
                  "x":491.5,
                  "y":-1911
-                },
-            
+                }, 
                 {
                  "height":14.25,
                  "id":399,
@@ -6148,7 +7031,8 @@
                  "width":13.75,
                  "x":510,
                  "y":-1912.5
-                }, 
+                },
+            
                 {
                  "height":11.25,
                  "id":400,
@@ -6328,8 +7212,7 @@
                  "width":77.3333333333333,
                  "x":129.333333333333,
                  "y":-2023.33333333333
-                },
-            
+                }, 
                 {
                  "height":57.6666666666667,
                  "id":423,
@@ -6341,7 +7224,8 @@
                  "width":114.666666666667,
                  "x":303.666666666667,
                  "y":-2072
-                }, 
+                },
+            
                 {
                  "height":54.6666666666667,
                  "id":424,
@@ -6521,8 +7405,7 @@
                  "width":6,
                  "x":46,
                  "y":-2235.66666666667
-                },
-            
+                }, 
                 {
                  "height":5.33333333333303,
                  "id":439,
@@ -6534,7 +7417,8 @@
                  "width":98,
                  "x":46.5,
                  "y":-2200.33333333333
-                }, 
+                },
+            
                 {
                  "height":70.1666666666665,
                  "id":440,
@@ -6714,8 +7598,7 @@
                  "width":22.25,
                  "x":-547,
                  "y":8901.75
-                },
-            
+                }, 
                 {
                  "height":28,
                  "id":465,
@@ -6727,7 +7610,8 @@
                  "width":22.5,
                  "x":-610.25,
                  "y":8929.25
-                }, 
+                },
+            
                 {
                  "height":24.5,
                  "id":466,
@@ -6811,39 +7695,6 @@
                  "width":26.3333333333334,
                  "x":-363,
                  "y":8737.33333333333
-                }, 
-                {
-                 "height":0,
-                 "id":473,
-                 "name":"",
-                 "opacity":1,
-                 "polygon":[
-                        {
-                         "x":0,
-                         "y":0
-                        }, 
-                        {
-                         "x":-0.545454545454561,
-                         "y":27.454545454546
-                        }, 
-                        {
-                         "x":22.7272727272727,
-                         "y":46.9090909090901
-                        }, 
-                        {
-                         "x":35.0909090909091,
-                         "y":46.545454545454
-                        }, 
-                        {
-                         "x":34.9090909090909,
-                         "y":11.2727272727279
-                        }],
-                 "rotation":0,
-                 "type":"",
-                 "visible":true,
-                 "width":0,
-                 "x":-335.818181818182,
-                 "y":8737.63636363636
                 }, 
                 {
                  "height":17.0909090909099,
@@ -6953,8 +7804,7 @@
                  "width":47.5,
                  "x":-479.25,
                  "y":8736.25
-                },
-            
+                }, 
                 {
                  "height":25,
                  "id":481,
@@ -6966,6 +7816,64 @@
                  "width":35.25,
                  "x":-427.25,
                  "y":8738
+                }, 
+                {
+                 "height":0,
+                 "id":482,
+                 "name":"",
+                 "opacity":1,
+                 "polygon":[
+                        {
+                         "x":0,
+                         "y":0
+                        }, 
+                        {
+                         "x":23,
+                         "y":35
+                        }, 
+                        {
+                         "x":35,
+                         "y":35
+                        }, 
+                        {
+                         "x":35,
+                         "y":-27.75
+                        }, 
+                        {
+                         "x":0,
+                         "y":-28.25
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":-336.25,
+                 "y":8764.75
+                },
+            
+                {
+                 "height":66,
+                 "id":483,
+                 "name":"",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":31.5833333333333,
+                 "x":-376.333333333333,
+                 "y":8846.08333333333
+                }, 
+                {
+                 "height":59.3333333333339,
+                 "id":484,
+                 "name":"",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":28,
+                 "x":-329,
+                 "y":8868.33333333333
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -6973,8 +7881,8 @@
          "x":0,
          "y":0
         }],
- "nextlayerid":45,
- "nextobjectid":482,
+ "nextlayerid":47,
+ "nextobjectid":519,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.12.2",
