@@ -143,7 +143,7 @@ class Preloader extends Phaser.Scene {
     // frameWidth/frameHeight são o tamanho, em pixels, de cada célula da spritesheet.
     this.load.spritesheet(
       "walk",
-      "personagem/PERSONAGENS PRICIPAIS/KAI_MERCER 1/KAI_WALK.png",
+      "PERSONAGENS/PERSONAGENS PRICIPAIS/KAI_MERCER 1/KAI_WALK.png",
       {
         frameWidth: 128,
         frameHeight: 128,
@@ -152,7 +152,7 @@ class Preloader extends Phaser.Scene {
 
     this.load.spritesheet(
       "personagem2-walk",
-      "personagem/PERSONAGENS PRICIPAIS/MAGNUS_FORCE 2/magnus_walk.png",
+      "PERSONAGENS/PERSONAGENS PRICIPAIS/MAGNUS_FORCE 2/magnus_walk.png",
       {
         frameWidth: 64,
         frameHeight: 64,
@@ -161,7 +161,7 @@ class Preloader extends Phaser.Scene {
 
     this.load.spritesheet(
       "personagem2-attack",
-      "personagem/PERSONAGENS PRICIPAIS/MAGNUS_FORCE 2/magnus_ataque_1.png",
+      "PERSONAGENS/PERSONAGENS PRICIPAIS/MAGNUS_FORCE 2/magnus_ataque_1.png",
       {
         frameWidth: 128,
         frameHeight: 128,
@@ -170,7 +170,7 @@ class Preloader extends Phaser.Scene {
 
     this.load.spritesheet(
       "personagem2-idle",
-      "personagem/personagem 2/Idle.png",
+      "PERSONAGENS/PERSONAGENS PRICIPAIS/MAGNUS_FORCE 2/magnus_1.png",
       {
         frameWidth: 48,
         frameHeight: 64,
@@ -179,7 +179,7 @@ class Preloader extends Phaser.Scene {
 
     this.load.spritesheet(
       "personagem3-walk",
-      "personagem/PERSONAGENS PRICIPAIS/ARIA_KADE 3/ARIA_WALK.png",
+      "PERSONAGENS/PERSONAGENS PRICIPAIS/ARIA_KADE 3/ARIA_WALK.png",
       {
         frameWidth: 128,
         frameHeight: 128,
@@ -188,7 +188,7 @@ class Preloader extends Phaser.Scene {
 
     this.load.spritesheet(
       "personagem3-attack",
-      "personagem/PERSONAGENS PRICIPAIS/ARIA_KADE 3/ARIA_ARCO_ATAQUE.png",
+      "PERSONAGENS/PERSONAGENS PRICIPAIS/ARIA_KADE 3/ARIA_ARCO_ATAQUE.png",
       {
         frameWidth: 64,
         frameHeight: 64,
@@ -197,7 +197,7 @@ class Preloader extends Phaser.Scene {
 
     this.load.spritesheet(
       "aria-arrow",
-      "personagem/PERSONAGENS PRICIPAIS/ARIA_KADE 3/Arrow.png",
+      "PERSONAGENS/PERSONAGENS PRICIPAIS/ARIA_KADE 3/Arrow.png",
       {
         frameWidth: 64,
         frameHeight: 64,
@@ -206,7 +206,7 @@ class Preloader extends Phaser.Scene {
 
     this.load.spritesheet(
       "personagem4-walk",
-      "personagem/PERSONAGENS PRICIPAIS/NYX_4/nyx_walk.png",
+      "PERSONAGENS/PERSONAGENS PRICIPAIS/NYX_4/nyx_walk.png",
       {
         frameWidth: 64,
         frameHeight: 64,
@@ -214,7 +214,7 @@ class Preloader extends Phaser.Scene {
     );
     this.load.spritesheet(
       "personagem4-attack",
-      "personagem/PERSONAGENS PRICIPAIS/NYX_4/nyx_ataque.png",
+      "PERSONAGENS/PERSONAGENS PRICIPAIS/NYX_4/nyx_ataque.png",
       {
         frameWidth: 192,
         frameHeight: 192,
@@ -227,7 +227,7 @@ class Preloader extends Phaser.Scene {
 
     this.load.spritesheet(
       "attack",
-      "personagem/PERSONAGENS PRICIPAIS/KAI_MERCER 1/KAI_ATAQUE_KATANA.png",
+      "PERSONAGENS/PERSONAGENS PRICIPAIS/KAI_MERCER 1/KAI_ATAQUE_KATANA.png",
       {
         frameWidth: 128,
         frameHeight: 128,
@@ -240,7 +240,7 @@ class Preloader extends Phaser.Scene {
 
     this.load.spritesheet(
       "robo-teste",
-      "personagem/inimigos/robo_teste_2.png",
+      "PERSONAGENS/INIMIGOS PRINCIPAIS/ROBO_DE_GUERRA/robo_teste_2.png",
       {
         frameWidth: 311,
         frameHeight: 421,
@@ -249,21 +249,29 @@ class Preloader extends Phaser.Scene {
 
     this.load.spritesheet(
       "robo-teste-normal",
-      "personagem/inimigos/robo_teste_3.png",
+      "PERSONAGENS/INIMIGOS PRINCIPAIS/ROBO_DE_GUERRA/robo_teste_3.png",
       {
         frameWidth: 311,
         frameHeight: 421,
       },
     );
 
-    this.load.spritesheet("robo-morte", "personagem/inimigos/robo_morte.png", {
-      frameWidth: 311,
-      frameHeight: 421,
-    });
-    this.load.spritesheet("robo-pet", "personagem/inimigos/robo_pet.png", {
-      frameWidth: 354,
-      frameHeight: 256,
-    });
+    this.load.spritesheet(
+      "robo-morte",
+      "PERSONAGENS/INIMIGOS PRINCIPAIS/ROBO_DE_GUERRA/robo_morte.png",
+      {
+        frameWidth: 311,
+        frameHeight: 421,
+      },
+    );
+    this.load.spritesheet(
+      "robo-pet",
+      "PERSONAGENS/PERSONAGENS PRICIPAIS/ROBO_PET/robo_pet.png",
+      {
+        frameWidth: 354,
+        frameHeight: 256,
+      },
+    );
     // =====================================================
     // JOYSTICK
     // =====================================================

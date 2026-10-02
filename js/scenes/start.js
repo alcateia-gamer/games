@@ -17,7 +17,7 @@ class Start extends Phaser.Scene {
   preload() {
     this.load.spritesheet(
       "start-character",
-      "assets/personagem/PERSONAGENS PRICIPAIS/KAI_MERCER 1/KAI_WALK.png",
+      "assets/PERSONAGENS/PERSONAGENS PRICIPAIS/KAI_MERCER 1/KAI_WALK.png",
       {
         frameWidth: 128,
         frameHeight: 128,
@@ -25,7 +25,7 @@ class Start extends Phaser.Scene {
     );
     this.load.spritesheet(
       "start-character-2",
-      "assets/personagem/PERSONAGENS PRICIPAIS/MAGNUS_FORCE 2/magnus_walk.png",
+      "assets/PERSONAGENS/PERSONAGENS PRICIPAIS/MAGNUS_FORCE 2/magnus_walk.png",
       {
         frameWidth: 64,
         frameHeight: 64,
@@ -33,7 +33,7 @@ class Start extends Phaser.Scene {
     );
     this.load.spritesheet(
       "start-character-3",
-      "assets/personagem/PERSONAGENS PRICIPAIS/ARIA_KADE 3/ARIA_WALK.png",
+      "assets/PERSONAGENS/PERSONAGENS PRICIPAIS/ARIA_KADE 3/ARIA_WALK.png",
       {
         frameWidth: 128,
         frameHeight: 128,
@@ -41,7 +41,7 @@ class Start extends Phaser.Scene {
     );
     this.load.spritesheet(
       "start-character-4",
-      "assets/personagem/PERSONAGENS PRICIPAIS/NYX_4/nyx_walk.png",
+      "assets/PERSONAGENS/PERSONAGENS PRICIPAIS/NYX_4/nyx_walk.png",
       {
         frameWidth: 64,
         frameHeight: 64,
