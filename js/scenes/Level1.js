@@ -22,6 +22,7 @@ import {
 } from "../player/PlayerStatus.js";
 import { criarRobos, atualizarInimigoTeste } from "../enemies/EnemyTest.js";
 import { atualizarTransicaoParaParte2 } from "../core/MapTransition.js";
+import { atualizarDepthLuzesPostes } from "../map/LuzesMapa.js";
 import {
   criarCompanionPet,
   atualizarCompanionPet,
@@ -358,6 +359,7 @@ class Level1 extends Phaser.Scene {
 
     atualizarDepthPlayer(this);
     atualizarDepthCompanionPet(this);
+    atualizarDepthLuzesPostes(this);
 
     if (Array.isArray(this.poleBaseObjects)) {
       this.poleBaseObjects.forEach((base) => {
