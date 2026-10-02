@@ -11,11 +11,7 @@ var config = {
     default: "arcade",
     arcade: {
       gravity: { x: 0, y: 0 },
-<<<<<<< HEAD
-      debug: false
-=======
-      debug: true,
->>>>>>> 91271f4 (att personagens)
+      debug: false,
     },
   },
   pointers: {
