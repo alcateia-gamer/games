@@ -83,12 +83,14 @@ function dispararProjetil(scene) {
   projetil.body.setAllowGravity(false);
   projetil.body.setImmovable(true);
   const projetilHorizontal = direcao.x !== 0;
-  const larguraHitbox = projetilHorizontal ? 46 : 8;
+  const larguraHitbox = projetilHorizontal ? 59 : 8;
   const alturaHitbox = projetilHorizontal ? 8 : 46;
   projetil.body.setSize(larguraHitbox, alturaHitbox, true);
+  const deslocamentoX = projetilHorizontal ? -5 : 3;
+  const deslocamentoY = projetilHorizontal ? -4 : 0;
   projetil.body.setOffset(
-    (64 - larguraHitbox) / 2 - 8,
-    (64 - alturaHitbox) / 2 - 4,
+    (64 - larguraHitbox) / 2 + deslocamentoX,
+    (64 - alturaHitbox) / 2 + deslocamentoY,
   );
   const velocidadeProjetil = scene.velocidadeProjetil ?? VELOCIDADE_PROJETIL;
   projetil.velocidade = velocidadeProjetil;

@@ -37,9 +37,7 @@ const framesCarregadosAria = {
 };
 
 const KAI_ATTACK_ORIGIN_Y = 0.43;
-const MAGNUS_ATTACK_ORIGIN_Y = 0.61;
-const ARIA_ATTACK_ORIGIN_Y = 0.19;
-const NYX_ATTACK_ORIGIN_Y = 0.61;
+const NYX_ATTACK_ORIGIN_Y = 0.45;
 
 function texturaWalk(scene, direcao = scene.direcaoAtual) {
   if (personagem4Ativa(scene)) {
@@ -54,6 +52,13 @@ function texturaWalk(scene, direcao = scene.direcaoAtual) {
 function configurarFiltroPersonagem2(scene) {
   const texture = scene.textures.get("personagem2-walk");
   texture?.setFilter(Phaser.Textures.FilterMode.NEAREST);
+}
+
+function configurarVisualWalk(scene) {
+  scene.player.setOrigin(0.5, 0.5);
+  if (personagem3Ativa(scene)) {
+    scene.player.setDisplayOrigin(64, 68);
+  }
 }
 
 function frameParado(scene, direcao = scene.direcaoAtual) {
@@ -115,6 +120,7 @@ function criarPlayer(scene) {
   }
 
   scene.player.setAlpha(1).clearTint().setBlendMode(Phaser.BlendModes.NORMAL);
+  configurarVisualWalk(scene);
 
   scene.player.invulneravel = false;
 
@@ -191,7 +197,7 @@ function criarPlayer(scene) {
       texturaWalk(scene, direcaoAtaque),
       frameParado(scene, direcaoAtaque),
     );
-    scene.player.setOrigin(0.5, 0.5);
+    configurarVisualWalk(scene);
 
     // =================================================
     // RESTAURA HITBOX PARA WALK 64x64
@@ -221,7 +227,7 @@ function configurarHitboxWalk(scene) {
   }
   if (personagem3Ativa(scene)) {
     scene.player.body.setSize(30, 15);
-    scene.player.body.setOffset(50, 73);
+    scene.player.body.setOffset(50, 78);
     return;
   }
   if (personagem4Ativa(scene)) {
@@ -245,23 +251,22 @@ function configurarHitboxAtaque(scene) {
   }
 
   if (personagem2Ativa(scene)) {
-    // O ataque usa frames 128x128 e originY=0.61. Este offset compensa
-    // apenas a origem visual para manter o mesmo body.bottom do walk.
+    // O displayOrigin desloca somente o desenho; o body permanece alinhado ao walk.
     scene.player.body.setSize(23, 11);
-    scene.player.body.setOffset(53, 93);
+    scene.player.body.setOffset(48, 72);
     return;
   }
   if (personagem3Ativa(scene)) {
     scene.player.body.setSize(30, 15);
-    scene.player.body.setOffset(18, 22);
+    scene.player.body.setOffset(20, 43);
     return;
   }
   if (personagem4Ativa(scene)) {
     scene.player.body.setSize(30, 15);
-    scene.player.body.setOffset(82, 130);
+    scene.player.body.setOffset(82, 99);
     return;
   }
-  scene.player.body.setSize(30, 15);
+  scene.player.body.setSize(30, 50);
   scene.player.body.setOffset(49, 73);
 }
 
@@ -279,7 +284,7 @@ function atualizarDirecaoAtaqueAria(scene, direcao) {
   scene.player.anims.stop();
   scene.player.setTexture("personagem3-attack");
   scene.player.setFrame(framesCarregadosAria[direcao]);
-  scene.player.setOrigin(0.5, ARIA_ATTACK_ORIGIN_Y);
+  scene.player.setOrigin(0.5, 0.5);
 }
 
 // =====================================================
@@ -594,14 +599,12 @@ function atacar(scene) {
   scene.direcaoAtaque = scene.direcaoAtual;
   const originAtaqueY = personagemKaiAtiva(scene)
     ? KAI_ATTACK_ORIGIN_Y
-    : personagem2Ativa(scene)
-      ? MAGNUS_ATTACK_ORIGIN_Y
-      : personagem3Ativa(scene)
-        ? ARIA_ATTACK_ORIGIN_Y
-        : personagem4Ativa(scene)
-          ? NYX_ATTACK_ORIGIN_Y
-          : 0.5;
-  scene.player.setOrigin(0.5, originAtaqueY);
+    : personagem3Ativa(scene)
+      ? 0.5
+      : personagem4Ativa(scene)
+        ? NYX_ATTACK_ORIGIN_Y
+        : 0.5;
+  scene.player.setOrigin(0.55, originAtaqueY);
 
   if (personagem3Ativa(scene)) {
     scene.ariaAtaqueCarregando = true;
@@ -639,11 +642,12 @@ function atacar(scene) {
       up: 0,
       left: 7,
       down: 16,
-      right: 29,
+      right: 25,
     }[scene.direcaoAtaque];
 
     scene.player.setTexture("personagem2-attack", primeiroFrameAtaque);
-    scene.player.setOrigin(0.5, MAGNUS_ATTACK_ORIGIN_Y);
+    scene.player.setOrigin(0.5, 0.5);
+    scene.player.setDisplayOrigin(59, 58);
   }
 
   if (personagem4Ativa(scene)) {
@@ -718,6 +722,7 @@ function respawnPlayer(scene) {
     texturaWalk(scene, "down"),
     frameParado(scene, "down"),
   );
+  configurarVisualWalk(scene);
 
   // =====================================================
   // POSIÇÃO
