@@ -1,4 +1,4 @@
-import criarLevel1Map from "../map/Level1Map.js";
+import criarLevel1Map from "../map/MapaCidade.js";
 
 import criarTransicaoParaParte2 from "../core/MapTransition.js";
 

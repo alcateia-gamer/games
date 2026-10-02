@@ -1,7 +1,8 @@
-import criarLevel1Parte2Map, {
+import criarLevel1Parte2Map from "../map/MapaFabrica.js";
+import {
   atualizarDepthGarras,
   atualizarDepthObjetosProducaoEArmazem,
-} from "../map/Level1Parte2Map.js";
+} from "../map/ProfundidadeMapa.js";
 import criarAnimacoesPlayer from "../player/PlayerAnimations.js";
 import { criarPlayer, atualizarHitboxDanoPlayer } from "../player/Player.js";
 import {
