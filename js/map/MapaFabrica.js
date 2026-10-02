@@ -4,30 +4,25 @@ import { criarObjetosFabrica } from "./ObjetosMapa.js";
 import { criarColisoesFabrica } from "./ColisoesMapa.js";
 
 function criarLevel1Parte2Map(scene) {
-	const map = scene.make.tilemap({
-		key: "mapaParte2",
-	});
+  const map = scene.make.tilemap({
+    key: "mapaParte2",
+  });
 
-	const { tilesets, registrosTilesets, textureKeyByTilesetName } =
-		criarTilesetsFabrica(map, scene);
-	const camadas = criarCamadasFabrica(
-		map,
-		tilesets,
-		scene,
-		registrosTilesets,
-	);
+  const { tilesets, registrosTilesets, textureKeyByTilesetName } =
+    criarTilesetsFabrica(map, scene);
+  const camadas = criarCamadasFabrica(map, tilesets, scene, registrosTilesets);
 
-	scene.camadaParedeAbaixoPerso = camadas.camadaParedeAbaixoPerso;
-	scene.camadaParedeAcimaPerso = camadas.camadaParedeAcimaPerso;
+  scene.camadaParedeAbaixoPerso = camadas.camadaParedeAbaixoPerso;
+  scene.camadaParedeAcimaPerso = camadas.camadaParedeAcimaPerso;
 
-	criarObjetosFabrica(scene, map, textureKeyByTilesetName);
-	criarColisoesFabrica(scene, map);
+  criarObjetosFabrica(scene, map, textureKeyByTilesetName);
+  criarColisoesFabrica(scene, map);
 
-	scene.camadasMapaParte2 = camadas.camadasTiles.map(
-		({ name }) => map.getLayer(name)?.tilemapLayer,
-	);
+  scene.camadasMapaParte2 = camadas.camadasTiles.map(
+    ({ name }) => map.getLayer(name)?.tilemapLayer,
+  );
 
-	return map;
+  return map;
 }
 
 export { criarLevel1Parte2Map };
