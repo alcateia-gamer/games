@@ -212,8 +212,4 @@ function respawnPlayerPorLaser(scene) {
 // DANO NO INIMIGO
 // =====================================================
 
-export {
-  tentarDispararLaser,
-  verificarLasersNoMapa,
-  verificarLasersNoPlayer,
-};
+export { tentarDispararLaser, verificarLasersNoMapa, verificarLasersNoPlayer };
