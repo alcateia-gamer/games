@@ -19,6 +19,7 @@ import {
 import {
   criarInimigoTeste,
   criarRobos,
+  criarRoboSerra,
   atualizarInimigoTeste,
   limparGrupoRobos,
   causarDanoInimigo,
@@ -87,6 +88,9 @@ class Level1Parte2 extends Phaser.Scene {
     this.teclaSpawnRobo3 = this.input.keyboard.addKey(
       Phaser.Input.Keyboard.KeyCodes.THREE,
     );
+    this.teclaSpawnRoboSerra = this.input.keyboard.addKey(
+      Phaser.Input.Keyboard.KeyCodes.FIVE,
+    );
 
     this.map = criarLevel1Parte2Map(this);
     criarAnimacoesPlayer(this);
@@ -148,6 +152,9 @@ class Level1Parte2 extends Phaser.Scene {
       criarRobos(this, 2);
     } else if ((!this.multiplayer || this.isMultiplayerHost) && Phaser.Input.Keyboard.JustDown(this.teclaSpawnRobo3)) {
       criarRobos(this, 3);
+    }
+    if (Phaser.Input.Keyboard.JustDown(this.teclaSpawnRoboSerra)) {
+      criarRoboSerra(this);
     }
 
     atualizarInimigoTeste(this, time);

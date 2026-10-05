@@ -155,25 +155,26 @@ function acertarPlayerComLaser(scene, laser) {
     return;
   }
 
-  if (scene.morteEmAndamento) {
-    laser.destroy();
-    return;
-  }
-
   laser.destroy();
-
-  if (scene.player.invulneravel) {
-    return;
-  }
-
-  scene.player.invulneravel = true;
 
   const danoLaser =
     Array.isArray(scene.inimigos) && scene.inimigos.length > 0
       ? scene.inimigos[0].danoLaser
       : (scene.inimigoTeste?.danoLaser ?? 5);
+  causarDanoPlayer(scene, danoLaser);
+}
 
-  tomarDano(scene, danoLaser);
+function causarDanoPlayer(scene, dano) {
+  if (
+    scene.morteEmAndamento ||
+    !scene.player?.active ||
+    scene.player.invulneravel
+  ) {
+    return;
+  }
+
+  scene.player.invulneravel = true;
+  tomarDano(scene, dano);
 
   scene.player.setTint(0xff5555);
 
@@ -219,4 +220,9 @@ function respawnPlayerPorLaser(scene) {
 // DANO NO INIMIGO
 // =====================================================
 
-export { tentarDispararLaser, verificarLasersNoMapa, verificarLasersNoPlayer };
+export {
+  tentarDispararLaser,
+  verificarLasersNoMapa,
+  verificarLasersNoPlayer,
+  causarDanoPlayer,
+};

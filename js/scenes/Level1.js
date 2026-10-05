@@ -23,13 +23,15 @@ import {
   atualizarStatusPlayer,
   tomarDano,
 } from "../player/PlayerStatus.js";
+
 import {
   criarInimigoTeste,
   criarRobos,
+  criarRoboSerra,
   atualizarInimigoTeste,
   causarDanoInimigo,
 } from "../enemies/EnemyTest.js";
-import { atualizarEstadoVisualRobo, tocarAnimacaoInimigo } from "../enemies/EnemyAnimations.js";
+
 import { atualizarTransicaoParaParte2 } from "../core/MapTransition.js";
 import { atualizarDepthLuzesPostes } from "../map/LuzesMapa.js";
 import {
@@ -239,6 +241,9 @@ class Level1 extends Phaser.Scene {
     this.teclaSpawnRobo3 = this.input.keyboard.addKey(
       Phaser.Input.Keyboard.KeyCodes.THREE,
     );
+    this.teclaSpawnRoboSerra = this.input.keyboard.addKey(
+      Phaser.Input.Keyboard.KeyCodes.FIVE,
+    );
 
     // =====================================================
     // CÂMERA
@@ -307,6 +312,9 @@ class Level1 extends Phaser.Scene {
       criarRobos(this, 2);
     } else if ((!this.multiplayer || this.isMultiplayerHost) && Phaser.Input.Keyboard.JustDown(this.teclaSpawnRobo3)) {
       criarRobos(this, 3);
+    }
+    if (Phaser.Input.Keyboard.JustDown(this.teclaSpawnRoboSerra)) {
+      criarRoboSerra(this);
     }
 
     atualizarInimigoTeste(this, time);

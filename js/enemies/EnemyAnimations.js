@@ -85,10 +85,37 @@ function criarAnimacoesInimigo(scene) {
       });
     }
   }
+
+  const direcoesSerra = [
+    { key: "up", ataque: [1, 2, 3, 4] },
+    { key: "down", ataque: [6, 7, 8, 9] },
+    { key: "left", ataque: [11, 12, 13, 14] },
+    { key: "right", ataque: [16, 17, 18, 19] },
+  ];
+
+  for (const direcao of direcoesSerra) {
+    const ataque = `robo-serra-ataque-${direcao.key}`;
+
+    if (!scene.anims.exists(ataque)) {
+      scene.anims.create({
+        key: ataque,
+        frames: direcao.ataque.map((frame) => ({
+          key: "robo-serra",
+          frame,
+        })),
+        frameRate: 10,
+        repeat: 0,
+      });
+    }
+  }
 }
 
 function atualizarEstadoVisualRobo(inimigo) {
   if (!inimigo) {
+    return;
+  }
+
+  if (inimigo.tipoRobo === "serra") {
     return;
   }
 
@@ -110,6 +137,17 @@ function atualizarEstadoVisualRobo(inimigo) {
 }
 
 function tocarAnimacaoInimigo(inimigo) {
+  if (inimigo.tipoRobo === "serra") {
+    if (inimigo.estado === "atacando" && inimigo.anims.isPlaying) {
+      return;
+    }
+
+    inimigo.estado = inimigo.alerta ? "alerta" : "idle";
+    inimigo.anims.stop();
+    inimigo.setFrame(frameParadoRoboSerra(inimigo.direcaoAtual));
+    return;
+  }
+
   const animacaoBase =
     inimigo.visualAtual === "alerta" ? "robo-alerta" : "robo";
 
@@ -129,6 +167,17 @@ function tocarAnimacaoInimigo(inimigo) {
 // =====================================================
 
 function pararAnimacaoInimigo(inimigo) {
+  if (inimigo.tipoRobo === "serra") {
+    if (inimigo.estado === "atacando" && inimigo.anims.isPlaying) {
+      return;
+    }
+
+    inimigo.estado = inimigo.alerta ? "alerta" : "idle";
+    inimigo.anims.stop();
+    inimigo.setFrame(frameParadoRoboSerra(inimigo.direcaoAtual));
+    return;
+  }
+
   if (inimigo.anims && inimigo.anims.isPlaying) {
     inimigo.anims.stop();
   }
@@ -146,8 +195,28 @@ function pararAnimacaoInimigo(inimigo) {
   }
 }
 
+function frameParadoRoboSerra(direcao) {
+  const frames = { up: 0, down: 5, left: 10, right: 15 };
+  return frames[direcao] ?? frames.down;
+}
+
+function tocarAnimacaoAtaqueInimigo(inimigo) {
+  if (!inimigo || inimigo.tipoRobo !== "serra") {
+    return;
+  }
+
+  inimigo.estado = "atacando";
+  inimigo.anims.play(`robo-serra-ataque-${inimigo.direcaoAtual}`, true);
+}
+
 // =====================================================
 // TENTA DISPARAR LASER
 // =====================================================
 
-export { criarAnimacoesInimigo, atualizarEstadoVisualRobo, tocarAnimacaoInimigo, pararAnimacaoInimigo };
+export {
+  criarAnimacoesInimigo,
+  atualizarEstadoVisualRobo,
+  tocarAnimacaoInimigo,
+  tocarAnimacaoAtaqueInimigo,
+  pararAnimacaoInimigo,
+};

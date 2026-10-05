@@ -9,19 +9,24 @@ function criarInimigoTeste(scene, config = {}) {
   const x = Number(config.x ?? scene.respawnX + 180);
   const y = Number(config.y ?? scene.respawnY);
 
-  const inimigo = scene.physics.add.sprite(x, y, "robo-teste-normal", 0);
+  const tipoRobo = config.tipoRobo === "serra" ? "serra" : "padrao";
+  const textura = tipoRobo === "serra" ? "robo-serra" : "robo-teste-normal";
+
+  const inimigo = scene.physics.add.sprite(x, y, textura, 0);
+
   inimigo.networkId = config.networkId || null;
   inimigo.remoteOnly = Boolean(config.remoteOnly);
 
   inimigo.setDepth(12);
-  inimigo.setScale(0.23);
+  inimigo.setScale(tipoRobo === "serra" ? 0.36 : 0.23);
   inimigo.setAlpha(1);
-  if (inimigo.postFX) {
+  if (tipoRobo === "padrao" && inimigo.postFX) {
     inimigo.efeitoCores = inimigo.postFX.addColorMatrix();
     inimigo.efeitoCores.saturate(1.05).contrast(0.28).brightness(1.65);
   }
   inimigo.body.setAllowGravity(false);
 
+  inimigo.tipoRobo = tipoRobo;
   inimigo.visualAtual = "normal";
   atualizarEstadoVisualRobo(inimigo);
 
@@ -48,7 +53,9 @@ function criarInimigoTeste(scene, config = {}) {
   inimigo.velocidade = Number(config.velocidade ?? 50);
   inimigo.orbitaAngulo = Math.random() * Math.PI * 2;
   inimigo.distanciaDeteccao = Number(config.distanciaDeteccao ?? 550);
-  inimigo.distanciaAtaque = Number(config.distanciaAtaque ?? 180);
+  inimigo.distanciaAtaque = Number(
+    config.distanciaAtaque ?? (tipoRobo === "serra" ? 68 : 180),
+  );
   inimigo.distanciaGrupo = Number(config.distanciaGrupo ?? 180);
   inimigo.danoBase = Number(config.danoLaser ?? 5);
   const direcoes = ["down", "left", "right", "up"];
@@ -69,6 +76,9 @@ function criarInimigoTeste(scene, config = {}) {
 
   inimigo.vidaMaxima = Number(config.vidaMaxima ?? 100);
   inimigo.vida = inimigo.vidaMaxima;
+  inimigo.tempoEntreAtaques = Number(config.tempoEntreAtaques ?? 1000);
+  inimigo.ultimoAtaque = Number.NEGATIVE_INFINITY;
+  inimigo.danoContato = Number(config.danoContato ?? 12);
 
   inimigo.alerta = false;
   inimigo.foiFerido = false;
@@ -105,6 +115,42 @@ function criarInimigoTeste(scene, config = {}) {
   scene.inimigoTeste = inimigo;
 
   return inimigo;
+}
+
+function criarRoboSerra(scene) {
+  if (!scene?.player?.active) {
+    return null;
+  }
+
+  const roboExistente = scene.inimigos?.find(
+    (inimigo) =>
+      inimigo?.tipoRobo === "serra" && inimigo.active && !inimigo.morto,
+  );
+  if (roboExistente) {
+    return roboExistente;
+  }
+
+  const angulo = Math.random() * Math.PI * 2;
+  const robo = criarInimigoTeste(scene, {
+    tipoRobo: "serra",
+    x: scene.player.x + Math.cos(angulo) * 140,
+    y: scene.player.y + Math.sin(angulo) * 140,
+    velocidade: 62,
+    distanciaDeteccao: 600,
+    distanciaAtaque: 68,
+    distanciaGrupo: 180,
+    vidaMaxima: 120,
+    danoContato: 12,
+    tempoEntreAtaques: 1000,
+  });
+  robo.alerta = true;
+  robo.estado = "alerta";
+
+  if (scene.collisionGroup) {
+    scene.physics.add.collider(robo, scene.collisionGroup);
+  }
+
+  return robo;
 }
 
 function limparGrupoRobos(scene) {
@@ -255,6 +301,12 @@ function configurarHitboxPeInimigo(inimigo) {
 
   // Physics body pequeno na base do robô: o corpo visual continua grande, mas a
   // colisão com cenário acontece somente na região dos pés.
+  if (inimigo.tipoRobo === "serra") {
+    inimigo.body.setSize(190, 100);
+    inimigo.body.setOffset(44, 160);
+    return;
+  }
+
   inimigo.body.setSize(180, 110);
   inimigo.body.setOffset(65, 270);
 }
@@ -358,5 +410,11 @@ function atualizarInimigoTeste(scene, time) {
 // IA DO INIMIGO
 // =====================================================
 
-export { criarInimigoTeste, criarRobos, atualizarInimigoTeste, limparGrupoRobos };
+export {
+  criarInimigoTeste,
+  criarRobos,
+  criarRoboSerra,
+  atualizarInimigoTeste,
+  limparGrupoRobos,
+};
 export { causarDanoInimigo } from "./EnemyHealth.js";

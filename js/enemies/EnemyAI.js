@@ -1,5 +1,10 @@
 import { atualizarSomPassoRobo } from "../sounds/inimigos.js";
-import { atualizarEstadoVisualRobo, tocarAnimacaoInimigo, pararAnimacaoInimigo } from "./EnemyAnimations.js";
+import {
+  atualizarEstadoVisualRobo,
+  tocarAnimacaoInimigo,
+  tocarAnimacaoAtaqueInimigo,
+  pararAnimacaoInimigo,
+} from "./EnemyAnimations.js";
 import {
   obterFilhosGrupoSeguro,
   caminhoDiretoBloqueado,
@@ -7,7 +12,7 @@ import {
   seguirRotaAtual,
   desenharDebugRotaInimigo,
 } from "./EnemyPathfinding.js";
-import { tentarDispararLaser } from "./EnemyLaser.js";
+import { causarDanoPlayer, tentarDispararLaser } from "./EnemyLaser.js";
 
 function aplicarSeparacaoGrupo(inimigo, scene) {
   if (!Array.isArray(scene.inimigos)) {
@@ -179,6 +184,69 @@ function notificarGrupo(scene, inimigoAlvo, origem = "dano") {
   }
 }
 
+function tentarAtaqueSerra(scene, time, inimigo, distancia) {
+  if (
+    inimigo.tipoRobo !== "serra" ||
+    distancia > inimigo.distanciaAtaque ||
+    caminhoDiretoBloqueado(scene, inimigo, scene.player)
+  ) {
+    return false;
+  }
+
+  inimigo.setVelocity(0, 0);
+  atualizarDirecaoInimigo(scene, inimigo);
+  atualizarSomPassoRobo(scene, inimigo, true, distancia, false);
+
+  if (time >= inimigo.ultimoAtaque + inimigo.tempoEntreAtaques) {
+    inimigo.ultimoAtaque = time;
+    tocarAnimacaoAtaqueInimigo(inimigo);
+    causarDanoPlayer(scene, inimigo.danoContato);
+  } else if (inimigo.estado !== "atacando" || !inimigo.anims.isPlaying) {
+    pararAnimacaoInimigo(inimigo);
+  }
+
+  return true;
+}
+
+function perseguirComSerra(scene, inimigo, time, distancia) {
+  if (tentarAtaqueSerra(scene, time, inimigo, distancia)) {
+    return;
+  }
+
+  const linhaBloqueada = caminhoDiretoBloqueado(scene, inimigo, scene.player);
+  if (linhaBloqueada) {
+    const rotaValida = atualizarRotaSeguindoInimigo(
+      scene,
+      inimigo,
+      scene.player,
+      time,
+    );
+    if (
+      (rotaValida || inimigo.rotaAtual?.length > 0) &&
+      seguirRotaAtual(
+        scene,
+        inimigo,
+        scene.player,
+        time,
+        atualizarDirecaoInimigo,
+      )
+    ) {
+      atualizarDirecaoInimigo(scene, inimigo);
+      atualizarSomPassoRobo(scene, inimigo, true, distancia, true);
+      tocarAnimacaoInimigo(inimigo);
+      desenharDebugRotaInimigo(scene, inimigo);
+      return;
+    }
+  }
+
+  inimigo.rotaAtual = [];
+  inimigo.indiceRota = 0;
+  scene.physics.moveToObject(inimigo, scene.player, inimigo.velocidade);
+  atualizarDirecaoInimigo(scene, inimigo);
+  atualizarSomPassoRobo(scene, inimigo, true, distancia, true);
+  tocarAnimacaoInimigo(inimigo);
+}
+
 function atualizarIAInimigo(scene, time, inimigo = scene.inimigoTeste) {
   const alvo = obterAlvoInimigo(scene, inimigo);
   if (!alvo || alvo.active === false || !inimigo || !inimigo.active) {
@@ -202,10 +270,17 @@ function atualizarIAInimigo(scene, time, inimigo = scene.inimigoTeste) {
 
   if (foiFerido || inimigo.alerta || viuPlayer) {
     inimigo.alerta = true;
-    inimigo.estado = "alerta";
+    if (inimigo.estado !== "atacando" || !inimigo.anims.isPlaying) {
+      inimigo.estado = "alerta";
+    }
   }
 
   atualizarEstadoVisualRobo(inimigo);
+
+  if (inimigo.tipoRobo === "serra") {
+    perseguirComSerra(scene, inimigo, time, distancia);
+    return;
+  }
 
   if (inimigo.alerta || viuPlayer || foiFerido) {
     const linhaBloqueada = caminhoDiretoBloqueado(scene, inimigo, alvo);

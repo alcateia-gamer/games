@@ -52,6 +52,37 @@ function destruirInimigoTeste(scene, inimigo = scene.inimigoTeste) {
     return;
   }
 
+  if (inimigo.tipoRobo === "serra") {
+    inimigo.morto = true;
+    inimigo.estado = "morto";
+    inimigo.setVelocity(0, 0);
+    inimigo.hitboxDano = null;
+    if (inimigo.body) {
+      inimigo.body.enable = false;
+    }
+    if (Array.isArray(scene.inimigos)) {
+      scene.inimigos = scene.inimigos.filter((robo) => robo !== inimigo);
+    }
+    if (scene.inimigoTeste === inimigo) {
+      scene.inimigoTeste = scene.inimigos?.[0] ?? null;
+    }
+    if (inimigo.anims) {
+      inimigo.anims.stop();
+    }
+    scene.tweens.add({
+      targets: [
+        inimigo,
+        inimigo.fundoVida,
+        inimigo.barraVida,
+        inimigo.bordaVida,
+      ].filter(Boolean),
+      alpha: 0,
+      duration: 180,
+      onComplete: () => finalizarDestruicaoInimigo(scene, inimigo),
+    });
+    return;
+  }
+
   const larguraVisualAntesDaMorte = inimigo.displayWidth;
   const alturaVisualAntesDaMorte = inimigo.displayHeight;
 

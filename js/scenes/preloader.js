@@ -266,6 +266,14 @@ class Preloader extends Phaser.Scene {
       },
     );
     this.load.spritesheet(
+      "robo-serra",
+      "PERSONAGENS/INIMIGOS PRINCIPAIS/ROBO_DE_SERRA/robo_novo.png",
+      {
+        frameWidth: 278,
+        frameHeight: 270,
+      },
+    );
+    this.load.spritesheet(
       "robo-pet",
       "PERSONAGENS/PERSONAGENS PRICIPAIS/ROBO_PET/robo_pet.png",
       {
