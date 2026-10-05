@@ -16,6 +16,11 @@ function causarDanoInimigo(scene, alvoOuQuantidade, quantidadeOpcional) {
     return;
   }
 
+  if (scene.multiplayer && !scene.isMultiplayerHost && alvo.remoteOnly) {
+    scene.multiplayerManager?.requestEnemyDamage(alvo.networkId, quantidade);
+    return;
+  }
+
   alvo.vida -= quantidade;
   alvo.vida = Phaser.Math.Clamp(alvo.vida, 0, alvo.vidaMaxima);
   alvo.foiFerido = true;

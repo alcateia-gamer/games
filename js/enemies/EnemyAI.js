@@ -49,17 +49,28 @@ function aplicarSeparacaoGrupo(inimigo, scene) {
   }
 }
 
+function obterAlvoInimigo(scene, inimigo) {
+  const alvoRemoto = scene.multiplayerManager?.room?.players?.find(
+    (player) => player.id === inimigo.alvoPlayerId,
+  );
+  if (alvoRemoto) {
+    return { ...alvoRemoto, active: true };
+  }
+  return scene.player;
+}
+
 // =====================================================
 // CRIA ANIMAÇÕES
 // =====================================================
 
 function temVisaoDoPlayer(scene, inimigo) {
-  if (!scene.player || !scene.player.active || !inimigo || !inimigo.active) {
+  const alvo = obterAlvoInimigo(scene, inimigo);
+  if (!alvo || alvo.active === false || !inimigo || !inimigo.active) {
     return false;
   }
 
-  const dx = scene.player.x - inimigo.x;
-  const dy = scene.player.y - inimigo.y;
+  const dx = alvo.x - inimigo.x;
+  const dy = alvo.y - inimigo.y;
   const distancia = Math.hypot(dx, dy);
 
   if (distancia > inimigo.distanciaDeteccao) {
@@ -81,8 +92,8 @@ function temVisaoDoPlayer(scene, inimigo) {
   }
 
   const centroPlayer = {
-    x: scene.player.x,
-    y: scene.player.y,
+    x: alvo.x,
+    y: alvo.y,
   };
 
   const playerDentroCono =
@@ -100,8 +111,8 @@ function temVisaoDoPlayer(scene, inimigo) {
   const linhaParaPlayer = new Phaser.Geom.Line(
     inimigo.x,
     inimigo.y,
-    scene.player.x,
-    scene.player.y,
+    alvo.x,
+    alvo.y,
   );
 
   if (!scene.collisionGroup || !scene.collisionGroup.getChildren) {
@@ -169,15 +180,17 @@ function notificarGrupo(scene, inimigoAlvo, origem = "dano") {
 }
 
 function atualizarIAInimigo(scene, time, inimigo = scene.inimigoTeste) {
-  if (!scene.player || !scene.player.active || !inimigo || !inimigo.active) {
+  const alvo = obterAlvoInimigo(scene, inimigo);
+  if (!alvo || alvo.active === false || !inimigo || !inimigo.active) {
     return;
   }
+  inimigo.alvoAtual = alvo;
 
   const distancia = Phaser.Math.Distance.Between(
     inimigo.x,
     inimigo.y,
-    scene.player.x,
-    scene.player.y,
+    alvo.x,
+    alvo.y,
   );
 
   const viuPlayer = temVisaoDoPlayer(scene, inimigo);
@@ -195,7 +208,7 @@ function atualizarIAInimigo(scene, time, inimigo = scene.inimigoTeste) {
   atualizarEstadoVisualRobo(inimigo);
 
   if (inimigo.alerta || viuPlayer || foiFerido) {
-    const linhaBloqueada = caminhoDiretoBloqueado(scene, inimigo, scene.player);
+    const linhaBloqueada = caminhoDiretoBloqueado(scene, inimigo, alvo);
     const rotaAtiva =
       Array.isArray(inimigo.rotaAtual) && inimigo.rotaAtual.length > 0;
 
@@ -206,14 +219,14 @@ function atualizarIAInimigo(scene, time, inimigo = scene.inimigoTeste) {
         const rotaValida = atualizarRotaSeguindoInimigo(
           scene,
           inimigo,
-          scene.player,
+          alvo,
           time,
         );
         if (rotaValida || rotaAtiva) {
           const seguiuRota = seguirRotaAtual(
             scene,
             inimigo,
-            scene.player,
+            alvo,
             time,
             atualizarDirecaoInimigo,
           );
@@ -247,8 +260,8 @@ function atualizarIAInimigo(scene, time, inimigo = scene.inimigoTeste) {
       time * 0.0015 +
       inimigo.orbitaAngulo +
       inimigo.formacaoIndex * (Math.PI / 2.1);
-    const alvoOrbitX = scene.player.x + Math.cos(anguloOrbit) * raioOrbit;
-    const alvoOrbitY = scene.player.y + Math.sin(anguloOrbit) * raioOrbit;
+    const alvoOrbitX = alvo.x + Math.cos(anguloOrbit) * raioOrbit;
+    const alvoOrbitY = alvo.y + Math.sin(anguloOrbit) * raioOrbit;
 
     scene.physics.moveTo(
       inimigo,
@@ -315,7 +328,7 @@ function atualizarIAInimigo(scene, time, inimigo = scene.inimigoTeste) {
   }
 
   aplicarSeparacaoGrupo(inimigo, scene);
-  scene.physics.moveToObject(inimigo, scene.player, inimigo.velocidade);
+  scene.physics.moveToObject(inimigo, alvo, inimigo.velocidade);
   atualizarSomPassoRobo(scene, inimigo, viuPlayer, distancia, true);
   tocarAnimacaoInimigo(inimigo);
 }
@@ -338,8 +351,9 @@ function atualizarDirecaoInimigo(scene, inimigo = scene.inimigoTeste) {
     return;
   }
 
-  const diferencaX = scene.player.x - inimigo.x;
-  const diferencaY = scene.player.y - inimigo.y;
+  const alvo = obterAlvoInimigo(scene, inimigo);
+  const diferencaX = alvo.x - inimigo.x;
+  const diferencaY = alvo.y - inimigo.y;
 
   if (Math.abs(diferencaX) > Math.abs(diferencaY)) {
     inimigo.direcaoAtual = diferencaX < 0 ? "left" : "right";

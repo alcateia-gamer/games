@@ -596,6 +596,8 @@ function atacar(scene) {
   // =====================================================
 
   scene.atacando = true;
+  scene.networkAttackId = (scene.networkAttackId || 0) + 1;
+  scene.attackPhase = personagem3Ativa(scene) ? "charge" : "normal";
   scene.direcaoAtaque = scene.direcaoAtual;
   const originAtaqueY = personagemKaiAtiva(scene)
     ? KAI_ATTACK_ORIGIN_Y
@@ -685,6 +687,7 @@ function soltarAtaque(scene) {
   }
 
   scene.ariaAtaqueCarregando = false;
+  scene.attackPhase = "release";
   dispararProjetil(scene);
   scene.player.anims.play(`aria-release-${scene.direcaoAtaque}`, false);
   criarHitboxKatana(scene);
@@ -708,6 +711,7 @@ function respawnPlayer(scene) {
 
   scene.atacando = false;
   scene.ariaAtaqueCarregando = false;
+  scene.attackPhase = "normal";
 
   scene.direcaoAtual = "down";
 

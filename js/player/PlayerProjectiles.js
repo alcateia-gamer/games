@@ -77,6 +77,9 @@ function dispararProjetil(scene) {
   projetil.setOrigin(0.5, 0.5);
   projetil.setDepth(scene.player.depth + 0.1);
   projetil.projetilPlayer = true;
+  scene.networkProjectileId = (scene.networkProjectileId || 0) + 1;
+  projetil.networkId = `${scene.multiplayerManager?.playerId || "local"}-${scene.networkProjectileId}`;
+  projetil.frameProjetil = direcao.frame;
   projetil.acertou = false;
   projetil.direcaoDisparo = { x: direcao.x, y: direcao.y };
   projetil.dano = DANO_PROJETIL_ARIA;

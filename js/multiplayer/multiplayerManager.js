@@ -35,6 +35,10 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
       character: CHARACTER_IDS.includes(player.character) ? player.character : null,
       ready: Boolean(player.ready), x: Number.isFinite(player.x) ? player.x : -490,
       y: Number.isFinite(player.y) ? player.y : 8823, direction: player.direction || "down",
+      attacking: Boolean(player.attacking), attackDirection: player.attackDirection || player.direction || "down",
+      attackId: Number(player.attackId) || 0,
+      attackPhase: player.attackPhase || "normal",
+      projectiles: Array.isArray(player.projectiles) ? player.projectiles : [],
       lastSeen: Number(player.lastSeen) || Date.now(),
     };
   }
@@ -56,7 +60,7 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
     this.leaveRoom(false);
     this.roomTopic = `room/${code}`;
     ["state", "action", "presence"].forEach((suffix) => this.mqtt.subscribe(`${this.roomTopic}/${suffix}`));
-    this.room = host ? { roomCode: code, hostId: this.playerId, status: "WAITING", players: [this.normalizePlayer({ id: this.playerId, isHost: true })] } : null;
+    this.room = host ? { roomCode: code, hostId: this.playerId, status: "WAITING", players: [this.normalizePlayer({ id: this.playerId, isHost: true })], enemies: [] } : null;
     if (host) this.publishState();
     this.publishAction({ type: "join_room", roomCode: code, playerId: this.playerId });
     this.startHeartbeat();
@@ -64,8 +68,9 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
   }
 
   receive(topic, data) {
-    if (!this.roomTopic || !topic.startsWith(`${this.roomTopic}/`) || !data || data.clientId === this.playerId) return;
+    if (!this.roomTopic || !topic.startsWith(`${this.roomTopic}/`) || !data) return;
     const kind = topic.slice(this.roomTopic.length + 1);
+    if (data.clientId === this.playerId && kind !== "action") return;
     if (kind === "state") this.receiveState(data);
     if (kind === "action") this.receiveAction(data);
     if (kind === "presence") this.receivePresence(data);
@@ -105,6 +110,15 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
       if (this.room?.hostId === this.playerId) this.publishState();
       return;
     }
+    if (action.type === "enemy_damage" && this.room?.hostId === this.playerId) {
+      const enemy = (this.room.enemies || []).find((item) => item.id === action.enemyId);
+      if (enemy) this.emit("enemyDamage", { enemyId: enemy.id, playerId: action.playerId, damage: Math.min(Math.max(Number(action.damage) || 0, 0), 25) });
+      return;
+    }
+    if (action.type === "player_damage" && action.targetId === this.playerId) {
+      this.emit("playerDamage", Number(action.damage) || 0);
+      return;
+    }
     if (this.room?.hostId !== this.playerId) return;
     const player = this.room.players.find((item) => item.id === action.playerId);
     if (action.type === "leave_room") this.removePlayer(action.playerId);
@@ -117,9 +131,17 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
     } else if (action.type === "player_ready" && player && this.room.status !== "PLAYING") {
       player.ready = Boolean(action.ready) && Boolean(player.character); this.publishState();
     } else if (action.type === "start_game" && this.canStart()) {
-      this.room.status = "PLAYING"; this.publishState();
+      this.room.status = "PLAYING"; this.publishState(); this.emit("gameStarted", this.room);
     } else if (action.type === "game_state" && player) {
-      player.x = Number(action.x) || player.x; player.y = Number(action.y) || player.y; player.direction = action.direction || player.direction; this.publishState();
+      player.x = Number.isFinite(action.x) ? action.x : player.x;
+      player.y = Number.isFinite(action.y) ? action.y : player.y;
+      player.direction = action.direction || player.direction;
+      player.attacking = Boolean(action.attacking);
+      player.attackDirection = action.attackDirection || player.direction;
+      player.attackId = Number(action.attackId) || player.attackId;
+      player.attackPhase = action.attackPhase || "normal";
+      player.projectiles = Array.isArray(action.projectiles) ? action.projectiles : [];
+      this.publishState({ retain: false, qos: 0 });
     }
   }
 
@@ -135,12 +157,12 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
     }
   }
 
-  publishAction(action) { this.mqtt.publish(`${this.roomTopic}/action`, action); }
+  publishAction(action, options = {}) { this.mqtt.publish(`${this.roomTopic}/action`, action, options); }
 
-  publishState() {
+  publishState(options = {}) {
     if (!this.room) return;
     this.room.revision = (this.room.revision || 0) + 1; this.room.updatedAt = Date.now();
-    this.mqtt.publish(`${this.roomTopic}/state`, this.room, { retain: true });
+    this.mqtt.publish(`${this.roomTopic}/state`, this.room, { retain: options.retain ?? true, qos: options.qos ?? 1 });
     this.emit("roomUpdated", this.room);
   }
 
@@ -196,7 +218,37 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
     this.roomTopic = null; this.room = null;
   }
 
-  sendPlayerState(x, y, direction) { this.publishAction({ type: "game_state", playerId: this.playerId, x, y, direction }); }
+  sendPlayerState(x, y, direction, attacking = false, attackDirection = direction, attackId = 0, attackPhase = "normal", projectiles = []) {
+    this.publishAction({ type: "game_state", playerId: this.playerId, x, y, direction, attacking, attackDirection, attackId, attackPhase, projectiles }, { qos: 0 });
+  }
+
+  publishEnemyState(enemies) {
+    if (this.room?.hostId !== this.playerId) return;
+    this.room.enemies = enemies.filter((enemy) => enemy?.active && !enemy.morto && enemy.networkId).map((enemy) => ({
+      id: enemy.networkId,
+      x: enemy.x,
+      y: enemy.y,
+      direction: enemy.direcaoAtual,
+      targetPlayerId: enemy.alvoPlayerId || null,
+      targetX: this.room.players.find((player) => player.id === enemy.alvoPlayerId)?.x ?? null,
+      targetY: this.room.players.find((player) => player.id === enemy.alvoPlayerId)?.y ?? null,
+      attackId: enemy.networkAttackId || 0,
+      visual: enemy.visualAtual,
+      vida: enemy.vida,
+      vidaMaxima: enemy.vidaMaxima,
+    }));
+    this.publishState({ retain: false, qos: 0 });
+  }
+
+  requestEnemyDamage(enemyId, damage) {
+    this.publishAction({ type: "enemy_damage", playerId: this.playerId, enemyId, damage });
+  }
+
+  publishPlayerDamage(targetId, damage) {
+    if (this.room?.hostId === this.playerId && targetId && targetId !== this.playerId) {
+      this.publishAction({ type: "player_damage", targetId, damage });
+    }
+  }
 
   destroy() { this.leaveRoom(); this.mqtt.off("message", this.boundMessage); this.removeAllListeners(); }
 }

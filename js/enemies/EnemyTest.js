@@ -10,6 +10,8 @@ function criarInimigoTeste(scene, config = {}) {
   const y = Number(config.y ?? scene.respawnY);
 
   const inimigo = scene.physics.add.sprite(x, y, "robo-teste-normal", 0);
+  inimigo.networkId = config.networkId || null;
+  inimigo.remoteOnly = Boolean(config.remoteOnly);
 
   inimigo.setDepth(12);
   inimigo.setScale(0.23);
@@ -55,7 +57,9 @@ function criarInimigoTeste(scene, config = {}) {
 
   inimigo.direcaoAtual = config.direcaoAtual ?? direcaoAleatoria;
 
-  configurarSomPassoRobo(scene, inimigo);
+  if (!inimigo.remoteOnly) {
+    configurarSomPassoRobo(scene, inimigo);
+  }
 
   inimigo.tempoEntreTiros = Number(config.tempoEntreTiros ?? 720);
   inimigo.ultimoTiro = 0;
@@ -193,6 +197,7 @@ function criarRobos(
   );
   const robosExistentes = scene.inimigos.length;
   const robosCriados = [];
+  scene.networkEnemyId = (scene.networkEnemyId || 0) + 1;
 
   for (let index = 0; index < quantidadeSolicitada; index += 1) {
     const angulo = (Math.PI * 2 * index) / quantidadeSolicitada;
@@ -203,6 +208,7 @@ function criarRobos(
     const robo = criarInimigoTeste(scene, {
       x,
       y,
+      networkId: `${scene.multiplayerManager?.playerId || "local"}-enemy-${scene.networkEnemyId}-${robosExistentes + index}`,
       formacaoIndex: robosExistentes + index,
       velocidade: 50,
       distanciaDeteccao: 550,
@@ -313,7 +319,9 @@ function atualizarInimigoTeste(scene, time) {
       continue;
     }
 
-    atualizarIAInimigo(scene, time, inimigo);
+    if (!inimigo.remoteOnly) {
+          atualizarIAInimigo(scene, time, inimigo);
+    }
     atualizarHitboxDanoInimigo(inimigo);
     atualizarDepthInimigo(inimigo, scene);
 

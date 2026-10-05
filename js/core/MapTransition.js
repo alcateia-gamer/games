@@ -101,6 +101,7 @@ function iniciarTransicao(scene) {
       spawnX: 97,
       spawnY: -1028,
       personagem: scene.personagemSelecionada,
+      multiplayer: scene.multiplayer === true,
     });
   });
 }

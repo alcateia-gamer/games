@@ -21,15 +21,17 @@ function tentarDispararLaser(scene, time, inimigo = scene.inimigoTeste) {
 // =====================================================
 
 function dispararLaser(scene, inimigo = scene.inimigoTeste) {
-  if (!inimigo || !inimigo.active || !scene.player || !scene.player.active) {
+  const alvo = inimigo?.alvoAtual || scene.player;
+  if (!inimigo || !inimigo.active || !alvo || alvo.active === false) {
     return;
   }
+  inimigo.networkAttackId = (inimigo.networkAttackId || 0) + 1;
 
   const angulo = Phaser.Math.Angle.Between(
     inimigo.x,
     inimigo.y,
-    scene.player.x,
-    scene.player.y,
+    alvo.x,
+    alvo.y,
   );
 
   const lado = inimigo.ultimoLadoTiro === "right" ? "right" : "left";
@@ -67,6 +69,11 @@ function dispararLaser(scene, inimigo = scene.inimigoTeste) {
       laser.destroy();
     }
   });
+  if (scene.multiplayer && scene.isMultiplayerHost && alvo.id) {
+    scene.time.delayedCall(220, () => {
+      scene.multiplayerManager?.publishPlayerDamage(alvo.id, inimigo.danoLaser);
+    });
+  }
 }
 
 // =====================================================
