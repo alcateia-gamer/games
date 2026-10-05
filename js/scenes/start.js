@@ -329,6 +329,11 @@ class Start extends Phaser.Scene {
       return;
     }
 
+    if (option === "MULTIJOGADOR") {
+      this.scene.start("MultiplayerMenu");
+      return;
+    }
+
     this.menuStatus.setText(`${option} // DISPONÍVEL EM BREVE`);
     this.tweens.add({
       targets: this.menuStatus,

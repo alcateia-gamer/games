@@ -109,6 +109,7 @@ class Preloader extends Phaser.Scene {
     this.time.delayedCall(1500, () => {
       this.scene.start("Level1", {
         personagem: this.personagemSelecionada,
+        multiplayer: this.multiplayer,
       });
     });
   }
@@ -571,6 +572,7 @@ class Preloader extends Phaser.Scene {
     this.cameras.main.setBackgroundColor("#000000");
     this.personagemSelecionada =
       this.scene.settings.data?.personagem || "standard";
+    this.multiplayer = this.scene.settings.data?.multiplayer === true;
     this.iniciarCarregamento();
   }
 }

@@ -21,6 +21,10 @@ var config = {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
+  mqtt: {
+    brokerUrl: "wss://broker.hivemq.com:8884/mqtt",
+    topicPrefix: "nexus-night-city",
+  },
 };
 
 export default config;

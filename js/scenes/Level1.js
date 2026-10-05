@@ -74,6 +74,10 @@ class Level1 extends Phaser.Scene {
     this.respawnX = data.spawnX ?? -490;
     this.respawnY = data.spawnY ?? 8823;
     this.personagemSelecionada = data.personagem || "standard";
+    this.multiplayer = data.multiplayer === true;
+    this.multiplayerManager = this.game.registry.get("multiplayer");
+    this.remotePlayers = new Map();
+    this.lastNetworkUpdate = 0;
     this.portaAbertaAoEntrar = data.portaAberta === true;
     this.entradaComFade = data.transicao === true;
     this.morteEmAndamento = false;
@@ -113,6 +117,8 @@ class Level1 extends Phaser.Scene {
 
     criarPlayer(this);
     criarCompanionPet(this);
+
+    if (this.multiplayer) this.iniciarMultiplayer();
 
     this.atualizarProfundidadePostes();
 
@@ -289,6 +295,7 @@ class Level1 extends Phaser.Scene {
     atualizarInimigoTeste(this, time);
     atualizarProjeteis(this, delta);
     atualizarCompanionPet(this, time, delta);
+    this.atualizarInterpolacaoRemota();
 
     // =====================================================
     // COORDENADAS
@@ -307,6 +314,55 @@ class Level1 extends Phaser.Scene {
     if (Phaser.Input.Keyboard.JustDown(this.teclaR)) {
       respawnPlayer(this);
     }
+
+    if (this.multiplayer && time - this.lastNetworkUpdate >= 80) {
+      this.lastNetworkUpdate = time;
+      this.multiplayerManager?.sendPlayerState(this.player.x, this.player.y, this.direcaoAtual);
+    }
+  }
+
+  iniciarMultiplayer() {
+    const manager = this.multiplayerManager;
+    if (!manager) return;
+    this.onMultiplayerRoomUpdated = (room) => this.atualizarJogadoresRemotos(room);
+    manager.on("roomUpdated", this.onMultiplayerRoomUpdated, this);
+    this.atualizarJogadoresRemotos(manager.room);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      manager.off("roomUpdated", this.onMultiplayerRoomUpdated, this);
+      this.remotePlayers.forEach((sprite) => sprite.destroy());
+      this.remotePlayers.clear();
+    });
+  }
+
+  atualizarJogadoresRemotos(room) {
+    if (!room?.players) return;
+    const activeIds = new Set();
+    room.players.forEach((player) => {
+      if (player.id === this.multiplayerManager.playerId || !player.character) return;
+      activeIds.add(player.id);
+      const texture = { standard: "walk", personagem2: "personagem2-walk", personagem3: "personagem3-walk", personagem4: "personagem4-walk" }[player.character];
+      if (!texture) return;
+      let remote = this.remotePlayers.get(player.id);
+      if (!remote) {
+        remote = this.add.sprite(player.x, player.y, texture, 18).setOrigin(0.5, 0.5).setAlpha(0.88).setDepth(13);
+        remote.playerId = player.id;
+        this.remotePlayers.set(player.id, remote);
+      }
+      if (remote.texture.key !== texture) remote.setTexture(texture);
+      remote.targetX = player.x;
+      remote.targetY = player.y;
+      remote.setFrame(player.direction === "up" ? 0 : player.direction === "left" ? 9 : player.direction === "right" ? 27 : 18);
+    });
+    this.remotePlayers.forEach((sprite, id) => {
+      if (!activeIds.has(id)) { sprite.destroy(); this.remotePlayers.delete(id); }
+    });
+  }
+
+  atualizarInterpolacaoRemota() {
+    this.remotePlayers.forEach((sprite) => {
+      sprite.x = Phaser.Math.Linear(sprite.x, sprite.targetX ?? sprite.x, 0.2);
+      sprite.y = Phaser.Math.Linear(sprite.y, sprite.targetY ?? sprite.y, 0.2);
+    });
   }
 
   // =====================================================
