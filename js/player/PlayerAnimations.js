@@ -187,26 +187,66 @@ function criarAnimacoesPersonagensRemotos(scene) {
     standard: {
       walk: "walk",
       attack: "attack",
-      walkFrames: { up: [0, 8], left: [9, 17], down: [18, 26], right: [27, 35] },
-      attackFrames: { up: [0, 5], left: [6, 11], down: [12, 17], right: [18, 23] },
+      walkFrames: {
+        up: [0, 8],
+        left: [9, 17],
+        down: [18, 26],
+        right: [27, 35],
+      },
+      attackFrames: {
+        up: [0, 5],
+        left: [6, 11],
+        down: [12, 17],
+        right: [18, 23],
+      },
     },
     personagem2: {
       walk: "personagem2-walk",
       attack: "personagem2-attack",
-      walkFrames: { up: [0, 8], left: [9, 17], down: [18, 26], right: [27, 35] },
-      attackFrames: { up: [0, 6], left: [7, 15], down: [16, 24], right: [25, 33] },
+      walkFrames: {
+        up: [0, 8],
+        left: [9, 17],
+        down: [18, 26],
+        right: [27, 35],
+      },
+      attackFrames: {
+        up: [0, 6],
+        left: [7, 15],
+        down: [16, 24],
+        right: [25, 33],
+      },
     },
     personagem3: {
       walk: "personagem3-walk",
       attack: "personagem3-attack",
-      walkFrames: { up: [0, 8], left: [9, 17], down: [18, 26], right: [27, 35] },
-      attackFrames: { up: [0, 0], left: [13, 13], down: [26, 26], right: [39, 39] },
+      walkFrames: {
+        up: [0, 8],
+        left: [9, 17],
+        down: [18, 26],
+        right: [27, 35],
+      },
+      attackFrames: {
+        up: [0, 0],
+        left: [13, 13],
+        down: [26, 26],
+        right: [39, 39],
+      },
     },
     personagem4: {
       walk: "personagem4-walk",
       attack: "personagem4-attack",
-      walkFrames: { up: [0, 8], left: [9, 17], down: [18, 26], right: [27, 35] },
-      attackFrames: { up: [0, 5], left: [6, 11], down: [12, 17], right: [18, 23] },
+      walkFrames: {
+        up: [0, 8],
+        left: [9, 17],
+        down: [18, 26],
+        right: [27, 35],
+      },
+      attackFrames: {
+        up: [0, 5],
+        left: [6, 11],
+        down: [12, 17],
+        right: [18, 23],
+      },
     },
   };
 
@@ -216,7 +256,10 @@ function criarAnimacoesPersonagensRemotos(scene) {
       if (!scene.anims.exists(key)) {
         scene.anims.create({
           key,
-          frames: scene.anims.generateFrameNumbers(config.walk, { start: frames[0], end: frames[1] }),
+          frames: scene.anims.generateFrameNumbers(config.walk, {
+            start: frames[0],
+            end: frames[1],
+          }),
           frameRate: 20,
           repeat: -1,
         });
@@ -248,7 +291,10 @@ function criarAnimacoesPersonagensRemotos(scene) {
         if (!scene.anims.exists(key)) {
           scene.anims.create({
             key,
-            frames: scene.anims.generateFrameNumbers(config.attack, { start: frames[0], end: frames[1] }),
+            frames: scene.anims.generateFrameNumbers(config.attack, {
+              start: frames[0],
+              end: frames[1],
+            }),
             frameRate: 20,
             repeat: 0,
           });

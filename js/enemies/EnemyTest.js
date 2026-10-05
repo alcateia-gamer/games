@@ -1,7 +1,13 @@
 import { configurarSomPassoRobo } from "../sounds/inimigos.js";
-import { criarAnimacoesInimigo, atualizarEstadoVisualRobo } from "./EnemyAnimations.js";
+import {
+  criarAnimacoesInimigo,
+  atualizarEstadoVisualRobo,
+} from "./EnemyAnimations.js";
 import { atualizarIAInimigo } from "./EnemyAI.js";
-import { verificarLasersNoMapa, verificarLasersNoPlayer } from "./EnemyLaser.js";
+import {
+  verificarLasersNoMapa,
+  verificarLasersNoPlayer,
+} from "./EnemyLaser.js";
 
 function criarInimigoTeste(scene, config = {}) {
   criarAnimacoesInimigo(scene);
@@ -372,7 +378,7 @@ function atualizarInimigoTeste(scene, time) {
     }
 
     if (!inimigo.remoteOnly) {
-          atualizarIAInimigo(scene, time, inimigo);
+      atualizarIAInimigo(scene, time, inimigo);
     }
     atualizarHitboxDanoInimigo(inimigo);
     atualizarDepthInimigo(inimigo, scene);
