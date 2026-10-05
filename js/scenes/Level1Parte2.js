@@ -275,8 +275,14 @@ class Level1Parte2 extends Phaser.Scene {
       if (!texture) return;
       let remote = this.remotePlayers.get(player.id);
       if (!remote) {
+        const initialFrame = {
+          up: 0,
+          left: 9,
+          down: 18,
+          right: 27,
+        }[player.direction] ?? 18;
         remote = this.add
-          .sprite(player.x, player.y, texture, 18)
+          .sprite(player.x, player.y, texture, initialFrame)
           .setOrigin(0.5, 0.5)
           .setAlpha(0.88)
           .setDepth(13);
@@ -306,8 +312,7 @@ class Level1Parte2 extends Phaser.Scene {
       if (
         player.attacking &&
         (remote.remoteAttackId !== player.attackId ||
-          remote.remoteAttackPhase !== attackPhase ||
-          !remote.anims.isPlaying)
+          remote.remoteAttackPhase !== attackPhase)
       ) {
         remote.remoteAttackId = player.attackId;
         remote.remoteAttackPhase = attackPhase;
@@ -420,18 +425,18 @@ class Level1Parte2 extends Phaser.Scene {
 
   atualizarInterpolacaoRemota() {
     this.remotePlayers.forEach((sprite) => {
-      sprite.x = Phaser.Math.Linear(sprite.x, sprite.targetX ?? sprite.x, 0.35);
-      sprite.y = Phaser.Math.Linear(sprite.y, sprite.targetY ?? sprite.y, 0.35);
-    });
-    this.remoteProjectiles.forEach((sprite) => {
       sprite.x = Phaser.Math.Linear(sprite.x, sprite.targetX ?? sprite.x, 0.55);
       sprite.y = Phaser.Math.Linear(sprite.y, sprite.targetY ?? sprite.y, 0.55);
+    });
+    this.remoteProjectiles.forEach((sprite) => {
+      sprite.x = Phaser.Math.Linear(sprite.x, sprite.targetX ?? sprite.x, 0.75);
+      sprite.y = Phaser.Math.Linear(sprite.y, sprite.targetY ?? sprite.y, 0.75);
     });
     this.inimigos
       ?.filter((enemy) => enemy.remoteOnly)
       .forEach((enemy) => {
-        enemy.x = Phaser.Math.Linear(enemy.x, enemy.targetX ?? enemy.x, 0.35);
-        enemy.y = Phaser.Math.Linear(enemy.y, enemy.targetY ?? enemy.y, 0.35);
+        enemy.x = Phaser.Math.Linear(enemy.x, enemy.targetX ?? enemy.x, 0.55);
+        enemy.y = Phaser.Math.Linear(enemy.y, enemy.targetY ?? enemy.y, 0.55);
       });
   }
 
