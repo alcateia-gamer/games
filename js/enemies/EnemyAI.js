@@ -252,6 +252,14 @@ function atualizarIAInimigo(scene, time, inimigo = scene.inimigoTeste) {
   if (!alvo || alvo.active === false || !inimigo || !inimigo.active) {
     return;
   }
+
+  if (
+    scene.multiplayer !== true &&
+    inimigo.combatKnockbackUntil > time
+  ) {
+    return;
+  }
+
   inimigo.alvoAtual = alvo;
 
   const distancia = Phaser.Math.Distance.Between(

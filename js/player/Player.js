@@ -3,6 +3,7 @@ import { dispararProjetil } from "./PlayerProjectiles.js";
 
 import { causarDanoInimigo } from "../enemies/EnemyTest.js";
 import { tocarSomKatanaAcerto, tocarSomKatanaErro } from "../sounds/katana.js";
+import { COMBAT_FEEL } from "../combat/CombatEffects.js";
 
 function debugHitboxesAtivado(scene) {
   return !!scene?.game?.config?.physics?.arcade?.debug;
@@ -187,6 +188,16 @@ function criarPlayer(scene) {
     // =================================================
 
     scene.atacando = false;
+
+    if (
+      scene.multiplayer !== true &&
+      scene.attackBufferedUntil > scene.time.now
+    ) {
+      scene.attackBufferedUntil = 0;
+      atacar(scene);
+      return;
+    }
+    scene.attackBufferedUntil = 0;
 
     // =================================================
     // VOLTA PARA WALK
@@ -578,6 +589,10 @@ function atacar(scene) {
   // =====================================================
 
   if (scene.atacando) {
+    if (scene.multiplayer !== true && scene.time) {
+      scene.attackBufferedUntil =
+        scene.time.now + COMBAT_FEEL.inputBufferMs;
+    }
     return;
   }
 

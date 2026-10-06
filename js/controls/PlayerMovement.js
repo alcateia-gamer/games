@@ -49,7 +49,11 @@ function atualizarMovimento(scene) {
   const velocidadeTurbo = scene.speedTurbo ?? 400;
   const usandoTurbo =
     !!scene.developerMode && !!scene.teclaShift && scene.teclaShift.isDown;
-  const velocidadeAtual = usandoTurbo ? velocidadeTurbo : velocidadeBase;
+  const velocidadeAtualBase = usandoTurbo ? velocidadeTurbo : velocidadeBase;
+  const velocidadeAtual =
+    !scene.multiplayer && scene.atacando
+      ? velocidadeAtualBase * 0.72
+      : velocidadeAtualBase;
 
   // MOVIMENTO E CAMINHADA
   if (movimentoX !== 0 || movimentoY !== 0) {

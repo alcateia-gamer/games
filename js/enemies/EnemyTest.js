@@ -25,6 +25,8 @@ function criarInimigoTeste(scene, config = {}) {
 
   inimigo.setDepth(12);
   inimigo.setScale(tipoRobo === "serra" ? 0.36 : 0.23);
+  inimigo.baseScaleX = inimigo.scaleX;
+  inimigo.baseScaleY = inimigo.scaleY;
   inimigo.setAlpha(1);
   if (tipoRobo === "padrao" && inimigo.postFX) {
     inimigo.efeitoCores = inimigo.postFX.addColorMatrix();

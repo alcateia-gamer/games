@@ -156,7 +156,9 @@ function atualizarProjeteis(scene, delta = 0) {
       return;
     }
 
-    causarDanoInimigo(scene, inimigoAtingido, projetil.dano);
+    causarDanoInimigo(scene, inimigoAtingido, projetil.dano, {
+      playSound: true,
+    });
     destruirProjetil(projetil);
   });
 }

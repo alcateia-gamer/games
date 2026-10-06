@@ -1,7 +1,13 @@
 import { notificarGrupo } from "./EnemyAI.js";
 import { tocarSomMorteRobo } from "../sounds/inimigos.js";
+import { playHitEffects } from "../combat/CombatEffects.js";
 
-function causarDanoInimigo(scene, alvoOuQuantidade, quantidadeOpcional) {
+function causarDanoInimigo(
+  scene,
+  alvoOuQuantidade,
+  quantidadeOpcional,
+  options = {},
+) {
   const alvo =
     typeof alvoOuQuantidade === "object" && alvoOuQuantidade
       ? alvoOuQuantidade
@@ -37,6 +43,7 @@ function causarDanoInimigo(scene, alvoOuQuantidade, quantidadeOpcional) {
   }
 
   notificarGrupo(scene, alvo);
+  playHitEffects(scene, scene.player, alvo, quantidade, options);
 
   if (alvo.vida <= 0) {
     destruirInimigoTeste(scene, alvo);

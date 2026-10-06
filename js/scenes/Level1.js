@@ -293,6 +293,14 @@ class Level1 extends Phaser.Scene {
       return;
     }
 
+    if (!this.multiplayer && this.combatHitStopRemaining > 0) {
+      this.combatHitStopRemaining -= delta;
+      if (this.combatHitStopRemaining > 0) {
+        return;
+      }
+      this.combatHitStopRemaining = 0;
+    }
+
     // =====================================================
     // CONTROLES
     // =====================================================
