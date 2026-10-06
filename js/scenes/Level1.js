@@ -184,6 +184,7 @@ class Level1 extends Phaser.Scene {
 
       camera.once("camerafadeoutcomplete", () => {
         this.player.setPosition(x, y);
+        this.companionPet?.setPosition(x - 45, y + 35);
         camera.fadeIn(250, 0, 0, 0);
 
         this.time.delayedCall(400, () => {
