@@ -1,5 +1,17 @@
 import { atacar, soltarAtaque } from "../player/Player.js";
 
+function ponteiroEhToque(pointer) {
+  return (
+    pointer?.pointerType === "touch" ||
+    pointer?.wasTouch === true ||
+    pointer?.event?.pointerType === "touch"
+  );
+}
+
+function ponteiroEhMouse(pointer) {
+  return !ponteiroEhToque(pointer) && pointer?.pointerType !== "pen";
+}
+
 function criarControlesAtaque(scene) {
   // BOTÃO DE ATAQUE
   scene.botaoAtaque = scene.add.circle(720, 350, 46, 0xffffff, 0.9);
@@ -38,14 +50,15 @@ function criarControlesAtaque(scene) {
   scene.iconeAtaque.fillStyle(0x555555, 1);
   scene.iconeAtaque.fillCircle(0, 31, 5);
 
-  // INCLINAÇÃO E ÁREA CLICÁVEL DA ESPADA
+  // INCLINAÇÃO DA ESPADA
   scene.iconeAtaque.setAngle(18);
-  scene.iconeAtaque.setInteractive(
-    new Phaser.Geom.Rectangle(-25, -40, 50, 80),
-    Phaser.Geom.Rectangle.Contains,
-  );
 
-  const apertarBotao = () => {
+  const apertarBotao = (pointer) => {
+    if (scene.pointerAtaque === pointer?.id) {
+      return;
+    }
+
+    scene.pointerAtaque = pointer?.id ?? null;
     scene.botaoAtaque.setScale(0.92);
     scene.iconeAtaque.setScale(0.92);
     atacar(scene);
@@ -56,21 +69,30 @@ function criarControlesAtaque(scene) {
     scene.iconeAtaque.setScale(1);
   };
 
-  const soltarAtaqueAtual = () => {
+  const soltarAtaqueAtual = (pointer) => {
+    if (
+      ponteiroEhToque(pointer) &&
+      scene.pointerAtaque !== (pointer?.id ?? null)
+    ) {
+      return;
+    }
+
     soltarBotao();
     soltarAtaque(scene);
+    scene.pointerAtaque = null;
   };
 
-  // BOTÃO NA TELA E ESPADA
+  // Somente o círculo é interativo; a espada é parte visual do botão.
   scene.botaoAtaque.on("pointerdown", apertarBotao);
   scene.botaoAtaque.on("pointerup", soltarAtaqueAtual);
   scene.botaoAtaque.on("pointerout", soltarBotao);
-  scene.iconeAtaque.on("pointerdown", apertarBotao);
-  scene.iconeAtaque.on("pointerup", soltarAtaqueAtual);
-  scene.iconeAtaque.on("pointerout", soltarBotao);
 
   // BOTÃO ESQUERDO DO MOUSE
   scene.input.on("pointerdown", (pointer, objetosClicados) => {
+    if (!ponteiroEhMouse(pointer)) {
+      return;
+    }
+
     if (!pointer.leftButtonDown()) {
       return;
     }
@@ -80,9 +102,16 @@ function criarControlesAtaque(scene) {
     }
 
     atacar(scene);
+    scene.pointerAtaque = pointer.id;
   });
 
-  scene.input.on("pointerup", soltarAtaqueAtual);
+  scene.input.on("pointerup", (pointer) => {
+    if (scene.pointerAtaque !== pointer.id) {
+      return;
+    }
+
+    soltarAtaqueAtual(pointer);
+  });
 }
 
 export { criarControlesAtaque };

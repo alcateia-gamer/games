@@ -14,7 +14,7 @@ var config = {
       debug: false,
     },
   },
-  pointers: {
+  input: {
     activePointers: 3,
   },
   scale: {

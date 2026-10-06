@@ -9,6 +9,29 @@ import MultiplayerLobby from "../scenes/MultiplayerLobby.js";
 import MqttClient from "../mqttClient.js";
 import MultiplayerManager from "../multiplayer/multiplayerManager.js";
 
+function atualizarEscalaComViewport(game) {
+  game.scale.refresh();
+}
+
+function registrarAtualizacaoDeViewport(game) {
+  const atualizar = () => {
+    window.requestAnimationFrame(() => atualizarEscalaComViewport(game));
+  };
+
+  window.addEventListener("resize", atualizar, { passive: true });
+  window.addEventListener("orientationchange", atualizar, { passive: true });
+  document.addEventListener("fullscreenchange", atualizar, { passive: true });
+  document.addEventListener("webkitfullscreenchange", atualizar, {
+    passive: true,
+  });
+
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", atualizar, {
+      passive: true,
+    });
+  }
+}
+
 class Game extends Phaser.Game {
   constructor() {
     super(config);
@@ -34,4 +57,5 @@ class Game extends Phaser.Game {
 
 window.onload = () => {
   const game = new Game();
+  registrarAtualizacaoDeViewport(game);
 };
