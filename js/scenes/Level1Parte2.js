@@ -312,9 +312,7 @@ class Level1Parte2 extends Phaser.Scene {
         remote.remoteAttackId = player.attacking
           ? Math.max(0, player.attackId - 1)
           : player.attackId;
-        remote.remoteAttackPhase = player.attacking
-          ? "normal"
-          : attackPhase;
+        remote.remoteAttackPhase = player.attacking ? "normal" : attackPhase;
         remote.remoteAttackDirection = attackDirection;
       }
       remote.targetX = player.x;
@@ -326,9 +324,7 @@ class Level1Parte2 extends Phaser.Scene {
           (player.attacking &&
             (remote.remoteAttackPhase !== attackPhase ||
               remote.remoteAttackDirection !== attackDirection)));
-      if (
-        attackChanged
-      ) {
+      if (attackChanged) {
         remote.remoteAttackId = player.attackId;
         remote.remoteAttackPhase = attackPhase;
         remote.remoteAttackDirection = attackDirection;
@@ -348,9 +344,7 @@ class Level1Parte2 extends Phaser.Scene {
         remote.remoteAttackActive = false;
         remote.remoteAnimationKey = walkKey;
         remote.anims.play(walkKey, true);
-      } else if (
-        !player.attacking && !stillMoving
-      ) {
+      } else if (!player.attacking && !stillMoving) {
         remote.remoteAttackActive = false;
         remote.setTexture(texture);
         remote.anims.stop();
@@ -460,12 +454,28 @@ class Level1Parte2 extends Phaser.Scene {
   atualizarInterpolacaoRemota(delta = 0) {
     const alpha = 1 - Math.exp((-12 * Math.max(0, delta)) / 1000);
     this.remotePlayers.forEach((sprite) => {
-      sprite.x = Phaser.Math.Linear(sprite.x, sprite.targetX ?? sprite.x, alpha);
-      sprite.y = Phaser.Math.Linear(sprite.y, sprite.targetY ?? sprite.y, alpha);
+      sprite.x = Phaser.Math.Linear(
+        sprite.x,
+        sprite.targetX ?? sprite.x,
+        alpha,
+      );
+      sprite.y = Phaser.Math.Linear(
+        sprite.y,
+        sprite.targetY ?? sprite.y,
+        alpha,
+      );
     });
     this.remoteProjectiles.forEach((sprite) => {
-      sprite.x = Phaser.Math.Linear(sprite.x, sprite.targetX ?? sprite.x, alpha);
-      sprite.y = Phaser.Math.Linear(sprite.y, sprite.targetY ?? sprite.y, alpha);
+      sprite.x = Phaser.Math.Linear(
+        sprite.x,
+        sprite.targetX ?? sprite.x,
+        alpha,
+      );
+      sprite.y = Phaser.Math.Linear(
+        sprite.y,
+        sprite.targetY ?? sprite.y,
+        alpha,
+      );
     });
     this.inimigos
       ?.filter((enemy) => enemy.remoteOnly)

@@ -1,54 +1,34 @@
-<!DOCTYPE html>
+<!doctype html>
 
 <html lang="pt_BR">
-
-<head>
-
+  <head>
     <meta charset="UTF-8" />
 
     <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
     />
 
     <title>Meu primeiro jogo</title>
     <link rel="icon" href="data:;base64,=" />
     <link rel="manifest" href="manifest.webmanifest" />
 
-    <link
-        rel="stylesheet"
-        href="style.css"
-    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
 
-</head>
-
-
-<body>
-
+  <body>
     <div id="game-container"></div>
 
-
     <!-- PHASER -->
-    <script
-        src="./js/libs/phaser.min.js">
-    </script>
-
+    <script src="./js/libs/phaser.min.js"></script>
 
     <!-- REX VIRTUAL JOYSTICK -->
-    <script
-        src="./js/libs/rexvirtualjoystickplugin.min.js">
-    </script>
+    <script src="./js/libs/rexvirtualjoystickplugin.min.js"></script>
 
     <!-- MQTT sobre WebSocket -->
     <script src="https://unpkg.com/mqtt@5.10.4/dist/mqtt.min.js"></script>
 
-
     <!-- JOGO -->
-    <script
-        type="module"
-        src="./js/core/game.js">
-    </script>
-
-</body>
-
+    <script type="module" src="./js/core/game.js"></script>
+  </body>
 </html>

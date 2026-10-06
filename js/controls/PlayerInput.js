@@ -86,9 +86,7 @@ function criarControleFullscreen(scene) {
     document.fullscreenElement || document.webkitFullscreenElement;
   const podeEntrarFullscreen = () => {
     const elemento = elementoFullscreen();
-    return !!(
-      elemento.requestFullscreen || elemento.webkitRequestFullscreen
-    );
+    return !!(elemento.requestFullscreen || elemento.webkitRequestFullscreen);
   };
 
   const entrarFullscreen = async () => {

@@ -2,10 +2,7 @@
   "name": "Meu primeiro jogo",
   "short_name": "Meu primeiro jogo",
   "start_url": "./",
-  "display_override": [
-    "fullscreen",
-    "standalone"
-  ],
+  "display_override": ["fullscreen", "standalone"],
   "display": "fullscreen",
   "orientation": "landscape",
   "background_color": "#000000",
