@@ -209,7 +209,7 @@ function escolherDirecao(scene, pet, alvo, velocidade) {
   return melhor;
 }
 
-function criarCompanionPet(scene) {
+function criarCompanionPet(scene, profundidadeFixa = null) {
   criarAnimacoesCompanionPet(scene);
   const pet = scene.physics.add.sprite(
     scene.player.x - 45,
@@ -217,8 +217,9 @@ function criarCompanionPet(scene) {
     "robo-pet",
   );
   pet.setScale(0.2);
-  pet.setDepth(13);
+  pet.setDepth(profundidadeFixa ?? 13);
   pet.setData("isCompanionPet", true);
+  pet.setData("profundidadeFixa", profundidadeFixa);
   pet.config = { ...COMPANION_CONFIG };
   pet.body.setAllowGravity(false);
   pet.body.setImmovable(true);
@@ -435,6 +436,11 @@ function atualizarAnimacaoCompanionPet(pet, velocidadeX, velocidadeY) {
 function atualizarDepthCompanionPet(scene) {
   const pet = scene.companionPet;
   if (!pet?.active) {
+    return;
+  }
+  const profundidadeFixa = pet.getData("profundidadeFixa");
+  if (typeof profundidadeFixa === "number") {
+    pet.setDepth(profundidadeFixa);
     return;
   }
   const footY = pet.body?.bottom ?? pet.getBounds().bottom;

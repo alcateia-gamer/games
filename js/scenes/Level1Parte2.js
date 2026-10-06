@@ -104,7 +104,7 @@ class Level1Parte2 extends Phaser.Scene {
     criarPlayer(this);
     this.definirProfundidadePersonagem(this.profundidadePersonagemParte2);
     if (!this.multiplayer) {
-      criarCompanionPet(this);
+      criarCompanionPet(this, 25.5);
     }
 
     this.criarTeleporteRetornoParte1();
