@@ -45,10 +45,13 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
       x: Number.isFinite(player.x) ? player.x : -490,
       y: Number.isFinite(player.y) ? player.y : 8823,
       direction: player.direction || "down",
+      moving: Boolean(player.moving),
       attacking: Boolean(player.attacking),
       attackDirection: player.attackDirection || player.direction || "down",
       attackId: Number(player.attackId) || 0,
       attackPhase: player.attackPhase || "normal",
+      attackStartedAt: Number(player.attackStartedAt) || 0,
+      serverTick: Number(player.serverTick) || 0,
       projectiles: Array.isArray(player.projectiles) ? player.projectiles : [],
       lastSeen: Number(player.lastSeen) || Date.now(),
     };
@@ -72,6 +75,7 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
 
   enterRoom(code, host) {
     this.leaveRoom(false);
+    this.lastSentPlayerState = null;
     this.roomTopic = `room/${code}`;
     ["state", "action", "presence"].forEach((suffix) =>
       this.mqtt.subscribe(`${this.roomTopic}/${suffix}`),
@@ -111,7 +115,7 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
       !Array.isArray(data.players)
     )
       return;
-    if (!this.room || data.revision >= (this.room.revision || 0)) {
+    if (!this.room || data.revision > (this.room.revision || 0)) {
       this.room = {
         ...data,
         players: data.players.map((player) => this.normalizePlayer(player)),
@@ -218,13 +222,18 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
       this.publishState();
       this.emit("gameStarted", this.room);
     } else if (action.type === "game_state" && player) {
+      const previousAttackId = player.attackId;
       player.x = Number.isFinite(action.x) ? action.x : player.x;
       player.y = Number.isFinite(action.y) ? action.y : player.y;
       player.direction = action.direction || player.direction;
+      player.moving = Boolean(action.moving);
       player.attacking = Boolean(action.attacking);
       player.attackDirection = action.attackDirection || player.direction;
       player.attackId = Number(action.attackId) || player.attackId;
       player.attackPhase = action.attackPhase || "normal";
+      if (player.attacking && player.attackId !== previousAttackId) {
+        player.attackStartedAt = Date.now();
+      }
       player.projectiles = Array.isArray(action.projectiles)
         ? action.projectiles
         : [];
@@ -257,6 +266,11 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
     if (!this.room) return;
     this.room.revision = (this.room.revision || 0) + 1;
     this.room.updatedAt = Date.now();
+    this.room.serverTime = this.room.updatedAt;
+    this.room.serverTick = Math.floor(this.room.serverTime / (1000 / 30));
+    this.room.players.forEach((player) => {
+      player.serverTick = this.room.serverTick;
+    });
     this.mqtt.publish(`${this.roomTopic}/state`, this.room, {
       retain: options.retain ?? true,
       qos: options.qos ?? 1,
@@ -376,27 +390,52 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
     x,
     y,
     direction,
+    moving = false,
     attacking = false,
     attackDirection = direction,
     attackId = 0,
     attackPhase = "normal",
     projectiles = [],
   ) {
+    const nextState = {
+      x,
+      y,
+      direction,
+      moving: Boolean(moving),
+      attacking: Boolean(attacking),
+      attackDirection,
+      attackId: Number(attackId) || 0,
+      attackPhase,
+      projectiles,
+    };
+    const projectilesKey = JSON.stringify(projectiles);
+    const previousState = this.lastSentPlayerState;
+    if (
+      previousState &&
+      previousState.x === nextState.x &&
+      previousState.y === nextState.y &&
+      previousState.direction === nextState.direction &&
+      previousState.moving === nextState.moving &&
+      previousState.attacking === nextState.attacking &&
+      previousState.attackDirection === nextState.attackDirection &&
+      previousState.attackId === nextState.attackId &&
+      previousState.attackPhase === nextState.attackPhase &&
+      previousState.projectilesKey === projectilesKey
+    ) {
+      return false;
+    }
+
+    this.lastSentPlayerState = { ...nextState, projectilesKey };
     this.publishAction(
       {
         type: "game_state",
         playerId: this.playerId,
-        x,
-        y,
-        direction,
-        attacking,
-        attackDirection,
-        attackId,
-        attackPhase,
+        ...nextState,
         projectiles,
       },
       { qos: 0 },
     );
+    return true;
   }
 
   publishEnemyState(enemies) {
@@ -415,6 +454,8 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
         targetY:
           this.room.players.find((player) => player.id === enemy.alvoPlayerId)
             ?.y ?? null,
+        alerta: Boolean(enemy.alerta),
+        estado: enemy.estado || "idle",
         attackId: enemy.networkAttackId || 0,
         visual: enemy.visualAtual,
         vida: enemy.vida,

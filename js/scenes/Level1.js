@@ -337,7 +337,7 @@ class Level1 extends Phaser.Scene {
     if (!this.multiplayer) {
       atualizarCompanionPet(this, time, delta);
     }
-    this.atualizarInterpolacaoRemota();
+    this.atualizarInterpolacaoRemota(delta);
 
     if (
       this.multiplayer &&
@@ -372,6 +372,7 @@ class Level1 extends Phaser.Scene {
         this.player.x,
         this.player.y,
         this.direcaoAtual,
+        this.player.body?.velocity?.lengthSq() > 0,
         this.atacando,
         this.direcaoAtaque ?? this.direcaoAtual,
         this.networkAttackId,
@@ -444,6 +445,8 @@ class Level1 extends Phaser.Scene {
       enemy.targetX = data.x;
       enemy.targetY = data.y;
       enemy.direcaoAtual = data.direction || enemy.direcaoAtual;
+      enemy.alerta = Boolean(data.alerta || data.visual === "alerta");
+      enemy.estado = data.estado || (enemy.alerta ? "alerta" : "idle");
       enemy.visualAtual = data.visual || enemy.visualAtual;
       enemy.vida = data.vida;
       enemy.vidaMaxima = data.vidaMaxima || enemy.vidaMaxima;
@@ -483,13 +486,15 @@ class Level1 extends Phaser.Scene {
       }[player.character];
       if (!texture) return;
       let remote = this.remotePlayers.get(player.id);
+      const remoteFoiCriado = !remote;
       if (!remote) {
-        const initialFrame = {
-          up: 0,
-          left: 9,
-          down: 18,
-          right: 27,
-        }[player.direction] ?? 18;
+        const initialFrame =
+          {
+            up: 0,
+            left: 9,
+            down: 18,
+            right: 27,
+          }[player.direction] ?? 18;
         remote = this.add
           .sprite(player.x, player.y, texture, initialFrame)
           .setOrigin(0.5, 0.5)
@@ -500,6 +505,8 @@ class Level1 extends Phaser.Scene {
         remote.targetY = player.y;
         remote.remoteAttackId = 0;
         remote.remoteAttackPhase = "normal";
+        remote.remoteAttackActive = false;
+        remote.remoteAnimationKey = null;
         this.remotePlayers.set(player.id, remote);
       }
       const projectileIds = new Set();
@@ -533,7 +540,9 @@ class Level1 extends Phaser.Scene {
           this.remoteProjectiles.delete(projectileKey);
         }
       });
-      if (remote.texture.key !== texture) remote.setTexture(texture);
+      if (remote.texture.key !== texture && !remote.remoteAttackActive) {
+        remote.setTexture(texture);
+      }
       const direction = player.direction || "down";
       const attackDirection = player.attackDirection || direction;
       const walkKey = `remote-${player.character}-walk-${direction}`;
@@ -542,33 +551,51 @@ class Level1 extends Phaser.Scene {
         player.character === "personagem3" && attackPhase !== "normal"
           ? `remote-${player.character}-${attackPhase}-${attackDirection}`
           : `remote-${player.character}-attack-${attackDirection}`;
-      const targetChanged =
-        remote.targetX !== player.x || remote.targetY !== player.y;
+      if (remoteFoiCriado) {
+        remote.remoteAttackId = player.attacking
+          ? Math.max(0, player.attackId - 1)
+          : player.attackId;
+        remote.remoteAttackPhase = player.attacking
+          ? "normal"
+          : attackPhase;
+        remote.remoteAttackDirection = attackDirection;
+      }
       remote.targetX = player.x;
       remote.targetY = player.y;
-      const stillMoving =
-        targetChanged ||
-        Math.abs(remote.x - remote.targetX) > 2 ||
-        Math.abs(remote.y - remote.targetY) > 2;
-      if (
-        player.attacking &&
+      const stillMoving = Boolean(player.moving);
+      const attackChanged =
+        player.attackId > 0 &&
         (remote.remoteAttackId !== player.attackId ||
-          remote.remoteAttackPhase !== attackPhase)
+          (player.attacking &&
+            (remote.remoteAttackPhase !== attackPhase ||
+              remote.remoteAttackDirection !== attackDirection)));
+      if (
+        attackChanged
       ) {
         remote.remoteAttackId = player.attackId;
         remote.remoteAttackPhase = attackPhase;
-        remote.anims.play(attackKey, true);
+        remote.remoteAttackDirection = attackDirection;
+        remote.remoteAttackActive = true;
+        remote.remoteAnimationKey = attackKey;
+        remote.anims.play(attackKey, false);
       } else if (
         !player.attacking &&
-        (stillMoving || remote.anims.currentAnim?.key !== walkKey)
+        remote.remoteAttackActive &&
+        remote.anims.isPlaying
       ) {
+      } else if (
+        !player.attacking &&
+        stillMoving &&
+        remote.remoteAnimationKey !== walkKey
+      ) {
+        remote.remoteAttackActive = false;
+        remote.remoteAnimationKey = walkKey;
         remote.anims.play(walkKey, true);
       } else if (
-        !player.attacking &&
-        !stillMoving &&
-        remote.anims.currentAnim?.key === walkKey
+        !player.attacking && !stillMoving
       ) {
-        remote.anims.stop();
+        remote.remoteAttackActive = false;
+        remote.setTexture(texture);
         const idleFrame =
           direction === "up"
             ? 0
@@ -577,7 +604,15 @@ class Level1 extends Phaser.Scene {
               : direction === "right"
                 ? 27
                 : 18;
-        remote.setFrame(idleFrame);
+        if (
+          remote.anims.isPlaying ||
+          remote.frame?.name !== idleFrame ||
+          remote.remoteAnimationKey !== `idle-${direction}`
+        ) {
+          remote.anims.stop();
+          remote.setFrame(idleFrame);
+          remote.remoteAnimationKey = `idle-${direction}`;
+        }
       }
     });
     this.remotePlayers.forEach((sprite, id) => {
@@ -588,20 +623,21 @@ class Level1 extends Phaser.Scene {
     });
   }
 
-  atualizarInterpolacaoRemota() {
+  atualizarInterpolacaoRemota(delta = 0) {
+    const alpha = 1 - Math.exp((-12 * Math.max(0, delta)) / 1000);
     this.remotePlayers.forEach((sprite) => {
-      sprite.x = Phaser.Math.Linear(sprite.x, sprite.targetX ?? sprite.x, 0.55);
-      sprite.y = Phaser.Math.Linear(sprite.y, sprite.targetY ?? sprite.y, 0.55);
+      sprite.x = Phaser.Math.Linear(sprite.x, sprite.targetX ?? sprite.x, alpha);
+      sprite.y = Phaser.Math.Linear(sprite.y, sprite.targetY ?? sprite.y, alpha);
     });
     this.remoteProjectiles.forEach((sprite) => {
-      sprite.x = Phaser.Math.Linear(sprite.x, sprite.targetX ?? sprite.x, 0.75);
-      sprite.y = Phaser.Math.Linear(sprite.y, sprite.targetY ?? sprite.y, 0.75);
+      sprite.x = Phaser.Math.Linear(sprite.x, sprite.targetX ?? sprite.x, alpha);
+      sprite.y = Phaser.Math.Linear(sprite.y, sprite.targetY ?? sprite.y, alpha);
     });
     this.inimigos
       ?.filter((enemy) => enemy.remoteOnly)
       .forEach((enemy) => {
-        enemy.x = Phaser.Math.Linear(enemy.x, enemy.targetX ?? enemy.x, 0.55);
-        enemy.y = Phaser.Math.Linear(enemy.y, enemy.targetY ?? enemy.y, 0.55);
+        enemy.x = Phaser.Math.Linear(enemy.x, enemy.targetX ?? enemy.x, alpha);
+        enemy.y = Phaser.Math.Linear(enemy.y, enemy.targetY ?? enemy.y, alpha);
       });
   }
 
