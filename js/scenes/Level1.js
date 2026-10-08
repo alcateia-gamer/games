@@ -46,6 +46,7 @@ import {
   criarSistemaProjeteis,
   atualizarProjeteis,
 } from "../player/PlayerProjectiles.js";
+import EnemySpawnManager from "../enemies/EnemySpawnManager.js";
 
 const DEBUG_TELEPORTES = false;
 // =====================================================
@@ -239,6 +240,7 @@ class Level1 extends Phaser.Scene {
 
     this.inimigos = [];
     this.inimigoTeste = null;
+    this.enemySpawnManager = new EnemySpawnManager(this, this.map);
     this.teclaSpawnRobo1 = this.input.keyboard.addKey(
       Phaser.Input.Keyboard.KeyCodes.ONE,
     );
@@ -342,6 +344,7 @@ class Level1 extends Phaser.Scene {
     }
 
     atualizarInimigoTeste(this, time);
+    this.enemySpawnManager?.update(time);
     atualizarProjeteis(this, delta);
     if (!this.multiplayer) {
       atualizarCompanionPet(this, time, delta);
