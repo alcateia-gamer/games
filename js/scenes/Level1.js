@@ -47,6 +47,7 @@ import {
   atualizarProjeteis,
 } from "../player/PlayerProjectiles.js";
 import EnemySpawnManager from "../enemies/EnemySpawnManager.js";
+import WeatherShader from "../effects/WeatherShader.js";
 
 const DEBUG_TELEPORTES = false;
 // =====================================================
@@ -262,6 +263,26 @@ class Level1 extends Phaser.Scene {
 
     this.cameras.main.setZoom(1);
 
+    this.weather = null;
+    this.teclaClima = this.input.keyboard.addKey(
+      Phaser.Input.Keyboard.KeyCodes.F6,
+    );
+    this.teclaModoClima = this.input.keyboard.addKey(
+      Phaser.Input.Keyboard.KeyCodes.F7,
+    );
+    this.teclaIntensidadeClima = this.input.keyboard.addKey(
+      Phaser.Input.Keyboard.KeyCodes.F8,
+    );
+    this.climaAtivo = true;
+    this.climaModo = "rain";
+    this.climaIntensidade = 200;
+
+    if (this.game.renderer.type === Phaser.WEBGL) {
+      this.weather = new WeatherShader(this, "rain");
+    } else {
+      console.warn("[Weather] Shader indisponível: WebGL necessário.");
+    }
+
     // =====================================================
     // COORDENADAS
     // =====================================================
@@ -291,6 +312,35 @@ class Level1 extends Phaser.Scene {
   // =====================================================
 
   update(time, delta) {
+    this.weather?.update(time, delta);
+
+    if (
+      this.weather &&
+      Phaser.Input.Keyboard.JustDown(this.teclaClima)
+    ) {
+      this.climaAtivo = !this.climaAtivo;
+      this.weather.shader.setVisible(this.climaAtivo);
+    }
+
+    if (
+      this.weather &&
+      Phaser.Input.Keyboard.JustDown(this.teclaModoClima)
+    ) {
+      this.climaModo = this.climaModo === "rain" ? "snow" : "rain";
+      this.weather.setMode(this.climaModo);
+    }
+
+    if (
+      this.weather &&
+      Phaser.Input.Keyboard.JustDown(this.teclaIntensidadeClima)
+    ) {
+      const intensidades = [100, 200, 300];
+      const indiceAtual = intensidades.indexOf(this.climaIntensidade);
+      this.climaIntensidade =
+        intensidades[(indiceAtual + 1) % intensidades.length];
+      this.weather.setIntensity(this.climaIntensidade);
+    }
+
     if (this.morteEmAndamento) {
       return;
     }
