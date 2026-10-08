@@ -1,5 +1,5 @@
 const ROOM_CODE = /^[A-Z0-9]{4,6}$/;
-const CHARACTER_IDS = ["standard", "personagem2", "personagem3", "personagem4"];
+const CHARACTER_IDS = ["kai-mercer", "magnus-force", "aria-kade", "nyx"];
 const MAX_PLAYERS = 4;
 const HEARTBEAT_MS = 3000;
 const PLAYER_TIMEOUT_MS = 10000;

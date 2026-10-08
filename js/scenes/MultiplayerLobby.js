@@ -1,8 +1,8 @@
 const CHARACTER_NAMES = {
-  standard: "KAI MERCER",
-  personagem2: "MAGNUS FORCE",
-  personagem3: "ARIA KADE",
-  personagem4: "NYX",
+  "kai-mercer": "KAI MERCER",
+  "magnus-force": "MAGNUS FORCE",
+  "aria-kade": "ARIA KADE",
+  "nyx": "NYX",
 };
 
 class MultiplayerLobby extends Phaser.Scene {
@@ -18,7 +18,7 @@ class MultiplayerLobby extends Phaser.Scene {
       const row = this.add.text(110, 125 + index * 46, "", { color: "#9dffb9", fontFamily: "monospace", fontSize: "14px" });
       this.rows.push(row);
     }
-    this.characterButtons = ["standard", "personagem2", "personagem3", "personagem4"].map((id, index) => {
+    this.characterButtons = ["kai-mercer", "magnus-force", "aria-kade", "nyx"].map((id, index) => {
       const button = this.createButton(180 + index * 145, 340, CHARACTER_NAMES[id], 132, 34);
       button.on("buttondown", () => this.manager.selectCharacter(id));
       return button;
@@ -64,7 +64,7 @@ class MultiplayerLobby extends Phaser.Scene {
     if (this.started) return;
     this.started = true;
     const local = room.players.find((player) => player.id === this.manager.playerId);
-    this.scene.start("preloader", { personagem: local?.character || "standard", multiplayer: true });
+    this.scene.start("preloader", { personagem: local?.character || "kai-mercer", multiplayer: true });
   }
 
   createButton(x, y, label, width, height) {

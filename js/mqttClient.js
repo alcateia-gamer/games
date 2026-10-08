@@ -9,7 +9,7 @@ function generateClientId() {
 }
 
 class MqttClient extends Phaser.Events.EventEmitter {
-  constructor({ brokerUrl, topicPrefix = "nexus", reconnectPeriod = 2000 } = {}) {
+  constructor({ brokerUrl, topicPrefix = "nullborns", reconnectPeriod = 2000 } = {}) {
     super();
     this.brokerUrl = brokerUrl;
     this.topicPrefix = topicPrefix.replace(/\/$/, "");

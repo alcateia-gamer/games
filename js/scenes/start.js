@@ -55,7 +55,7 @@ class Start extends Phaser.Scene {
     this.height = this.scale.height;
     this.columns = [];
     this.sequenceStarted = false;
-    this.selectedCharacter = "standard";
+    this.selectedCharacter = "kai-mercer";
 
     if (this.scene.settings.data?.abrirMenu) {
       this.mode = "menu";
@@ -366,15 +366,15 @@ class Start extends Phaser.Scene {
     const characters = [
       // frame escolhe o retrato dentro da spritesheet; altere scale apenas o tamanho exibido.
       {
-        id: "standard",
+        id: "kai-mercer",
         x: this.width / 2 - 276,
         texture: "start-character",
         frame: 26,
         scale: 1.45,
-        name: "OPERADOR // 01",
+        name: "KAI MERCER // 01",
       },
       {
-        id: "personagem2",
+        id: "magnus-force",
         x: this.width / 2 - 92,
         texture: "start-character-2",
         frame: 18,
@@ -382,7 +382,7 @@ class Start extends Phaser.Scene {
         name: "MAGNUS FORCE // 02",
       },
       {
-        id: "personagem3",
+        id: "aria-kade",
         x: this.width / 2 + 92,
         texture: "start-character-3",
         frame: 18,
@@ -390,12 +390,12 @@ class Start extends Phaser.Scene {
         name: "ARIA KADE // 03",
       },
       {
-        id: "personagem4",
+        id: "nyx",
         x: this.width / 2 + 276,
         texture: "start-character-4",
         frame: 18,
         scale: 1.5,
-        name: "OPERADORA // 04",
+        name: "NYX // 04",
       },
     ];
     const characterViews = characters.map((character) => {

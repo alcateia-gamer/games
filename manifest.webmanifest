@@ -1,6 +1,6 @@
 {
-  "name": "Meu primeiro jogo",
-  "short_name": "Meu primeiro jogo",
+  "name": "NULLBORNS",
+  "short_name": "NULLBORNS",
   "start_url": "./",
   "display_override": ["fullscreen", "standalone"],
   "display": "fullscreen",

@@ -11,7 +11,7 @@ var config = {
     default: "arcade",
     arcade: {
       gravity: { x: 0, y: 0 },
-      debug: false,
+      debug: true,
     },
   },
   input: {
@@ -26,7 +26,7 @@ var config = {
   },
   mqtt: {
     brokerUrl: "wss://broker.hivemq.com:8884/mqtt",
-    topicPrefix: "nexus-night-city",
+    topicPrefix: "nullborns-night-city",
   },
 };
 

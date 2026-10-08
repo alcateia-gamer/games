@@ -4,9 +4,9 @@ function criarAnimacoesPlayer(scene) {
   const criarFramesIntercalados = (texture, indices) =>
     indices.map((frame) => ({ key: texture, frame }));
 
-  const personagem2 = scene.personagemSelecionada === "personagem2";
-  const personagem3 = scene.personagemSelecionada === "personagem3";
-  const personagem4 = scene.personagemSelecionada === "personagem4";
+  const personagem2 = scene.personagemSelecionada === "magnus-force";
+  const personagem3 = scene.personagemSelecionada === "aria-kade";
+  const personagem4 = scene.personagemSelecionada === "nyx";
 
   // Caminhada por direção: up = cima, left = esquerda, down = baixo, right = direita.
   // Nos personagens 2, 4 e padrão, cada par [início, fim] é um intervalo inclusivo.
@@ -184,7 +184,7 @@ function criarAnimacoesPlayer(scene) {
 
 function criarAnimacoesPersonagensRemotos(scene) {
   const personagens = {
-    standard: {
+    "kai-mercer": {
       walk: "walk",
       attack: "attack",
       walkFrames: {
@@ -200,7 +200,7 @@ function criarAnimacoesPersonagensRemotos(scene) {
         right: [18, 23],
       },
     },
-    personagem2: {
+    "magnus-force": {
       walk: "personagem2-walk",
       attack: "personagem2-attack",
       walkFrames: {
@@ -216,7 +216,7 @@ function criarAnimacoesPersonagensRemotos(scene) {
         right: [25, 33],
       },
     },
-    personagem3: {
+    "aria-kade": {
       walk: "personagem3-walk",
       attack: "personagem3-attack",
       walkFrames: {
@@ -232,7 +232,7 @@ function criarAnimacoesPersonagensRemotos(scene) {
         right: [39, 39],
       },
     },
-    personagem4: {
+    "nyx": {
       walk: "personagem4-walk",
       attack: "personagem4-attack",
       walkFrames: {
@@ -266,7 +266,7 @@ function criarAnimacoesPersonagensRemotos(scene) {
       }
     });
 
-    if (personagem === "personagem3") {
+    if (personagem === "aria-kade") {
       const phases = { charge: [0, 8], release: [9, 12] };
       Object.entries(config.attackFrames).forEach(([direcao, frames]) => {
         Object.entries(phases).forEach(([phase, phaseFrames]) => {

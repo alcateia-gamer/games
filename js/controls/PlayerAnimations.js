@@ -48,11 +48,11 @@ function atualizarAnimacaoParado(scene) {
     return;
   }
 
-  if (scene.personagemSelecionada === "personagem2") {
+  if (scene.personagemSelecionada === "magnus-force") {
     const framesParados = { up: 0, left: 9, down: 18, right: 27 };
     scene.player.anims.stop();
     scene.player.setFrame(framesParados[scene.direcaoAtual] ?? 18);
-  } else if (scene.personagemSelecionada === "personagem4") {
+  } else if (scene.personagemSelecionada === "nyx") {
     tocarAnimacaoSeNecessario(scene, `idle-${scene.direcaoAtual}`);
   } else {
     scene.player.anims.stop();

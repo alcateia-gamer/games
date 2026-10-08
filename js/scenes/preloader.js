@@ -579,7 +579,7 @@ class Preloader extends Phaser.Scene {
   create() {
     this.cameras.main.setBackgroundColor("#000000");
     this.personagemSelecionada =
-      this.scene.settings.data?.personagem || "standard";
+      this.scene.settings.data?.personagem || "kai-mercer";
     this.multiplayer = this.scene.settings.data?.multiplayer === true;
     this.iniciarCarregamento();
   }

@@ -58,7 +58,7 @@ class Level1Parte2 extends Phaser.Scene {
     this.respawnY = data.spawnY ?? -980;
     this.profundidadePersonagemParte2 =
       data.profundidadePersonagem ?? this.profundidadePersonagemParte2;
-    this.personagemSelecionada = data.personagem || "standard";
+    this.personagemSelecionada = data.personagem || "kai-mercer";
     this.multiplayer = data.multiplayer === true;
     this.multiplayerManager = this.game.registry.get("multiplayer");
     this.remotePlayers = new Map();
@@ -276,10 +276,10 @@ class Level1Parte2 extends Phaser.Scene {
         return;
       activeIds.add(player.id);
       const texture = {
-        standard: "walk",
-        personagem2: "personagem2-walk",
-        personagem3: "personagem3-walk",
-        personagem4: "personagem4-walk",
+        "kai-mercer": "walk",
+        "magnus-force": "personagem2-walk",
+        "aria-kade": "personagem3-walk",
+        "nyx": "personagem4-walk",
       }[player.character];
       if (!texture) return;
       let remote = this.remotePlayers.get(player.id);
@@ -313,7 +313,7 @@ class Level1Parte2 extends Phaser.Scene {
       const walkKey = `remote-${player.character}-walk-${direction}`;
       const attackPhase = player.attackPhase || "normal";
       const attackKey =
-        player.character === "personagem3" && attackPhase !== "normal"
+        player.character === "aria-kade" && attackPhase !== "normal"
           ? `remote-${player.character}-${attackPhase}-${attackDirection}`
           : `remote-${player.character}-attack-${attackDirection}`;
       if (remoteFoiCriado) {

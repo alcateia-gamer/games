@@ -4,21 +4,25 @@ import { dispararProjetil } from "./PlayerProjectiles.js";
 import { causarDanoInimigo } from "../enemies/EnemyTest.js";
 import { tocarSomKatanaAcerto, tocarSomKatanaErro } from "../sounds/katana.js";
 import { COMBAT_FEEL } from "../combat/CombatEffects.js";
+import {
+  obterConfiguracaoHitboxAtaque,
+  obterConfiguracaoHitboxWalk,
+} from "./colisoes/index.mjs";
 
 function debugHitboxesAtivado(scene) {
   return !!scene?.game?.config?.physics?.arcade?.debug;
 }
 
 function personagem2Ativa(scene) {
-  return scene.personagemSelecionada === "personagem2";
+  return scene.personagemSelecionada === "magnus-force";
 }
 
 function personagem3Ativa(scene) {
-  return scene.personagemSelecionada === "personagem3";
+  return scene.personagemSelecionada === "aria-kade";
 }
 
 function personagem4Ativa(scene) {
-  return scene.personagemSelecionada === "personagem4";
+  return scene.personagemSelecionada === "nyx";
 }
 
 function personagemKaiAtiva(scene) {
@@ -231,23 +235,15 @@ function configurarHitboxWalk(scene) {
     return;
   }
 
-  if (personagem2Ativa(scene)) {
-    scene.player.body.setSize(23, 11);
-    scene.player.body.setOffset(21, 47);
-    return;
-  }
-  if (personagem3Ativa(scene)) {
-    scene.player.body.setSize(30, 15);
-    scene.player.body.setOffset(50, 78);
-    return;
-  }
-  if (personagem4Ativa(scene)) {
-    scene.player.body.setSize(30, 15);
-    scene.player.body.setOffset(18, 45);
-    return;
-  }
-  scene.player.body.setSize(30, 15);
-  scene.player.body.setOffset(49, 82);
+  const configuracao = obterConfiguracaoHitboxWalk(scene.personagemSelecionada);
+  scene.player.body.setSize(
+    configuracao.width,
+    configuracao.height,
+  );
+  scene.player.body.setOffset(
+    configuracao.offsetX,
+    configuracao.offsetY,
+  );
 }
 
 // =====================================================
@@ -261,24 +257,11 @@ function configurarHitboxAtaque(scene) {
     return;
   }
 
-  if (personagem2Ativa(scene)) {
-    // O displayOrigin desloca somente o desenho; o body permanece alinhado ao walk.
-    scene.player.body.setSize(23, 11);
-    scene.player.body.setOffset(48, 72);
-    return;
-  }
-  if (personagem3Ativa(scene)) {
-    scene.player.body.setSize(30, 15);
-    scene.player.body.setOffset(20, 43);
-    return;
-  }
-  if (personagem4Ativa(scene)) {
-    scene.player.body.setSize(30, 15);
-    scene.player.body.setOffset(82, 99);
-    return;
-  }
-  scene.player.body.setSize(30, 50);
-  scene.player.body.setOffset(49, 73);
+  const configuracao = obterConfiguracaoHitboxAtaque(
+    scene.personagemSelecionada,
+  );
+  scene.player.body.setSize(configuracao.width, configuracao.height);
+  scene.player.body.setOffset(configuracao.offsetX, configuracao.offsetY);
 }
 
 function atualizarDirecaoAtaqueAria(scene, direcao) {
