@@ -75,7 +75,7 @@ export const ataquePorEstado = Object.freeze({
 
 export const colisaoBase = {
   x: 0,
-  y: -110,
+  y: -100,
   largura: 150,
   altura: 50,
 };
