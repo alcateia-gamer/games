@@ -177,6 +177,7 @@ function causarDanoPlayer(scene, dano) {
   tomarDano(scene, dano);
 
   scene.player.setTint(0xff5555);
+  scene.player.setTintMode(Phaser.TintModes.FILL);
 
   scene.time.delayedCall(500, () => {
     if (scene.player && scene.player.active) {

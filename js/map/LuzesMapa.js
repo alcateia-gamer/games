@@ -364,6 +364,7 @@ function criarLuzPoste(
 
     // Aplica a cor da luz.
     .setTint(cor)
+    .setTintMode(Phaser.TintModes.FILL)
 
     // Controla a intensidade/transparência.
     .setAlpha(intensidade * 1.05)
@@ -400,6 +401,7 @@ function criarLuzPoste(
 
     // Aplica a cor.
     .setTint(cor)
+    .setTintMode(Phaser.TintModes.FILL)
 
     // Controla a intensidade.
     .setAlpha(intensidade * 1.05)
@@ -434,6 +436,7 @@ function criarLuzPoste(
 
     // Aplica a cor.
     .setTint(cor)
+    .setTintMode(Phaser.TintModes.FILL)
 
     // Intensidade um pouco maior.
     .setAlpha(intensidade * 1.1)

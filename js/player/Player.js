@@ -2,6 +2,7 @@ import { gastarEstamina } from "./PlayerStatus.js";
 import { dispararProjetil } from "./PlayerProjectiles.js";
 
 import { causarDanoInimigo } from "../enemies/EnemyTest.js";
+import { causarDanoBoss } from "../enemies/BossFinal.js";
 import { tocarSomKatanaAcerto, tocarSomKatanaErro } from "../sounds/katana.js";
 import { COMBAT_FEEL } from "../combat/CombatEffects.js";
 import {
@@ -496,11 +497,16 @@ function criarHitboxKatana(scene) {
         return;
       }
 
-      const alvos = Array.isArray(scene.inimigos)
-        ? scene.inimigos.filter((inimigo) => inimigo && inimigo.active)
-        : scene.inimigoTeste && scene.inimigoTeste.active
-          ? [scene.inimigoTeste]
-          : [];
+      const alvos = [
+        ...(Array.isArray(scene.inimigos)
+          ? scene.inimigos.filter((inimigo) => inimigo && inimigo.active)
+          : scene.inimigoTeste && scene.inimigoTeste.active
+            ? [scene.inimigoTeste]
+            : []),
+        ...(scene.bossFinal?.active && !scene.bossFinal.morto
+          ? [scene.bossFinal]
+          : []),
+      ];
 
       if (alvos.length === 0) {
         return;
@@ -534,7 +540,11 @@ function criarHitboxKatana(scene) {
           somAtaqueTocado = true;
         }
 
-        causarDanoInimigo(scene, inimigo, 25);
+        if (inimigo === scene.bossFinal) {
+          causarDanoBoss(scene, 25);
+        } else {
+          causarDanoInimigo(scene, inimigo, 25);
+        }
       }
 
       if (acertouAlgum) {

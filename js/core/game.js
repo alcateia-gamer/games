@@ -36,6 +36,34 @@ class Game extends Phaser.Game {
   constructor() {
     super(config);
 
+    this._unlockAudio = () => {
+      const soundManager = this.sound;
+
+      const resumeAudio = async () => {
+        try {
+          if (soundManager?.context && soundManager.context.state === "suspended") {
+            await soundManager.context.resume();
+          }
+
+          if (typeof soundManager?.resumeAll === "function") {
+            soundManager.resumeAll();
+          }
+        } catch (error) {
+          console.warn("Audio não pôde ser desbloqueado:", error);
+        }
+      };
+
+      void resumeAudio();
+    };
+
+    ["pointerdown", "touchstart", "keydown"].forEach((nomeEvento) => {
+      window.addEventListener(
+        nomeEvento,
+        this._unlockAudio,
+        { once: true, passive: true },
+      );
+    });
+
     const mqttClient = new MqttClient(config.mqtt);
     const multiplayer = new MultiplayerManager(mqttClient);
     this.registry.set("mqtt", mqttClient);

@@ -1,3 +1,101 @@
+// =====================================================
+// FIXAR DEV E ANALÓGICO NA TELA
+// =====================================================
+
+function configurarControlesFixos(scene) {
+  scene.limparControlesInputFixos?.();
+
+  const botaoDev = scene.botaoDesenvolvedor;
+  const textoDev = scene.textoBotaoDesenvolvedor;
+  const joystick = scene.joystick;
+
+  const atualizarPosicao = () => {
+    const camera = scene.cameras.main;
+
+    if (
+      !camera ||
+      !botaoDev?.scene ||
+      !textoDev?.scene ||
+      !joystick.base?.scene ||
+      !joystick.thumb?.scene
+    ) {
+      return;
+    }
+
+    const zoomX = camera.zoomX || camera.zoom || 1;
+    const zoomY = camera.zoomY || camera.zoom || 1;
+
+    const origemX = camera.width * camera.originX;
+    const origemY = camera.height * camera.originY;
+
+    // =================================================
+    // BOTÃO DEV
+    // =================================================
+
+    const devTelaX = camera.width - 40;
+    const devTelaY = 24;
+
+    const devX = origemX + (devTelaX - origemX) / zoomX;
+    const devY = origemY + (devTelaY - origemY) / zoomY;
+
+    botaoDev.setPosition(devX, devY);
+    textoDev.setPosition(devX, devY);
+
+    botaoDev.setScale(1 / zoomX, 1 / zoomY);
+    textoDev.setScale(1 / zoomX, 1 / zoomY);
+
+    // =================================================
+    // ANALÓGICO
+    // =================================================
+
+    // Preserva a posição original na tela de 800 x 450:
+    // X = 100 e Y = 350.
+    const analogicoTelaX = 100;
+    const analogicoTelaY = camera.height - 100;
+
+    const analogicoX = origemX + (analogicoTelaX - origemX) / zoomX;
+
+    const analogicoY = origemY + (analogicoTelaY - origemY) / zoomY;
+
+    // Mantém o tamanho visual da base e do botão central.
+    joystick.base.setScale(1 / zoomX, 1 / zoomY);
+    joystick.thumb.setScale(1 / zoomX, 1 / zoomY);
+
+    // O zoom da arena é uniforme.
+    // Compensa também o limite de deslocamento do analógico.
+    joystick.setRadius(50 / zoomX);
+
+    // Atualiza o centro usado pelo próprio plugin.
+    joystick.setPosition(analogicoX, analogicoY);
+
+    // Atualiza o deslocamento do botão central mesmo
+    // quando o dedo está parado e a câmera muda de zoom.
+    joystick.forceUpdateThumb();
+  };
+
+  const limpar = () => {
+    scene.events.off(Phaser.Scenes.Events.PRE_RENDER, atualizarPosicao);
+
+    scene.events.off(Phaser.Scenes.Events.SHUTDOWN, limpar);
+
+    if (scene.limparControlesInputFixos === limpar) {
+      scene.limparControlesInputFixos = null;
+    }
+  };
+
+  scene.limparControlesInputFixos = limpar;
+
+  scene.events.on(Phaser.Scenes.Events.PRE_RENDER, atualizarPosicao);
+
+  scene.events.once(Phaser.Scenes.Events.SHUTDOWN, limpar);
+
+  atualizarPosicao();
+}
+
+// =====================================================
+// CRIAÇÃO DOS CONTROLES
+// =====================================================
+
 function criarControlesInput(scene) {
   // TECLAS WASD
   scene.teclasWASD = scene.input.keyboard.addKeys({
@@ -13,7 +111,7 @@ function criarControlesInput(scene) {
 
   scene.developerMode = !!scene.developerMode;
 
-  // BOTÃO DE DESENVOLVEDOR
+  // BOTÃO DEV
   scene.botaoDesenvolvedor = scene.add
     .rectangle(760, 24, 80, 30, 0x1f2937, 0.9)
     .setStrokeStyle(2, 0x6ee7b7, 1)
@@ -36,7 +134,9 @@ function criarControlesInput(scene) {
     const ligado = !!scene.developerMode;
 
     scene.botaoDesenvolvedor.setFillStyle(ligado ? 0x166534 : 0x1f2937, 0.9);
+
     scene.botaoDesenvolvedor.setStrokeStyle(2, ligado ? 0x86efac : 0x6ee7b7, 1);
+
     scene.textoBotaoDesenvolvedor.setText(ligado ? "DEV ON" : "DEV");
   };
 
@@ -47,7 +147,7 @@ function criarControlesInput(scene) {
 
   atualizarEstadoBotaoDesenvolvedor();
 
-  // JOYSTICK
+  // ANALÓGICO
   scene.joystick = scene.plugins.get("rexvirtualjoystickplugin").add(scene, {
     x: 100,
     y: 350,
@@ -57,6 +157,7 @@ function criarControlesInput(scene) {
   });
 
   scene.joystick.base.setScrollFactor(0).setDepth(100);
+
   scene.joystick.thumb.setScrollFactor(0).setDepth(101);
 
   scene.joystickPointerId = null;
@@ -70,6 +171,7 @@ function criarControlesInput(scene) {
   });
 
   criarControleFullscreen(scene);
+  configurarControlesFixos(scene);
 }
 
 function criarControleFullscreen(scene) {

@@ -37,6 +37,10 @@ import {
   criarSistemaProjeteis,
   atualizarProjeteis,
 } from "../player/PlayerProjectiles.js";
+import {
+  vincularIABoss,
+  atualizarIABoss,
+} from "../enemies/BossFinal.js";
 
 class Level1Parte2 extends Phaser.Scene {
   constructor() {
@@ -54,8 +58,8 @@ class Level1Parte2 extends Phaser.Scene {
   }
 
   init(data) {
-    this.respawnX = data.spawnX ?? 97;
-    this.respawnY = data.spawnY ?? -980;
+    this.respawnX = data.spawnX ?? -1093;
+    this.respawnY = data.spawnY ?? -5905;
     this.profundidadePersonagemParte2 =
       data.profundidadePersonagem ?? this.profundidadePersonagemParte2;
     this.personagemSelecionada = data.personagem || "kai-mercer";
@@ -122,6 +126,8 @@ class Level1Parte2 extends Phaser.Scene {
     criarControles(this);
     if (this.multiplayer) this.iniciarMultiplayer();
 
+    vincularIABoss(this);
+
     this.textoCoordenadas = this.add.text(10, 78, "", {
       fontSize: "14px",
       backgroundColor: "#000000",
@@ -182,6 +188,7 @@ class Level1Parte2 extends Phaser.Scene {
 
     atualizarInimigoTeste(this, time);
     atualizarProjeteis(this, delta);
+    atualizarIABoss(this, delta);
     if (!this.multiplayer) {
       atualizarCompanionPet(this, time, delta);
       atualizarDepthCompanionPet(this);

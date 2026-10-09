@@ -1,4 +1,5 @@
 import { causarDanoInimigo } from "../enemies/EnemyTest.js";
+import { causarDanoBoss } from "../enemies/BossFinal.js";
 
 const DIRECOES_PROJETIL = {
   // x/y definem o movimento; frame escolhe o desenho correspondente na folha da flecha.
@@ -141,24 +142,39 @@ function atualizarProjeteis(scene, delta = 0) {
       projetil.body.width,
       projetil.body.height,
     );
-    const inimigoAtingido = inimigos.find(
-      (inimigo) =>
-        inimigo?.active &&
-        !inimigo.morto &&
-        inimigo.hitboxDano &&
-        Phaser.Geom.Intersects.RectangleToRectangle(
-          boundsProjetil,
-          inimigo.hitboxDano,
-        ),
-    );
+    const boss = scene.bossFinal;
+    const bossAtingido =
+      boss?.active &&
+      !boss.morto &&
+      Phaser.Geom.Intersects.RectangleToRectangle(
+        boundsProjetil,
+        boss.hitboxDano,
+      );
+    const inimigoAtingido = bossAtingido
+      ? null
+      : inimigos.find(
+          (inimigo) =>
+            inimigo?.active &&
+            !inimigo.morto &&
+            inimigo.hitboxDano &&
+            Phaser.Geom.Intersects.RectangleToRectangle(
+              boundsProjetil,
+              inimigo.hitboxDano,
+            ),
+        );
 
-    if (!inimigoAtingido) {
+    if (!bossAtingido && !inimigoAtingido) {
       return;
     }
 
-    causarDanoInimigo(scene, inimigoAtingido, projetil.dano, {
-      playSound: true,
-    });
+    if (bossAtingido) {
+      causarDanoBoss(scene, projetil.dano);
+    } else {
+      causarDanoInimigo(scene, inimigoAtingido, projetil.dano, {
+        playSound: true,
+      });
+    }
+
     destruirProjetil(projetil);
   });
 }

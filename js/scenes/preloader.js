@@ -240,6 +240,43 @@ class Preloader extends Phaser.Scene {
     // =====================================================
 
     this.load.spritesheet(
+      "boss-ataque-chao",
+      "PERSONAGENS/INIMIGOS PRINCIPAIS/BOSS_FINAL/BOSS_ATAQUE_CHAO.png",
+      {
+        frameWidth: 256,
+        frameHeight: 256,
+        endFrame: 15,
+      },
+    );
+    this.load.spritesheet(
+      "boss-raio-chao",
+      "PERSONAGENS/INIMIGOS PRINCIPAIS/BOSS_FINAL/BOSS_RAIO_CHAO.png",
+      {
+        frameWidth: 256,
+        frameHeight: 256,
+        endFrame: 11,
+      },
+    );
+    this.load.spritesheet(
+      "boss-rec-vida",
+      "PERSONAGENS/INIMIGOS PRINCIPAIS/BOSS_FINAL/BOSS_REC_VIDA.png",
+      {
+        frameWidth: 256,
+        frameHeight: 256,
+        endFrame: 24,
+      },
+    );
+    this.load.spritesheet(
+      "boss-tiro-laser",
+      "PERSONAGENS/INIMIGOS PRINCIPAIS/BOSS_FINAL/BOSS_TIRO_LAZER.png",
+      {
+        frameWidth: 256,
+        frameHeight: 256,
+        endFrame: 19,
+      },
+    );
+
+    this.load.spritesheet(
       "robo-teste",
       "PERSONAGENS/INIMIGOS PRINCIPAIS/ROBO_DE_GUERRA/robo_teste_2.png",
       {

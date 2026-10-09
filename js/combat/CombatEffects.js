@@ -36,8 +36,7 @@ function playHitFlash(enemy, duration = COMBAT_FEEL.hitFlashDuration) {
     return;
   }
 
-  enemy.setTintFill?.(0xffffff);
-  enemy.setTint?.(0xffffff);
+  enemy.setTint?.(0xffffff).setTintMode(Phaser.TintModes.FILL);
   enemy.scene.time.delayedCall(duration, () => {
     if (enemy.active) {
       enemy.clearTint();
