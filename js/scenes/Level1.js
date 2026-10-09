@@ -154,7 +154,10 @@ class Level1 extends Phaser.Scene {
     // =====================================================
 
     if (this.collisionGroup) {
-      this.physics.add.collider(this.player, this.collisionGroup);
+      this.colliderPlayerMapa = this.physics.add.collider(
+        this.player,
+        this.collisionGroup,
+      );
     }
 
     this.canTeleport = true;

@@ -12,7 +12,19 @@ function criarMovimento(scene) {
   configurarSomCorrida(scene);
 }
 
+function atualizarColisaoMapaPlayer(scene) {
+  if (!scene.colliderPlayerMapa) {
+    return;
+  }
+
+  const atravessandoMapa =
+    !!scene.developerMode && !!scene.teclaEspaco?.isDown;
+  scene.colliderPlayerMapa.active = !atravessandoMapa;
+}
+
 function atualizarMovimento(scene) {
+  atualizarColisaoMapaPlayer(scene);
+
   let movimentoX = 0;
   let movimentoY = 0;
   let usandoTeclado = false;

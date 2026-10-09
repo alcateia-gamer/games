@@ -98,8 +98,8 @@ function iniciarTransicao(scene) {
   scene.cameras.main.once("camerafadeoutcomplete", () => {
     limparGrupoRobos(scene);
     scene.scene.start("Level1Parte2", {
-      spawnX: -1093,
-      spawnY: -5905,
+      spawnX: 98,
+      spawnY: -1040,
       personagem: scene.personagemSelecionada,
       multiplayer: scene.multiplayer === true,
     });

@@ -114,7 +114,10 @@ class Level1Parte2 extends Phaser.Scene {
     this.criarTeleporteRetornoParte1();
 
     if (this.collisionGroup) {
-      this.physics.add.collider(this.player, this.collisionGroup);
+      this.colliderPlayerMapa = this.physics.add.collider(
+        this.player,
+        this.collisionGroup,
+      );
     }
     criarSistemaProjeteis(this);
 

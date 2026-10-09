@@ -108,6 +108,9 @@ function criarControlesInput(scene) {
   scene.teclaShift = scene.input.keyboard.addKey(
     Phaser.Input.Keyboard.KeyCodes.SHIFT,
   );
+  scene.teclaEspaco = scene.input.keyboard.addKey(
+    Phaser.Input.Keyboard.KeyCodes.SPACE,
+  );
 
   scene.developerMode = !!scene.developerMode;
 
