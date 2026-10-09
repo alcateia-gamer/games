@@ -698,7 +698,6 @@ function soltarAtaque(scene) {
   scene.attackPhase = "release";
   dispararProjetil(scene);
   scene.player.anims.play(`aria-release-${scene.direcaoAtaque}`, false);
-  criarHitboxKatana(scene);
   configurarHitboxAtaque(scene);
 }
 

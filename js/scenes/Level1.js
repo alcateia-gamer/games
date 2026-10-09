@@ -81,14 +81,14 @@ class Level1 extends Phaser.Scene {
     // RESPAWN
     // =====================================================
 
-    this.respawnX = -490;
+    this.respawnX = -1405;
 
-    this.respawnY = 8823;
+    this.respawnY = 475;
   }
 
   init(data) {
-    this.respawnX = data.spawnX ?? -490;
-    this.respawnY = data.spawnY ?? 8823;
+    this.respawnX = data.spawnX ?? -1405;
+    this.respawnY = data.spawnY ?? 475;
     this.personagemSelecionada = data.personagem || "kai-mercer";
     this.multiplayer = data.multiplayer === true;
     this.multiplayerManager = this.game.registry.get("multiplayer");
@@ -202,7 +202,7 @@ class Level1 extends Phaser.Scene {
     });
 
     this.physics.add.overlap(this.player, teleporteB, () => {
-      teleportarComFadeNovo(-436, 8959);
+      teleportarComFadeNovo(-1405, 475);
     });
 
     criarSistemaProjeteis(this);
