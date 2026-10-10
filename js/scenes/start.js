@@ -3,6 +3,7 @@ class Start extends Phaser.Scene {
     super("Start");
 
     this.characters = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ#$%&*@?!<>[]{}";
+
     this.messages = [
       "INITIALIZING...",
       "MEMORY CHECK",
@@ -11,10 +12,22 @@ class Start extends Phaser.Scene {
       "ERROR",
       "CORRUPTED",
     ];
+
     this.mode = "intro";
   }
 
+  // =====================================================
+  // PRELOAD
+  // =====================================================
+
   preload() {
+    // Música dos menus, carregamento e multiplayer.
+    this.load.audio(
+      "musica-menu",
+      "assets/sounds.mp3/sons.musicais.mp3/cyberpunk-2077.mp3",
+    );
+
+    // Personagens.
     this.load.spritesheet(
       "start-character",
       "assets/PERSONAGENS/PERSONAGENS PRICIPAIS/KAI_MERCER 1/KAI_WALK.png",
@@ -23,6 +36,7 @@ class Start extends Phaser.Scene {
         frameHeight: 128,
       },
     );
+
     this.load.spritesheet(
       "start-character-2",
       "assets/PERSONAGENS/PERSONAGENS PRICIPAIS/MAGNUS_FORCE 2/magnus_walk.png",
@@ -31,6 +45,7 @@ class Start extends Phaser.Scene {
         frameHeight: 64,
       },
     );
+
     this.load.spritesheet(
       "start-character-3",
       "assets/PERSONAGENS/PERSONAGENS PRICIPAIS/ARIA_KADE 3/ARIA_WALK.png",
@@ -39,6 +54,7 @@ class Start extends Phaser.Scene {
         frameHeight: 128,
       },
     );
+
     this.load.spritesheet(
       "start-character-4",
       "assets/PERSONAGENS/PERSONAGENS PRICIPAIS/NYX_4/nyx_walk.png",
@@ -49,10 +65,16 @@ class Start extends Phaser.Scene {
     );
   }
 
+  // =====================================================
+  // CREATE
+  // =====================================================
+
   create() {
     this.cameras.main.setBackgroundColor("#000000");
+
     this.width = this.scale.width;
     this.height = this.scale.height;
+
     this.columns = [];
     this.sequenceStarted = false;
     this.selectedCharacter = "kai-mercer";
@@ -66,8 +88,62 @@ class Start extends Phaser.Scene {
     this.createStartButton();
   }
 
+  // =====================================================
+  // MÚSICA DOS MENUS
+  // =====================================================
+
+  iniciarMusicaMenu() {
+    // Evita reproduzir duas músicas simultaneamente.
+    if (this.game.musicaMenu?.isPlaying) {
+      return;
+    }
+
+    // Confere se o MP3 foi carregado.
+    if (!this.cache.audio.exists("musica-menu")) {
+      console.warn(
+        "Música do menu não encontrada: assets/sounds.mp3/sons.musicais.mp3/cyberpunk-2077.mp3",
+      );
+      return;
+    }
+
+    // Remove qualquer instância anterior.
+    if (this.game.musicaMenu) {
+      this.game.musicaMenu.stop();
+      this.game.musicaMenu.destroy();
+      this.game.musicaMenu = null;
+    }
+
+    // Volume reduzido para 20%.
+    const musica = this.sound.add("musica-menu", {
+      volume: 0.2,
+      loop: true,
+    });
+
+    // Mantém a música ativa entre as cenas.
+    this.game.musicaMenu = musica;
+
+    musica.play();
+
+    // Para quando o jogo realmente começar.
+    // Funciona tanto no solo quanto no multiplayer.
+    const cenaJogo = this.scene.get("Level1");
+
+    cenaJogo.events.once(Phaser.Scenes.Events.START, () => {
+      if (this.game.musicaMenu === musica) {
+        musica.stop();
+        musica.destroy();
+        this.game.musicaMenu = null;
+      }
+    });
+  }
+
+  // =====================================================
+  // BOTÃO JOGAR
+  // =====================================================
+
   createStartButton() {
     const button = this.createButton(this.width / 2, this.height / 2, "J0GAR");
+
     button.on("buttondown", () => {
       if (!this.sequenceStarted) {
         this.startSequence(button);
@@ -75,40 +151,65 @@ class Start extends Phaser.Scene {
     });
   }
 
+  // =====================================================
+  // CRIAR BOTÕES
+  // =====================================================
+
   createButton(x, y, label, width = 180, height = 42) {
     const background = this.add
       .rectangle(0, 0, width, height, 0x062b16, 0.88)
       .setStrokeStyle(2, 0x42ff84, 0.95)
       .setInteractive({ useHandCursor: true });
+
     const text = this.add
       .text(0, 0, label, {
         color: "#9dffb9",
         fontFamily: "monospace",
         fontSize: "17px",
         fontStyle: "bold",
-        shadow: { blur: 8, color: "#00ff66", fill: true },
+        shadow: {
+          blur: 8,
+          color: "#00ff66",
+          fill: true,
+        },
       })
       .setOrigin(0.5);
+
     const button = this.add.container(x, y, [background, text]);
+
     button.background = background;
     button.label = text;
     button.setAngle(0);
+
     background.on("pointerover", () => {
       background.setFillStyle(0x0b5429, 0.95);
       text.setColor("#e4ffeb");
       button.emit("buttonover");
     });
+
     background.on("pointerout", () => {
       background.setFillStyle(0x062b16, 0.88);
       text.setColor("#9dffb9");
       button.emit("buttonout");
     });
-    background.on("pointerdown", () => button.emit("buttondown"));
+
+    background.on("pointerdown", () => {
+      button.emit("buttondown");
+    });
+
     return button;
   }
 
+  // =====================================================
+  // INICIAR SEQUÊNCIA
+  // =====================================================
+
   startSequence(button) {
     this.sequenceStarted = true;
+
+    // A música começa no clique do botão JOGAR.
+    this.iniciarMusicaMenu();
+
     this.tweens.add({
       targets: button,
       alpha: 0,
@@ -116,16 +217,22 @@ class Start extends Phaser.Scene {
       ease: "Cubic.easeIn",
       onComplete: () => {
         button.destroy();
+
         this.time.delayedCall(320, () => this.beginRain());
       },
     });
   }
+
+  // =====================================================
+  // CHUVA DIGITAL
+  // =====================================================
 
   beginRain() {
     this.rainStartedAt = this.time.now;
     this.nextMessageAt = 1200;
     this.nextMessageIndex = 0;
     this.glitchStarted = false;
+
     this.createScanlines();
     this.createColumns();
   }
@@ -136,6 +243,7 @@ class Start extends Phaser.Scene {
     for (let index = 0; index < columnCount; index += 1) {
       const glyphs = [];
       const length = Phaser.Math.Between(5, 15);
+
       const column = {
         x: index * (this.width / columnCount) + Phaser.Math.Between(-5, 5),
         y: Phaser.Math.Between(-this.height, 0),
@@ -154,7 +262,11 @@ class Start extends Phaser.Scene {
               color: "#55ff88",
               fontFamily: "monospace",
               fontSize: "15px",
-              shadow: { blur: 8, color: "#00ff55", fill: true },
+              shadow: {
+                blur: 8,
+                color: "#00ff55",
+                fill: true,
+              },
             })
             .setOrigin(0.5),
         );
@@ -167,10 +279,15 @@ class Start extends Phaser.Scene {
   createScanlines() {
     this.scanlines = this.add.graphics().setDepth(10);
     this.scanlines.lineStyle(1, 0x65ff9a, 0.035);
+
     for (let y = 0; y < this.height; y += 4) {
       this.scanlines.lineBetween(0, y, this.width, y);
     }
   }
+
+  // =====================================================
+  // MENSAGENS DO SISTEMA
+  // =====================================================
 
   showSystemMessage(message) {
     const text = this.add
@@ -182,14 +299,21 @@ class Start extends Phaser.Scene {
           color: "#75ff9a",
           fontFamily: "monospace",
           fontSize: Phaser.Math.Between(11, 17) + "px",
-          shadow: { blur: 12, color: "#00ff55", fill: true },
+          shadow: {
+            blur: 12,
+            color: "#00ff55",
+            fill: true,
+          },
         },
       )
       .setAlpha(0);
 
     this.tweens.add({
       targets: text,
-      alpha: { from: 0, to: 0.9 },
+      alpha: {
+        from: 0,
+        to: 0.9,
+      },
       duration: 100,
       hold: 260,
       yoyo: true,
@@ -205,16 +329,25 @@ class Start extends Phaser.Scene {
         fontFamily: "monospace",
         fontSize: "34px",
         fontStyle: "bold",
-        shadow: { blur: 18, color: "#00ff55", fill: true },
+        shadow: {
+          blur: 18,
+          color: "#00ff55",
+          fill: true,
+        },
       })
       .setOrigin(0.5)
       .setAlpha(0);
+
     const failure = this.add
       .text(this.width / 2, this.height * 0.56, "SYSTEM FAILURE", {
         color: "#57ff85",
         fontFamily: "monospace",
         fontSize: "20px",
-        shadow: { blur: 14, color: "#00ff55", fill: true },
+        shadow: {
+          blur: 14,
+          color: "#00ff55",
+          fill: true,
+        },
       })
       .setOrigin(0.5)
       .setAlpha(0);
@@ -226,6 +359,7 @@ class Start extends Phaser.Scene {
       yoyo: true,
       repeat: 3,
     });
+
     this.tweens.add({
       targets: failure,
       alpha: 1,
@@ -236,29 +370,43 @@ class Start extends Phaser.Scene {
     });
   }
 
+  // =====================================================
+  // FINALIZAR SEQUÊNCIA
+  // =====================================================
+
   finishSequence() {
     this.mode = "menu";
     this.rainStartedAt = this.time.now;
+
     this.columns.forEach((column, index) => {
       column.frozen = false;
       column.speed = Phaser.Math.Between(18, 36);
       column.brightness = Phaser.Math.FloatBetween(0.18, 0.42);
       column.y = Phaser.Math.Between(-this.height, this.height);
+
       column.glyphs.forEach((glyph, glyphIndex) => {
         glyph.setDepth(4);
+
         glyph.setAlpha(
           Math.max(0.04, column.brightness * (1 - glyphIndex / column.length)),
         );
       });
+
       if (index % 2 === 0) {
         column.nextChange = this.time.now;
       }
     });
+
     this.showMainMenu();
   }
 
+  // =====================================================
+  // MENU PRINCIPAL
+  // =====================================================
+
   showMainMenu() {
     this.menuLayer = this.add.container(0, 0).setDepth(20).setAlpha(0);
+
     const shade = this.add.rectangle(
       this.width / 2,
       this.height / 2,
@@ -267,15 +415,21 @@ class Start extends Phaser.Scene {
       0x000000,
       0.52,
     );
+
     const title = this.add
       .text(this.width / 2, 64, "N E X U S", {
         color: "#c9ffda",
         fontFamily: "monospace",
         fontSize: "30px",
         fontStyle: "bold",
-        shadow: { blur: 16, color: "#00ff66", fill: true },
+        shadow: {
+          blur: 16,
+          color: "#00ff66",
+          fill: true,
+        },
       })
       .setOrigin(0.5);
+
     const subtitle = this.add
       .text(this.width / 2, 96, "SYSTEM INTERFACE", {
         color: "#54d879",
@@ -283,9 +437,11 @@ class Start extends Phaser.Scene {
         fontSize: "11px",
       })
       .setOrigin(0.5);
+
     this.menuLayer.add([shade, title, subtitle]);
 
     const menuItems = ["SOLO", "MULTIJOGADOR", "OPÇÕES", "SAIR"];
+
     menuItems.forEach((label, index) => {
       const button = this.createButton(
         this.width / 2,
@@ -294,8 +450,12 @@ class Start extends Phaser.Scene {
         240,
         38,
       );
+
       this.menuLayer.add(button);
-      button.on("buttondown", () => this.selectMenuOption(label));
+
+      button.on("buttondown", () => {
+        this.selectMenuOption(label);
+      });
     });
 
     this.menuStatus = this.add
@@ -305,7 +465,9 @@ class Start extends Phaser.Scene {
         fontSize: "11px",
       })
       .setOrigin(0.5);
+
     this.menuLayer.add(this.menuStatus);
+
     this.tweens.add({
       targets: this.menuLayer,
       alpha: 1,
@@ -322,10 +484,13 @@ class Start extends Phaser.Scene {
 
     if (option === "SAIR") {
       this.menuStatus.setText("ENCERRANDO SESSÃO...");
+
       window.close();
+
       this.time.delayedCall(250, () =>
         this.menuStatus.setText("O NAVEGADOR BLOQUEOU O FECHAMENTO"),
       );
+
       return;
     }
 
@@ -335,6 +500,7 @@ class Start extends Phaser.Scene {
     }
 
     this.menuStatus.setText(`${option} // DISPONÍVEL EM BREVE`);
+
     this.tweens.add({
       targets: this.menuStatus,
       alpha: 0.35,
@@ -344,9 +510,15 @@ class Start extends Phaser.Scene {
     });
   }
 
+  // =====================================================
+  // SELEÇÃO DE PERSONAGEM
+  // =====================================================
+
   showSoloSelection() {
     this.menuLayer.setVisible(false);
+
     this.soloLayer = this.add.container(0, 0).setDepth(21).setAlpha(0);
+
     const shade = this.add.rectangle(
       this.width / 2,
       this.height / 2,
@@ -355,6 +527,7 @@ class Start extends Phaser.Scene {
       0x000000,
       0.72,
     );
+
     const title = this.add
       .text(this.width / 2, 62, "SELECIONE SEU OPERADOR", {
         color: "#c9ffda",
@@ -363,8 +536,8 @@ class Start extends Phaser.Scene {
         fontStyle: "bold",
       })
       .setOrigin(0.5);
+
     const characters = [
-      // frame escolhe o retrato dentro da spritesheet; altere scale apenas o tamanho exibido.
       {
         id: "kai-mercer",
         x: this.width / 2 - 276,
@@ -398,15 +571,22 @@ class Start extends Phaser.Scene {
         name: "NYX // 04",
       },
     ];
+
     const characterViews = characters.map((character) => {
       const frame = this.add
         .rectangle(character.x, 205, 112, 112, 0x062b16, 0.95)
         .setStrokeStyle(2, 0x1b6b3b, 1)
-        .setInteractive({ useHandCursor: true });
+        .setInteractive({
+          useHandCursor: true,
+        });
+
       const portrait = this.add
         .image(character.x, 205, character.texture, character.frame)
         .setScale(character.scale)
-        .setInteractive({ useHandCursor: true });
+        .setInteractive({
+          useHandCursor: true,
+        });
+
       const name = this.add
         .text(character.x, 285, character.name, {
           color: "#9dffb9",
@@ -414,8 +594,15 @@ class Start extends Phaser.Scene {
           fontSize: "11px",
         })
         .setOrigin(0.5);
-      return { ...character, frame, portrait, name };
+
+      return {
+        ...character,
+        frame,
+        portrait,
+        name,
+      };
     });
+
     const choose = this.createButton(
       this.width / 2,
       350,
@@ -423,8 +610,11 @@ class Start extends Phaser.Scene {
       210,
       40,
     );
+
     const back = this.createButton(this.width / 2, 405, "VOLTAR", 130, 30);
+
     back.label.setFontSize("12px");
+
     this.soloLayer.add([
       shade,
       title,
@@ -436,8 +626,10 @@ class Start extends Phaser.Scene {
       choose,
       back,
     ]);
+
     const selectCharacter = (character) => {
       this.selectedCharacter = character.id;
+
       characterViews.forEach((view) =>
         view.frame.setStrokeStyle(
           2,
@@ -445,26 +637,45 @@ class Start extends Phaser.Scene {
           1,
         ),
       );
+
       this.menuStatus.setText(`${character.name} // SELECIONADA`);
     };
+
     characterViews.forEach((character) => {
       character.frame.on("pointerdown", () => selectCharacter(character));
+
       character.portrait.on("pointerdown", () => selectCharacter(character));
     });
+
     selectCharacter(characterViews[0]);
+
     choose.on("buttondown", () => this.startSoloGame());
+
     back.on("buttondown", () => {
       this.soloLayer.destroy();
       this.menuLayer.setVisible(true);
     });
-    this.tweens.add({ targets: this.soloLayer, alpha: 1, duration: 260 });
+
+    this.tweens.add({
+      targets: this.soloLayer,
+      alpha: 1,
+      duration: 260,
+    });
   }
+
+  // =====================================================
+  // INICIAR PARTIDA SOLO
+  // =====================================================
 
   startSoloGame() {
     this.scene.start("preloader", {
       personagem: this.selectedCharacter,
     });
   }
+
+  // =====================================================
+  // ATUALIZAÇÃO DA ANIMAÇÃO
+  // =====================================================
 
   update(time, delta) {
     if (
@@ -475,7 +686,9 @@ class Start extends Phaser.Scene {
     }
 
     const elapsed = time - this.rainStartedAt;
+
     const intensity = Phaser.Math.Clamp((elapsed - 800) / 2200, 0, 1);
+
     const speedMultiplier = 0.75 + intensity * 1.7;
 
     this.columns.forEach((column) => {
@@ -485,16 +698,19 @@ class Start extends Phaser.Scene {
 
       if (time > column.nextChange) {
         column.nextChange = time + Phaser.Math.Between(80, 260);
+
         column.glyphs.forEach((glyph, glyphIndex) => {
           glyph.setText(
             this.characters[Phaser.Math.Between(0, this.characters.length - 1)],
           );
+
           glyph.setAlpha(
             Math.max(
               0.08,
               column.brightness * (1 - glyphIndex / column.length),
             ),
           );
+
           glyph.setPosition(column.x, column.y - glyphIndex * 18);
         });
       } else {
@@ -512,13 +728,16 @@ class Start extends Phaser.Scene {
       this.showSystemMessage(
         this.messages[this.nextMessageIndex % this.messages.length],
       );
+
       this.nextMessageIndex += 1;
+
       this.nextMessageAt = time + Phaser.Math.Between(180, 450);
     }
 
     if (this.mode === "intro" && elapsed > 3700 && !this.glitchStarted) {
       this.glitchStarted = true;
       this.showFailure();
+
       this.columns.forEach((column, index) => {
         column.frozen = index % 3 === 0;
         column.speed *= index % 2 === 0 ? 3.5 : 0.4;

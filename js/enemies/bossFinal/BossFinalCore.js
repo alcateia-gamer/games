@@ -99,6 +99,9 @@ function configurarCameraArena(scene, boss) {
   let cameraControlada = null;
   let zoomNormal = 1;
 
+  // A barra começa invisível fora da arena.
+  boss.dentroArena = false;
+
   const atualizarCamera = (_tempo, delta = 16.67) => {
     const camera = scene.cameras.main;
     const player = scene.player;
@@ -146,6 +149,11 @@ function configurarCameraArena(scene, boss) {
       dentroArena = false;
     }
 
+    // O HUD acompanha exatamente o estado da arena.
+    // Aparece ao iniciar o zoom afastado e desaparece
+    // ao sair da região do confronto.
+    boss.dentroArena = dentroArena;
+
     if (!controlandoZoom) return;
 
     const destino = dentroArena ? zoomNormal * FATOR_ZOOM_ARENA : zoomNormal;
@@ -178,6 +186,9 @@ function configurarCameraArena(scene, boss) {
     }
 
     dentroArena = false;
+    boss.dentroArena = false;
+    boss.hudVida?.setVisible(false);
+
     controlandoZoom = false;
     cameraControlada = null;
   };
@@ -286,6 +297,7 @@ function desenharPreenchimentoArredondado(
   grafico.clear();
 
   const proporcao = Phaser.Math.Clamp(percentual, 0, 1);
+
   const larguraAtual = larguraMaxima * proporcao;
 
   if (larguraAtual <= 0) return;
@@ -296,6 +308,7 @@ function desenharPreenchimentoArredondado(
   const raio = Math.min(altura / 2, larguraAtual / 2);
 
   grafico.fillStyle(cor, 1);
+
   grafico.fillRoundedRect(x, y, larguraAtual, altura, raio);
 }
 
@@ -318,12 +331,16 @@ function criarHudBoss(scene, boss) {
     boss.barraEstamina,
   ]);
 
+  // O HUD nunca deve aparecer antes do confronto.
+  boss.hudVida.setVisible(false);
+
   const atualizarHud = () => {
     if (!boss.hudVida?.scene) return;
 
     const camera = scene.cameras.main;
 
     const zoomX = camera.zoomX || camera.zoom || 1;
+
     const zoomY = camera.zoomY || camera.zoom || 1;
 
     const largura = Math.min(320, camera.width * 0.38);
@@ -331,6 +348,7 @@ function criarHudBoss(scene, boss) {
     const larguraInterna = Math.max(0, largura - MARGEM_INTERNA * 2);
 
     const centroX = camera.width * camera.originX;
+
     const centroY = camera.height * camera.originY;
 
     const telaX = camera.width * 0.5;
@@ -342,6 +360,7 @@ function criarHudBoss(scene, boss) {
     );
 
     boss.hudVida.setScale(1 / zoomX, 1 / zoomY);
+
     boss.larguraBarraVida = larguraInterna;
 
     desenharFundoArredondado(boss.fundoVida, largura, ALTURA_VIDA, 0);
@@ -371,7 +390,11 @@ function criarHudBoss(scene, boss) {
       boss.recuperandoEstamina ? 0xffc857 : 0x45dfff,
     );
 
-    boss.hudVida.setVisible(boss.active && boss.visible && !boss.morto);
+    // Exibe vida e estamina somente na arena,
+    // usando a mesma condição do zoom.
+    boss.hudVida.setVisible(
+      boss.active && boss.visible && !boss.morto && boss.dentroArena === true,
+    );
   };
 
   atualizarHud();
@@ -415,6 +438,7 @@ function criarBoss(scene) {
   boss.morto = false;
 
   boss.vidaMaxima = bossVidaMaxima * MULTIPLICADOR_VIDA;
+
   boss.vida = boss.vidaMaxima;
   boss.larguraBarraVida = 206;
 
@@ -515,7 +539,9 @@ function criarBoss(scene) {
 // =====================================================
 
 export function vincularIABoss(scene) {
-  if (scene.bossFinal?.active) return scene.bossFinal;
+  if (scene.bossFinal?.active) {
+    return scene.bossFinal;
+  }
 
   const boss = criarBoss(scene);
 
@@ -536,7 +562,9 @@ export function vincularIABoss(scene) {
   const aoEncerrarCena = () => {
     limparBoss();
 
-    if (boss.scene) boss.destroy();
+    if (boss.scene) {
+      boss.destroy();
+    }
   };
 
   const limparBoss = () => {
@@ -559,7 +587,9 @@ export function vincularIABoss(scene) {
     removerColisaoBoss(boss);
 
     for (const hitbox of boss.hitboxesColisao || []) {
-      if (hitbox.scene) hitbox.destroy();
+      if (hitbox.scene) {
+        hitbox.destroy();
+      }
     }
 
     if (boss.debugDano?.scene) {
@@ -603,13 +633,17 @@ function atualizarBoss(scene, delta = 16.67) {
 
   if (boss.recuperandoEstamina) {
     atualizarRecuperacaoEstamina(boss, delta);
+
     atualizarHitboxesBoss(boss);
+
     processarAtaquesJogadorContraBoss(scene, delta);
+
     return;
   }
 
   atualizarIABoss(scene, delta);
   atualizarHitboxesBoss(boss);
+
   processarAtaquesJogadorContraBoss(scene, delta);
 }
 

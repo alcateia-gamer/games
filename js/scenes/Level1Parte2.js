@@ -1,21 +1,27 @@
 import criarLevel1Parte2Map from "../map/MapaFabrica.js";
+
 import {
   atualizarDepthGarras,
   atualizarDepthObjetosProducaoEArmazem,
 } from "../map/ProfundidadeMapa.js";
+
 import criarAnimacoesPlayer, {
   criarAnimacoesPersonagensRemotos,
 } from "../player/PlayerAnimations.js";
+
 import { criarPlayer, atualizarHitboxDanoPlayer } from "../player/Player.js";
+
 import {
   criarControles,
   atualizarControles,
 } from "../controls/PlayerControls.js";
+
 import {
   criarStatusPlayer,
   atualizarStatusPlayer,
   tomarDano,
 } from "../player/PlayerStatus.js";
+
 import {
   criarInimigoTeste,
   criarRobos,
@@ -24,23 +30,24 @@ import {
   limparGrupoRobos,
   causarDanoInimigo,
 } from "../enemies/EnemyTest.js";
+
 import {
   atualizarEstadoVisualRobo,
   tocarAnimacaoInimigo,
 } from "../enemies/EnemyAnimations.js";
+
 import {
   criarCompanionPet,
   atualizarCompanionPet,
   atualizarDepthCompanionPet,
 } from "../player/CompanionPet.js";
+
 import {
   criarSistemaProjeteis,
   atualizarProjeteis,
 } from "../player/PlayerProjectiles.js";
-import {
-  vincularIABoss,
-  atualizarIABoss,
-} from "../enemies/BossFinal.js";
+
+import { vincularIABoss, atualizarIABoss } from "../enemies/BossFinal.js";
 
 class Level1Parte2 extends Phaser.Scene {
   constructor() {
@@ -60,21 +67,28 @@ class Level1Parte2 extends Phaser.Scene {
   init(data) {
     this.respawnX = data.spawnX ?? -1093;
     this.respawnY = data.spawnY ?? -5905;
+
     this.profundidadePersonagemParte2 =
       data.profundidadePersonagem ?? this.profundidadePersonagemParte2;
+
     this.personagemSelecionada = data.personagem || "kai-mercer";
+
     this.multiplayer = data.multiplayer === true;
     this.multiplayerManager = this.game.registry.get("multiplayer");
+
     this.remotePlayers = new Map();
     this.remoteProjectiles = new Map();
+
     this.lastNetworkUpdate = 0;
     this.lastEnemyNetworkUpdate = 0;
     this.networkAttackId = 0;
     this.networkProjectileId = 0;
+
     this.isMultiplayerHost =
       this.multiplayer &&
       this.multiplayerManager?.room?.hostId ===
         this.multiplayerManager?.playerId;
+
     this.morteEmAndamento = false;
     this.inimigos = [];
     this.grupoRobosAtivado = false;
@@ -83,30 +97,88 @@ class Level1Parte2 extends Phaser.Scene {
     this.transicaoRetornoEmAndamento = false;
   }
 
+  // =====================================================
+  // COORDENADAS FIXAS DURANTE O ZOOM
+  // =====================================================
+
+  configurarCoordenadasFixas() {
+    const texto = this.textoCoordenadas;
+
+    if (!texto) return;
+
+    const posicaoX = 10;
+    const posicaoY = 78;
+
+    const atualizarPosicao = () => {
+      if (!texto.scene) return;
+
+      const camera = this.cameras.main;
+      if (!camera) return;
+
+      const zoomX = camera.zoomX || camera.zoom || 1;
+
+      const zoomY = camera.zoomY || camera.zoom || 1;
+
+      const centroX = camera.width * camera.originX;
+
+      const centroY = camera.height * camera.originY;
+
+      // Mantém as coordenadas no mesmo ponto da tela.
+      texto.setPosition(
+        centroX + (posicaoX - centroX) / zoomX,
+        centroY + (posicaoY - centroY) / zoomY,
+      );
+
+      // Mantém o tamanho original do texto.
+      texto.setScale(1 / zoomX, 1 / zoomY);
+    };
+
+    this.events.on(Phaser.Scenes.Events.PRE_RENDER, atualizarPosicao);
+
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.events.off(Phaser.Scenes.Events.PRE_RENDER, atualizarPosicao);
+    });
+
+    atualizarPosicao();
+  }
+
+  // =====================================================
+  // CRIAÇÃO DA CENA
+  // =====================================================
+
   create() {
     this.physics.resume();
     this.physics.world.resume();
+
     this.cameras.main.fadeIn(250, 0, 0, 0);
+
     this.input.keyboard.enabled = true;
     this.input.keyboard.resetKeys();
+
     this.teclaSpawnRobo1 = this.input.keyboard.addKey(
       Phaser.Input.Keyboard.KeyCodes.ONE,
     );
+
     this.teclaSpawnRobo2 = this.input.keyboard.addKey(
       Phaser.Input.Keyboard.KeyCodes.TWO,
     );
+
     this.teclaSpawnRobo3 = this.input.keyboard.addKey(
       Phaser.Input.Keyboard.KeyCodes.THREE,
     );
+
     this.teclaSpawnRoboSerra = this.input.keyboard.addKey(
       Phaser.Input.Keyboard.KeyCodes.FIVE,
     );
 
     this.map = criarLevel1Parte2Map(this);
+
     criarAnimacoesPlayer(this);
     criarAnimacoesPersonagensRemotos(this);
     criarPlayer(this);
+
     this.definirProfundidadePersonagem(this.profundidadePersonagemParte2);
+
     if (!this.multiplayer) {
       criarCompanionPet(this, 25.5);
     }
@@ -119,6 +191,7 @@ class Level1Parte2 extends Phaser.Scene {
         this.collisionGroup,
       );
     }
+
     criarSistemaProjeteis(this);
 
     this.events.on(Phaser.Scenes.Events.POST_UPDATE, () => {
@@ -127,9 +200,16 @@ class Level1Parte2 extends Phaser.Scene {
 
     criarStatusPlayer(this);
     criarControles(this);
-    if (this.multiplayer) this.iniciarMultiplayer();
+
+    if (this.multiplayer) {
+      this.iniciarMultiplayer();
+    }
 
     vincularIABoss(this);
+
+    // =====================================================
+    // TEXTO DE COORDENADAS
+    // =====================================================
 
     this.textoCoordenadas = this.add.text(10, 78, "", {
       fontSize: "14px",
@@ -142,13 +222,21 @@ class Level1Parte2 extends Phaser.Scene {
 
     this.textoCoordenadas.setScrollFactor(0).setDepth(200);
 
+    // Compensa o zoom sem modificar o visual.
+    this.configurarCoordenadasFixas();
+
     this.cameras.main.startFollow(this.player, true);
+
     this.cameras.main.setZoom(1);
 
     this.inimigos = [];
     this.grupoRobosAtivado = false;
     this.inimigoTeste = null;
   }
+
+  // =====================================================
+  // ATUALIZAÇÃO
+  // =====================================================
 
   update(time, delta) {
     if (this.morteEmAndamento) {
@@ -157,15 +245,19 @@ class Level1Parte2 extends Phaser.Scene {
 
     if (!this.multiplayer && this.combatHitStopRemaining > 0) {
       this.combatHitStopRemaining -= delta;
+
       if (this.combatHitStopRemaining > 0) {
         return;
       }
+
       this.combatHitStopRemaining = 0;
     }
 
     atualizarControles(this);
     atualizarStatusPlayer(this, delta);
+
     this.definirProfundidadePersonagem(this.profundidadePersonagemParte2);
+
     atualizarDepthObjetosProducaoEArmazem(this);
     atualizarDepthGarras(this);
 
@@ -185,6 +277,7 @@ class Level1Parte2 extends Phaser.Scene {
     ) {
       criarRobos(this, 3);
     }
+
     if (Phaser.Input.Keyboard.JustDown(this.teclaSpawnRoboSerra)) {
       criarRoboSerra(this);
     }
@@ -192,10 +285,13 @@ class Level1Parte2 extends Phaser.Scene {
     atualizarInimigoTeste(this, time);
     atualizarProjeteis(this, delta);
     atualizarIABoss(this, delta);
+
     if (!this.multiplayer) {
       atualizarCompanionPet(this, time, delta);
+
       atualizarDepthCompanionPet(this);
     }
+
     this.atualizarInterpolacaoRemota(delta);
 
     if (
@@ -204,11 +300,13 @@ class Level1Parte2 extends Phaser.Scene {
       time - this.lastEnemyNetworkUpdate >= 1000 / 30
     ) {
       this.lastEnemyNetworkUpdate = time;
+
       this.multiplayerManager?.publishEnemyState(this.inimigos);
     }
 
     if (this.multiplayer && time - this.lastNetworkUpdate >= 1000 / 30) {
       this.lastNetworkUpdate = time;
+
       this.multiplayerManager?.sendPlayerState(
         this.player.x,
         this.player.y,
@@ -243,57 +341,92 @@ class Level1Parte2 extends Phaser.Scene {
     }
   }
 
+  // =====================================================
+  // MULTIPLAYER
+  // =====================================================
+
   iniciarMultiplayer() {
     const manager = this.multiplayerManager;
+
     if (!manager) return;
+
     this.onEnemyDamage = ({ enemyId, playerId, damage }) => {
       if (!this.isMultiplayerHost) return;
+
       const enemy = this.inimigos.find(
         (item) => item.networkId === enemyId && !item.remoteOnly,
       );
+
       if (enemy) {
         enemy.alvoPlayerId = playerId;
+
         causarDanoInimigo(this, enemy, damage);
       }
     };
+
     this.onPlayerDamage = (damage) => tomarDano(this, damage);
+
     this.onMultiplayerRoomUpdated = (room) => {
       this.isMultiplayerHost = room.hostId === manager.playerId;
+
       this.atualizarJogadoresRemotos(room);
       this.atualizarInimigosRemotos(room);
     };
+
     manager.on("roomUpdated", this.onMultiplayerRoomUpdated, this);
+
     manager.on("enemyDamage", this.onEnemyDamage, this);
+
     manager.on("playerDamage", this.onPlayerDamage, this);
+
     this.atualizarJogadoresRemotos(manager.room);
     this.atualizarInimigosRemotos(manager.room);
+
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       manager.off("roomUpdated", this.onMultiplayerRoomUpdated, this);
+
       manager.off("enemyDamage", this.onEnemyDamage, this);
+
       manager.off("playerDamage", this.onPlayerDamage, this);
+
       this.remotePlayers.forEach((sprite) => sprite.destroy());
+
       this.remotePlayers.clear();
+
       this.remoteProjectiles.forEach((sprite) => sprite.destroy());
+
       this.remoteProjectiles.clear();
     });
   }
 
+  // =====================================================
+  // JOGADORES REMOTOS
+  // =====================================================
+
   atualizarJogadoresRemotos(room) {
     if (!room?.players) return;
+
     const activeIds = new Set();
+
     room.players.forEach((player) => {
-      if (player.id === this.multiplayerManager.playerId || !player.character)
+      if (player.id === this.multiplayerManager.playerId || !player.character) {
         return;
+      }
+
       activeIds.add(player.id);
+
       const texture = {
         "kai-mercer": "walk",
         "magnus-force": "personagem2-walk",
         "aria-kade": "personagem3-walk",
-        "nyx": "personagem4-walk",
+        nyx: "personagem4-walk",
       }[player.character];
+
       if (!texture) return;
+
       let remote = this.remotePlayers.get(player.id);
       const remoteFoiCriado = !remote;
+
       if (!remote) {
         const initialFrame =
           {
@@ -302,46 +435,62 @@ class Level1Parte2 extends Phaser.Scene {
             down: 18,
             right: 27,
           }[player.direction] ?? 18;
+
         remote = this.add
           .sprite(player.x, player.y, texture, initialFrame)
           .setOrigin(0.5, 0.5)
           .setAlpha(0.88)
           .setDepth(13);
+
         remote.targetX = player.x;
         remote.targetY = player.y;
         remote.remoteAttackId = 0;
         remote.remoteAttackPhase = "normal";
         remote.remoteAttackActive = false;
         remote.remoteAnimationKey = null;
+
         this.remotePlayers.set(player.id, remote);
       }
+
       if (remote.texture.key !== texture && !remote.remoteAttackActive) {
         remote.setTexture(texture);
       }
+
       const direction = player.direction || "down";
+
       const attackDirection = player.attackDirection || direction;
+
       const walkKey = `remote-${player.character}-walk-${direction}`;
+
       const attackPhase = player.attackPhase || "normal";
+
       const attackKey =
         player.character === "aria-kade" && attackPhase !== "normal"
           ? `remote-${player.character}-${attackPhase}-${attackDirection}`
           : `remote-${player.character}-attack-${attackDirection}`;
+
       if (remoteFoiCriado) {
         remote.remoteAttackId = player.attacking
           ? Math.max(0, player.attackId - 1)
           : player.attackId;
+
         remote.remoteAttackPhase = player.attacking ? "normal" : attackPhase;
+
         remote.remoteAttackDirection = attackDirection;
       }
+
       remote.targetX = player.x;
       remote.targetY = player.y;
+
       const stillMoving = Boolean(player.moving);
+
       const attackChanged =
         player.attackId > 0 &&
         (remote.remoteAttackId !== player.attackId ||
           (player.attacking &&
             (remote.remoteAttackPhase !== attackPhase ||
               remote.remoteAttackDirection !== attackDirection)));
+
       if (attackChanged) {
         remote.remoteAttackId = player.attackId;
         remote.remoteAttackPhase = attackPhase;
@@ -354,6 +503,7 @@ class Level1Parte2 extends Phaser.Scene {
         remote.remoteAttackActive &&
         remote.anims.isPlaying
       ) {
+        // Mantém a animação atual.
       } else if (
         !player.attacking &&
         stillMoving &&
@@ -366,6 +516,7 @@ class Level1Parte2 extends Phaser.Scene {
         remote.remoteAttackActive = false;
         remote.setTexture(texture);
         remote.anims.stop();
+
         const idleFrame =
           direction === "up"
             ? 0
@@ -374,6 +525,7 @@ class Level1Parte2 extends Phaser.Scene {
               : direction === "right"
                 ? 27
                 : 18;
+
         if (
           remote.frame?.name !== idleFrame ||
           remote.remoteAnimationKey !== `idle-${direction}`
@@ -382,12 +534,18 @@ class Level1Parte2 extends Phaser.Scene {
           remote.remoteAnimationKey = `idle-${direction}`;
         }
       }
+
       const projectileIds = new Set();
+
       (player.projectiles || []).forEach((projectile) => {
         if (!projectile?.id) return;
+
         const projectileKey = `${player.id}:${projectile.id}`;
+
         projectileIds.add(projectileKey);
+
         let remoteProjectile = this.remoteProjectiles.get(projectileKey);
+
         if (!remoteProjectile) {
           remoteProjectile = this.add
             .sprite(
@@ -397,24 +555,33 @@ class Level1Parte2 extends Phaser.Scene {
               projectile.frame ?? 0,
             )
             .setDepth(55);
+
           remoteProjectile.targetX = projectile.x;
+
           remoteProjectile.targetY = projectile.y;
+
           this.remoteProjectiles.set(projectileKey, remoteProjectile);
         }
+
         remoteProjectile.setFrame(projectile.frame ?? 0);
+
         remoteProjectile.targetX = projectile.x;
+
         remoteProjectile.targetY = projectile.y;
       });
+
       this.remoteProjectiles.forEach((sprite, projectileKey) => {
         if (
           projectileKey.startsWith(`${player.id}:`) &&
           !projectileIds.has(projectileKey)
         ) {
           sprite.destroy();
+
           this.remoteProjectiles.delete(projectileKey);
         }
       });
     });
+
     this.remotePlayers.forEach((sprite, id) => {
       if (!activeIds.has(id)) {
         sprite.destroy();
@@ -423,13 +590,24 @@ class Level1Parte2 extends Phaser.Scene {
     });
   }
 
+  // =====================================================
+  // INIMIGOS REMOTOS
+  // =====================================================
+
   atualizarInimigosRemotos(room) {
-    if (!this.multiplayer || this.isMultiplayerHost || !room) return;
+    if (!this.multiplayer || this.isMultiplayerHost || !room) {
+      return;
+    }
+
     const activeIds = new Set();
+
     (room.enemies || []).forEach((data) => {
       if (!data?.id) return;
+
       activeIds.add(data.id);
+
       let enemy = this.inimigos.find((item) => item.networkId === data.id);
+
       if (!enemy) {
         enemy = criarInimigoTeste(this, {
           networkId: data.id,
@@ -440,74 +618,104 @@ class Level1Parte2 extends Phaser.Scene {
           direcaoAtual: data.direction,
         });
       }
+
       enemy.targetX = data.x;
       enemy.targetY = data.y;
+
       enemy.direcaoAtual = data.direction || enemy.direcaoAtual;
+
       enemy.alerta = Boolean(data.alerta || data.visual === "alerta");
+
       enemy.estado = data.estado || (enemy.alerta ? "alerta" : "idle");
+
       enemy.visualAtual = data.visual || enemy.visualAtual;
+
       enemy.vida = data.vida;
+
       enemy.vidaMaxima = data.vidaMaxima || enemy.vidaMaxima;
+
       if (data.attackId && enemy.remoteAttackId !== data.attackId) {
         enemy.remoteAttackId = data.attackId;
+
         this.criarLaserInimigoRemoto(enemy, data);
       }
+
       atualizarEstadoVisualRobo(enemy);
       tocarAnimacaoInimigo(enemy);
     });
+
     this.inimigos
       .filter((enemy) => enemy.remoteOnly && !activeIds.has(enemy.networkId))
       .forEach((enemy) => {
         [enemy.fundoVida, enemy.barraVida, enemy.bordaVida].forEach((element) =>
           element?.destroy(),
         );
+
         enemy.destroy();
       });
+
     this.inimigos = this.inimigos.filter(
       (enemy) => !enemy.remoteOnly || activeIds.has(enemy.networkId),
     );
+
     this.inimigoTeste = this.inimigos[0] || null;
   }
 
+  // =====================================================
+  // INTERPOLAÇÃO REMOTA
+  // =====================================================
+
   atualizarInterpolacaoRemota(delta = 0) {
     const alpha = 1 - Math.exp((-12 * Math.max(0, delta)) / 1000);
+
     this.remotePlayers.forEach((sprite) => {
       sprite.x = Phaser.Math.Linear(
         sprite.x,
         sprite.targetX ?? sprite.x,
         alpha,
       );
+
       sprite.y = Phaser.Math.Linear(
         sprite.y,
         sprite.targetY ?? sprite.y,
         alpha,
       );
     });
+
     this.remoteProjectiles.forEach((sprite) => {
       sprite.x = Phaser.Math.Linear(
         sprite.x,
         sprite.targetX ?? sprite.x,
         alpha,
       );
+
       sprite.y = Phaser.Math.Linear(
         sprite.y,
         sprite.targetY ?? sprite.y,
         alpha,
       );
     });
+
     this.inimigos
       ?.filter((enemy) => enemy.remoteOnly)
       .forEach((enemy) => {
         enemy.x = Phaser.Math.Linear(enemy.x, enemy.targetX ?? enemy.x, alpha);
+
         enemy.y = Phaser.Math.Linear(enemy.y, enemy.targetY ?? enemy.y, alpha);
       });
   }
+
+  // =====================================================
+  // LASER REMOTO
+  // =====================================================
 
   criarLaserInimigoRemoto(enemy, data) {
     const laser = this.add
       .circle(enemy.x, enemy.y, 4, 0xff0000, 1)
       .setDepth(55);
+
     laser.setStrokeStyle(2, 0xff8888, 1);
+
     this.tweens.add({
       targets: laser,
       x: data.targetX ?? enemy.x,
@@ -517,6 +725,10 @@ class Level1Parte2 extends Phaser.Scene {
     });
   }
 
+  // =====================================================
+  // PROFUNDIDADE DO PERSONAGEM
+  // =====================================================
+
   definirProfundidadePersonagem(profundidade) {
     const valor = Number(profundidade);
 
@@ -525,8 +737,13 @@ class Level1Parte2 extends Phaser.Scene {
     }
 
     this.profundidadePersonagemParte2 = valor;
+
     this.player?.setDepth(valor);
   }
+
+  // =====================================================
+  // TELEPORTE DE RETORNO
+  // =====================================================
 
   criarTeleporteRetornoParte1() {
     const x = 95;
@@ -540,6 +757,7 @@ class Level1Parte2 extends Phaser.Scene {
       this.teleporteRetornoParte1,
       Phaser.Physics.Arcade.STATIC_BODY,
     );
+
     this.teleporteRetornoParte1.body.setSize(largura, altura);
 
     this.physics.add.overlap(this.player, this.teleporteRetornoParte1, () => {
@@ -552,11 +770,14 @@ class Level1Parte2 extends Phaser.Scene {
       }
 
       this.transicaoRetornoEmAndamento = true;
+
       this.physics.pause();
+
       this.cameras.main.fadeOut(250, 0, 0, 0);
 
       this.cameras.main.once("camerafadeoutcomplete", () => {
         limparGrupoRobos(this);
+
         this.scene.start("Level1", {
           spawnX: 72,
           spawnY: -2160,

@@ -16,6 +16,13 @@ import { tomarDano } from "../../player/PlayerStatus.js";
 import mostrarTelaMorte from "../../scenes/DeathScreen.js";
 
 // =====================================================
+// CONFIGURAÇÃO DO EFEITO VISUAL DE DANO
+// =====================================================
+
+// Vermelho forte, preservando a textura original.
+const COR_DANO = 0xff4040;
+
+// =====================================================
 // OBTER RETANGULO DE UM OBJETO
 // =====================================================
 
@@ -52,8 +59,9 @@ export function causarDanoJogador(boss, quantidade) {
 
   tomarDano(scene, quantidade);
 
-  player.setTint(0xff5555);
-  player.setTintMode(Phaser.TintModes.FILL);
+  // Vermelho mais intenso, sem esconder os detalhes.
+  player.setTint(COR_DANO);
+  player.setTintMode(Phaser.TintModes.MULTIPLY);
 
   scene.time.delayedCall(500, () => {
     if (!player.active) {
@@ -106,14 +114,10 @@ export function aplicarDanoDoAtaque(boss) {
   const ia = boss.iaCombate;
   const player = scene.player;
 
-  // O ataque no chao precisa estar
-  // em um frame ativo.
   if (!socoComDanoAtivo(boss)) {
     return;
   }
 
-  // Evita varios acertos durante
-  // o mesmo golpe.
   if (ia.jogadorAtingidoNesteAtaque) {
     return;
   }
@@ -122,54 +126,28 @@ export function aplicarDanoDoAtaque(boss) {
     return;
   }
 
-  // ===============================================
-  // HITBOX REAL DE RECEBIMENTO DE DANO
-  // ===============================================
-  //
-  // NAO usar:
-  // player.body
-  //
-  // NAO usar:
-  // player.getBounds()
-  //
-  // Usar somente a hitbox especifica
-  // do sistema de dano do jogador.
-  // ===============================================
-
+  // Hitbox real de recebimento de dano do jogador.
   const hitboxJogador = scene.hitboxDanoPlayer;
 
   if (!hitboxJogador) {
     return;
   }
 
-  // ===============================================
-  // HITBOX AZUL DO ATAQUE
-  // ===============================================
-
+  // Hitbox azul do ataque.
   const hitboxAzul = boss.areaDanoChao;
 
   if (!hitboxAzul) {
     return;
   }
 
-  // ===============================================
-  // VERIFICAR INTERSECAO
-  // ===============================================
-
   const jogadorDentroDaArea = Phaser.Geom.Intersects.RectangleToRectangle(
     hitboxJogador,
     hitboxAzul,
   );
 
-  // Se estiver fora da area azul,
-  // nao recebe dano.
   if (!jogadorDentroDaArea) {
     return;
   }
-
-  // ===============================================
-  // APLICAR DANO
-  // ===============================================
 
   const danoAplicado = causarDanoJogador(boss, danoAtaqueChao);
 
@@ -239,7 +217,6 @@ export function causarDanoBoss(scene, quantidade, regiaoAtaque = null) {
     return false;
   }
 
-  // Verificar zonas verdes.
   if (regiaoAtaque && !ataqueAcertaZonaVerde(boss, regiaoAtaque)) {
     return false;
   }
@@ -249,9 +226,9 @@ export function causarDanoBoss(scene, quantidade, regiaoAtaque = null) {
 
   atualizarBarraVidaBoss(boss);
 
-  // Efeito visual.
-  boss.sprite.setTint(0xff7777);
-  boss.sprite.setTintMode(Phaser.TintModes.FILL);
+  // Vermelho mais forte, mantendo os detalhes do boss.
+  boss.sprite.setTint(COR_DANO);
+  boss.sprite.setTintMode(Phaser.TintModes.MULTIPLY);
 
   scene.time.delayedCall(100, () => {
     if (boss.active && !boss.morto) {
@@ -287,10 +264,6 @@ export function causarDanoBoss(scene, quantidade, regiaoAtaque = null) {
 
 // =====================================================
 // OBTER HITBOX DA KATANA
-// =====================================================
-//
-// Mantem a geometria usada pelo Player.js.
-// Nao altera as animacoes do jogador.
 // =====================================================
 
 function obterRetanguloKatana(scene) {
@@ -345,13 +318,6 @@ function obterRetanguloKatana(scene) {
 // =====================================================
 // PROCESSAR ATAQUES DO JOGADOR CONTRA O BOSS
 // =====================================================
-//
-// Espada e projeteis devem atingir
-// somente as hitboxes VERDES.
-//
-// As hitboxes de colisao VERMELHA
-// e LARANJAS nao recebem dano.
-// =====================================================
 
 export function processarAtaquesJogadorContraBoss(scene, delta = 16.67) {
   const boss = scene.bossFinal;
@@ -370,7 +336,6 @@ export function processarAtaquesJogadorContraBoss(scene, delta = 16.67) {
 
   const atacando = Boolean(scene.atacando || scene.player?.atacando);
 
-  // Inicio de um novo ataque.
   if (atacando && !ia.ataqueJogadorAnterior) {
     ia.janelaKatanaRestante = 140;
     ia.katanaAtingiuBoss = false;
@@ -382,7 +347,6 @@ export function processarAtaquesJogadorContraBoss(scene, delta = 16.67) {
     const regiaoAtaque = obterRetanguloKatana(scene);
 
     if (regiaoAtaque && causarDanoBoss(scene, 25, regiaoAtaque)) {
-      // Impede varios danos no mesmo golpe.
       ia.katanaAtingiuBoss = true;
     }
   }
@@ -417,7 +381,6 @@ export function processarAtaquesJogadorContraBoss(scene, delta = 16.67) {
       continue;
     }
 
-    // Dano somente nas zonas verdes.
     const acertou = causarDanoBoss(scene, projetil.dano || 25, areaProjetil);
 
     if (!acertou) {

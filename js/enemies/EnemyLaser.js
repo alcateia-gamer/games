@@ -3,6 +3,13 @@ import { tomarDano } from "../player/PlayerStatus.js";
 import { tocarSomTiroLaser } from "../sounds/inimigos.js";
 import { obterFilhosGrupoSeguro } from "./EnemyPathfinding.js";
 
+// =====================================================
+// CONFIGURAÇÃO DO EFEITO VISUAL DE DANO
+// =====================================================
+
+// Vermelho mais forte, mantendo os detalhes do personagem.
+const COR_DANO_PLAYER = 0xff4040;
+
 function tentarDispararLaser(scene, time, inimigo = scene.inimigoTeste) {
   if (!inimigo || !inimigo.active) {
     return;
@@ -69,6 +76,7 @@ function dispararLaser(scene, inimigo = scene.inimigoTeste) {
       laser.destroy();
     }
   });
+
   if (scene.multiplayer && scene.isMultiplayerHost && alvo.id) {
     scene.time.delayedCall(220, () => {
       scene.multiplayerManager?.publishPlayerDamage(alvo.id, inimigo.danoLaser);
@@ -176,8 +184,9 @@ function causarDanoPlayer(scene, dano) {
   scene.player.invulneravel = true;
   tomarDano(scene, dano);
 
-  scene.player.setTint(0xff5555);
-  scene.player.setTintMode(Phaser.TintModes.FILL);
+  // Efeito vermelho mais intenso sem esconder a textura.
+  scene.player.setTint(COR_DANO_PLAYER);
+  scene.player.setTintMode(Phaser.TintModes.MULTIPLY);
 
   scene.time.delayedCall(500, () => {
     if (scene.player && scene.player.active) {
