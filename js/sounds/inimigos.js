@@ -1,5 +1,5 @@
 // Volume máximo do passo do robô. A distância reduz este valor até zero.
-const VOLUME_PASSO_ROBO_MAXIMO = 0.3;
+const VOLUME_PASSO_ROBO_MAXIMO = 0.12;
 const DISTANCIA_FADE_PASSO_ROBO = 240;
 
 // Volume fixo do disparo de laser dos inimigos.
@@ -9,6 +9,7 @@ const VOLUME_MORTE_ROBO = 0.3;
 function carregarSonsInimigos(loader) {
   loader.audio("tiro-laser", "sounds.mp3/tiro_laser.mp3");
   loader.audio("robot-walk", "sounds.mp3/robot_walk_3.mp3");
+  loader.audio("walk-robo-serra", "sounds.mp3/walk_robo_serra.mp3");
   loader.audio("robo-explodindo", "sounds.mp3/robo_explodindo.mp3");
 }
 
@@ -19,6 +20,7 @@ function atualizarSomPassoRobo(
   distancia,
   estaSeMovendo,
 ) {
+  const fatorVolumeSerra = inimigo?.tipoRobo === "serra" ? 0.5 : 1;
   if (scene.morteEmAndamento) {
     if (inimigo.somPassoRobo?.isPlaying) {
       inimigo.somPassoRobo.stop();
@@ -37,7 +39,8 @@ function atualizarSomPassoRobo(
           0,
           0.2,
         );
-  const volume = volumeRelativo * VOLUME_PASSO_ROBO_MAXIMO;
+  const volume =
+    volumeRelativo * VOLUME_PASSO_ROBO_MAXIMO * fatorVolumeSerra;
   const podeOuvir = volume > 0;
 
   inimigo.podeTocarPasso = podeTocar;
@@ -55,9 +58,12 @@ function atualizarSomPassoRobo(
 }
 
 function configurarSomPassoRobo(scene, inimigo) {
+  const chaveSomPasso =
+    inimigo?.tipoRobo === "serra" ? "walk-robo-serra" : "robot-walk";
+
   // Cada robô possui uma instância própria para que todos possam caminhar
   // e tocar seus passos simultaneamente sem bloquear os demais.
-  inimigo.somPassoRobo = scene.sound.add("robot-walk", { loop: true });
+  inimigo.somPassoRobo = scene.sound.add(chaveSomPasso, { loop: true });
 
   scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
     if (!inimigo.somPassoRobo) {
