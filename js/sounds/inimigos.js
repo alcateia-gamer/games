@@ -39,8 +39,7 @@ function atualizarSomPassoRobo(
           0,
           0.2,
         );
-  const volume =
-    volumeRelativo * VOLUME_PASSO_ROBO_MAXIMO * fatorVolumeSerra;
+  const volume = volumeRelativo * VOLUME_PASSO_ROBO_MAXIMO * fatorVolumeSerra;
   const podeOuvir = volume > 0;
 
   inimigo.podeTocarPasso = podeTocar;
