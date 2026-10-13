@@ -113,16 +113,33 @@ class Start extends Phaser.Scene {
       this.game.musicaMenu = null;
     }
 
-    // Volume reduzido para 20%.
+    const loopEndOffsetOriginal = this.sound.loopEndOffset;
+    const ajustarMargemLoop = Number.isFinite(loopEndOffsetOriginal);
+    const loopEndOffsetMenu = Math.max(loopEndOffsetOriginal || 0, 0.12);
+
+    if (ajustarMargemLoop) {
+      this.sound.loopEndOffset = loopEndOffsetMenu;
+    }
+
     const musica = this.sound.add("musica-menu", {
-      volume: 0.2,
-      loop: true,
+      volume: 0.1,
+      mute: Boolean(this.game.musicaMenuMutada),
+    });
+    musica.addMarker({
+      name: "loop-menu",
+      start: 0,
+      duration: 12,
+      config: {
+        volume: 0.1,
+        loop: true,
+        mute: Boolean(this.game.musicaMenuMutada),
+      },
     });
 
     // Mantém a música ativa entre as cenas.
     this.game.musicaMenu = musica;
 
-    musica.play();
+    musica.play("loop-menu");
 
     // Para quando o jogo realmente começar.
     // Funciona tanto no solo quanto no multiplayer.
@@ -133,6 +150,13 @@ class Start extends Phaser.Scene {
         musica.stop();
         musica.destroy();
         this.game.musicaMenu = null;
+
+        if (
+          ajustarMargemLoop &&
+          this.sound.loopEndOffset === loopEndOffsetMenu
+        ) {
+          this.sound.loopEndOffset = loopEndOffsetOriginal;
+        }
       }
     });
   }
@@ -499,6 +523,11 @@ class Start extends Phaser.Scene {
       return;
     }
 
+    if (option === "OPÇÕES") {
+      this.showOptions();
+      return;
+    }
+
     this.menuStatus.setText(`${option} // DISPONÍVEL EM BREVE`);
 
     this.tweens.add({
@@ -507,6 +536,104 @@ class Start extends Phaser.Scene {
       duration: 120,
       yoyo: true,
       repeat: 2,
+    });
+  }
+
+  showOptions() {
+    this.menuLayer.setVisible(false);
+    this.optionsLayer = this.add.container(0, 0).setDepth(21).setAlpha(0);
+
+    const shade = this.add.rectangle(
+      this.width / 2,
+      this.height / 2,
+      this.width,
+      this.height,
+      0x000000,
+      0.72,
+    );
+
+    const title = this.add
+      .text(this.width / 2, this.height / 2 - 82, "OPÇÕES", {
+        color: "#c9ffda",
+        fontFamily: "monospace",
+        fontSize: "22px",
+        fontStyle: "bold",
+      })
+      .setOrigin(0.5);
+
+    const toggle = this.createButton(
+      this.width / 2,
+      this.height / 2,
+      "",
+      250,
+      54,
+    );
+    const icon = this.add.graphics();
+    const atualizarEstado = () => {
+      const mutada = Boolean(this.game.musicaMenuMutada);
+      const cor = mutada ? 0x54d879 : 0x9dffb9;
+
+      icon.clear();
+      icon.fillStyle(cor, 1);
+      icon.fillPoints(
+        [
+          { x: -78, y: -10 },
+          { x: -66, y: -10 },
+          { x: -52, y: -21 },
+          { x: -52, y: 21 },
+          { x: -66, y: 10 },
+          { x: -78, y: 10 },
+        ],
+        true,
+      );
+      icon.lineStyle(3, cor, 1);
+
+      if (mutada) {
+        icon.lineBetween(-44, -12, -25, 12);
+        icon.lineBetween(-25, -12, -44, 12);
+      } else {
+        icon.beginPath();
+        icon.arc(-49, 0, 17, -Math.PI / 4, Math.PI / 4, false);
+        icon.strokePath();
+        icon.beginPath();
+        icon.arc(-49, 0, 27, -Math.PI / 4, Math.PI / 4, false);
+        icon.strokePath();
+      }
+
+      toggle.label
+        .setText(mutada ? "MÚSICA MUTADA" : "MÚSICA ATIVA")
+        .setPosition(32, 0)
+        .setFontSize("13px");
+    };
+
+    toggle.add(icon);
+    atualizarEstado();
+
+    toggle.on("buttondown", () => {
+      this.game.musicaMenuMutada = !Boolean(this.game.musicaMenuMutada);
+      this.game.musicaMenu?.setMute(this.game.musicaMenuMutada);
+      atualizarEstado();
+    });
+
+    const back = this.createButton(
+      this.width / 2,
+      this.height / 2 + 68,
+      "VOLTAR",
+      140,
+      36,
+    );
+
+    this.optionsLayer.add([shade, title, toggle, back]);
+
+    back.on("buttondown", () => {
+      this.optionsLayer.destroy();
+      this.menuLayer.setVisible(true);
+    });
+
+    this.tweens.add({
+      targets: this.optionsLayer,
+      alpha: 1,
+      duration: 260,
     });
   }
 
