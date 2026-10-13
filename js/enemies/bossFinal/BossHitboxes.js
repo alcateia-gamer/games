@@ -3,7 +3,6 @@ import {
   bossBaseY,
   bossDepth,
   colisaoBase,
-  mostrarHitboxes,
   posesMaos,
   zonasVulneraveis,
   areaAtaqueChao,
@@ -11,10 +10,32 @@ import {
   obterNumeroFrameAnimacao,
 } from "./BossConfig.js";
 
-// Os valores fixos da base e da área azul foram
-// definidos para o sprite com escala 1.25.
+// =====================================================
+// CONFIGURAÇÕES
+// =====================================================
+
 const ESCALA_ORIGINAL = 1.25;
 const TAMANHO_FRAME = 256;
+
+// =====================================================
+// CONSULTAR DEBUG DO PHASER
+// =====================================================
+
+// Usa a mesma configuração das hitboxes do jogador:
+//
+// physics: {
+//   default: "arcade",
+//   arcade: {
+//     debug: true ou false
+//   }
+// }
+//
+// Não depende mais de mostrarHitboxes = true
+// no BossConfig.js.
+
+function debugHitboxesAtivado(scene) {
+  return Boolean(scene?.game?.config?.physics?.arcade?.debug);
+}
 
 // =====================================================
 // CRIAR HITBOX FÍSICA
@@ -27,6 +48,8 @@ export function criarHitboxColisao(
   altura,
   cor = 0xff3333,
 ) {
+  const debugAtivo = debugHitboxesAtivado(scene);
+
   const hitbox = scene.add.rectangle(
     bossBaseX,
     bossBaseY,
@@ -40,9 +63,16 @@ export function criarHitboxColisao(
   hitbox.setOrigin(0.5, 0.5);
   hitbox.setStrokeStyle(2, cor, 1);
   hitbox.setDepth(bossDepth + 1);
-  hitbox.setVisible(mostrarHitboxes);
 
+  // Somente a aparência segue o debug.
+  hitbox.setVisible(debugAtivo);
+
+  // O corpo físico existe independentemente
+  // da visualização das hitboxes.
   scene.physics.add.existing(hitbox, true);
+
+  // Evita que o Arcade Physics desenhe outra
+  // caixa sobre a hitbox personalizada.
   hitbox.body.debugShowBody = false;
 
   return hitbox;
@@ -64,24 +94,31 @@ function posicionarColisao(hitbox, x, y, largura, altura) {
   hitbox.setPosition(x, y);
 
   hitbox.body.setSize(largura, altura);
+
   hitbox.body.updateFromGameObject();
 }
 
 // =====================================================
-// PIXELS DO SPRITE PARA COORDENADAS DO MAPA
+// CONVERTER PIXEL PARA COORDENADAS DO MAPA
 // =====================================================
 
 function converterPixelParaMundo(boss, x, y) {
   const sprite = boss.sprite;
 
   const origemX = Number(sprite.originX ?? 0.5) * TAMANHO_FRAME;
+
   const origemY = Number(sprite.originY ?? 1) * TAMANHO_FRAME;
 
   return {
     x: boss.x + sprite.x + (x - origemX) * sprite.scaleX,
+
     y: boss.y + sprite.y + (y - origemY) * sprite.scaleY,
   };
 }
+
+// =====================================================
+// CONVERTER REGIÃO DO SPRITE
+// =====================================================
 
 function converterRetanguloSprite(boss, regiao) {
   const centro = converterPixelParaMundo(
@@ -91,6 +128,7 @@ function converterRetanguloSprite(boss, regiao) {
   );
 
   const largura = Math.abs(boss.sprite.scaleX) * regiao.largura;
+
   const altura = Math.abs(boss.sprite.scaleY) * regiao.altura;
 
   return new Phaser.Geom.Rectangle(
@@ -102,19 +140,22 @@ function converterRetanguloSprite(boss, regiao) {
 }
 
 // =====================================================
-// REGIÕES DEFINIDAS NA ESCALA ANTIGA
+// REGIÕES DEFINIDAS NA ESCALA ORIGINAL
 // =====================================================
 
 function converterRegiaoOriginal(boss, regiao) {
   const sprite = boss.sprite;
 
   const fatorX = sprite.scaleX / ESCALA_ORIGINAL;
+
   const fatorY = sprite.scaleY / ESCALA_ORIGINAL;
 
   const largura = regiao.largura * Math.abs(fatorX);
+
   const altura = regiao.altura * Math.abs(fatorY);
 
   const centroX = boss.x + sprite.x + regiao.x * fatorX;
+
   const centroY = boss.y + sprite.y + regiao.y * fatorY;
 
   return {
@@ -138,6 +179,7 @@ function obterMaoNoFrame(boss, lado) {
   const lista = posesMaos[estado] || posesMaos.ataqueChao;
 
   const frameAtual = obterNumeroFrameAnimacao(boss.sprite.frame);
+
   const numero = Phaser.Math.Clamp(frameAtual, 0, lista.length - 1);
 
   const [px, py, largura, altura] = lista[numero];
@@ -176,18 +218,38 @@ export function socoComDanoAtivo(boss) {
 }
 
 // =====================================================
-// DESENHO DE DEPURAÇÃO
+// DESENHAR DEBUG DO BOSS
 // =====================================================
 
 function desenharHitboxesBoss(boss) {
   const desenho = boss.debugDano;
-  if (!desenho) return;
 
+  if (!desenho?.scene) return;
+
+  const debugAtivo = debugHitboxesAtivado(boss.scene);
+
+  desenho.setVisible(debugAtivo);
   desenho.clear();
 
-  if (!mostrarHitboxes || boss.morto) return;
+  // Mostra as hitboxes físicas somente
+  // quando o debug do Phaser estiver ligado.
+  for (const hitbox of boss.hitboxesColisao || []) {
+    if (!hitbox?.active) continue;
+
+    hitbox.setVisible(debugAtivo && !boss.morto);
+  }
+
+  // Não desenha hitboxes gráficas no modo normal.
+  if (!debugAtivo || boss.morto) {
+    return;
+  }
+
+  // ================================================
+  // HITBOXES VERDES - RECEBIMENTO DE DANO
+  // ================================================
 
   desenho.lineStyle(2, 0x22dd55, 1);
+
   desenho.fillStyle(0x22dd55, 0.14);
 
   for (const area of boss.hitboxesReceberDano) {
@@ -195,28 +257,38 @@ function desenharHitboxesBoss(boss) {
     desenho.strokeRectShape(area);
   }
 
+  // ================================================
+  // HITBOX AZUL - ATAQUE DE SOCO NO CHÃO
+  // ================================================
+
   if (boss.areaDanoChao) {
     const ativo = socoComDanoAtivo(boss);
 
     desenho.lineStyle(ativo ? 3 : 2, 0x2288ff, 1);
+
     desenho.fillStyle(0x2288ff, ativo ? 0.19 : 0.025);
 
     desenho.fillRectShape(boss.areaDanoChao);
+
     desenho.strokeRectShape(boss.areaDanoChao);
   }
 }
 
 // =====================================================
-// ATUALIZAÇÃO DAS HITBOXES
+// ATUALIZAR TODAS AS HITBOXES
 // =====================================================
 
 export function atualizarHitboxesBoss(boss) {
   if (!boss?.active || boss.morto) return;
 
   const maoEsquerda = obterMaoNoFrame(boss, "esquerda");
+
   const maoDireita = obterMaoNoFrame(boss, "direita");
 
-  // Base vermelha: acompanha o aumento do sprite.
+  // ================================================
+  // BASE VERMELHA
+  // ================================================
+
   const base = converterRegiaoOriginal(boss, colisaoBase);
 
   posicionarColisao(
@@ -227,7 +299,10 @@ export function atualizarHitboxesBoss(boss) {
     base.altura,
   );
 
-  // Mãos: posição e tamanho específicos de cada frame.
+  // ================================================
+  // MÃO ESQUERDA - LARANJA
+  // ================================================
+
   posicionarColisao(
     boss.hitboxMaoEsquerda,
     maoEsquerda.x,
@@ -235,6 +310,10 @@ export function atualizarHitboxesBoss(boss) {
     maoEsquerda.largura,
     maoEsquerda.altura,
   );
+
+  // ================================================
+  // MÃO DIREITA - LARANJA
+  // ================================================
 
   posicionarColisao(
     boss.hitboxMaoDireita,
@@ -244,7 +323,10 @@ export function atualizarHitboxesBoss(boss) {
     maoDireita.altura,
   );
 
-  // Cabeça e corpo: convertidos dos pixels do sprite.
+  // ================================================
+  // CABEÇA E CORPO - VERDE
+  // ================================================
+
   const cabeca = converterRetanguloSprite(boss, zonasVulneraveis.cabeca);
 
   boss.hitboxCabeca.setTo(cabeca.x, cabeca.y, cabeca.width, cabeca.height);
@@ -253,16 +335,23 @@ export function atualizarHitboxesBoss(boss) {
 
   boss.hitboxCorpo.setTo(corpo.x, corpo.y, corpo.width, corpo.height);
 
-  // Área azul: acompanha o deslocamento e a nova escala.
+  // ================================================
+  // ATAQUE DO SOCO - AZUL
+  // ================================================
+
   const area = converterRegiaoOriginal(boss, areaAtaqueChao);
 
   boss.areaDanoChao.setTo(area.x, area.y, area.largura, area.altura);
+
+  // ================================================
+  // ATUALIZAR VISIBILIDADE DO DEBUG
+  // ================================================
 
   desenharHitboxesBoss(boss);
 }
 
 // =====================================================
-// RECEBIMENTO DE DANO
+// VERIFICAR RECEBIMENTO DE DANO
 // =====================================================
 
 export function ataqueAcertaZonaVerde(boss, retanguloAtaque) {
@@ -296,6 +385,7 @@ export function removerColisaoBoss(boss) {
   }
 
   boss.debugDano?.clear();
+  boss.debugDano?.setVisible(false);
 }
 
 // =====================================================
@@ -334,16 +424,20 @@ export function criarHitboxesBoss(scene, boss) {
   ];
 
   boss.hitboxCabeca = new Phaser.Geom.Rectangle();
+
   boss.hitboxCorpo = new Phaser.Geom.Rectangle();
 
   boss.hitboxesReceberDano = [boss.hitboxCabeca, boss.hitboxCorpo];
 
   boss.hitboxDano = boss.hitboxCorpo;
+
   boss.areaDanoChao = new Phaser.Geom.Rectangle();
 
-  // Posiciona e dimensiona antes de vincular as colisões.
+  // Coloca as hitboxes nas coordenadas corretas.
   atualizarHitboxesBoss(boss);
 
+  // Colisões físicas permanecem ativas
+  // mesmo com debug: false.
   boss.collidersColisao = scene.player?.body
     ? boss.hitboxesColisao.map((hitbox) =>
         scene.physics.add.collider(scene.player, hitbox),

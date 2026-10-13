@@ -32,6 +32,12 @@ import {
   processarAtaquesJogadorContraBoss,
 } from "./BossCombate.js";
 
+import {
+  limparRaioZona,
+  inicializarDebugZonasRaio,
+  destruirDebugZonasRaio,
+} from "./BossRaioZonas.js";
+
 // =====================================================
 // POSIÇÃO E TAMANHO DO BOSS
 // =====================================================
@@ -43,14 +49,16 @@ const ESCALA_BOSS = 1.4;
 // ÁREA DE ZOOM DA ARENA
 // =====================================================
 
-// O zoom aberto permanece em toda esta largura.
+// Área principal da arena.
 const ARENA_X_MIN = -1606;
-const ARENA_X_MAX = -600;
+const ARENA_X_MAX = -550;
 
 // Entrando nesta coordenada e seguindo para cima.
 const ENTRADA_ARENA_Y = -5470;
 
-// Pequena margem vertical para evitar alternância na entrada.
+// Margens para não sair da arena só por encostar
+// nas paredes laterais ou oscilar perto da entrada.
+const MARGEM_SAIDA_X = 70;
 const MARGEM_SAIDA_Y = 80;
 
 const FATOR_ZOOM_ARENA = 0.8;
@@ -70,7 +78,6 @@ const CUSTO_ESTAMINA = {
   rec: 20,
 };
 
-// Recuperação total: 3,5 segundos.
 const PAUSA_ESTAMINA_MS = 250;
 const RECUPERACAO_ESTAMINA_MS = 3250;
 
@@ -99,7 +106,6 @@ function configurarCameraArena(scene, boss) {
   let cameraControlada = null;
   let zoomNormal = 1;
 
-  // A barra começa invisível fora da arena.
   boss.dentroArena = false;
 
   const atualizarCamera = (_tempo, delta = 16.67) => {
@@ -121,11 +127,18 @@ function configurarCameraArena(scene, boss) {
     const podeEntrar = boss.active && !boss.morto && player?.active;
 
     if (podeEntrar) {
-      const dentroDaLargura =
+      // Área normal para entrar.
+      const dentroDaLarguraEntrada =
         player.x >= ARENA_X_MIN && player.x <= ARENA_X_MAX;
 
+      // Área com folga para permanecer.
+      const dentroDaLarguraPermanencia =
+        player.x >= ARENA_X_MIN - MARGEM_SAIDA_X &&
+        player.x <= ARENA_X_MAX + MARGEM_SAIDA_X;
+
       if (!dentroArena) {
-        const entrouNaArena = dentroDaLargura && player.y <= ENTRADA_ARENA_Y;
+        const entrouNaArena =
+          dentroDaLarguraEntrada && player.y <= ENTRADA_ARENA_Y;
 
         if (entrouNaArena) {
           dentroArena = true;
@@ -137,7 +150,7 @@ function configurarCameraArena(scene, boss) {
           }
         }
       } else {
-        const saiuPelosLados = !dentroDaLargura;
+        const saiuPelosLados = !dentroDaLarguraPermanencia;
 
         const saiuPelaEntrada = player.y > ENTRADA_ARENA_Y + MARGEM_SAIDA_Y;
 
@@ -149,9 +162,6 @@ function configurarCameraArena(scene, boss) {
       dentroArena = false;
     }
 
-    // O HUD acompanha exatamente o estado da arena.
-    // Aparece ao iniciar o zoom afastado e desaparece
-    // ao sair da região do confronto.
     boss.dentroArena = dentroArena;
 
     if (!controlandoZoom) return;
@@ -195,7 +205,7 @@ function configurarCameraArena(scene, boss) {
 }
 
 // =====================================================
-// RECUPERAÇÃO DA ESTAMINA
+// RECUPERAÇÃO DE ESTAMINA
 // =====================================================
 
 function iniciarRecuperacaoEstamina(boss) {
@@ -206,6 +216,8 @@ function iniciarRecuperacaoEstamina(boss) {
   boss.tempoRecuperacaoEstamina = 0;
 
   const ia = boss.iaCombate;
+
+  limparRaioZona(boss);
 
   ia.ataqueAtual = null;
   ia.ataqueSolicitado = null;
@@ -276,9 +288,11 @@ function desenharFundoArredondado(grafico, largura, altura, centroY) {
 
   const x = -largura / 2;
   const y = centroY - altura / 2;
+
   const raio = Math.min(altura / 2, largura / 2);
 
   grafico.fillStyle(0x000000, OPACIDADE_FUNDO);
+
   grafico.fillRoundedRect(x, y, largura, altura, raio);
 
   grafico.lineStyle(ESPESSURA_CONTORNO, 0x000000, OPACIDADE_CONTORNO);
@@ -305,6 +319,7 @@ function desenharPreenchimentoArredondado(
   const direita = larguraMaxima / 2;
   const x = direita - larguraAtual;
   const y = centroY - altura / 2;
+
   const raio = Math.min(altura / 2, larguraAtual / 2);
 
   grafico.fillStyle(cor, 1);
@@ -331,13 +346,13 @@ function criarHudBoss(scene, boss) {
     boss.barraEstamina,
   ]);
 
-  // O HUD nunca deve aparecer antes do confronto.
   boss.hudVida.setVisible(false);
 
   const atualizarHud = () => {
     if (!boss.hudVida?.scene) return;
 
     const camera = scene.cameras.main;
+    if (!camera) return;
 
     const zoomX = camera.zoomX || camera.zoom || 1;
 
@@ -390,8 +405,6 @@ function criarHudBoss(scene, boss) {
       boss.recuperandoEstamina ? 0xffc857 : 0x45dfff,
     );
 
-    // Exibe vida e estamina somente na arena,
-    // usando a mesma condição do zoom.
     boss.hudVida.setVisible(
       boss.active && boss.visible && !boss.morto && boss.dentroArena === true,
     );
@@ -425,6 +438,7 @@ function criarBoss(scene) {
   }
 
   criarAnimacoesBoss(scene);
+
   pecas.forEach((peca) => peca.destroy());
 
   const boss = scene.add
@@ -453,6 +467,7 @@ function criarBoss(scene) {
     .setScale(ESCALA_BOSS);
 
   boss.add(boss.sprite);
+
   boss.estadosAnimacao = estadosAnimacao;
 
   boss.debugDano = scene.add.graphics().setDepth(bossDepth + 2);
@@ -502,6 +517,8 @@ function criarBoss(scene) {
   criarHudBoss(scene, boss);
   configurarCameraArena(scene, boss);
 
+  inicializarDebugZonasRaio(boss);
+
   const aoFinalizarAtaque = (evento) => {
     if (evento?.boss !== boss || boss.morto || boss.recuperandoEstamina) {
       return;
@@ -535,7 +552,7 @@ function criarBoss(scene) {
 }
 
 // =====================================================
-// VINCULAÇÃO E LIMPEZA
+// VINCULAR BOSS
 // =====================================================
 
 export function vincularIABoss(scene) {
@@ -555,6 +572,7 @@ export function vincularIABoss(scene) {
   });
 
   scene.bossFinal = boss;
+
   atualizarHitboxesBoss(boss);
 
   let limpo = false;
@@ -584,6 +602,9 @@ export function vincularIABoss(scene) {
     boss.limparHudVida?.();
     boss.limparEstamina?.();
 
+    limparRaioZona(boss);
+    destruirDebugZonasRaio(boss);
+
     removerColisaoBoss(boss);
 
     for (const hitbox of boss.hitboxesColisao || []) {
@@ -609,7 +630,7 @@ export function vincularIABoss(scene) {
 }
 
 // =====================================================
-// PEDIDOS DE ATAQUE
+// PEDIDO DE ATAQUE
 // =====================================================
 
 function solicitarAtaqueBoss(scene, ataque) {

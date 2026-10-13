@@ -14,17 +14,9 @@ class Preloader extends Phaser.Scene {
   iniciarCarregamento() {
     this.carregandoAtivos = true;
 
-    // =====================================================
-    // PAINEL PRINCIPAL
-    // =====================================================
-
     this.add
       .rectangle(400, 305, 440, 115, 0x000000, 1)
       .setStrokeStyle(2, 0x00ff66, 0.8);
-
-    // =====================================================
-    // STATUS
-    // =====================================================
 
     this.textoStatus = this.add.text(200, 280, "CARREGANDO ASSETS...", {
       fontFamily: "monospace",
@@ -32,25 +24,13 @@ class Preloader extends Phaser.Scene {
       color: "#00ff66",
     });
 
-    // =====================================================
-    // BORDA DA BARRA
-    // =====================================================
-
     this.add
       .rectangle(400, 315, 404, 26, 0x000000, 1)
       .setStrokeStyle(2, 0x00ff66, 1);
 
-    // =====================================================
-    // BARRA DE CARREGAMENTO
-    // =====================================================
-
     this.barra = this.add
       .rectangle(204, 315, 0, 12, 0x00ff66, 1)
       .setOrigin(0, 0.5);
-
-    // =====================================================
-    // PORCENTAGEM
-    // =====================================================
 
     this.porcentagem = this.add
       .text(600, 342, "0%", {
@@ -60,30 +40,16 @@ class Preloader extends Phaser.Scene {
       })
       .setOrigin(1, 0.5);
 
-    // =====================================================
-    // PROGRESSO
-    // =====================================================
-
     this.load.on("progress", (progress) => {
-      // Atualiza o tamanho da barra
       this.barra.width = 392 * progress;
-
-      // Atualiza a porcentagem
       this.porcentagem.setText(Math.floor(progress * 100) + "%");
     });
-
-    // =====================================================
-    // QUANDO TERMINAR O CARREGAMENTO
-    // =====================================================
 
     this.load.once("complete", () => {
       this.finalizarCarregamento();
     });
 
-    // Carrega todos os assets
     this.carregarAssets();
-
-    // Inicia o carregamento
     this.load.start();
   }
 
@@ -92,7 +58,7 @@ class Preloader extends Phaser.Scene {
   // =====================================================
 
   preload() {
-    // O carregamento é iniciado manualmente após clicar no botão "JOGAR"
+    // Carregamento iniciado após clicar em JOGAR.
   }
 
   // =====================================================
@@ -100,12 +66,10 @@ class Preloader extends Phaser.Scene {
   // =====================================================
 
   finalizarCarregamento() {
-    // Atualiza a barra para 100%
     this.barra.width = 392;
     this.porcentagem.setText("100%");
     this.textoStatus.setText("INCURSÃO PRONTA");
 
-    // Inicia o Level 1 após 1.5 segundos
     this.time.delayedCall(1500, () => {
       this.scene.start("Level1", {
         personagem: this.personagemSelecionada,
@@ -119,10 +83,6 @@ class Preloader extends Phaser.Scene {
   // =====================================================
 
   carregarAssets() {
-    // =====================================================
-    // CAMINHO DOS ASSETS
-    // =====================================================
-
     this.load.setPath("./assets/");
 
     carregarSonsPersonagem(this.load);
@@ -130,7 +90,7 @@ class Preloader extends Phaser.Scene {
     carregarSonsInimigos(this.load);
 
     // =====================================================
-    // MAPA
+    // MAPAS
     // =====================================================
 
     this.load.tilemapTiledJSON("mapa", "map/InicioFase1 (1).json");
@@ -138,10 +98,9 @@ class Preloader extends Phaser.Scene {
     this.load.tilemapTiledJSON("mapaParte2", "map/parte2-fase1.json");
 
     // =====================================================
-    // PERSONAGEM - CAMINHADA
+    // PERSONAGEM 1 - KAI MERCER
     // =====================================================
 
-    // frameWidth/frameHeight são o tamanho, em pixels, de cada célula da spritesheet.
     this.load.spritesheet(
       "walk",
       "PERSONAGENS/PERSONAGENS PRICIPAIS/KAI_MERCER 1/KAI_WALK.png",
@@ -150,6 +109,19 @@ class Preloader extends Phaser.Scene {
         frameHeight: 128,
       },
     );
+
+    this.load.spritesheet(
+      "attack",
+      "PERSONAGENS/PERSONAGENS PRICIPAIS/KAI_MERCER 1/KAI_ATAQUE_KATANA.png",
+      {
+        frameWidth: 128,
+        frameHeight: 128,
+      },
+    );
+
+    // =====================================================
+    // PERSONAGEM 2 - MAGNUS FORCE
+    // =====================================================
 
     this.load.spritesheet(
       "personagem2-walk",
@@ -178,6 +150,10 @@ class Preloader extends Phaser.Scene {
       },
     );
 
+    // =====================================================
+    // PERSONAGEM 3 - ARIA KADE
+    // =====================================================
+
     this.load.spritesheet(
       "personagem3-walk",
       "PERSONAGENS/PERSONAGENS PRICIPAIS/ARIA_KADE 3/ARIA_WALK.png",
@@ -205,6 +181,10 @@ class Preloader extends Phaser.Scene {
       },
     );
 
+    // =====================================================
+    // PERSONAGEM 4 - NYX
+    // =====================================================
+
     this.load.spritesheet(
       "personagem4-walk",
       "PERSONAGENS/PERSONAGENS PRICIPAIS/NYX_4/nyx_walk.png",
@@ -213,6 +193,7 @@ class Preloader extends Phaser.Scene {
         frameHeight: 64,
       },
     );
+
     this.load.spritesheet(
       "personagem4-attack",
       "PERSONAGENS/PERSONAGENS PRICIPAIS/NYX_4/nyx_ataque.png",
@@ -223,20 +204,7 @@ class Preloader extends Phaser.Scene {
     );
 
     // =====================================================
-    // PERSONAGEM - ATAQUE
-    // =====================================================
-
-    this.load.spritesheet(
-      "attack",
-      "PERSONAGENS/PERSONAGENS PRICIPAIS/KAI_MERCER 1/KAI_ATAQUE_KATANA.png",
-      {
-        frameWidth: 128,
-        frameHeight: 128,
-      },
-    );
-
-    // =====================================================
-    // INIMIGO DE TESTE
+    // BOSS FINAL
     // =====================================================
 
     this.load.spritesheet(
@@ -248,15 +216,29 @@ class Preloader extends Phaser.Scene {
         endFrame: 15,
       },
     );
+
+    // Animação do próprio Boss.
+    // Mantém todos os frames e a velocidade original.
     this.load.spritesheet(
       "boss-raio-chao",
       "PERSONAGENS/INIMIGOS PRINCIPAIS/BOSS_FINAL/BOSS_RAIO_CHAO.png",
       {
         frameWidth: 256,
         frameHeight: 256,
-        endFrame: 11,
       },
     );
+
+    // NOVA IMAGEM: RAIO_BOSS_1.png.
+    // Sem endFrame para carregar todos os frames.
+    this.load.spritesheet(
+      "boss-raio-zona",
+      "PERSONAGENS/INIMIGOS PRINCIPAIS/BOSS_FINAL/RAIO_BOSS_1.png",
+      {
+        frameWidth: 311,
+        frameHeight: 623,
+      },
+    );
+
     this.load.spritesheet(
       "boss-rec-vida",
       "PERSONAGENS/INIMIGOS PRINCIPAIS/BOSS_FINAL/BOSS_REC_VIDA.png",
@@ -266,6 +248,7 @@ class Preloader extends Phaser.Scene {
         endFrame: 24,
       },
     );
+
     this.load.spritesheet(
       "boss-tiro-laser",
       "PERSONAGENS/INIMIGOS PRINCIPAIS/BOSS_FINAL/BOSS_TIRO_LAZER.png",
@@ -275,6 +258,10 @@ class Preloader extends Phaser.Scene {
         endFrame: 19,
       },
     );
+
+    // =====================================================
+    // ROBÔ DE GUERRA
+    // =====================================================
 
     this.load.spritesheet(
       "robo-teste",
@@ -302,6 +289,11 @@ class Preloader extends Phaser.Scene {
         frameHeight: 421,
       },
     );
+
+    // =====================================================
+    // ROBÔ DE SERRA
+    // =====================================================
+
     this.load.spritesheet(
       "robo-serra",
       "PERSONAGENS/INIMIGOS PRINCIPAIS/ROBO_DE_SERRA/robo_novo.png",
@@ -310,6 +302,11 @@ class Preloader extends Phaser.Scene {
         frameHeight: 270,
       },
     );
+
+    // =====================================================
+    // ROBÔ PET
+    // =====================================================
+
     this.load.spritesheet(
       "robo-pet",
       "PERSONAGENS/PERSONAGENS PRICIPAIS/ROBO_PET/robo_pet.png",
@@ -318,6 +315,7 @@ class Preloader extends Phaser.Scene {
         frameHeight: 256,
       },
     );
+
     // =====================================================
     // JOYSTICK
     // =====================================================
@@ -332,68 +330,55 @@ class Preloader extends Phaser.Scene {
     // TILESETS - CIDADE
     // =====================================================
 
-    // City Shopping
     this.load.image(
       "cityShopping",
       "../Tilesets/City/Tileset_SciFi_CityShopping_Rasak.png",
     );
 
-    // Rua
     this.load.image(
       "street",
       "../Tilesets/City/Tileset_SciFi_Street_Rasak.png",
     );
 
-    // Rua duplicada
     this.load.image(
       "street2",
       "../Tilesets/City/Tileset_SciFi_Street_Rasak_DUP.png",
     );
 
-    // Lixo
     this.load.image(
       "garbage",
       "../Tilesets/City/Tileset_SciFi_Garbage_Rasak.png",
     );
 
-    // Rua A5
     this.load.image("a5Street", "../Tilesets/City/A5_Street_Rasak.png");
 
-    // Slums
     this.load.image("slums", "../Tilesets/City/Tileset_SciFi_Slums_Rasak.png");
 
-    // Transporte público
     this.load.image(
       "publicTransportation",
       "../Tilesets/City/Tileset_SciFi_PublicTransportation_Slums_Rasak.png.png",
     );
 
-    // Exterior A4
     this.load.image("a4Outside", "../Tilesets/City/A4_SciFi_Outside_Rasak.png");
 
-    // Exterior A3
     this.load.image("a3Outside", "../Tilesets/City/A3_SciFi_Outside_Rasak.png");
 
-    // Exterior A5
     this.load.image(
       "A5_SciFi_Outside_Rasak",
       "../Tilesets/City/A5_SciFi_Outside_Rasak.png",
     );
 
-    // Extras de prédios
     this.load.image(
       "buildingExtras",
       "../Tilesets/City/Tileset_SciFi_BuildingExtras.png",
     );
 
-    // Torre
     this.load.image("torre", "../Tilesets/City/TorreTileset.png");
 
     // =====================================================
     // TILESETS - INTERIOR
     // =====================================================
 
-    // Apartamento
     this.load.image(
       "apartment2",
       "../Tilesets/Inside/Tileset_SciFi_Arpartment_2_Rasak.png",
@@ -409,13 +394,11 @@ class Preloader extends Phaser.Scene {
     // TILESETS - INDUSTRIAL
     // =====================================================
 
-    // Tileset industrial
     this.load.image(
       "ModernIndustrial2",
       "../Tilesets/Industrial/Tileset_Modern_Industrial_2_Rasak.png",
     );
 
-    // Interior da fábrica
     this.load.image(
       "ModernInsideFactoryA1",
       "../Tilesets/Industrial/A1_Modern_Inside_Factory_Rasak.png",
@@ -468,6 +451,10 @@ class Preloader extends Phaser.Scene {
       "apartment1",
       "../Tilesets/Inside/Tileset_SciFi_Arpartment_1_Rasak.png",
     );
+
+    // =====================================================
+    // PORTAS E ELEMENTOS INDUSTRIAIS
+    // =====================================================
 
     this.load.image(
       "securityDoor",
@@ -529,6 +516,10 @@ class Preloader extends Phaser.Scene {
       "../Tilesets/Animations/Industrial and Security/!$Shield_Door_char.png",
     );
 
+    // =====================================================
+    // LUZES
+    // =====================================================
+
     this.load.image(
       "neonTubes1",
       "../Tilesets/Animations/Lights/!$Neontubes1.png",
@@ -548,6 +539,10 @@ class Preloader extends Phaser.Scene {
       "modernFloorLights",
       "../Tilesets/Animations/Lights/!$ModernFloorLights.png",
     );
+
+    // =====================================================
+    // EXTRAS
+    // =====================================================
 
     this.load.image("roboPB", "../Tilesets/extras/RoboPB.png");
 
@@ -570,31 +565,26 @@ class Preloader extends Phaser.Scene {
     // TILESETS - VEÍCULOS
     // =====================================================
 
-    // Speeder civil 5
     this.load.image(
       "VehiclesSpeederCivil5",
       "../Tilesets/Animations/Vehicles/Flying cars/Speeder_civil5.png",
     );
 
-    // Speeder civil 2
     this.load.image(
       "Speeder_civil2",
       "../Tilesets/Animations/Vehicles/Flying cars/Speeder_civil2.png",
     );
 
-    // Transporte privado
     this.load.image(
       "Transporter_Private",
       "../Tilesets/Animations/Vehicles/Flying cars/Transporter_Private.png",
     );
 
-    // Ambulância
     this.load.image(
       "Transporter_Ambulance",
       "../Tilesets/Animations/Vehicles/Flying cars/Transporter_Ambulance.png",
     );
 
-    // SWAT
     this.load.image(
       "Transporter_PoliceSwat",
       "../Tilesets/Animations/Vehicles/Flying cars/Transporter_PoliceSwat.png",
@@ -615,9 +605,12 @@ class Preloader extends Phaser.Scene {
 
   create() {
     this.cameras.main.setBackgroundColor("#000000");
+
     this.personagemSelecionada =
       this.scene.settings.data?.personagem || "kai-mercer";
+
     this.multiplayer = this.scene.settings.data?.multiplayer === true;
+
     this.iniciarCarregamento();
   }
 }
