@@ -3,25 +3,73 @@ import { bossDepth, danoAtaqueChao, duracaoFrame } from "./BossConfig.js";
 import { causarDanoJogador } from "./BossCombate.js";
 
 // =====================================================
-// CONFIGURAÇÃO DO RAIO
+// 1. AJUSTES MANUAIS DO RAIO DA BASE
+// =====================================================
+//
+// ESTES SÃO OS VALORES QUE VOCÊ JÁ AJUSTOU.
+// FORAM PRESERVADOS EXATAMENTE.
+//
+// X: maior = direita; menor = esquerda.
+// Y: maior = desce; menor = sobe.
+// LARGURA: aumenta ou diminui a largura.
+// ALTURA: aumenta ou diminui a altura.
+//
+// X é o centro horizontal.
+// Y é o topo da imagem.
+//
+// ESTES VALORES NÃO MUDAM A HITBOX.
+// =====================================================
+
+const BASE_IMAGEM_X = -1080;
+const BASE_IMAGEM_Y = -6245;
+
+const BASE_IMAGEM_LARGURA = 500;
+const BASE_IMAGEM_ALTURA = 520;
+
+// =====================================================
+// 2. MÁSCARA VISUAL DA BASE
+// =====================================================
+//
+// Limita a imagem ao retângulo roxo.
+// Os quatro recuos abaixo não afetam o dano.
+//
+// Valores zero usam toda a área da hitbox.
+// =====================================================
+
+const MASCARA_RECUO_ESQUERDA = 0;
+const MASCARA_RECUO_DIREITA = 0;
+
+const MASCARA_RECUO_CIMA = 0;
+const MASCARA_RECUO_BAIXO = 0;
+
+// =====================================================
+// 3. TEXTURAS
 // =====================================================
 
 const TEXTURA_RAIO = "boss-raio-zona";
+const TEXTURA_RAIO_BASE = "boss-raio-base";
 
-// Mantém o início sincronizado com o Boss.
+const TEXTURA_BASE_623 = "boss-raio-base-frame-623";
+
+const LARGURA_FRAME_BASE = 311;
+const ALTURA_FRAME_BASE = 623;
+
+// =====================================================
+// 4. SINCRONIZAÇÃO DO ATAQUE
+// =====================================================
+
+// O efeito começa no frame 7 do Boss.
 const FRAME_BOSS_INICIO_RAIO = 7;
 
-// Preparação original do raio.
+// Preparação sem dano.
 const PERCENTUAL_PREPARACAO = 0.3;
 const MINIMO_FRAMES_PREPARACAO = 4;
 
-// NOVO:
-// Os dois últimos frames são considerados
-// o desaparecimento do raio e não causam dano.
+// Os dois últimos frames não dão dano.
 const FRAMES_FINAIS_SEM_DANO = 2;
 
 // =====================================================
-// CONFIGURAÇÃO DAS TRÊS ZONAS
+// 5. TRÊS ZONAS PRINCIPAIS
 // =====================================================
 
 const ARENA_X_MIN = -1606;
@@ -35,43 +83,94 @@ const CHANCE_PRIORIZAR_JOGADOR = 0.75;
 
 const LARGURA_ZONA = (ARENA_X_MAX - ARENA_X_MIN) / TOTAL_ZONAS;
 
-const FATOR_LARGURA_HITBOX = 0.98;
-const FATOR_LARGURA_VISUAL = 1.24;
+// Hitbox original do raio principal.
+const LARGURA_RAIO_HITBOX = LARGURA_ZONA * 0.98;
 
-const LARGURA_RAIO_HITBOX = LARGURA_ZONA * FATOR_LARGURA_HITBOX;
-
-const LARGURA_RAIO_VISUAL = LARGURA_ZONA * FATOR_LARGURA_VISUAL;
-
+// Tamanho visual original das três zonas.
+const LARGURA_RAIO_VISUAL = LARGURA_ZONA * 1.24;
 const ALTURA_RAIO = ZONA_FIM_Y - ZONA_INICIO_Y;
 
 // =====================================================
-// CONFIGURAÇÃO VISUAL DO DEBUG
+// 5.1 AJUSTES MANUAIS DOS RAIOS DAS ZONAS 1 E 3
+// =====================================================
+//
+// EDITE ESTES VALORES PARA MUDAR AS IMAGENS
+// DAS ZONAS 1 (ESQUERDA) E 3 (DIREITA).
+//
+// OS MESMOS VALORES SERVEM PARA AS DUAS ZONAS.
+//
+// NÃO ALTERAM A HITBOX DE DANO.
+// NÃO ALTERAM A ZONA 2.
+// NÃO ALTERAM A ANIMAÇÃO NEM SUA DURAÇÃO.
+//
+// AJUSTE_X:
+//   Maior = desloca para a direita.
+//   Menor/negativo = desloca para a esquerda.
+//   Zero = posição horizontal original.
+//
+// AJUSTE_Y:
+//   Maior = desloca para baixo.
+//   Menor/negativo = desloca para cima.
+//   Zero = posição vertical original.
+//
+// LARGURA:
+//   Maior = mais largo.
+//   Menor = mais estreito.
+//
+// ALTURA:
+//   Maior = mais alto.
+//   Menor = mais baixo.
+//
+// Os valores iniciais preservam exatamente
+// o tamanho e a posição anteriores.
+// =====================================================
+
+// POSIÇÃO - deslocamento em unidades do mapa.
+const ZONAS_1_E_3_AJUSTE_X = 0;
+const ZONAS_1_E_3_AJUSTE_Y = 0;
+
+// TAMANHO - largura e altura da imagem.
+const ZONAS_1_E_3_IMAGEM_LARGURA = 500;
+const ZONAS_1_E_3_IMAGEM_ALTURA = 735;
+
+// =====================================================
+// 6. HITBOX ROXA DA BASE
+// =====================================================
+//
+// Estas coordenadas controlam a HITBOX,
+// não a imagem.
+//
+// Mantidas como estavam no arquivo enviado.
+// =====================================================
+
+const BASE_CENTRO_X = -1080;
+
+const BASE_INICIO_Y = -6161;
+const BASE_FIM_Y = -5875;
+
+const LARGURA_HITBOX_BASE = LARGURA_ZONA * 1.04;
+
+const ALTURA_BASE = BASE_FIM_Y - BASE_INICIO_Y;
+
+// =====================================================
+// 7. CORES DO DEBUG
 // =====================================================
 
 const COR_ZONA_INATIVA = 0x2f7dff;
 const COR_ZONA_ATIVA = 0x00d8ff;
 
-const ALFA_CONTORNO_INATIVA = 0.7;
-const ALFA_CONTORNO_ATIVA = 1;
+const COR_BASE = 0xb266ff;
 
-const ESPESSURA_CONTORNO_INATIVA = 3;
-const ESPESSURA_CONTORNO_ATIVA = 4;
-
-const ALFA_PREENCHIMENTO_INATIVA = 0.06;
-const ALFA_PREENCHIMENTO_ATIVA = 0.12;
-
-// =====================================================
-// CONSULTAR DEBUG DO PHASER
-// =====================================================
-
+// Segue physics.arcade.debug do Phaser.
 function debugHitboxesAtivado(scene) {
   return Boolean(scene?.game?.config?.physics?.arcade?.debug);
 }
 
 // =====================================================
-// ÁREA REAL DE DANO
+// 8. CALCULAR HITBOX DAS ZONAS
 // =====================================================
 
+// A hitbox permanece independente da imagem.
 function obterAreaZona(indice) {
   const x = ARENA_X_MIN + indice * LARGURA_ZONA;
 
@@ -84,29 +183,142 @@ function obterAreaZona(indice) {
 }
 
 // =====================================================
-// ÁREA VISUAL DO RAIO
+// ÁREA VISUAL DO RAIO PRINCIPAL
+// =====================================================
+//
+// ESTA FUNÇÃO USA OS NOVOS AJUSTES DA SEÇÃO 5.1.
+//
+// Índice 0 = zona 1.
+// Índice 1 = zona 2.
+// Índice 2 = zona 3.
+//
+// Apenas os índices 0 e 2 recebem
+// os controles manuais compartilhados.
+//
+// A hitbox NÃO é alterada.
 // =====================================================
 
 function obterAreaVisualZona(indice) {
-  const areaDano = obterAreaZona(indice);
+  const area = obterAreaZona(indice);
 
+  // ZONAS 1 E 3:
+  // Utilizam os quatro valores manuais.
+  if (indice === 0 || indice === 2) {
+    return new Phaser.Geom.Rectangle(
+      area.centerX + ZONAS_1_E_3_AJUSTE_X - ZONAS_1_E_3_IMAGEM_LARGURA / 2,
+
+      ZONA_INICIO_Y + ZONAS_1_E_3_AJUSTE_Y,
+
+      ZONAS_1_E_3_IMAGEM_LARGURA,
+      ZONAS_1_E_3_IMAGEM_ALTURA,
+    );
+  }
+
+  // ZONA 2:
+  // Continua utilizando o tamanho original.
   return new Phaser.Geom.Rectangle(
-    areaDano.centerX - LARGURA_RAIO_VISUAL / 2,
+    area.centerX - LARGURA_RAIO_VISUAL / 2,
     ZONA_INICIO_Y,
     LARGURA_RAIO_VISUAL,
     ALTURA_RAIO,
   );
 }
 
+// Hitbox adicional da base do Boss.
+function obterAreaBase() {
+  return new Phaser.Geom.Rectangle(
+    BASE_CENTRO_X - LARGURA_HITBOX_BASE / 2,
+    BASE_INICIO_Y,
+    LARGURA_HITBOX_BASE,
+    ALTURA_BASE,
+  );
+}
+
 // =====================================================
-// MANTER RAIO ATRÁS DO PERSONAGEM
+// 9. IDENTIFICAR FRAMES DE UMA TEXTURA
+// =====================================================
+
+function obterFramesTextura(scene, chave) {
+  if (!scene.textures.exists(chave)) {
+    return [];
+  }
+
+  return scene.textures
+    .get(chave)
+    .getFrameNames()
+    .filter((nome) => /^\d+$/.test(String(nome)))
+    .sort((a, b) => Number(a) - Number(b));
+}
+
+// =====================================================
+// 10. CARREGAR FRAMES DE 311x623 DA BASE
+// =====================================================
+//
+// Usa a imagem original carregada no preloader.
+//
+// Se necessário, registra outra textura em
+// memória com os frames de 311x623.
+//
+// Não modifica o PNG original.
+// =====================================================
+
+function obterTexturaBaseCorreta(scene) {
+  if (!scene.textures.exists(TEXTURA_RAIO_BASE)) {
+    console.warn("Boss: textura boss-raio-base não carregada.");
+    return null;
+  }
+
+  if (!scene.textures.exists(TEXTURA_BASE_623)) {
+    const original = scene.textures.get(TEXTURA_RAIO_BASE);
+
+    const imagem = original.getSourceImage();
+
+    if (!imagem?.width || !imagem?.height) {
+      return null;
+    }
+
+    const larguraValida = imagem.width % LARGURA_FRAME_BASE === 0;
+
+    const alturaValida = imagem.height % ALTURA_FRAME_BASE === 0;
+
+    if (!larguraValida || !alturaValida) {
+      console.warn(
+        "Boss: dimensões da imagem incompatíveis com 311x623.",
+        imagem.width,
+        imagem.height,
+      );
+
+      return null;
+    }
+
+    scene.textures.addSpriteSheet(TEXTURA_BASE_623, imagem, {
+      frameWidth: LARGURA_FRAME_BASE,
+      frameHeight: ALTURA_FRAME_BASE,
+    });
+  }
+
+  const frames = obterFramesTextura(scene, TEXTURA_BASE_623);
+
+  if (frames.length === 0) {
+    return null;
+  }
+
+  return {
+    chave: TEXTURA_BASE_623,
+    frames,
+  };
+}
+
+// =====================================================
+// 11. PROFUNDIDADE DOS RAIOS
+// =====================================================
+//
+// Os raios permanecem atrás do personagem.
+//
+// Controla o raio principal e o raio da base.
 // =====================================================
 
 function atualizarProfundidadeRaio(boss) {
-  const sprite = boss.raioZonaSprite;
-
-  if (!sprite?.active) return;
-
   const jogador = boss.scene?.player;
 
   let profundidade = bossDepth - 0.5;
@@ -115,13 +327,26 @@ function atualizarProfundidadeRaio(boss) {
     profundidade = Math.min(profundidade, jogador.depth - 0.1);
   }
 
-  if (sprite.depth !== profundidade) {
-    sprite.setDepth(profundidade);
+  const sprites = [boss.raioZonaSprite, boss.raioBaseSprite];
+
+  for (const sprite of sprites) {
+    if (!sprite?.active) continue;
+
+    if (sprite.depth !== profundidade) {
+      sprite.setDepth(profundidade);
+    }
   }
 }
 
 // =====================================================
-// DESENHAR DEBUG DAS TRÊS ZONAS
+// 12. DESENHAR DEBUG DAS HITBOXES
+// =====================================================
+//
+// Três zonas principais em azul.
+// Hitbox adicional da base em roxo.
+//
+// debug: false esconde apenas os desenhos.
+// O dano e as colisões continuam funcionando.
 // =====================================================
 
 function desenharDebugZonas(boss) {
@@ -129,17 +354,16 @@ function desenharDebugZonas(boss) {
 
   if (!graphics?.scene) return;
 
-  const debugAtivo = debugHitboxesAtivado(boss.scene);
+  const mostrar = debugHitboxesAtivado(boss.scene) && !boss.morto;
 
-  graphics.setVisible(debugAtivo);
+  graphics.setVisible(mostrar);
   graphics.clear();
 
-  if (!debugAtivo || boss.morto) {
-    return;
-  }
+  if (!mostrar) return;
 
   const ia = boss.iaCombate;
 
+  // Desenha as três zonas principais.
   for (let i = 0; i < TOTAL_ZONAS; i++) {
     const area = obterAreaZona(i);
 
@@ -147,28 +371,31 @@ function desenharDebugZonas(boss) {
 
     const cor = ativa ? COR_ZONA_ATIVA : COR_ZONA_INATIVA;
 
-    const alphaLinha = ativa ? ALFA_CONTORNO_ATIVA : ALFA_CONTORNO_INATIVA;
-
-    const espessura = ativa
-      ? ESPESSURA_CONTORNO_ATIVA
-      : ESPESSURA_CONTORNO_INATIVA;
-
-    const alphaFill = ativa
-      ? ALFA_PREENCHIMENTO_ATIVA
-      : ALFA_PREENCHIMENTO_INATIVA;
-
-    graphics.fillStyle(cor, alphaFill);
+    graphics.fillStyle(cor, ativa ? 0.12 : 0.06);
 
     graphics.fillRect(area.x, area.y, area.width, area.height);
 
-    graphics.lineStyle(espessura, cor, alphaLinha);
+    graphics.lineStyle(ativa ? 4 : 3, cor, ativa ? 1 : 0.7);
+
+    graphics.strokeRect(area.x, area.y, area.width, area.height);
+  }
+
+  // Desenha a hitbox roxa adicional.
+  if (ia?.areaRaioBase) {
+    const area = ia.areaRaioBase;
+
+    graphics.fillStyle(COR_BASE, 0.09);
+
+    graphics.fillRect(area.x, area.y, area.width, area.height);
+
+    graphics.lineStyle(3, COR_BASE, 1);
 
     graphics.strokeRect(area.x, area.y, area.width, area.height);
   }
 }
 
 // =====================================================
-// INICIALIZAR DEBUG PERMANENTE
+// 13. INICIALIZAR DEBUG PERMANENTE
 // =====================================================
 
 export function inicializarDebugZonasRaio(boss) {
@@ -182,27 +409,21 @@ export function inicializarDebugZonasRaio(boss) {
     boss.raioZonaDebugGraphics.setDepth(bossDepth + 5);
   }
 
-  boss.raioZonaDebugGraphics.setVisible(debugHitboxesAtivado(scene));
-
   desenharDebugZonas(boss);
 
   if (!boss.raioZonaDebugUpdate) {
-    const atualizarDebug = () => {
-      if (!boss?.active || !boss.scene) {
-        return;
+    boss.raioZonaDebugUpdate = () => {
+      if (boss?.active && boss.scene) {
+        desenharDebugZonas(boss);
       }
-
-      desenharDebugZonas(boss);
     };
 
-    boss.raioZonaDebugUpdate = atualizarDebug;
-
-    scene.events.on(Phaser.Scenes.Events.UPDATE, atualizarDebug);
+    scene.events.on(Phaser.Scenes.Events.UPDATE, boss.raioZonaDebugUpdate);
   }
 }
 
 // =====================================================
-// DESTRUIR DEBUG DAS ZONAS
+// 14. DESTRUIR DEBUG
 // =====================================================
 
 export function destruirDebugZonasRaio(boss) {
@@ -224,7 +445,7 @@ export function destruirDebugZonasRaio(boss) {
 }
 
 // =====================================================
-// ESCOLHER ZONA DO ATAQUE
+// 15. ESCOLHER UMA DAS TRÊS ZONAS
 // =====================================================
 
 function escolherZona(boss) {
@@ -242,76 +463,52 @@ function escolherZona(boss) {
 }
 
 // =====================================================
-// OBTER TODOS OS FRAMES DO RAIO
-// =====================================================
-
-function obterFramesRaio(scene) {
-  if (!scene.textures.exists(TEXTURA_RAIO)) {
-    return [];
-  }
-
-  const textura = scene.textures.get(TEXTURA_RAIO);
-
-  return textura
-    .getFrameNames()
-    .filter((nome) => /^\d+$/.test(String(nome)))
-    .sort((a, b) => Number(a) - Number(b));
-}
-
-// =====================================================
-// FRAME ATUAL DO BOSS
+// 16. FRAME ATUAL DO BOSS
 // =====================================================
 
 function obterFrameAtualBoss(boss) {
-  const animacao = boss.sprite?.anims;
+  const atual = boss.sprite?.anims?.currentFrame;
 
-  if (!animacao) {
-    return boss.iaCombate?.frame ?? 0;
-  }
-
-  const frameAtual = animacao.currentFrame;
-
-  if (frameAtual && Number.isFinite(frameAtual.index)) {
-    return Math.max(0, frameAtual.index - 1);
+  if (Number.isFinite(atual?.index)) {
+    return Math.max(0, atual.index - 1);
   }
 
   return boss.iaCombate?.frame ?? 0;
 }
 
-// =====================================================
-// TOTAL DE FRAMES DO BOSS
-// =====================================================
-
 function obterTotalFramesBoss(boss) {
-  const animacao = boss.sprite?.anims?.currentAnim;
-
-  if (!animacao) return 1;
-
-  return Math.max(1, animacao.frames.length);
+  return Math.max(1, boss.sprite?.anims?.currentAnim?.frames?.length ?? 1);
 }
 
 // =====================================================
-// DURAÇÃO RESTANTE DA ANIMAÇÃO DO BOSS
+// 17. DURAÇÃO ORIGINAL DO ATAQUE
+// =====================================================
+//
+// Mantém o tempo restante da animação do Boss.
+// Não acrescenta duração artificial.
 // =====================================================
 
 function obterDuracaoRestanteBoss(boss, frameInicio) {
   const animacao = boss.sprite?.anims?.currentAnim;
 
-  const totalFrames = obterTotalFramesBoss(boss);
-
-  const framesRestantes = Math.max(1, totalFrames - frameInicio);
+  const restante = Math.max(1, obterTotalFramesBoss(boss) - frameInicio);
 
   const fps = Number(animacao?.frameRate);
 
   if (Number.isFinite(fps) && fps > 0) {
-    return framesRestantes * (1000 / fps);
+    return restante * (1000 / fps);
   }
 
-  return framesRestantes * duracaoFrame;
+  return restante * duracaoFrame;
 }
 
 // =====================================================
-// FRAMES DE PREPARAÇÃO DO RAIO
+// 18. JANELA DE DANO
+// =====================================================
+//
+// Dano começa após a preparação.
+//
+// Os dois últimos frames não causam dano.
 // =====================================================
 
 function obterFramesPreparacao(totalFrames) {
@@ -324,8 +521,139 @@ function obterFramesPreparacao(totalFrames) {
   );
 }
 
+function frameDentroDaJanelaDano(frame, totalFrames) {
+  if (totalFrames <= 0) return false;
+
+  const primeiro = obterFramesPreparacao(totalFrames);
+
+  const ultimoExclusivo = Math.max(0, totalFrames - FRAMES_FINAIS_SEM_DANO);
+
+  return frame >= primeiro && frame < ultimoExclusivo;
+}
+
 // =====================================================
-// DESATIVAR DANO E VISUAL AO FINAL DO RAIO
+// 19. MÁSCARA VISUAL DA BASE
+// =====================================================
+//
+// A máscara limita a imagem da base ao
+// retângulo roxo.
+//
+// Não altera a hitbox.
+//
+// Também não afeta as imagens das zonas 1 e 3.
+// =====================================================
+
+function criarMascaraBase(scene, area) {
+  const graphics = scene.make.graphics({
+    x: 0,
+    y: 0,
+    add: false,
+  });
+
+  graphics.fillStyle(0xffffff, 1);
+
+  const x = area.x + MASCARA_RECUO_ESQUERDA;
+
+  const y = area.y + MASCARA_RECUO_CIMA;
+
+  const largura = Math.max(
+    1,
+    area.width - MASCARA_RECUO_ESQUERDA - MASCARA_RECUO_DIREITA,
+  );
+
+  const altura = Math.max(
+    1,
+    area.height - MASCARA_RECUO_CIMA - MASCARA_RECUO_BAIXO,
+  );
+
+  graphics.fillRect(x, y, largura, altura);
+
+  return {
+    graphics,
+    mask: graphics.createGeometryMask(),
+  };
+}
+
+// =====================================================
+// 20. CRIAR O RAIO DA BASE
+// =====================================================
+//
+// Usa os quatro valores da seção 1.
+//
+// Zona 2 não recebe o PNG adicional.
+// Zonas 1 e 3 recebem o PNG da base.
+//
+// A hitbox roxa permanece inalterada.
+// =====================================================
+
+function criarRaioBase(boss, indiceZona) {
+  // Índice 1 é a zona 2.
+  if (indiceZona === 1) return;
+
+  const scene = boss.scene;
+  const ia = boss.iaCombate;
+
+  const dadosBase = obterTexturaBaseCorreta(scene);
+
+  if (!dadosBase) {
+    console.warn(
+      "Boss: não foi possível carregar RAIO_BOSS_BASE.png com frames 311x623.",
+    );
+
+    return;
+  }
+
+  const frames = dadosBase.frames;
+
+  // Hitbox original da base.
+  const area = obterAreaBase();
+
+  ia.areaRaioBase = area;
+  ia.raioFramesBase = frames;
+  ia.raioFrameBaseVisual = -1;
+
+  // ================================================
+  // IMAGEM DA BASE - VALORES DO USUÁRIO
+  // ================================================
+
+  const sprite = scene.add.sprite(
+    BASE_IMAGEM_X,
+    BASE_IMAGEM_Y,
+    dadosBase.chave,
+    frames[0],
+  );
+
+  // Centro horizontal e topo vertical.
+  sprite.setOrigin(0.5, 0);
+
+  // X = -1080
+  // Y = -6270
+  // Largura = 500
+  // Altura = 520
+  //
+  // Estes valores foram preservados.
+  sprite.setDisplaySize(BASE_IMAGEM_LARGURA, BASE_IMAGEM_ALTURA);
+
+  sprite.setDepth(bossDepth - 0.5);
+
+  // Aguarda a animação do Boss.
+  sprite.setVisible(false);
+
+  // ================================================
+  // MÁSCARA ROXA
+  // ================================================
+
+  const { graphics, mask } = criarMascaraBase(scene, area);
+
+  sprite.setMask(mask);
+
+  boss.raioBaseSprite = sprite;
+  boss.raioBaseMascara = mask;
+  boss.raioBaseMascaraGraphics = graphics;
+}
+
+// =====================================================
+// 21. ENCERRAR O EFEITO DOS RAIOS
 // =====================================================
 
 function encerrarEfeitoRaio(boss) {
@@ -333,22 +661,26 @@ function encerrarEfeitoRaio(boss) {
 
   if (!ia) return;
 
-  // Desativa imediatamente o dano.
   ia.raioVisualAtivo = false;
   ia.raioAguardandoInicio = false;
 
-  // Remove a área ativa, impedindo colisões
-  // de dano após o fim da animação.
+  // Desativa ambas as áreas de dano.
   ia.areaRaio = null;
+  ia.areaRaioBase = null;
 
-  // Oculta o raio terminado.
   if (boss.raioZonaSprite?.active) {
     boss.raioZonaSprite.setVisible(false);
   }
+
+  if (boss.raioBaseSprite?.active) {
+    boss.raioBaseSprite.setVisible(false);
+  }
+
+  desenharDebugZonas(boss);
 }
 
 // =====================================================
-// LIMPAR O RAIO
+// 22. LIMPAR O ATAQUE
 // =====================================================
 
 export function limparRaioZona(boss) {
@@ -356,17 +688,23 @@ export function limparRaioZona(boss) {
 
   const scene = boss.scene;
 
+  // Desliga a atualização.
   if (boss.raioZonaUpdate && scene?.events) {
     scene.events.off(Phaser.Scenes.Events.UPDATE, boss.raioZonaUpdate);
   }
 
   boss.raioZonaUpdate = null;
 
+  // Remove o listener de derrota.
   if (boss.raioZonaAoDerrotar && scene?.events) {
     scene.events.off("boss:derrotado", boss.raioZonaAoDerrotar);
   }
 
   boss.raioZonaAoDerrotar = null;
+
+  // ================================================
+  // DESTRUIR RAIO PRINCIPAL
+  // ================================================
 
   if (boss.raioZonaSprite?.scene) {
     boss.raioZonaSprite.destroy();
@@ -374,17 +712,47 @@ export function limparRaioZona(boss) {
 
   boss.raioZonaSprite = null;
 
+  // ================================================
+  // DESTRUIR RAIO DA BASE
+  // ================================================
+
+  if (boss.raioBaseSprite?.scene) {
+    boss.raioBaseSprite.destroy();
+  }
+
+  boss.raioBaseSprite = null;
+
+  if (boss.raioBaseMascara) {
+    boss.raioBaseMascara.destroy();
+  }
+
+  boss.raioBaseMascara = null;
+
+  if (boss.raioBaseMascaraGraphics) {
+    boss.raioBaseMascaraGraphics.destroy();
+  }
+
+  boss.raioBaseMascaraGraphics = null;
+
   if (!boss.iaCombate) return;
 
   const ia = boss.iaCombate;
 
   ia.zonasRaio = [];
+
   ia.areaRaio = null;
+  ia.areaRaioBase = null;
+
   ia.raioZonaIndice = null;
 
   ia.raioFrames = [];
+  ia.raioFramesBase = [];
+
   ia.raioFrameVisual = -1;
+  ia.raioFrameBaseVisual = -1;
+
   ia.raioFramesPreparacao = 0;
+
   ia.raioAtingiuJogador = false;
 
   ia.raioInicioMs = null;
@@ -397,7 +765,7 @@ export function limparRaioZona(boss) {
 }
 
 // =====================================================
-// INICIAR ATAQUE DE RAIO
+// 23. INICIAR O ATAQUE
 // =====================================================
 
 export function iniciarRaioZona(boss) {
@@ -405,31 +773,35 @@ export function iniciarRaioZona(boss) {
 
   inicializarDebugZonasRaio(boss);
 
+  // Remove qualquer efeito anterior.
   limparRaioZona(boss);
 
   const scene = boss.scene;
   const ia = boss.iaCombate;
 
-  const indice = escolherZona(boss);
+  // Escolhe uma das três zonas.
+  const indiceZona = escolherZona(boss);
 
-  const areaDano = obterAreaZona(indice);
+  // Área de dano (não foi alterada).
+  const areaPrincipal = obterAreaZona(indiceZona);
 
-  const areaVisual = obterAreaVisualZona(indice);
+  // Área visual (usa ajustes manuais nas zonas 1 e 3).
+  const visualPrincipal = obterAreaVisualZona(indiceZona);
 
-  ia.zonasRaio = [indice + 1];
-  ia.areaRaio = areaDano;
-  ia.raioZonaIndice = indice;
+  ia.zonasRaio = [indiceZona + 1];
+
+  ia.areaRaio = areaPrincipal;
+  ia.raioZonaIndice = indiceZona;
+
   ia.raioAtingiuJogador = false;
 
-  if (!scene.textures.exists(TEXTURA_RAIO)) {
-    console.error("Boss: textura boss-raio-zona não carregada.");
-    return;
-  }
-
-  const frames = obterFramesRaio(scene);
+  // Frames do raio principal.
+  const frames = obterFramesTextura(scene, TEXTURA_RAIO);
 
   if (frames.length === 0) {
-    console.error("Boss: nenhum frame encontrado no raio.");
+    console.error("Boss: textura boss-raio-zona não carregada.");
+
+    ia.areaRaio = null;
     return;
   }
 
@@ -439,65 +811,72 @@ export function iniciarRaioZona(boss) {
 
   ia.raioFrameVisual = -1;
 
+  // Aguarda o frame 7 do Boss.
   ia.raioInicioMs = null;
   ia.raioDuracaoMs = 0;
 
   ia.raioVisualAtivo = false;
   ia.raioAguardandoInicio = true;
 
-  // ===================================================
-  // CRIAR SPRITE INVISÍVEL
-  // ===================================================
+  // ================================================
+  // CRIAR RAIO PRINCIPAL
+  // ================================================
 
   const sprite = scene.add.sprite(
-    areaVisual.centerX,
-    areaVisual.y,
+    visualPrincipal.centerX,
+    visualPrincipal.y,
     TEXTURA_RAIO,
     frames[0],
   );
 
+  // Centro horizontal, topo vertical.
   sprite.setOrigin(0.5, 0);
 
-  sprite.setDisplaySize(areaVisual.width, areaVisual.height);
+  // Aplica largura e altura visuais.
+  //
+  // Zona 1 e 3: valores da seção 5.1.
+  // Zona 2: valores originais.
+  sprite.setDisplaySize(visualPrincipal.width, visualPrincipal.height);
 
   sprite.setDepth(bossDepth - 0.5);
-
   sprite.setVisible(false);
 
   boss.raioZonaSprite = sprite;
 
+  // ================================================
+  // RAIO EXTRA NA BASE
+  // ================================================
+
+  criarRaioBase(boss, indiceZona);
+
   atualizarProfundidadeRaio(boss);
   desenharDebugZonas(boss);
 
-  // ===================================================
-  // ATUALIZAÇÃO DO RAIO
-  // ===================================================
+  // ================================================
+  // ATUALIZAÇÃO DOS RAIOS
+  // ================================================
 
-  const aoAtualizar = () => {
+  boss.raioZonaUpdate = () => {
     atualizarRaioZona(boss);
   };
 
-  boss.raioZonaUpdate = aoAtualizar;
+  scene.events.on(Phaser.Scenes.Events.UPDATE, boss.raioZonaUpdate);
 
-  scene.events.on(Phaser.Scenes.Events.UPDATE, aoAtualizar);
+  // ================================================
+  // LIMPEZA QUANDO O BOSS É DERROTADO
+  // ================================================
 
-  // ===================================================
-  // REMOVER AO DERROTAR O BOSS
-  // ===================================================
-
-  const aoDerrotar = (evento) => {
+  boss.raioZonaAoDerrotar = (evento) => {
     if (evento?.boss === boss) {
       limparRaioZona(boss);
     }
   };
 
-  boss.raioZonaAoDerrotar = aoDerrotar;
-
-  scene.events.on("boss:derrotado", aoDerrotar);
+  scene.events.on("boss:derrotado", boss.raioZonaAoDerrotar);
 }
 
 // =====================================================
-// VERIFICAR QUANDO O RAIO PODE DAR DANO
+// 24. VERIFICAR DANO DO RAIO PRINCIPAL
 // =====================================================
 
 export function raioPodeDarDano(boss) {
@@ -519,37 +898,40 @@ export function raioPodeDarDano(boss) {
     return false;
   }
 
-  // ===================================================
-  // BLOQUEAR DANO APÓS O FIM DA ANIMAÇÃO
-  // ===================================================
+  // Tempo desde o início do raio visual.
+  const decorrido = Math.max(0, boss.scene.time.now - ia.raioInicioMs);
 
-  const tempoDecorrido = Math.max(0, boss.scene.time.now - ia.raioInicioMs);
-
-  if (ia.raioDuracaoMs <= 0 || tempoDecorrido >= ia.raioDuracaoMs) {
+  // Dano desativado após o fim.
+  if (ia.raioDuracaoMs <= 0 || decorrido >= ia.raioDuracaoMs) {
     return false;
   }
 
-  // ===================================================
-  // BLOQUEAR DANO NOS FRAMES FINAIS
-  // ===================================================
+  return frameDentroDaJanelaDano(ia.raioFrameVisual, ia.raioFrames.length);
+}
 
-  const totalFrames = ia.raioFrames.length;
+// =====================================================
+// 25. VERIFICAR DANO DO RAIO DA BASE
+// =====================================================
 
-  const primeiroFrameFinal = Math.max(0, totalFrames - FRAMES_FINAIS_SEM_DANO);
+function raioBasePodeDarDano(boss) {
+  const ia = boss?.iaCombate;
+  const sprite = boss?.raioBaseSprite;
 
-  // Só causa dano depois da preparação
-  // e antes dos frames de desaparecimento.
-  return (
-    ia.raioFrameVisual >= ia.raioFramesPreparacao &&
-    ia.raioFrameVisual < primeiroFrameFinal
+  return Boolean(
+    raioPodeDarDano(boss) &&
+    ia?.areaRaioBase &&
+    sprite?.active &&
+    sprite.visible &&
+    frameDentroDaJanelaDano(ia.raioFrameBaseVisual, ia.raioFramesBase.length),
   );
 }
 
 // =====================================================
-// ATUALIZAR ANIMAÇÃO E DANO DO RAIO
+// 26. ATUALIZAR AS DUAS ANIMAÇÕES
 // =====================================================
 
 export function atualizarRaioZona(boss) {
+  // Limpa os efeitos se o Boss foi destruído.
   if (!boss?.active || boss.morto) {
     limparRaioZona(boss);
     return;
@@ -568,19 +950,24 @@ export function atualizarRaioZona(boss) {
 
   atualizarProfundidadeRaio(boss);
 
-  // ===================================================
-  // AGUARDAR O ROBÔ COMEÇAR A SOLTAR RAIOS
-  // ===================================================
+  // ================================================
+  // AGUARDAR O FRAME 7 DO BOSS
+  // ================================================
 
   if (ia.raioAguardandoInicio) {
-    const frameBoss = obterFrameAtualBoss(boss);
+    const inicio = Math.min(
+      FRAME_BOSS_INICIO_RAIO,
+      obterTotalFramesBoss(boss) - 1,
+    );
 
-    const totalFramesBoss = obterTotalFramesBoss(boss);
-
-    const frameInicio = Math.min(FRAME_BOSS_INICIO_RAIO, totalFramesBoss - 1);
-
-    if (frameBoss < frameInicio) {
+    // Durante a preparação, ambos ficam invisíveis.
+    if (obterFrameAtualBoss(boss) < inicio) {
       sprite.setVisible(false);
+
+      if (boss.raioBaseSprite?.active) {
+        boss.raioBaseSprite.setVisible(false);
+      }
+
       return;
     }
 
@@ -589,21 +976,44 @@ export function atualizarRaioZona(boss) {
 
     ia.raioInicioMs = scene.time.now;
 
-    // Mantém a duração original.
-    ia.raioDuracaoMs = obterDuracaoRestanteBoss(boss, frameInicio);
+    // Tempo original restante da animação do Boss.
+    ia.raioDuracaoMs = obterDuracaoRestanteBoss(boss, inicio);
 
     ia.raioFrameVisual = 0;
 
     sprite.setFrame(ia.raioFrames[0]);
 
     sprite.setVisible(true);
+
+    // Inicia o raio adicional simultaneamente.
+    if (boss.raioBaseSprite?.active && ia.raioFramesBase.length > 0) {
+      ia.raioFrameBaseVisual = 0;
+
+      boss.raioBaseSprite.setFrame(ia.raioFramesBase[0]);
+
+      boss.raioBaseSprite.setVisible(true);
+    }
   }
 
-  // ===================================================
-  // ANIMAR O RAIO
-  // ===================================================
-
   if (!ia.raioVisualAtivo) return;
+
+  // ================================================
+  // RELÓGIO COMPARTILHADO
+  // ================================================
+
+  const decorrido = Math.max(0, scene.time.now - ia.raioInicioMs);
+
+  // Encerra ambos os efeitos juntos.
+  if (ia.raioDuracaoMs <= 0 || decorrido >= ia.raioDuracaoMs) {
+    encerrarEfeitoRaio(boss);
+    return;
+  }
+
+  const progresso = Phaser.Math.Clamp(decorrido / ia.raioDuracaoMs, 0, 1);
+
+  // ================================================
+  // ATUALIZAR RAIO PRINCIPAL
+  // ================================================
 
   const totalFrames = ia.raioFrames.length;
 
@@ -611,23 +1021,6 @@ export function atualizarRaioZona(boss) {
     encerrarEfeitoRaio(boss);
     return;
   }
-
-  const tempoDecorrido = Math.max(0, scene.time.now - ia.raioInicioMs);
-
-  // ===================================================
-  // DESATIVAR IMEDIATAMENTE QUANDO O RAIO TERMINA
-  // ===================================================
-
-  if (ia.raioDuracaoMs <= 0 || tempoDecorrido >= ia.raioDuracaoMs) {
-    encerrarEfeitoRaio(boss);
-    return;
-  }
-
-  // ===================================================
-  // SINCRONIZAR O FRAME VISUAL
-  // ===================================================
-
-  const progresso = Phaser.Math.Clamp(tempoDecorrido / ia.raioDuracaoMs, 0, 1);
 
   const indice = Phaser.Math.Clamp(
     Math.floor(progresso * totalFrames),
@@ -643,30 +1036,58 @@ export function atualizarRaioZona(boss) {
 
   sprite.setVisible(true);
 
+  // ================================================
+  // ATUALIZAR RAIO DA BASE
+  // ================================================
+
+  const base = boss.raioBaseSprite;
+  const totalBase = ia.raioFramesBase.length;
+
+  if (base?.active && totalBase > 0) {
+    const indiceBase = Phaser.Math.Clamp(
+      Math.floor(progresso * totalBase),
+      0,
+      totalBase - 1,
+    );
+
+    if (indiceBase !== ia.raioFrameBaseVisual) {
+      ia.raioFrameBaseVisual = indiceBase;
+
+      base.setFrame(ia.raioFramesBase[indiceBase]);
+    }
+
+    base.setVisible(true);
+  }
+
   desenharDebugZonas(boss);
 
-  // ===================================================
-  // APLICAR DANO SOMENTE COM RAIO ATIVO
-  // ===================================================
+  // ================================================
+  // VERIFICAR DANO DAS DUAS HITBOXES
+  // ================================================
 
-  if (!raioPodeDarDano(boss)) return;
-
+  // Um único acerto por ataque.
   if (ia.raioAtingiuJogador) return;
 
   const jogador = scene.player;
-
   const hitboxJogador = scene.hitboxDanoPlayer;
 
   if (!jogador?.active || !hitboxJogador) {
     return;
   }
 
-  const atingiu = Phaser.Geom.Intersects.RectangleToRectangle(
-    hitboxJogador,
-    ia.areaRaio,
-  );
+  // Dano da zona principal.
+  const atingiuPrincipal =
+    raioPodeDarDano(boss) &&
+    Phaser.Geom.Intersects.RectangleToRectangle(hitboxJogador, ia.areaRaio);
 
-  if (!atingiu) return;
+  // Dano adicional da base.
+  const atingiuBase =
+    raioBasePodeDarDano(boss) &&
+    Phaser.Geom.Intersects.RectangleToRectangle(hitboxJogador, ia.areaRaioBase);
+
+  if (!atingiuPrincipal && !atingiuBase) {
+    return;
+  }
 
   const danoAplicado = causarDanoJogador(boss, danoAtaqueChao);
 

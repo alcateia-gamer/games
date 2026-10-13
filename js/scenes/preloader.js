@@ -42,6 +42,7 @@ class Preloader extends Phaser.Scene {
 
     this.load.on("progress", (progress) => {
       this.barra.width = 392 * progress;
+
       this.porcentagem.setText(Math.floor(progress * 100) + "%");
     });
 
@@ -218,7 +219,6 @@ class Preloader extends Phaser.Scene {
     );
 
     // Animação do próprio Boss.
-    // Mantém todos os frames e a velocidade original.
     this.load.spritesheet(
       "boss-raio-chao",
       "PERSONAGENS/INIMIGOS PRINCIPAIS/BOSS_FINAL/BOSS_RAIO_CHAO.png",
@@ -228,8 +228,7 @@ class Preloader extends Phaser.Scene {
       },
     );
 
-    // NOVA IMAGEM: RAIO_BOSS_1.png.
-    // Sem endFrame para carregar todos os frames.
+    // Raio principal das zonas 1, 2 e 3.
     this.load.spritesheet(
       "boss-raio-zona",
       "PERSONAGENS/INIMIGOS PRINCIPAIS/BOSS_FINAL/RAIO_BOSS_1.png",
@@ -238,6 +237,30 @@ class Preloader extends Phaser.Scene {
         frameHeight: 623,
       },
     );
+
+    // =====================================================
+    // NOVO: RAIO ADICIONAL NA BASE DO BOSS
+    // =====================================================
+    //
+    // Utilizado somente quando a zona escolhida
+    // pelo Boss é a zona 1 ou a zona 3.
+    //
+    // Cada frame possui 311x626 pixels.
+    // Todos os frames são carregados automaticamente.
+    // =====================================================
+
+    this.load.spritesheet(
+      "boss-raio-base",
+      "PERSONAGENS/INIMIGOS PRINCIPAIS/BOSS_FINAL/RAIO_BOSS_BASE.png",
+      {
+        frameWidth: 311,
+        frameHeight: 626,
+      },
+    );
+
+    // =====================================================
+    // RESTANTE DAS ANIMAÇÕES DO BOSS
+    // =====================================================
 
     this.load.spritesheet(
       "boss-rec-vida",
