@@ -5,6 +5,9 @@ import {
   emitirEventoBoss,
   intervaloEntreAtaques,
   obterNumeroFrameAnimacao,
+
+  // Frames de contato definidos no próprio Boss.
+  framesImpactoChao,
 } from "./BossConfig.js";
 
 import { atualizarHitboxesBoss, socoComDanoAtivo } from "./BossHitboxes.js";
@@ -16,7 +19,7 @@ import {
 } from "./BossRaioZonas.js";
 
 // =====================================================
-// NOVO: CONTROLE DO SOM DO RAIO
+// CONTROLE DO SOM DO RAIO - ORIGINAL
 // =====================================================
 
 import {
@@ -24,6 +27,12 @@ import {
   atualizarSomRaioBoss,
   pararSomRaioBoss,
 } from "../../sounds/bossRaio.js";
+
+// =====================================================
+// NOVO: CONTROLE DO SOM DOS SOCOS
+// =====================================================
+
+import { tocarSomSocoBoss, pararSomSocoBoss } from "../../sounds/inimigos.js";
 
 // =====================================================
 // IDENTIFICAR FRAMES DA ANIMAÇÃO DO BOSS
@@ -102,20 +111,31 @@ export function exibirEstadoBoss(boss, estado) {
   }
 
   // ===================================================
-  // NOVO: CONTROLAR SOM AO TROCAR DE ESTADO
+  // CONTROLAR SOM DO RAIO - ORIGINAL
   // ===================================================
 
   if (estado === "raioChao") {
-    // Inicia o monitoramento da animação.
-    //
-    // O áudio só vai começar a tocar quando
-    // o raio realmente aparecer no chão.
     ativarMonitorSomRaioBoss(boss);
   } else {
-    // Qualquer outro estado interrompe o som.
-    // Isso impede que o áudio continue tocando
-    // durante ataques diferentes.
     pararSomRaioBoss(boss);
+  }
+
+  // ===================================================
+  // NOVO: CONTROLAR SOM DO SOCO
+  // ===================================================
+
+  if (estado === "ataqueChao") {
+    // Início de uma nova sequência de socos.
+    //
+    // Permite tocar novamente os sons nos
+    // frames 6 e 12 do novo ataque.
+    boss.ultimoFrameSocoComSom = null;
+  } else {
+    // Ao mudar para outro estado, interromper
+    // qualquer som de impacto ainda ativo.
+    pararSomSocoBoss(boss);
+
+    boss.ultimoFrameSocoComSom = null;
   }
 
   // ===================================================
@@ -136,6 +156,66 @@ export function exibirEstadoBoss(boss, estado) {
   if (estado !== "idle") {
     boss.sprite.anims.play(`boss-final-${estado}`);
   }
+}
+
+// =====================================================
+// NOVO: SINCRONIZAR SOM COM OS FRAMES DE IMPACTO
+// =====================================================
+//
+// A configuração original do Boss informa:
+//
+// framesImpactoChao = [6, 12]
+//
+// O áudio só será executado nesses frames.
+//
+// Não toca nos frames de preparação.
+// Não toca nos frames em que o braço está descendo.
+// Não toca nos frames de recuperação.
+//
+// Cada frame de impacto dispara apenas uma vez.
+//
+// Não depende de o jogador receber dano.
+// O impacto produz som mesmo quando o soco erra.
+// =====================================================
+
+function atualizarSomImpactoChao(boss) {
+  if (!boss?.active || boss.morto) {
+    return;
+  }
+
+  const ia = boss.iaCombate;
+
+  // Apenas o ataque de soco.
+  if (ia.ataqueAtual !== "ataqueChao") {
+    return;
+  }
+
+  const frameAtual = ia.frame;
+
+  // ===================================================
+  // VERIFICAR SE O FRAME É REALMENTE DE IMPACTO
+  // ===================================================
+
+  if (!framesImpactoChao.includes(frameAtual)) {
+    return;
+  }
+
+  // ===================================================
+  // EVITAR REPETIR O SOM NO MESMO FRAME
+  // ===================================================
+
+  if (boss.ultimoFrameSocoComSom === frameAtual) {
+    return;
+  }
+
+  // Registrar o frame antes de tocar.
+  boss.ultimoFrameSocoComSom = frameAtual;
+
+  // ===================================================
+  // EXECUTAR SOM EXATAMENTE NO FRAME DE IMPACTO
+  // ===================================================
+
+  tocarSomSocoBoss(boss);
 }
 
 // =====================================================
@@ -192,10 +272,6 @@ function atualizarMiraDurantePreparacao(boss, player, frame, callbacks) {
 // FINALIZAR ANIMAÇÃO DO BOSS
 // =====================================================
 
-// Restaurado:
-// não existe mais temporizador adicional
-// esperando o raio completar 4,7 segundos.
-
 export function finalizarAnimacaoBoss(boss, animacao, callbacks) {
   if (boss.morto) return;
 
@@ -218,15 +294,23 @@ export function finalizarAnimacaoBoss(boss, animacao, callbacks) {
   }
 
   // ===================================================
-  // FINALIZAR O RAIO JUNTO COM O BOSS
+  // FINALIZAR RAIO ORIGINAL
   // ===================================================
 
   if (estadoTerminado === "raioChao") {
-    // Encerrar os raios visuais originais.
     limparRaioZona(boss);
 
-    // NOVO: interromper o áudio do raio.
     pararSomRaioBoss(boss);
+  }
+
+  // ===================================================
+  // NOVO: FINALIZAR SOM DO SOCO
+  // ===================================================
+
+  if (estadoTerminado === "ataqueChao") {
+    // Garante que o áudio não permaneça
+    // reproduzindo após o fim do ataque.
+    pararSomSocoBoss(boss);
   }
 
   // ===================================================
@@ -265,39 +349,56 @@ export function tratarAnimationUpdate(boss, animacao, frame, callbacks) {
     return;
   }
 
+  // ===================================================
+  // OBTER FRAME REAL DO PHASER
+  // ===================================================
+
   ia.frame = obterNumeroFrameAnimacao(frame);
 
   ia.jogadorAtual = boss.scene.player;
 
-  // Hitboxes seguem os frames originais.
+  // ===================================================
+  // NOVO: SINCRONIZAR ÁUDIO DO SOCO
+  // ===================================================
+  //
+  // Primeiro identificamos o frame.
+  //
+  // Se for o frame 6 ou 12, o som começa
+  // imediatamente neste evento.
+  //
+  // Isso evita iniciar o som no começo do
+  // movimento dos braços.
+  // ===================================================
+
+  if (ia.ataqueAtual === "ataqueChao") {
+    atualizarSomImpactoChao(boss);
+  }
+
+  // ===================================================
+  // HITBOXES ORIGINAIS
+  // ===================================================
+
   atualizarHitboxesBoss(boss);
 
-  // Mira do laser.
+  // ===================================================
+  // MIRA DO LASER ORIGINAL
+  // ===================================================
+
   atualizarMiraDurantePreparacao(boss, ia.jogadorAtual, ia.frame, callbacks);
 
-  // Cura e dano dos outros ataques.
+  // ===================================================
+  // CURA E DANO ORIGINAIS
+  // ===================================================
+
   callbacks.aplicarCuraDoFrame(boss);
   callbacks.aplicarDanoDoAtaque(boss);
 
   // ===================================================
-  // ATUALIZAR RAIO SINCRONIZADO COM O BOSS
+  // RAIO SINCRONIZADO COM O BOSS - ORIGINAL
   // ===================================================
 
   if (ia.ataqueAtual === "raioChao") {
-    // Atualização visual original do raio.
     atualizarRaioZona(boss);
-
-    // =================================================
-    // NOVO: SINCRONIZAR VOLUME COM O RAIO
-    // =================================================
-    //
-    // Usa o mesmo tempo de animação visual.
-    //
-    // O controle contínuo também ocorre pelo
-    // monitor de áudio, permitindo mudanças
-    // suaves entre os frames.
-    //
-    // =================================================
 
     atualizarSomRaioBoss(boss);
   }
@@ -305,7 +406,7 @@ export function tratarAnimationUpdate(boss, animacao, frame, callbacks) {
   const ataqueRaio = ia.ataqueAtual === "raioChao";
 
   // ===================================================
-  // EVENTO DE ATAQUE
+  // EVENTO ORIGINAL DE ATAQUE
   // ===================================================
 
   emitirEventoBoss(boss, "boss:ataque-frame", {
