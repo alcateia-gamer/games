@@ -4,25 +4,27 @@ import { framesImpactoChao } from "./BossConfig.js";
 // SISTEMA DE RACHADURAS PERMANENTES DO BOSS FINAL
 // =====================================================
 //
-// 1ª batida -> frame 0
-// 2ª batida -> frame 1
-// 3ª batida -> frame 2
-// 4ª batida -> frame 3
-// 5ª batida -> frame 4
-// 6ª batida -> frame 5
+// NOVO PNG: chao_quebrando_1.png
 //
-// Após a sexta batida, permanece no frame 5.
+// Cada batida avança um frame:
 //
-// O sprite não é filho do Boss.
-// Portanto, continua no chão após a derrota.
+//  1ª batida -> frame 0
+//  2ª batida -> frame 1
+//  3ª batida -> frame 2
+//  4ª batida -> frame 3
+//  5ª batida -> frame 4
+//  6ª batida -> frame 5
+//  7ª batida -> frame 6
+//  8ª batida -> frame 7
+//  9ª batida -> frame 8
+// 10ª batida -> frame 9
+// 11ª batida -> frame 10
 //
-// Melhorias visuais:
-// - mais transparência
-// - blend mode MULTIPLY
-// - tamanho um pouco menor
+// Após a 11ª batida, permanece no frame 10.
 //
-// CORREÇÃO ATUAL:
-// - depth reduzida para ficar abaixo do personagem
+// As rachaduras permanecem após a morte do Boss.
+//
+// Não altera sons, danos, hitboxes ou ataques.
 // =====================================================
 
 // =====================================================
@@ -32,15 +34,30 @@ import { framesImpactoChao } from "./BossConfig.js";
 const TEXTURA_CHAO_QUEBRADO = "boss-chao-quebrado";
 
 const CAMINHO_CHAO_QUEBRADO =
-  "./assets/PERSONAGENS/INIMIGOS PRINCIPAIS/BOSS_FINAL/chao_quebrado.png";
+  "./assets/PERSONAGENS/INIMIGOS PRINCIPAIS/BOSS_FINAL/chao_quebrando_1.png";
+
+// =====================================================
+// CORREÇÃO: TAMANHO EXATO DE CADA FRAME
+// =====================================================
+//
+// X = 627 pixels.
+// Y = 627 pixels.
+//
+// Não utilizar mais 512x512.
+//
+// =====================================================
 
 const LARGURA_FRAME = 627;
 const ALTURA_FRAME = 627;
-const TOTAL_FRAMES = 6;
+
+// Quantidade de frames utilizados.
+const TOTAL_FRAMES = 11;
 
 // =====================================================
 // 2. AJUSTES MANUAIS DA IMAGEM NO CHÃO
 // =====================================================
+//
+// Valores anteriores preservados.
 //
 // DESLOCAMENTO_X:
 // positivo = direita
@@ -50,21 +67,12 @@ const TOTAL_FRAMES = 6;
 // positivo = baixo
 // negativo = cima
 //
-// LARGURA_CHAO e ALTURA_CHAO controlam só a imagem.
+// LARGURA_CHAO e ALTURA_CHAO controlam
+// somente o tamanho visual.
 //
 // ALPHA_CHAO:
 // 1 = totalmente opaco
 // 0 = invisível
-//
-// MULTIPLY costuma encaixar melhor no piso,
-// deixando as rachaduras mais naturais.
-//
-// PROFUNDIDADE_CHAO:
-// menor = mais para trás
-// maior = mais para frente
-//
-// Agora está baixa o suficiente para ficar
-// abaixo do personagem.
 // =====================================================
 
 const DESLOCAMENTO_X = 0;
@@ -76,24 +84,8 @@ const ALTURA_CHAO = 270;
 const ALPHA_CHAO = 0.42;
 const USAR_BLEND_MULTIPLY = true;
 
-// =====================================================
-// CORREÇÃO DA DEPTH
-// =====================================================
-//
-// Antes estava alta demais.
-//
-// No mapa da fábrica, as camadas do chão ficam
-// entre depth 1 e 5.
-//
-// O personagem fica acima disso.
-//
-// Então deixamos o chão quebrado em 5.5:
-// - acima do piso
-// - abaixo do personagem
-// - sem cobrir o player
-// =====================================================
-
-const PROFUNDIDADE_CHAO = 5.5;
+// Mantém a imagem abaixo do personagem.
+const PROFUNDIDADE_CHAO = 5.3;
 
 // =====================================================
 // 3. CONFIGURAR SISTEMA DAS RACHADURAS
@@ -108,13 +100,16 @@ export function configurarChaoQuebradoBoss(scene, boss) {
 
   const estado = {
     ativo: true,
+
     impactos: 0,
+
     ultimoFrameImpacto: null,
+
     sprite: null,
   };
 
   // ===================================================
-  // 4. DESENHAR O ESTADO ATUAL DAS RACHADURAS
+  // 4. ATUALIZAR IMAGEM DO CHÃO
   // ===================================================
 
   function atualizarVisualChao() {
@@ -122,15 +117,32 @@ export function configurarChaoQuebradoBoss(scene, boss) {
       return;
     }
 
+    // Chão intacto antes da primeira batida.
     if (estado.impactos === 0) {
       return;
     }
 
+    // Aguardar carregamento da textura.
     if (!scene.textures.exists(TEXTURA_CHAO_QUEBRADO)) {
       return;
     }
 
+    // =================================================
+    // IDENTIFICAR FRAME ATUAL
+    // =================================================
+    //
+    // Primeiro impacto utiliza frame 0.
+    //
+    // Último frame utilizado = 10.
+    //
+    // Nunca ultrapassar o limite.
+    // =================================================
+
     const frameAtual = Math.min(estado.impactos - 1, TOTAL_FRAMES - 1);
+
+    // =================================================
+    // CRIAR IMAGEM SOMENTE UMA VEZ
+    // =================================================
 
     if (!estado.sprite?.active) {
       const area = boss.areaDanoChao;
@@ -146,12 +158,26 @@ export function configurarChaoQuebradoBoss(scene, boss) {
         frameAtual,
       );
 
+      // Centralizar imagem.
       estado.sprite.setOrigin(0.5, 0.5);
+
+      // =================================================
+      // TAMANHO VISUAL ANTERIOR PRESERVADO
+      // =================================================
 
       estado.sprite.setDisplaySize(LARGURA_CHAO, ALTURA_CHAO);
 
+      // =================================================
+      // PROFUNDIDADE ANTERIOR PRESERVADA
+      // =================================================
+
       estado.sprite.setDepth(PROFUNDIDADE_CHAO);
+
       estado.sprite.setScrollFactor(1);
+
+      // =================================================
+      // TRANSPARÊNCIA ANTERIOR PRESERVADA
+      // =================================================
 
       estado.sprite.setAlpha(ALPHA_CHAO);
 
@@ -164,7 +190,17 @@ export function configurarChaoQuebradoBoss(scene, boss) {
       return;
     }
 
+    // =================================================
+    // ATUALIZAR APENAS O FRAME
+    // =================================================
+    //
+    // Não alterar posição.
+    // Não alterar tamanho.
+    // Não reiniciar a imagem.
+    // =================================================
+
     estado.sprite.setFrame(frameAtual);
+
     estado.sprite.setDepth(PROFUNDIDADE_CHAO);
     estado.sprite.setAlpha(ALPHA_CHAO);
 
@@ -174,7 +210,7 @@ export function configurarChaoQuebradoBoss(scene, boss) {
   }
 
   // ===================================================
-  // 5. INÍCIO DE NOVO ATAQUE DE SOCO
+  // 5. INÍCIO DE NOVO ATAQUE
   // ===================================================
 
   function aoIniciarAtaque(evento) {
@@ -182,11 +218,21 @@ export function configurarChaoQuebradoBoss(scene, boss) {
       return;
     }
 
+    // Reiniciar somente controle de duplicação.
+    // Não reiniciar contador de rachaduras.
     estado.ultimoFrameImpacto = null;
   }
 
   // ===================================================
-  // 6. PROCESSAR IMPACTO REAL
+  // 6. PROCESSAR IMPACTOS DO BOSS
+  // ===================================================
+  //
+  // A animação possui dois frames de impacto:
+  //
+  // Frame 6  = primeira batida.
+  // Frame 12 = segunda batida.
+  //
+  // Cada impacto avança um frame do PNG.
   // ===================================================
 
   function aoFrameAtaque(evento) {
@@ -208,30 +254,54 @@ export function configurarChaoQuebradoBoss(scene, boss) {
 
     const frameBoss = evento.frame;
 
+    // Aceitar somente os frames de impacto.
     if (!framesImpactoChao.includes(frameBoss)) {
       return;
     }
 
+    // Impedir contagem duplicada.
     if (estado.ultimoFrameImpacto === frameBoss) {
       return;
     }
 
     estado.ultimoFrameImpacto = frameBoss;
 
+    // =================================================
+    // PARAR DE AVANÇAR NO ÚLTIMO FRAME
+    // =================================================
+
     if (estado.impactos >= TOTAL_FRAMES) {
       return;
     }
 
+    // Registrar batida.
     estado.impactos += 1;
+
+    // Atualizar imagem imediatamente.
     atualizarVisualChao();
   }
+
+  // ===================================================
+  // 7. REGISTRAR EVENTOS
+  // ===================================================
 
   scene.events.on("boss:ataque-iniciado", aoIniciarAtaque);
 
   scene.events.on("boss:ataque-frame", aoFrameAtaque);
 
   // ===================================================
-  // 7. CARREGAR SPRITESHEET
+  // 8. CARREGAR SPRITE SHEET CORRIGIDA
+  // ===================================================
+  //
+  // NOVO PNG:
+  // chao_quebrando_1.png
+  //
+  // CORREÇÃO:
+  //
+  // frameWidth = 627
+  // frameHeight = 627
+  //
+  // Mantém os primeiros 11 frames.
   // ===================================================
 
   const EVENTO_ARQUIVO_CARREGADO = `filecomplete-spritesheet-${TEXTURA_CHAO_QUEBRADO}`;
@@ -250,7 +320,7 @@ export function configurarChaoQuebradoBoss(scene, boss) {
     }
 
     console.error(
-      "Boss: não foi possível carregar chao_quebrado.png.",
+      "Boss: não foi possível carregar chao_quebrando_1.png.",
       arquivo.src,
     );
   }
@@ -270,7 +340,13 @@ export function configurarChaoQuebradoBoss(scene, boss) {
   }
 
   // ===================================================
-  // 8. LIMPEZA APENAS AO ENCERRAR A CENA
+  // 9. LIMPEZA AO ENCERRAR A CENA
+  // ===================================================
+  //
+  // As rachaduras permanecem após a morte do Boss.
+  //
+  // Somente o encerramento da cena
+  // remove a imagem.
   // ===================================================
 
   function limparSistemaChao() {
@@ -293,6 +369,7 @@ export function configurarChaoQuebradoBoss(scene, boss) {
     }
 
     estado.sprite = null;
+
     boss.chaoQuebradoConfigurado = false;
   }
 
