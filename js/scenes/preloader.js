@@ -8,6 +8,292 @@ class Preloader extends Phaser.Scene {
   }
 
   // =====================================================
+  // NOVA SPRITE SHEET DO RAIO DA BASE
+  // =====================================================
+  //
+  // PNG:
+  // RAIO_BOSS_BASE (1) (1).png
+  //
+  // Dimensão da imagem original: 1789x2048.
+  //
+  // Organização original:
+  // 7 colunas e 4 linhas.
+  // 24 quadros, com 3 na última linha.
+  //
+  // Organização final usada pelo Boss:
+  // 6 colunas e 4 linhas.
+  //
+  // TAMANHO EXATO DOS FRAMES FINAIS:
+  // X = 311
+  // Y = 623
+  //
+  // Não redimensiona o conteúdo dos raios.
+  // Não altera a ordem dos frames.
+  // Não modifica o PNG original.
+  // =====================================================
+
+  prepararNovoRaioBase() {
+    const CHAVE_ORIGINAL = "boss-raio-base-original";
+    const CHAVE_FINAL = "boss-raio-base";
+    const CHAVE_CANVAS = "boss-raio-base-canvas";
+    const CHAVE_CORRECAO = "boss-raio-base-frame-623";
+
+    // ===================================================
+    // CONFIGURAÇÕES DA IMAGEM ORIGINAL
+    // ===================================================
+
+    const TOTAL_FRAMES = 24;
+    const COLUNAS_ORIGEM = 7;
+    const LINHAS_ORIGEM = 4;
+
+    // ===================================================
+    // CONFIGURAÇÕES DOS FRAMES FINAIS
+    // ===================================================
+
+    const FRAME_LARGURA = 311;
+    const FRAME_ALTURA = 623;
+
+    const COLUNAS_DESTINO = 6;
+    const LINHAS_DESTINO = 4;
+
+    // ===================================================
+    // AJUSTES MANUAIS DE CENTRALIZAÇÃO
+    // ===================================================
+    //
+    // Estes valores deslocam o conteúdo de todos
+    // os frames dentro de suas células.
+    //
+    // Não alteram a posição do raio no mapa.
+    //
+    // X positivo: direita.
+    // X negativo: esquerda.
+    //
+    // Y positivo: baixo.
+    // Y negativo: cima.
+    //
+    // Zero mantém a centralização automática.
+    // ===================================================
+
+    const AJUSTE_CENTRO_X = 0;
+    const AJUSTE_CENTRO_Y = 0;
+
+    // ===================================================
+    // VERIFICAR SE A IMAGEM FOI CARREGADA
+    // ===================================================
+
+    if (!this.textures.exists(CHAVE_ORIGINAL)) {
+      console.error("Boss: imagem original do raio da base não carregada.");
+      return;
+    }
+
+    const texturaOriginal = this.textures.get(CHAVE_ORIGINAL);
+
+    const imagem = texturaOriginal.getSourceImage();
+
+    if (!imagem?.width || !imagem?.height) {
+      console.error("Boss: dimensões inválidas para o raio da base.");
+      return;
+    }
+
+    // ===================================================
+    // IDENTIFICAR OS LIMITES REAIS DOS QUADROS
+    // ===================================================
+    //
+    // A imagem original não possui largura
+    // múltipla de 311.
+    //
+    // Por isso, NÃO tentamos recortar a imagem
+    // diretamente em células de 311x623.
+    //
+    // Primeiro identificamos os 7 quadros de
+    // cada linha original.
+    //
+    // Depois colocamos cada quadro inteiro,
+    // centralizado em sua célula de 311x623.
+    // ===================================================
+
+    const larguraOriginal = imagem.width;
+    const alturaOriginal = imagem.height;
+
+    const larguraMediaOrigem = larguraOriginal / COLUNAS_ORIGEM;
+
+    const alturaMediaOrigem = alturaOriginal / LINHAS_ORIGEM;
+
+    // Verificar se cada quadro cabe na grade final.
+    if (
+      Math.ceil(larguraMediaOrigem) > FRAME_LARGURA ||
+      Math.ceil(alturaMediaOrigem) > FRAME_ALTURA
+    ) {
+      console.error("Boss: o tamanho dos quadros originais excede 311x623.");
+      return;
+    }
+
+    // ===================================================
+    // LIMPAR TEXTURAS ANTERIORES
+    // ===================================================
+
+    if (this.textures.exists(CHAVE_CORRECAO)) {
+      this.textures.remove(CHAVE_CORRECAO);
+    }
+
+    if (this.textures.exists(CHAVE_FINAL)) {
+      this.textures.remove(CHAVE_FINAL);
+    }
+
+    if (this.textures.exists(CHAVE_CANVAS)) {
+      this.textures.remove(CHAVE_CANVAS);
+    }
+
+    // ===================================================
+    // CRIAR CANVAS COM A GRADE CORRETA
+    // ===================================================
+
+    const larguraCanvas = COLUNAS_DESTINO * FRAME_LARGURA;
+
+    const alturaCanvas = LINHAS_DESTINO * FRAME_ALTURA;
+
+    const texturaCanvas = this.textures.createCanvas(
+      CHAVE_CANVAS,
+      larguraCanvas,
+      alturaCanvas,
+    );
+
+    if (!texturaCanvas) {
+      console.error("Boss: não foi possível criar a textura do raio.");
+      return;
+    }
+
+    const contexto = texturaCanvas.getContext();
+
+    // Não suavizar os pixels da arte.
+    contexto.imageSmoothingEnabled = false;
+
+    contexto.clearRect(0, 0, larguraCanvas, alturaCanvas);
+
+    // ===================================================
+    // COPIAR OS 24 FRAMES NA ORDEM ORIGINAL
+    // ===================================================
+
+    for (let i = 0; i < TOTAL_FRAMES; i++) {
+      // =================================================
+      // POSIÇÃO DO FRAME NA IMAGEM ORIGINAL
+      // =================================================
+
+      const colunaOrigem = i % COLUNAS_ORIGEM;
+      const linhaOrigem = Math.floor(i / COLUNAS_ORIGEM);
+
+      // Limites reais calculados com base na largura
+      // e altura da imagem inteira.
+      //
+      // Isso evita acumular diferenças de pixels
+      // entre as colunas da imagem original.
+      const origemX = Math.round(colunaOrigem * larguraMediaOrigem);
+
+      const origemDireita = Math.round((colunaOrigem + 1) * larguraMediaOrigem);
+
+      const origemY = Math.round(linhaOrigem * alturaMediaOrigem);
+
+      const origemBaixo = Math.round((linhaOrigem + 1) * alturaMediaOrigem);
+
+      const larguraRecorte = origemDireita - origemX;
+
+      const alturaRecorte = origemBaixo - origemY;
+
+      // =================================================
+      // POSIÇÃO NA GRADE FINAL DE 311x623
+      // =================================================
+
+      const colunaDestino = i % COLUNAS_DESTINO;
+
+      const linhaDestino = Math.floor(i / COLUNAS_DESTINO);
+
+      // =================================================
+      // CENTRALIZAR SEM ESTICAR O RAIO
+      // =================================================
+
+      const margemX = Math.floor((FRAME_LARGURA - larguraRecorte) / 2);
+
+      const margemY = Math.floor((FRAME_ALTURA - alturaRecorte) / 2);
+
+      const destinoX =
+        colunaDestino * FRAME_LARGURA + margemX + AJUSTE_CENTRO_X;
+
+      const destinoY = linhaDestino * FRAME_ALTURA + margemY + AJUSTE_CENTRO_Y;
+
+      // =================================================
+      // COPIAR O FRAME ORIGINAL
+      // =================================================
+      //
+      // A largura e a altura da cópia são iguais às
+      // do recorte original.
+      //
+      // Portanto, nenhum redimensionamento acontece.
+      //
+      // Os pixels são apenas reposicionados dentro
+      // do frame final de 311x623.
+      // =================================================
+
+      contexto.drawImage(
+        imagem,
+
+        // Área de origem.
+        origemX,
+        origemY,
+        larguraRecorte,
+        alturaRecorte,
+
+        // Área de destino.
+        destinoX,
+        destinoY,
+        larguraRecorte,
+        alturaRecorte,
+      );
+    }
+
+    // ===================================================
+    // ATUALIZAR A TEXTURA DO CANVAS
+    // ===================================================
+
+    texturaCanvas.refresh();
+
+    // ===================================================
+    // CRIAR SPRITE SHEET FINAL DE 311x623
+    // ===================================================
+
+    this.textures.addSpriteSheet(CHAVE_FINAL, texturaCanvas.getSourceImage(), {
+      frameWidth: FRAME_LARGURA,
+      frameHeight: FRAME_ALTURA,
+      endFrame: TOTAL_FRAMES - 1,
+    });
+
+    // ===================================================
+    // VERIFICAR A QUANTIDADE DE FRAMES
+    // ===================================================
+
+    const texturaFinal = this.textures.get(CHAVE_FINAL);
+
+    const framesCarregados = texturaFinal
+      .getFrameNames()
+      .filter((nome) => /^\d+$/.test(String(nome)));
+
+    if (framesCarregados.length !== TOTAL_FRAMES) {
+      console.error(
+        "Boss: quantidade incorreta de frames.",
+        framesCarregados.length,
+      );
+      return;
+    }
+
+    console.log("Boss: raio da base carregado corretamente.", {
+      frames: framesCarregados.length,
+      larguraFrame: FRAME_LARGURA,
+      alturaFrame: FRAME_ALTURA,
+      larguraSpritesheet: larguraCanvas,
+      alturaSpritesheet: alturaCanvas,
+    });
+  }
+
+  // =====================================================
   // INICIAR CARREGAMENTO
   // =====================================================
 
@@ -42,11 +328,13 @@ class Preloader extends Phaser.Scene {
 
     this.load.on("progress", (progress) => {
       this.barra.width = 392 * progress;
-
       this.porcentagem.setText(Math.floor(progress * 100) + "%");
     });
 
     this.load.once("complete", () => {
+      // Preparar os frames do raio antes da partida.
+      this.prepararNovoRaioBase();
+
       this.finalizarCarregamento();
     });
 
@@ -239,23 +527,22 @@ class Preloader extends Phaser.Scene {
     );
 
     // =====================================================
-    // NOVO: RAIO ADICIONAL NA BASE DO BOSS
+    // NOVO PNG DO RAIO DA BASE
     // =====================================================
     //
-    // Utilizado somente quando a zona escolhida
-    // pelo Boss é a zona 1 ou a zona 3.
+    // Não carregar diretamente como spritesheet,
+    // pois as dimensões originais não são múltiplas
+    // de 311x623.
     //
-    // Cada frame possui 311x626 pixels.
-    // Todos os frames são carregados automaticamente.
+    // Primeiro carrega como imagem.
+    //
+    // prepararNovoRaioBase() reorganiza os 24 frames,
+    // preservando seus pixels e a ordem original.
     // =====================================================
 
-    this.load.spritesheet(
-      "boss-raio-base",
-      "PERSONAGENS/INIMIGOS PRINCIPAIS/BOSS_FINAL/RAIO_BOSS_BASE.png",
-      {
-        frameWidth: 311,
-        frameHeight: 626,
-      },
+    this.load.image(
+      "boss-raio-base-original",
+      "PERSONAGENS/INIMIGOS PRINCIPAIS/BOSS_FINAL/RAIO_BOSS_BASE (1) (1).png",
     );
 
     // =====================================================

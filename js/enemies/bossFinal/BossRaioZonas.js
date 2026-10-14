@@ -14,10 +14,10 @@ import { causarDanoJogador } from "./BossCombate.js";
 // =====================================================
 
 const BASE_IMAGEM_X = -1080;
-const BASE_IMAGEM_Y = -6245;
+const BASE_IMAGEM_Y = -6320;
 
-const BASE_IMAGEM_LARGURA = 500;
-const BASE_IMAGEM_ALTURA = 520;
+const BASE_IMAGEM_LARGURA = 510;
+const BASE_IMAGEM_ALTURA = 650;
 
 // =====================================================
 // 2. MÁSCARA VISUAL DA BASE
@@ -111,7 +111,7 @@ const ALTURA_RAIO = ZONA_FIM_Y - ZONA_INICIO_Y;
 const ZONAS_1_E_3_AJUSTE_X = 0;
 const ZONAS_1_E_3_AJUSTE_Y = 0;
 
-const ZONAS_1_E_3_IMAGEM_LARGURA = 500;
+const ZONAS_1_E_3_IMAGEM_LARGURA = 510;
 const ZONAS_1_E_3_IMAGEM_ALTURA = 735;
 
 // =====================================================
