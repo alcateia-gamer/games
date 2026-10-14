@@ -1,23 +1,16 @@
 import { bossDepth, danoAtaqueChao, duracaoFrame } from "./BossConfig.js";
-
 import { causarDanoJogador } from "./BossCombate.js";
 
 // =====================================================
 // 1. AJUSTES MANUAIS DO RAIO DA BASE
 // =====================================================
 //
-// ESTES SÃO OS VALORES QUE VOCÊ JÁ AJUSTOU.
-// FORAM PRESERVADOS EXATAMENTE.
+// Estes valores controlam SOMENTE a imagem.
 //
 // X: maior = direita; menor = esquerda.
 // Y: maior = desce; menor = sobe.
-// LARGURA: aumenta ou diminui a largura.
-// ALTURA: aumenta ou diminui a altura.
 //
-// X é o centro horizontal.
-// Y é o topo da imagem.
-//
-// ESTES VALORES NÃO MUDAM A HITBOX.
+// A largura e a altura são independentes da hitbox.
 // =====================================================
 
 const BASE_IMAGEM_X = -1080;
@@ -31,9 +24,11 @@ const BASE_IMAGEM_ALTURA = 520;
 // =====================================================
 //
 // Limita a imagem ao retângulo roxo.
-// Os quatro recuos abaixo não afetam o dano.
+// Os recuos não alteram o dano.
 //
-// Valores zero usam toda a área da hitbox.
+// IMPORTANTE:
+// A máscara foi atualizada para ser compatível
+// com o Phaser 4 e WebGL.
 // =====================================================
 
 const MASCARA_RECUO_ESQUERDA = 0;
@@ -65,7 +60,7 @@ const FRAME_BOSS_INICIO_RAIO = 7;
 const PERCENTUAL_PREPARACAO = 0.3;
 const MINIMO_FRAMES_PREPARACAO = 4;
 
-// Os dois últimos frames não dão dano.
+// Os dois últimos frames não causam dano.
 const FRAMES_FINAIS_SEM_DANO = 2;
 
 // =====================================================
@@ -83,64 +78,44 @@ const CHANCE_PRIORIZAR_JOGADOR = 0.75;
 
 const LARGURA_ZONA = (ARENA_X_MAX - ARENA_X_MIN) / TOTAL_ZONAS;
 
-// Hitbox original do raio principal.
+// Hitbox original.
 const LARGURA_RAIO_HITBOX = LARGURA_ZONA * 0.98;
 
-// Tamanho visual original das três zonas.
+// Tamanho visual original.
 const LARGURA_RAIO_VISUAL = LARGURA_ZONA * 1.24;
 const ALTURA_RAIO = ZONA_FIM_Y - ZONA_INICIO_Y;
 
 // =====================================================
-// 5.1 AJUSTES MANUAIS DOS RAIOS DAS ZONAS 1 E 3
+// 5.1 AJUSTES MANUAIS DAS ZONAS 1 E 3
 // =====================================================
 //
-// EDITE ESTES VALORES PARA MUDAR AS IMAGENS
-// DAS ZONAS 1 (ESQUERDA) E 3 (DIREITA).
-//
-// OS MESMOS VALORES SERVEM PARA AS DUAS ZONAS.
-//
-// NÃO ALTERAM A HITBOX DE DANO.
-// NÃO ALTERAM A ZONA 2.
-// NÃO ALTERAM A ANIMAÇÃO NEM SUA DURAÇÃO.
+// ESTES VALORES CONTROLAM APENAS AS IMAGENS.
 //
 // AJUSTE_X:
-//   Maior = desloca para a direita.
-//   Menor/negativo = desloca para a esquerda.
-//   Zero = posição horizontal original.
+// Positivo = direita.
+// Negativo = esquerda.
 //
 // AJUSTE_Y:
-//   Maior = desloca para baixo.
-//   Menor/negativo = desloca para cima.
-//   Zero = posição vertical original.
+// Positivo = baixo.
+// Negativo = cima.
 //
 // LARGURA:
-//   Maior = mais largo.
-//   Menor = mais estreito.
+// Aumenta ou diminui a imagem horizontalmente.
 //
 // ALTURA:
-//   Maior = mais alto.
-//   Menor = mais baixo.
+// Aumenta ou diminui a imagem verticalmente.
 //
-// Os valores iniciais preservam exatamente
-// o tamanho e a posição anteriores.
+// A hitbox continua independente.
 // =====================================================
 
-// POSIÇÃO - deslocamento em unidades do mapa.
 const ZONAS_1_E_3_AJUSTE_X = 0;
 const ZONAS_1_E_3_AJUSTE_Y = 0;
 
-// TAMANHO - largura e altura da imagem.
 const ZONAS_1_E_3_IMAGEM_LARGURA = 500;
 const ZONAS_1_E_3_IMAGEM_ALTURA = 735;
 
 // =====================================================
 // 6. HITBOX ROXA DA BASE
-// =====================================================
-//
-// Estas coordenadas controlam a HITBOX,
-// não a imagem.
-//
-// Mantidas como estavam no arquivo enviado.
 // =====================================================
 
 const BASE_CENTRO_X = -1080;
@@ -161,7 +136,6 @@ const COR_ZONA_ATIVA = 0x00d8ff;
 
 const COR_BASE = 0xb266ff;
 
-// Segue physics.arcade.debug do Phaser.
 function debugHitboxesAtivado(scene) {
   return Boolean(scene?.game?.config?.physics?.arcade?.debug);
 }
@@ -170,7 +144,6 @@ function debugHitboxesAtivado(scene) {
 // 8. CALCULAR HITBOX DAS ZONAS
 // =====================================================
 
-// A hitbox permanece independente da imagem.
 function obterAreaZona(indice) {
   const x = ARENA_X_MIN + indice * LARGURA_ZONA;
 
@@ -186,23 +159,16 @@ function obterAreaZona(indice) {
 // ÁREA VISUAL DO RAIO PRINCIPAL
 // =====================================================
 //
-// ESTA FUNÇÃO USA OS NOVOS AJUSTES DA SEÇÃO 5.1.
+// Zona 1 = índice 0.
+// Zona 2 = índice 1.
+// Zona 3 = índice 2.
 //
-// Índice 0 = zona 1.
-// Índice 1 = zona 2.
-// Índice 2 = zona 3.
-//
-// Apenas os índices 0 e 2 recebem
-// os controles manuais compartilhados.
-//
-// A hitbox NÃO é alterada.
+// Os controles manuais só afetam zonas 1 e 3.
 // =====================================================
 
 function obterAreaVisualZona(indice) {
   const area = obterAreaZona(indice);
 
-  // ZONAS 1 E 3:
-  // Utilizam os quatro valores manuais.
   if (indice === 0 || indice === 2) {
     return new Phaser.Geom.Rectangle(
       area.centerX + ZONAS_1_E_3_AJUSTE_X - ZONAS_1_E_3_IMAGEM_LARGURA / 2,
@@ -214,8 +180,6 @@ function obterAreaVisualZona(indice) {
     );
   }
 
-  // ZONA 2:
-  // Continua utilizando o tamanho original.
   return new Phaser.Geom.Rectangle(
     area.centerX - LARGURA_RAIO_VISUAL / 2,
     ZONA_INICIO_Y,
@@ -224,7 +188,10 @@ function obterAreaVisualZona(indice) {
   );
 }
 
-// Hitbox adicional da base do Boss.
+// =====================================================
+// HITBOX ADICIONAL DA BASE DO BOSS
+// =====================================================
+
 function obterAreaBase() {
   return new Phaser.Geom.Rectangle(
     BASE_CENTRO_X - LARGURA_HITBOX_BASE / 2,
@@ -256,9 +223,7 @@ function obterFramesTextura(scene, chave) {
 //
 // Usa a imagem original carregada no preloader.
 //
-// Se necessário, registra outra textura em
-// memória com os frames de 311x623.
-//
+// Se necessário, registra outra textura na memória.
 // Não modifica o PNG original.
 // =====================================================
 
@@ -314,8 +279,6 @@ function obterTexturaBaseCorreta(scene) {
 // =====================================================
 //
 // Os raios permanecem atrás do personagem.
-//
-// Controla o raio principal e o raio da base.
 // =====================================================
 
 function atualizarProfundidadeRaio(boss) {
@@ -345,8 +308,7 @@ function atualizarProfundidadeRaio(boss) {
 // Três zonas principais em azul.
 // Hitbox adicional da base em roxo.
 //
-// debug: false esconde apenas os desenhos.
-// O dano e as colisões continuam funcionando.
+// O debug não modifica colisões ou dano.
 // =====================================================
 
 function desenharDebugZonas(boss) {
@@ -363,7 +325,7 @@ function desenharDebugZonas(boss) {
 
   const ia = boss.iaCombate;
 
-  // Desenha as três zonas principais.
+  // Desenhar as três zonas.
   for (let i = 0; i < TOTAL_ZONAS; i++) {
     const area = obterAreaZona(i);
 
@@ -380,7 +342,7 @@ function desenharDebugZonas(boss) {
     graphics.strokeRect(area.x, area.y, area.width, area.height);
   }
 
-  // Desenha a hitbox roxa adicional.
+  // Desenhar a hitbox roxa.
   if (ia?.areaRaioBase) {
     const area = ia.areaRaioBase;
 
@@ -507,7 +469,6 @@ function obterDuracaoRestanteBoss(boss, frameInicio) {
 // =====================================================
 //
 // Dano começa após a preparação.
-//
 // Os dois últimos frames não causam dano.
 // =====================================================
 
@@ -535,12 +496,25 @@ function frameDentroDaJanelaDano(frame, totalFrames) {
 // 19. MÁSCARA VISUAL DA BASE
 // =====================================================
 //
-// A máscara limita a imagem da base ao
-// retângulo roxo.
+// CORREÇÃO PARA PHASER 4
 //
-// Não altera a hitbox.
+// O Phaser 4 usa sistemas diferentes:
 //
-// Também não afeta as imagens das zonas 1 e 3.
+// WebGL:
+//   sprite.enableFilters();
+//   sprite.filters.external.addMask(graphics);
+//
+// Canvas:
+//   graphics.createGeometryMask();
+//   sprite.setMask(mask);
+//
+// O código antigo usava setMask em WebGL,
+// produzindo o aviso repetido no console.
+//
+// Agora o recorte continua funcionando sem
+// chamar o método incompatível.
+//
+// A máscara não modifica a hitbox.
 // =====================================================
 
 function criarMascaraBase(scene, area) {
@@ -568,9 +542,57 @@ function criarMascaraBase(scene, area) {
 
   graphics.fillRect(x, y, largura, altura);
 
+  // Apenas retorna o objeto Graphics.
+  // A máscara será criada de acordo com
+  // o renderizador utilizado.
+  return graphics;
+}
+
+// =====================================================
+// NOVO: APLICAR MÁSCARA COMPATÍVEL
+// =====================================================
+
+function aplicarMascaraBase(scene, sprite, area) {
+  const graphics = criarMascaraBase(scene, area);
+
+  let mask = null;
+
+  const usaWebGL = scene.game.renderer.type === Phaser.WEBGL;
+
+  if (usaWebGL) {
+    // ===============================================
+    // PHASER 4 - WEBGL
+    // ===============================================
+    //
+    // O Mask Filter é compatível com WebGL.
+    //
+    // EXTERNAL:
+    // Usa as coordenadas da câmera e do mapa,
+    // preservando o retângulo original da máscara.
+    //
+    // NÃO usar sprite.setMask() aqui.
+    // ===============================================
+
+    sprite.enableFilters();
+
+    mask = sprite.filters.external.addMask(graphics, false, scene.cameras.main);
+  } else {
+    // ===============================================
+    // RENDERIZADOR CANVAS
+    // ===============================================
+    //
+    // A máscara geométrica continua válida
+    // quando o jogo utiliza Canvas.
+    // ===============================================
+
+    mask = graphics.createGeometryMask();
+
+    sprite.setMask(mask);
+  }
+
   return {
     graphics,
-    mask: graphics.createGeometryMask(),
+    mask,
   };
 }
 
@@ -578,7 +600,7 @@ function criarMascaraBase(scene, area) {
 // 20. CRIAR O RAIO DA BASE
 // =====================================================
 //
-// Usa os quatro valores da seção 1.
+// Usa os valores da seção 1.
 //
 // Zona 2 não recebe o PNG adicional.
 // Zonas 1 e 3 recebem o PNG da base.
@@ -587,7 +609,7 @@ function criarMascaraBase(scene, area) {
 // =====================================================
 
 function criarRaioBase(boss, indiceZona) {
-  // Índice 1 é a zona 2.
+  // Índice 1 corresponde à zona 2.
   if (indiceZona === 1) return;
 
   const scene = boss.scene;
@@ -613,7 +635,7 @@ function criarRaioBase(boss, indiceZona) {
   ia.raioFrameBaseVisual = -1;
 
   // ================================================
-  // IMAGEM DA BASE - VALORES DO USUÁRIO
+  // IMAGEM DA BASE - VALORES PRESERVADOS
   // ================================================
 
   const sprite = scene.add.sprite(
@@ -626,12 +648,7 @@ function criarRaioBase(boss, indiceZona) {
   // Centro horizontal e topo vertical.
   sprite.setOrigin(0.5, 0);
 
-  // X = -1080
-  // Y = -6270
-  // Largura = 500
-  // Altura = 520
-  //
-  // Estes valores foram preservados.
+  // Mantém as dimensões configuradas.
   sprite.setDisplaySize(BASE_IMAGEM_LARGURA, BASE_IMAGEM_ALTURA);
 
   sprite.setDepth(bossDepth - 0.5);
@@ -640,13 +657,12 @@ function criarRaioBase(boss, indiceZona) {
   sprite.setVisible(false);
 
   // ================================================
-  // MÁSCARA ROXA
+  // NOVO: MÁSCARA COMPATÍVEL COM WEBGL
   // ================================================
 
-  const { graphics, mask } = criarMascaraBase(scene, area);
+  const { graphics, mask } = aplicarMascaraBase(scene, sprite, area);
 
-  sprite.setMask(mask);
-
+  // Guardar referências para limpeza posterior.
   boss.raioBaseSprite = sprite;
   boss.raioBaseMascara = mask;
   boss.raioBaseMascaraGraphics = graphics;
@@ -664,7 +680,7 @@ function encerrarEfeitoRaio(boss) {
   ia.raioVisualAtivo = false;
   ia.raioAguardandoInicio = false;
 
-  // Desativa ambas as áreas de dano.
+  // Desativa as duas áreas de dano.
   ia.areaRaio = null;
   ia.areaRaioBase = null;
 
@@ -688,14 +704,14 @@ export function limparRaioZona(boss) {
 
   const scene = boss.scene;
 
-  // Desliga a atualização.
+  // Desligar atualização do raio.
   if (boss.raioZonaUpdate && scene?.events) {
     scene.events.off(Phaser.Scenes.Events.UPDATE, boss.raioZonaUpdate);
   }
 
   boss.raioZonaUpdate = null;
 
-  // Remove o listener de derrota.
+  // Remover listener de derrota.
   if (boss.raioZonaAoDerrotar && scene?.events) {
     scene.events.off("boss:derrotado", boss.raioZonaAoDerrotar);
   }
@@ -713,21 +729,38 @@ export function limparRaioZona(boss) {
   boss.raioZonaSprite = null;
 
   // ================================================
-  // DESTRUIR RAIO DA BASE
+  // NOVO: LIMPAR CORRETAMENTE A MÁSCARA
+  // ================================================
+  //
+  // No Phaser 4 com WebGL, a máscara é um Filter.
+  // Por isso, removemos pelo FilterList.
+  //
+  // No Canvas, removemos a GeometryMask.
+  //
+  // Isso evita deixar efeitos anteriores ativos
+  // ou acumular recursos entre os ataques.
   // ================================================
 
+  const usaWebGL = scene?.game?.renderer?.type === Phaser.WEBGL;
+
   if (boss.raioBaseSprite?.scene) {
+    if (usaWebGL && boss.raioBaseMascara) {
+      // Remover o filtro antes de destruir o sprite.
+      boss.raioBaseSprite.filters?.external?.remove(boss.raioBaseMascara);
+    } else if (boss.raioBaseMascara) {
+      // Limpeza para Canvas.
+      boss.raioBaseSprite.clearMask();
+
+      boss.raioBaseMascara.destroy();
+    }
+
     boss.raioBaseSprite.destroy();
   }
 
   boss.raioBaseSprite = null;
-
-  if (boss.raioBaseMascara) {
-    boss.raioBaseMascara.destroy();
-  }
-
   boss.raioBaseMascara = null;
 
+  // Destruir o objeto usado para criar a máscara.
   if (boss.raioBaseMascaraGraphics) {
     boss.raioBaseMascaraGraphics.destroy();
   }
@@ -773,19 +806,19 @@ export function iniciarRaioZona(boss) {
 
   inicializarDebugZonasRaio(boss);
 
-  // Remove qualquer efeito anterior.
+  // Remover qualquer efeito anterior.
   limparRaioZona(boss);
 
   const scene = boss.scene;
   const ia = boss.iaCombate;
 
-  // Escolhe uma das três zonas.
+  // Escolher uma das três zonas.
   const indiceZona = escolherZona(boss);
 
-  // Área de dano (não foi alterada).
+  // Área de dano original.
   const areaPrincipal = obterAreaZona(indiceZona);
 
-  // Área visual (usa ajustes manuais nas zonas 1 e 3).
+  // Área visual com os ajustes manuais.
   const visualPrincipal = obterAreaVisualZona(indiceZona);
 
   ia.zonasRaio = [indiceZona + 1];
@@ -829,13 +862,10 @@ export function iniciarRaioZona(boss) {
     frames[0],
   );
 
-  // Centro horizontal, topo vertical.
+  // Centro horizontal e topo vertical.
   sprite.setOrigin(0.5, 0);
 
-  // Aplica largura e altura visuais.
-  //
-  // Zona 1 e 3: valores da seção 5.1.
-  // Zona 2: valores originais.
+  // Tamanho visual independente da hitbox.
   sprite.setDisplaySize(visualPrincipal.width, visualPrincipal.height);
 
   sprite.setDepth(bossDepth - 0.5);
@@ -931,7 +961,7 @@ function raioBasePodeDarDano(boss) {
 // =====================================================
 
 export function atualizarRaioZona(boss) {
-  // Limpa os efeitos se o Boss foi destruído.
+  // Limpar efeitos se o Boss foi destruído.
   if (!boss?.active || boss.morto) {
     limparRaioZona(boss);
     return;
@@ -982,10 +1012,9 @@ export function atualizarRaioZona(boss) {
     ia.raioFrameVisual = 0;
 
     sprite.setFrame(ia.raioFrames[0]);
-
     sprite.setVisible(true);
 
-    // Inicia o raio adicional simultaneamente.
+    // Iniciar o raio da base simultaneamente.
     if (boss.raioBaseSprite?.active && ia.raioFramesBase.length > 0) {
       ia.raioFrameBaseVisual = 0;
 
@@ -1003,7 +1032,7 @@ export function atualizarRaioZona(boss) {
 
   const decorrido = Math.max(0, scene.time.now - ia.raioInicioMs);
 
-  // Encerra ambos os efeitos juntos.
+  // Encerrar os dois efeitos juntos.
   if (ia.raioDuracaoMs <= 0 || decorrido >= ia.raioDuracaoMs) {
     encerrarEfeitoRaio(boss);
     return;

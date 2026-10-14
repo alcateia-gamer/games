@@ -16,6 +16,16 @@ import {
 } from "./BossRaioZonas.js";
 
 // =====================================================
+// NOVO: CONTROLE DO SOM DO RAIO
+// =====================================================
+
+import {
+  ativarMonitorSomRaioBoss,
+  atualizarSomRaioBoss,
+  pararSomRaioBoss,
+} from "../../sounds/bossRaio.js";
+
+// =====================================================
 // IDENTIFICAR FRAMES DA ANIMAÇÃO DO BOSS
 // =====================================================
 
@@ -90,6 +100,27 @@ export function exibirEstadoBoss(boss, estado) {
   if (boss.bossEstadoAtual === estado) {
     return;
   }
+
+  // ===================================================
+  // NOVO: CONTROLAR SOM AO TROCAR DE ESTADO
+  // ===================================================
+
+  if (estado === "raioChao") {
+    // Inicia o monitoramento da animação.
+    //
+    // O áudio só vai começar a tocar quando
+    // o raio realmente aparecer no chão.
+    ativarMonitorSomRaioBoss(boss);
+  } else {
+    // Qualquer outro estado interrompe o som.
+    // Isso impede que o áudio continue tocando
+    // durante ataques diferentes.
+    pararSomRaioBoss(boss);
+  }
+
+  // ===================================================
+  // ANIMAÇÃO ORIGINAL
+  // ===================================================
 
   boss.sprite.anims.stop();
 
@@ -191,7 +222,11 @@ export function finalizarAnimacaoBoss(boss, animacao, callbacks) {
   // ===================================================
 
   if (estadoTerminado === "raioChao") {
+    // Encerrar os raios visuais originais.
     limparRaioZona(boss);
+
+    // NOVO: interromper o áudio do raio.
+    pararSomRaioBoss(boss);
   }
 
   // ===================================================
@@ -249,7 +284,22 @@ export function tratarAnimationUpdate(boss, animacao, frame, callbacks) {
   // ===================================================
 
   if (ia.ataqueAtual === "raioChao") {
+    // Atualização visual original do raio.
     atualizarRaioZona(boss);
+
+    // =================================================
+    // NOVO: SINCRONIZAR VOLUME COM O RAIO
+    // =================================================
+    //
+    // Usa o mesmo tempo de animação visual.
+    //
+    // O controle contínuo também ocorre pelo
+    // monitor de áudio, permitindo mudanças
+    // suaves entre os frames.
+    //
+    // =================================================
+
+    atualizarSomRaioBoss(boss);
   }
 
   const ataqueRaio = ia.ataqueAtual === "raioChao";
@@ -260,7 +310,9 @@ export function tratarAnimationUpdate(boss, animacao, frame, callbacks) {
 
   emitirEventoBoss(boss, "boss:ataque-frame", {
     ataque: ataquePorEstado[ia.ataqueAtual],
+
     estado: ia.ataqueAtual,
+
     frame: ia.frame,
 
     zonas: ia.zonasRaio,

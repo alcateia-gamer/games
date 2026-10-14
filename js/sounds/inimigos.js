@@ -8,9 +8,31 @@ const VOLUME_MORTE_ROBO = 0.3;
 
 function carregarSonsInimigos(loader) {
   loader.audio("tiro-laser", "sounds.mp3/tiro_laser.mp3");
+
   loader.audio("robot-walk", "sounds.mp3/robot_walk_3.mp3");
+
   loader.audio("walk-robo-serra", "sounds.mp3/walk_robo_serra.mp3");
+
   loader.audio("robo-explodindo", "sounds.mp3/robo_explodindo.mp3");
+
+  // ===================================================
+  // NOVO SOM DO RAIO NO CHÃO DO BOSS FINAL
+  // ===================================================
+  //
+  // O Preloader utiliza o caminho "./assets/".
+  //
+  // Por isso, ../js/ permite acessar o áudio
+  // armazenado na pasta js/sounds.
+  //
+  // Arquivo:
+  // js/sounds/SOUNDS_INIMIGOS.js/raio_boss.mp3
+  //
+  // ===================================================
+
+  loader.audio(
+    "som-boss-raio-chao",
+    "../js/sounds/SOUNDS_INIMIGOS.js/raio_boss.mp3",
+  );
 }
 
 function atualizarSomPassoRobo(
@@ -21,6 +43,7 @@ function atualizarSomPassoRobo(
   estaSeMovendo,
 ) {
   const fatorVolumeSerra = inimigo?.tipoRobo === "serra" ? 0.5 : 1;
+
   if (scene.morteEmAndamento) {
     if (inimigo.somPassoRobo?.isPlaying) {
       inimigo.somPassoRobo.stop();
@@ -31,6 +54,7 @@ function atualizarSomPassoRobo(
   const podeTocar = estaSeMovendo;
   const distanciaInicioFade = inimigo.distanciaDeteccao;
   const distanciaFimFade = distanciaInicioFade + DISTANCIA_FADE_PASSO_ROBO;
+
   const volumeRelativo =
     distancia <= distanciaInicioFade
       ? Math.max(1 - distancia / distanciaInicioFade, 0.2)
@@ -39,7 +63,9 @@ function atualizarSomPassoRobo(
           0,
           0.2,
         );
+
   const volume = volumeRelativo * VOLUME_PASSO_ROBO_MAXIMO * fatorVolumeSerra;
+
   const podeOuvir = volume > 0;
 
   inimigo.podeTocarPasso = podeTocar;
@@ -60,8 +86,9 @@ function configurarSomPassoRobo(scene, inimigo) {
   const chaveSomPasso =
     inimigo?.tipoRobo === "serra" ? "walk-robo-serra" : "robot-walk";
 
-  // Cada robô possui uma instância própria para que todos possam caminhar
-  // e tocar seus passos simultaneamente sem bloquear os demais.
+  // Cada robô possui uma instância própria para
+  // que todos possam caminhar e tocar seus passos
+  // simultaneamente sem bloquear os demais.
   inimigo.somPassoRobo = scene.sound.add(chaveSomPasso, { loop: true });
 
   scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
@@ -80,7 +107,9 @@ function tocarSomTiroLaser(scene) {
     return;
   }
 
-  scene.sound.play("tiro-laser", { volume: VOLUME_TIRO_LASER });
+  scene.sound.play("tiro-laser", {
+    volume: VOLUME_TIRO_LASER,
+  });
 }
 
 function tocarSomMorteRobo(scene, inimigo) {
@@ -94,7 +123,10 @@ function tocarSomMorteRobo(scene, inimigo) {
   }
 
   inimigo.somMorteTocado = true;
-  scene.sound.play("robo-explodindo", { volume: VOLUME_MORTE_ROBO });
+
+  scene.sound.play("robo-explodindo", {
+    volume: VOLUME_MORTE_ROBO,
+  });
 }
 
 export {

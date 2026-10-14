@@ -39,6 +39,12 @@ import {
 } from "./BossRaioZonas.js";
 
 // =====================================================
+// NOVO: CONTROLE DO SOM DO RAIO
+// =====================================================
+
+import { pararSomRaioBoss } from "../../sounds/bossRaio.js";
+
+// =====================================================
 // POSIÇÃO E TAMANHO DO BOSS
 // =====================================================
 
@@ -63,6 +69,35 @@ const MARGEM_SAIDA_Y = 80;
 
 const FATOR_ZOOM_ARENA = 0.8;
 const VELOCIDADE_ZOOM = 5;
+
+// =====================================================
+// NOVO: ATIVAÇÃO DO COMBATE NA ARENA
+// =====================================================
+//
+// A IA utiliza a mesma propriedade dentroArena
+// que já controla o zoom da câmera.
+//
+// ANTES DE ENTRAR:
+// - Boss permanece em idle.
+// - Não executa ataques.
+// - Não reproduz sons de ataques.
+//
+// DENTRO DA ARENA:
+// - IA funciona normalmente.
+// - Ataques e animações são liberados.
+//
+// AO SAIR:
+// - Ataque atual é cancelado.
+// - Raios são removidos.
+// - Áudio do raio é interrompido.
+// - Boss retorna ao idle.
+//
+// A vida do Boss NÃO é reiniciada.
+// =====================================================
+
+// Tempo que o Boss aguarda antes de começar
+// a decidir ataques ao entrar na arena.
+const TEMPO_INICIAL_COMBATE = 1200;
 
 // =====================================================
 // VIDA E ESTAMINA
@@ -97,6 +132,125 @@ const ESPESSURA_CONTORNO = 1;
 const OPACIDADE_CONTORNO = 0.55;
 
 // =====================================================
+// NOVO: INTERROMPER COMBATE FORA DA ARENA
+// =====================================================
+
+function interromperCombateForaArena(boss) {
+  if (!boss?.active) {
+    return;
+  }
+
+  // ===================================================
+  // INTERROMPER SOM DO RAIO
+  // ===================================================
+
+  // Para o áudio imediatamente, mesmo quando
+  // o ataque ainda não terminou sua animação.
+  pararSomRaioBoss(boss);
+
+  // ===================================================
+  // REMOVER RAIOS DO CHÃO
+  // ===================================================
+
+  // Remove os efeitos das zonas e da base do Boss.
+  // Também desativa as áreas de dano dos raios.
+  limparRaioZona(boss);
+
+  if (boss.morto || !boss.iaCombate) {
+    return;
+  }
+
+  const ia = boss.iaCombate;
+
+  // ===================================================
+  // CANCELAR ATAQUE ATUAL
+  // ===================================================
+
+  ia.ataqueAtual = null;
+  ia.ataqueSolicitado = null;
+
+  ia.frame = 0;
+
+  ia.frameMiraTravada = null;
+  ia.direcaoLaser = null;
+  ia.posicaoNoDisparo = null;
+
+  ia.zonasRaio = [];
+  ia.areaRaio = null;
+
+  ia.jogadorAtingidoNesteAtaque = false;
+
+  // Cancelar qualquer cura que estava sendo
+  // processada durante a animação.
+  ia.framesCuraAplicados.clear();
+
+  // ===================================================
+  // LIMPAR OBSERVAÇÕES DO JOGADOR
+  // ===================================================
+
+  // Impede que a IA reutilize informações antigas
+  // de movimentação ao entrar novamente na sala.
+  ia.posicaoAnterior = null;
+  ia.distanciaAnterior = null;
+
+  ia.velocidadeX = 0;
+  ia.velocidadeY = 0;
+
+  ia.aproximacaoRadial = 0;
+
+  ia.aproximando = false;
+  ia.afastando = false;
+  ia.correndo = false;
+  ia.parado = true;
+
+  ia.atacandoPerto = false;
+
+  ia.distancia = Infinity;
+
+  ia.pertoPor = 0;
+  ia.longePor = 0;
+  ia.pressaoPerto = 0;
+  ia.paradoPor = 0;
+
+  ia.regiaoAtual = null;
+  ia.tempoNaRegiao = 0;
+
+  ia.jogadorAtual = null;
+
+  // ===================================================
+  // REINICIAR CONTROLE DOS ATAQUES DO JOGADOR
+  // ===================================================
+
+  ia.ataqueJogadorAnterior = false;
+  ia.janelaKatanaRestante = 0;
+  ia.katanaAtingiuBoss = false;
+
+  // ===================================================
+  // RETORNAR BOSS PARA ANIMAÇÃO PARADA
+  // ===================================================
+
+  // Troca para o frame original de idle.
+  exibirEstadoBoss(boss, "idle");
+
+  // Garante que nenhuma animação continue tocando.
+  boss.sprite.anims.stop();
+
+  // ===================================================
+  // PREPARAR A IA PARA A PRÓXIMA ENTRADA
+  // ===================================================
+
+  // Mantém a recuperação de estamina, caso
+  // ela já estivesse acontecendo.
+  if (boss.recuperandoEstamina) {
+    ia.estado = "RECUPERANDO_ESTAMINA";
+  } else {
+    ia.estado = "IDLE";
+  }
+
+  ia.tempoAteDecidir = TEMPO_INICIAL_COMBATE;
+}
+
+// =====================================================
 // CONTROLE DO ZOOM
 // =====================================================
 
@@ -106,6 +260,10 @@ function configurarCameraArena(scene, boss) {
   let cameraControlada = null;
   let zoomNormal = 1;
 
+  // ===================================================
+  // BOSS COMEÇA FORA DO COMBATE
+  // ===================================================
+
   boss.dentroArena = false;
 
   const atualizarCamera = (_tempo, delta = 16.67) => {
@@ -113,6 +271,10 @@ function configurarCameraArena(scene, boss) {
     const player = scene.player;
 
     if (!camera) return;
+
+    // Guardar estado anterior para detectar
+    // quando o jogador SAIU da arena.
+    const estavaDentroArena = dentroArena;
 
     if (cameraControlada && cameraControlada !== camera) {
       if (controlandoZoom) {
@@ -162,7 +324,27 @@ function configurarCameraArena(scene, boss) {
       dentroArena = false;
     }
 
+    // =================================================
+    // ATUALIZAR O ESTADO DA ARENA
+    // =================================================
+
+    // Esta propriedade controla tanto o zoom
+    // quanto a ativação da inteligência do Boss.
     boss.dentroArena = dentroArena;
+
+    // =================================================
+    // NOVO: DETECTAR SAÍDA DO COMBATE
+    // =================================================
+
+    // Quando o jogador estava dentro e saiu,
+    // interrompe o combate imediatamente.
+    if (estavaDentroArena && !dentroArena) {
+      interromperCombateForaArena(boss);
+    }
+
+    // =================================================
+    // ZOOM ORIGINAL DA ARENA
+    // =================================================
 
     if (!controlandoZoom) return;
 
@@ -197,6 +379,7 @@ function configurarCameraArena(scene, boss) {
 
     dentroArena = false;
     boss.dentroArena = false;
+
     boss.hudVida?.setVisible(false);
 
     controlandoZoom = false;
@@ -367,6 +550,7 @@ function criarHudBoss(scene, boss) {
     const centroY = camera.height * camera.originY;
 
     const telaX = camera.width * 0.5;
+
     const telaY = camera.height * POSICAO_VERTICAL_HUD;
 
     boss.hudVida.setPosition(
@@ -434,6 +618,7 @@ function criarBoss(scene) {
     console.error(
       "IA do Boss: peças ausentes na camada ObjetosBoss perto da posição-base.",
     );
+
     return null;
   }
 
@@ -448,18 +633,31 @@ function criarBoss(scene) {
 
   boss.bossBaseX = POSICAO_BOSS_X;
   boss.bossBaseY = bossBaseY;
+
   boss.bossEstadoAtual = "idle";
   boss.morto = false;
+
+  // ===================================================
+  // VIDA
+  // ===================================================
 
   boss.vidaMaxima = bossVidaMaxima * MULTIPLICADOR_VIDA;
 
   boss.vida = boss.vidaMaxima;
   boss.larguraBarraVida = 206;
 
+  // ===================================================
+  // ESTAMINA
+  // ===================================================
+
   boss.estaminaMaxima = ESTAMINA_MAXIMA;
   boss.estamina = ESTAMINA_MAXIMA;
   boss.recuperandoEstamina = false;
   boss.tempoRecuperacaoEstamina = 0;
+
+  // ===================================================
+  // SPRITE DO BOSS
+  // ===================================================
 
   boss.sprite = scene.add
     .sprite(0, 0, estadosAnimacao.idle.textura, 0)
@@ -472,42 +670,70 @@ function criarBoss(scene) {
 
   boss.debugDano = scene.add.graphics().setDepth(bossDepth + 2);
 
+  // ===================================================
+  // INTELIGÊNCIA ARTIFICIAL
+  // ===================================================
+
   boss.iaCombate = {
     estado: "IDLE",
     ataqueAtual: null,
     ataqueSolicitado: null,
-    tempoAteDecidir: 1200,
+
+    tempoAteDecidir: TEMPO_INICIAL_COMBATE,
+
     ataquesRecentes: [],
+
     posicaoAnterior: null,
     distanciaAnterior: null,
+
     velocidadeX: 0,
     velocidadeY: 0,
-    direcao: { x: 0, y: 0 },
+
+    direcao: {
+      x: 0,
+      y: 0,
+    },
+
     aproximacaoRadial: 0,
+
     aproximando: false,
     afastando: false,
     correndo: false,
     parado: true,
+
     atacandoPerto: false,
+
     distancia: Infinity,
+
     pertoPor: 0,
     longePor: 0,
     pressaoPerto: 0,
     paradoPor: 0,
+
     regiaoAtual: null,
     tempoNaRegiao: 0,
+
     aprendizadoEsquiva: 0,
     tendenciaEsquiva: [],
+
     posicaoNoDisparo: null,
     frameMiraTravada: null,
+
     frame: 0,
+
     direcaoLaser: null,
+
     zonasRaio: [],
     areaRaio: null,
+
     jogadorAtingidoNesteAtaque: false,
+
     framesCuraAplicados: new Set(),
+
     cooldownRecVidaRestante: 0,
+
     jogadorAtual: scene.player || null,
+
     ataqueJogadorAnterior: false,
     janelaKatanaRestante: 0,
     katanaAtingiuBoss: false,
@@ -518,6 +744,10 @@ function criarBoss(scene) {
   configurarCameraArena(scene, boss);
 
   inicializarDebugZonasRaio(boss);
+
+  // ===================================================
+  // CUSTO DE ESTAMINA POR ATAQUE
+  // ===================================================
 
   const aoFinalizarAtaque = (evento) => {
     if (evento?.boss !== boss || boss.morto || boss.recuperandoEstamina) {
@@ -547,6 +777,12 @@ function criarBoss(scene) {
 
   boss.onAnimationUpdate = null;
   boss.onAnimationComplete = null;
+
+  // ===================================================
+  // NOVO: BOSS COMEÇA SEM EXECUTAR ANIMAÇÕES
+  // ===================================================
+
+  boss.sprite.anims.stop();
 
   return boss;
 }
@@ -598,9 +834,17 @@ export function vincularIABoss(scene) {
       boss.sprite.off("animationcomplete", boss.onAnimationComplete);
     }
 
+    // =================================================
+    // LIMPEZA DOS SISTEMAS DO BOSS
+    // =================================================
+
     boss.limparCameraArena?.();
     boss.limparHudVida?.();
     boss.limparEstamina?.();
+
+    // Interromper áudio do raio quando
+    // o Boss for removido da cena.
+    pararSomRaioBoss(boss);
 
     limparRaioZona(boss);
     destruirDebugZonasRaio(boss);
@@ -640,6 +884,15 @@ function solicitarAtaqueBoss(scene, ataque) {
     return false;
   }
 
+  // ===================================================
+  // NOVO: NÃO PERMITIR ATAQUES FORA DA ARENA
+  // ===================================================
+
+  // Usa exatamente a mesma condição do zoom.
+  if (boss.dentroArena !== true) {
+    return false;
+  }
+
   return solicitarAtaqueOriginal(scene, ataque);
 }
 
@@ -650,7 +903,35 @@ function solicitarAtaqueBoss(scene, ataque) {
 function atualizarBoss(scene, delta = 16.67) {
   const boss = scene.bossFinal;
 
-  if (!boss?.active || boss.morto) return;
+  if (!boss?.active || boss.morto) {
+    return;
+  }
+
+  // ===================================================
+  // NOVO: IA ATIVA SOMENTE DENTRO DA ARENA
+  // ===================================================
+  //
+  // O Boss só começa a funcionar depois que
+  // dentroArena ficar true.
+  //
+  // Essa propriedade é controlada pela mesma
+  // função que ativa o zoom da câmera.
+  //
+  // Antes disso:
+  // - Não escolhe ataques.
+  // - Não executa animações.
+  // - Não ativa raios.
+  // - Não inicia sons de ataques.
+  //
+  // ===================================================
+
+  if (boss.dentroArena !== true) {
+    return;
+  }
+
+  // ===================================================
+  // RECUPERAÇÃO DE ESTAMINA ORIGINAL
+  // ===================================================
 
   if (boss.recuperandoEstamina) {
     atualizarRecuperacaoEstamina(boss, delta);
@@ -662,7 +943,12 @@ function atualizarBoss(scene, delta = 16.67) {
     return;
   }
 
+  // ===================================================
+  // INTELIGÊNCIA ARTIFICIAL ORIGINAL
+  // ===================================================
+
   atualizarIABoss(scene, delta);
+
   atualizarHitboxesBoss(boss);
 
   processarAtaquesJogadorContraBoss(scene, delta);
