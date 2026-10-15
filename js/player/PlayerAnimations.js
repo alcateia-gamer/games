@@ -23,13 +23,15 @@ function criarAnimacoesPlayer(scene) {
       : personagem4
         ? { up: [0, 8], left: [9, 17], down: [18, 26], right: [27, 35] }
         : { up: [0, 8], left: [9, 17], down: [18, 26], right: [27, 35] };
-  // Quadros da pose parada por direção. Para deixar uma pose fixa, use [quadro, quadro].
+
+  // Quadros da pose parada por direção.
   const idleFrames = personagem3
     ? { up: [0, 0], left: [9, 9], down: [18, 18], right: [27, 27] }
     : personagem4
       ? { up: [0, 0], left: [9, 9], down: [18, 18], right: [27, 27] }
       : walkFrames;
-  // Texturas usadas por cada animação. Se trocar a textura, confira os índices abaixo.
+
+  // Texturas usadas por cada animação.
   const walkTexture = personagem3
     ? "personagem3-walk"
     : personagem2
@@ -37,6 +39,7 @@ function criarAnimacoesPlayer(scene) {
       : personagem4
         ? "personagem4-walk"
         : "walk";
+
   const idleTexture = personagem3
     ? "personagem3-walk"
     : personagem2
@@ -44,6 +47,7 @@ function criarAnimacoesPlayer(scene) {
       : personagem4
         ? "personagem4-walk"
         : "walk";
+
   const attackTexture = personagem3
     ? "personagem3-attack"
     : personagem2
@@ -79,6 +83,10 @@ function criarAnimacoesPlayer(scene) {
     }
   });
 
+  // =====================================================
+  // ANIMAÇÕES DE CAMINHADA
+  // =====================================================
+
   Object.entries(walkFrames).forEach(([direcao, frames]) => {
     scene.anims.create({
       key: `walk-${direcao}`,
@@ -92,6 +100,10 @@ function criarAnimacoesPlayer(scene) {
       repeat: -1,
     });
   });
+
+  // =====================================================
+  // ANIMAÇÕES PARADAS
+  // =====================================================
 
   Object.entries(idleFrames).forEach(([direcao, frames]) => {
     scene.anims.create({
@@ -107,7 +119,10 @@ function criarAnimacoesPlayer(scene) {
     });
   });
 
-  // Quadros do ataque normal por direção; os índices seguem a mesma convenção da caminhada.
+  // =====================================================
+  // FRAMES DO ATAQUE NORMAL
+  // =====================================================
+
   const attackFrames = personagem3
     ? walkFrames
     : personagem2
@@ -126,9 +141,16 @@ function criarAnimacoesPlayer(scene) {
           }
         : { up: [0, 5], left: [6, 11], down: [12, 17], right: [18, 23] };
 
+  // =====================================================
+  // ANIMAÇÕES EXCLUSIVAS DA ARIA KADE
+  // =====================================================
+
   if (personagem3) {
-    // Sequências exclusivas da Aria: charge = carregamento; release = disparo.
-    // Cada direção aceita uma lista explícita de quadros na ordem de reprodução.
+    // Charge = carregamento do arco.
+    // Release = disparo da flecha.
+    //
+    // Mantém os frames originais de cada direção.
+
     const ariaAttackFrames = {
       up: {
         charge: [0, 1, 2, 3, 4, 5, 6, 7, 8],
@@ -148,21 +170,43 @@ function criarAnimacoesPlayer(scene) {
       },
     };
 
+    // ===================================================
+    // VELOCIDADE ORIGINAL DA ANIMAÇÃO DA ARIA
+    // ===================================================
+
+    // RESTAURADA PARA 12 FPS.
+    //
+    // Antes da primeira alteração: 12 FPS.
+    // Alteração anterior: 9 FPS.
+    // Agora: 12 FPS novamente.
+    //
+    // O atraso e a velocidade do som são controlados
+    // exclusivamente pelo arquivo sounds_Aria.js.
+    const FPS_TENSAO_ARIA = 12;
+
+    // Velocidade original do disparo.
+    const FPS_DISPARO_ARIA = 20;
+
     Object.entries(ariaAttackFrames).forEach(([direcao, frames]) => {
       scene.anims.create({
         key: `aria-charge-${direcao}`,
         frames: criarFramesIntercalados(attackTexture, frames.charge),
-        frameRate: 12,
+        frameRate: FPS_TENSAO_ARIA,
         repeat: 0,
       });
+
       scene.anims.create({
         key: `aria-release-${direcao}`,
         frames: criarFramesIntercalados(attackTexture, frames.release),
-        frameRate: 20,
+        frameRate: FPS_DISPARO_ARIA,
         repeat: 0,
       });
     });
   }
+
+  // =====================================================
+  // ANIMAÇÕES DE ATAQUE NORMAL
+  // =====================================================
 
   Object.entries(attackFrames).forEach(([direcao, frames]) => {
     scene.anims.create({
@@ -182,6 +226,10 @@ function criarAnimacoesPlayer(scene) {
   });
 }
 
+// =====================================================
+// ANIMAÇÕES DOS PERSONAGENS REMOTOS
+// =====================================================
+
 function criarAnimacoesPersonagensRemotos(scene) {
   const personagens = {
     "kai-mercer": {
@@ -200,6 +248,7 @@ function criarAnimacoesPersonagensRemotos(scene) {
         right: [18, 23],
       },
     },
+
     "magnus-force": {
       walk: "personagem2-walk",
       attack: "personagem2-attack",
@@ -216,6 +265,7 @@ function criarAnimacoesPersonagensRemotos(scene) {
         right: [25, 33],
       },
     },
+
     "aria-kade": {
       walk: "personagem3-walk",
       attack: "personagem3-attack",
@@ -232,7 +282,8 @@ function criarAnimacoesPersonagensRemotos(scene) {
         right: [39, 39],
       },
     },
-    "nyx": {
+
+    nyx: {
       walk: "personagem4-walk",
       attack: "personagem4-attack",
       walkFrames: {
@@ -250,9 +301,14 @@ function criarAnimacoesPersonagensRemotos(scene) {
     },
   };
 
+  // =====================================================
+  // CRIAR ANIMAÇÕES REMOTAS
+  // =====================================================
+
   Object.entries(personagens).forEach(([personagem, config]) => {
     Object.entries(config.walkFrames).forEach(([direcao, frames]) => {
       const key = `remote-${personagem}-walk-${direcao}`;
+
       if (!scene.anims.exists(key)) {
         scene.anims.create({
           key,
@@ -266,12 +322,21 @@ function criarAnimacoesPersonagensRemotos(scene) {
       }
     });
 
+    // =================================================
+    // ANIMAÇÕES REMOTAS DA ARIA
+    // =================================================
+
     if (personagem === "aria-kade") {
-      const phases = { charge: [0, 8], release: [9, 12] };
+      const phases = {
+        charge: [0, 8],
+        release: [9, 12],
+      };
+
       Object.entries(config.attackFrames).forEach(([direcao, frames]) => {
         Object.entries(phases).forEach(([phase, phaseFrames]) => {
           const offset = frames[0];
           const key = `remote-${personagem}-${phase}-${direcao}`;
+
           if (!scene.anims.exists(key)) {
             scene.anims.create({
               key,
@@ -279,6 +344,9 @@ function criarAnimacoesPersonagensRemotos(scene) {
                 start: offset + phaseFrames[0],
                 end: offset + phaseFrames[1],
               }),
+
+              // RESTAURADO PARA 12 FPS NO MULTIPLAYER.
+              // A animação de disparo continua em 20 FPS.
               frameRate: phase === "charge" ? 12 : 20,
               repeat: 0,
             });
@@ -286,8 +354,13 @@ function criarAnimacoesPersonagensRemotos(scene) {
         });
       });
     } else {
+      // =================================================
+      // ATAQUES REMOTOS DOS OUTROS PERSONAGENS
+      // =================================================
+
       Object.entries(config.attackFrames).forEach(([direcao, frames]) => {
         const key = `remote-${personagem}-attack-${direcao}`;
+
         if (!scene.anims.exists(key)) {
           scene.anims.create({
             key,

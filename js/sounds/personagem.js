@@ -2,13 +2,29 @@
 const VOLUME_CORRIDA = 1;
 
 function carregarSonsPersonagem(loader) {
+  // =====================================================
+  // SOM DE CORRIDA
+  // =====================================================
+
   loader.audio("running", "sounds.mp3/running.mp3");
+
+  // =====================================================
+  // SONS DA ARIA KADE
+  // =====================================================
+
+  // Som utilizado ao manter o arco tensionado.
+  // O nome "tenasr" é o nome real do arquivo no GitHub.
+  loader.audio("aria-tensar-arco", "sounds.mp3/tenasr_arco.mp3");
+
+  // Som utilizado sempre que a flecha é disparada.
+  loader.audio("aria-soltar-flecha", "sounds.mp3/soltar_flecha.mp3");
 }
 
 function configurarSomCorrida(scene) {
   scene.somCorrida = scene.sound.add("running", {
     loop: true,
-    // Configuração do volume do áudio de corrida do personagem.
+
+    // Configuração do volume do áudio de corrida.
     volume: VOLUME_CORRIDA,
   });
 
@@ -18,12 +34,15 @@ function configurarSomCorrida(scene) {
     }
 
     const teclasDirecao = scene.teclasWASD;
+
     const teclaDirecional = Object.values(teclasDirecao || {}).some(
       (tecla) => tecla.keyCode === event.keyCode,
     );
 
     if (teclaDirecional && !scene.somCorrida.isPlaying) {
-      scene.somCorrida.play({ volume: VOLUME_CORRIDA });
+      scene.somCorrida.play({
+        volume: VOLUME_CORRIDA,
+      });
     }
   };
 
@@ -31,6 +50,7 @@ function configurarSomCorrida(scene) {
 
   scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
     scene.input.keyboard.off("keydown", iniciarSomCorrida);
+
     scene.somCorrida.stop();
   });
 }
@@ -44,12 +64,15 @@ function atualizarSomCorrida(scene, estaSeMovendo) {
     if (scene.somCorrida.isPlaying) {
       scene.somCorrida.stop();
     }
+
     return;
   }
 
   if (estaSeMovendo) {
     if (!scene.somCorrida.isPlaying) {
-      scene.somCorrida.play({ volume: VOLUME_CORRIDA });
+      scene.somCorrida.play({
+        volume: VOLUME_CORRIDA,
+      });
     }
   } else if (scene.somCorrida.isPlaying) {
     scene.somCorrida.stop();
