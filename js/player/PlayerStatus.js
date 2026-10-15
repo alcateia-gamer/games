@@ -1,4 +1,44 @@
 // =====================================================
+// CONFIGURAÇÕES DO SOM DE DANO
+// =====================================================
+
+// Chave do áudio carregado no preloader.
+const SOM_DANO_PLAYER = "dano-soft";
+
+// Volume do efeito sonoro.
+//
+// 0.0 = mudo
+// 0.5 = metade do volume
+// 1.0 = volume máximo
+const VOLUME_SOM_DANO = 0.35;
+
+// =====================================================
+// REPRODUZIR SOM DE DANO
+// =====================================================
+
+function tocarSomDanoPlayer(scene) {
+  // Verifica se existe um personagem jogável ativo.
+  if (!scene.player?.active) {
+    return;
+  }
+
+  // Verifica se o áudio foi carregado.
+  if (!scene.cache?.audio?.exists(SOM_DANO_PLAYER)) {
+    return;
+  }
+
+  if (!scene.sound?.play) {
+    return;
+  }
+
+  // Reproduz o áudio imediatamente.
+  // Sem atrasos e sem modificar a animação.
+  scene.sound.play(SOM_DANO_PLAYER, {
+    volume: VOLUME_SOM_DANO,
+  });
+}
+
+// =====================================================
 // FIXAR O PAINEL NA TELA, COMPENSANDO O ZOOM
 // =====================================================
 
@@ -240,14 +280,41 @@ function gastarEstamina(scene, quantidade) {
 }
 
 // =====================================================
-// DANO
+// DANO DO PERSONAGEM JOGÁVEL
 // =====================================================
 
 function tomarDano(scene, quantidade) {
+  // Registra a vida antes do dano.
+  const vidaAntesDoDano = scene.vida;
+
+  // =====================================================
+  // APLICA O DANO ORIGINAL
+  // =====================================================
+
   scene.tempoSemDano = 0;
+
   scene.vida -= quantidade;
 
   scene.vida = Phaser.Math.Clamp(scene.vida, 0, scene.vidaMaxima);
+
+  // =====================================================
+  // SOM SINCRONIZADO COM O EFEITO VERMELHO
+  // =====================================================
+
+  // Só toca quando a vida realmente diminuiu.
+  //
+  // O áudio é reproduzido no mesmo ciclo em que
+  // o código de combate aplica a cor vermelha.
+  //
+  // Não toca durante regeneração.
+  // Não toca com dano zero.
+  // Não toca se a vida já estava zerada.
+  //
+  // Funciona para todos os personagens jogáveis.
+
+  if (scene.vida < vidaAntesDoDano) {
+    tocarSomDanoPlayer(scene);
+  }
 }
 
 // =====================================================

@@ -18,6 +18,20 @@ function carregarSonsPersonagem(loader) {
 
   // Som utilizado sempre que a flecha é disparada.
   loader.audio("aria-soltar-flecha", "sounds.mp3/soltar_flecha.mp3");
+
+  // =====================================================
+  // SOM DE DANO DOS PERSONAGENS JOGÁVEIS
+  // =====================================================
+
+  // Som reproduzido quando qualquer personagem
+  // jogável recebe dano.
+  //
+  // Kai Mercer
+  // Magnus Force
+  // Aria Kade
+  // Nyx
+
+  loader.audio("dano-soft", "sounds.mp3/dano_soft.mp3");
 }
 
 function configurarSomCorrida(scene) {
