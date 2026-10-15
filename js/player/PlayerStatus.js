@@ -188,7 +188,6 @@ function criarStatusPlayer(scene) {
     fontFamily: "monospace",
     fontSize: "9px",
     color: "#62ff7b",
-    fontStyle: "bold",
   });
 
   scene.textoEstamina.setScrollFactor(0).setDepth(303);
@@ -247,6 +246,7 @@ function atualizarStatusPlayer(scene, delta) {
 
   if (scene.tempoSemDano >= scene.tempoSemDanoParaRegen * 1000) {
     scene.vida += scene.regeneracaoVida * (delta / 1000);
+
     scene.vida = Math.min(scene.vida, scene.vidaMaxima);
   }
 
@@ -287,26 +287,21 @@ function tomarDano(scene, quantidade) {
   // Registra a vida antes do dano.
   const vidaAntesDoDano = scene.vida;
 
+  scene.tempoSemDano = 0;
+
   // =====================================================
-  // NOVA CONFIGURAÇÃO DO MODO DEV
+  // MODO DEV
   // =====================================================
   //
   // DEV ON:
-  // O personagem continua recebendo os golpes.
-  // O vermelho e o som de dano continuam funcionando.
-  // Porém, nenhum HP é descontado.
+  // Recebe o impacto e os efeitos de dano,
+  // mas NÃO perde HP.
   //
   // DEV OFF:
-  // O dano volta a diminuir a vida normalmente.
-  // O personagem pode morrer ao chegar a 0 HP.
-  //
-  // Não altera nenhuma outra função do modo DEV.
+  // Perde HP normalmente e pode morrer.
   // =====================================================
 
-  scene.tempoSemDano = 0;
-
   if (!scene.developerMode) {
-    // Aplica o dano somente com DEV desligado.
     scene.vida -= quantidade;
 
     scene.vida = Phaser.Math.Clamp(scene.vida, 0, scene.vidaMaxima);
@@ -314,19 +309,6 @@ function tomarDano(scene, quantidade) {
 
   // =====================================================
   // SOM SINCRONIZADO COM O EFEITO VERMELHO
-  // =====================================================
-  //
-  // DEV ON:
-  // O som toca ao receber um golpe válido,
-  // mesmo que o HP não diminua.
-  //
-  // DEV OFF:
-  // Mantém a lógica original.
-  // O som toca quando a vida diminui.
-  //
-  // Não toca com dano zero.
-  // Não toca durante regeneração.
-  // Não altera a duração do efeito vermelho.
   // =====================================================
 
   const recebeuDanoValido = scene.developerMode && quantidade > 0;
