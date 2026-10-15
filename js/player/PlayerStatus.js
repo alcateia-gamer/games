@@ -288,31 +288,52 @@ function tomarDano(scene, quantidade) {
   const vidaAntesDoDano = scene.vida;
 
   // =====================================================
-  // APLICA O DANO ORIGINAL
+  // NOVA CONFIGURAÇÃO DO MODO DEV
+  // =====================================================
+  //
+  // DEV ON:
+  // O personagem continua recebendo os golpes.
+  // O vermelho e o som de dano continuam funcionando.
+  // Porém, nenhum HP é descontado.
+  //
+  // DEV OFF:
+  // O dano volta a diminuir a vida normalmente.
+  // O personagem pode morrer ao chegar a 0 HP.
+  //
+  // Não altera nenhuma outra função do modo DEV.
   // =====================================================
 
   scene.tempoSemDano = 0;
 
-  scene.vida -= quantidade;
+  if (!scene.developerMode) {
+    // Aplica o dano somente com DEV desligado.
+    scene.vida -= quantidade;
 
-  scene.vida = Phaser.Math.Clamp(scene.vida, 0, scene.vidaMaxima);
+    scene.vida = Phaser.Math.Clamp(scene.vida, 0, scene.vidaMaxima);
+  }
 
   // =====================================================
   // SOM SINCRONIZADO COM O EFEITO VERMELHO
   // =====================================================
-
-  // Só toca quando a vida realmente diminuiu.
   //
-  // O áudio é reproduzido no mesmo ciclo em que
-  // o código de combate aplica a cor vermelha.
+  // DEV ON:
+  // O som toca ao receber um golpe válido,
+  // mesmo que o HP não diminua.
   //
-  // Não toca durante regeneração.
+  // DEV OFF:
+  // Mantém a lógica original.
+  // O som toca quando a vida diminui.
+  //
   // Não toca com dano zero.
-  // Não toca se a vida já estava zerada.
-  //
-  // Funciona para todos os personagens jogáveis.
+  // Não toca durante regeneração.
+  // Não altera a duração do efeito vermelho.
+  // =====================================================
 
-  if (scene.vida < vidaAntesDoDano) {
+  const recebeuDanoValido = scene.developerMode && quantidade > 0;
+
+  const perdeuVida = scene.vida < vidaAntesDoDano;
+
+  if (recebeuDanoValido || perdeuVida) {
     tocarSomDanoPlayer(scene);
   }
 }
