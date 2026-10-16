@@ -200,9 +200,7 @@ function criarLevel1Parte2Map(scene) {
   // REGISTRAR CAMADAS ORIGINAIS
   // ===================================================
 
-  scene.camadasMapaParte2 = camadas.camadasTiles.map(
-    ({ name }) => map.getLayer(name)?.tilemapLayer,
-  );
+  scene.camadasMapaParte2 = camadas.camadasTiles;
 
   return map;
 }

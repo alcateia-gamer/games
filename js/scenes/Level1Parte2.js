@@ -48,6 +48,15 @@ import {
 } from "../player/PlayerProjectiles.js";
 
 import { vincularIABoss, atualizarIABoss } from "../enemies/BossFinal.js";
+import criarIluminacaoTerror from "../effects/TerrorLighting.js";
+
+const CAMADAS_PISO_TROCA = new Set([
+  "chão",
+  "detalhes do chão",
+  "ListrasChão",
+  "Sujeira",
+  "ChãoProdução",
+]);
 
 class Level1Parte2 extends Phaser.Scene {
   constructor() {
@@ -95,6 +104,9 @@ class Level1Parte2 extends Phaser.Scene {
     this.inimigoTeste = null;
     this.teleporteRetornoLiberado = false;
     this.transicaoRetornoEmAndamento = false;
+    this.regiaoTrocaCamada = null;
+    this.depthsOriginaisCamadasTroca = [];
+    this.trocadecamadaAtiva = false;
   }
 
   // =====================================================
@@ -150,6 +162,7 @@ class Level1Parte2 extends Phaser.Scene {
     this.physics.resume();
     this.physics.world.resume();
 
+    criarIluminacaoTerror(this);
     this.cameras.main.fadeIn(250, 0, 0, 0);
 
     this.input.keyboard.enabled = true;
@@ -172,6 +185,7 @@ class Level1Parte2 extends Phaser.Scene {
     );
 
     this.map = criarLevel1Parte2Map(this);
+    this.inicializarTrocaCamada();
 
     criarAnimacoesPlayer(this);
     criarAnimacoesPersonagensRemotos(this);
@@ -234,6 +248,89 @@ class Level1Parte2 extends Phaser.Scene {
     this.inimigoTeste = null;
   }
 
+  inicializarTrocaCamada() {
+    const objetos = this.map.getObjectLayer("trocadecamada")?.objects;
+    const regiao = objetos?.find(
+      (objeto) =>
+        objeto.name === "trocadecamada01" &&
+        objeto.width > 0 &&
+        objeto.height > 0,
+    );
+
+    if (!regiao) return;
+
+    this.regiaoTrocaCamada = {
+      left: regiao.x,
+      top: regiao.y,
+      right: regiao.x + regiao.width,
+      bottom: regiao.y + regiao.height,
+    };
+
+    this.depthsOriginaisCamadasTroca = this.camadasMapaParte2
+      .filter((camada) => camada?.layer?.name)
+      .map((camada, indice) => ({
+        camada,
+        nome: camada.layer.name,
+        depth: camada.depth,
+        indice,
+      }));
+
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.aplicarOrdemCamadasTroca(false);
+    });
+  }
+
+  atualizarTrocaCamada() {
+    const regiao = this.regiaoTrocaCamada;
+    const player = this.player;
+
+    if (!regiao || !player?.active) return;
+
+    const body = player.body;
+    const left = body?.width ? body.x : player.x;
+    const right = body?.width ? body.x + body.width : player.x;
+    const top = body?.height ? body.y : player.y;
+    const bottom = body?.height ? body.y + body.height : player.y;
+    const dentro =
+      right > regiao.left &&
+      left < regiao.right &&
+      bottom > regiao.top &&
+      top < regiao.bottom;
+
+    if (dentro === this.trocadecamadaAtiva) return;
+
+    this.aplicarOrdemCamadasTroca(dentro);
+  }
+
+  aplicarOrdemCamadasTroca(ativar) {
+    if (ativar === this.trocadecamadaAtiva) return;
+
+    this.trocadecamadaAtiva = ativar;
+
+    if (!ativar) {
+      this.depthsOriginaisCamadasTroca.forEach(({ camada, depth }) => {
+        camada.setDepth(depth);
+      });
+      return;
+    }
+
+    const depthPlayer = this.player.depth;
+    const camadasPiso = this.depthsOriginaisCamadasTroca
+      .filter(({ nome }) => CAMADAS_PISO_TROCA.has(nome))
+      .sort((a, b) => a.depth - b.depth || a.indice - b.indice);
+    const camadasAcima = this.depthsOriginaisCamadasTroca
+      .filter(({ nome }) => !CAMADAS_PISO_TROCA.has(nome))
+      .sort((a, b) => a.depth - b.depth || a.indice - b.indice);
+
+    camadasPiso.forEach(({ camada }, indice) => {
+      camada.setDepth(depthPlayer - camadasPiso.length + indice);
+    });
+
+    camadasAcima.forEach(({ camada }, indice) => {
+      camada.setDepth(depthPlayer + (indice + 1) * 0.001);
+    });
+  }
+
   // =====================================================
   // ATUALIZAÇÃO
   // =====================================================
@@ -257,6 +354,7 @@ class Level1Parte2 extends Phaser.Scene {
     atualizarStatusPlayer(this, delta);
 
     this.definirProfundidadePersonagem(this.profundidadePersonagemParte2);
+    this.atualizarTrocaCamada();
 
     atualizarDepthObjetosProducaoEArmazem(this);
     atualizarDepthGarras(this);
