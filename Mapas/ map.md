@@ -20,6 +20,60 @@
 
 ---
 
+## Itens coletáveis no Tiled
+
+O inventário é integrado às cenas `Level1` e `Level1Parte2`. Para posicionar
+coletáveis, adicione em cada mapa uma Object Layer chamada `Coletaveis` (ou
+`Itens`, para mapas existentes) e crie um objeto por item. O objeto pode ser um
+ponto, um retângulo ou um tile object; a posição do objeto define onde o item
+aparece.
+
+Configure estas propriedades personalizadas no objeto:
+
+| Propriedade | Tipo no Tiled | Obrigatória | Descrição |
+| --- | --- | --- | --- |
+| `itemID` | String | Sim | ID registrado em `js/inventory/InventoryItems.js` (ex.: `gasolina`). |
+| `Quantidade` | Int | Não | Quantidade recebida; padrão `1`. |
+| `itemUid` | String | Recomendada | Identificador estável e único no mapa. Se não for definido, o sistema usa o ID do objeto Tiled. |
+| `alcance` | Float | Não | Distância máxima de coleta em pixels; padrão `64`. |
+
+Exemplo de propriedades para um coletável de gasolina:
+
+```text
+itemID = gasolina
+Quantidade = 3
+itemUid = setor-industrial-gasolina-01
+alcance = 64
+```
+
+Os nomes das propriedades não diferenciam maiúsculas de minúsculas. `itemId`
+deve existir no catálogo. O catálogo fornece nome, imagem, categoria
+e quantidade máxima por slot. Para cadastrar outro tipo, registre-o em
+`InventoryItems.js`:
+
+```js
+registerInventoryItem({
+  id: "celula-axiom",
+  name: "Célula AXIOM",
+  image: {
+    key: "icone-celula-axiom",
+    path: "COLETAVEIS/celula-axiom.png",
+  },
+  maxStack: 5,
+  category: "consumable",
+  usable: true,
+  showQuantity: true,
+});
+```
+
+Gasolina já está cadastrada com a imagem `assets/COLETAVEIS/gasolina.png`.
+Por padrão, a quantidade aparece nos slots; defina `showQuantity: false` para
+ocultá-la em itens específicos, como gasolina. O caminho da imagem é relativo
+ao caminho base `./assets/` configurado pelo preloader. A imagem é carregada
+durante a tela de carregamento. Cada jogador mantém suas quantidades e IDs
+coletados no registry do jogo ao trocar entre as fases; IDs são separados por
+cena/mapa para impedir que o mesmo objeto reapareça ao retornar.
+
 # MAPA 1 — SETOR INDUSTRIAL: "LINHA DE PRODUÇÃO"
 
 ## Duração aproximada

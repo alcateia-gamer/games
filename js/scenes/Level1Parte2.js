@@ -49,6 +49,10 @@ import {
 
 import { vincularIABoss, atualizarIABoss } from "../enemies/BossFinal.js";
 import criarIluminacaoTerror from "../effects/TerrorLighting.js";
+import {
+  atualizarSistemaInventario,
+  criarSistemaInventario,
+} from "../inventory/ItemPickup.js";
 
 const CAMADAS_PISO_TROCA = new Set([
   "chão",
@@ -215,6 +219,7 @@ class Level1Parte2 extends Phaser.Scene {
 
     criarStatusPlayer(this);
     criarControles(this);
+    criarSistemaInventario(this);
 
     if (this.multiplayer) {
       this.iniciarMultiplayer();
@@ -360,6 +365,7 @@ class Level1Parte2 extends Phaser.Scene {
     }
 
     atualizarControles(this);
+    atualizarSistemaInventario(this);
     atualizarStatusPlayer(this, delta);
 
     this.definirProfundidadePersonagem(this.profundidadePersonagemParte2);

@@ -8646,8 +8646,19 @@
          "visible":true,
          "x":0,
          "y":0
+        },
+         {
+          "draworder":"topdown",
+          "id":46,
+          "name":"Itens",
+          "objects":[],
+          "opacity":1,
+          "type":"objectgroup",
+          "visible":true,
+          "x":0,
+          "y":0
         }],
- "nextlayerid":46,
+ "nextlayerid":47,
  "nextobjectid":849,
  "orientation":"orthogonal",
  "renderorder":"right-down",

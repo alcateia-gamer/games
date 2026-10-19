@@ -48,6 +48,10 @@ import {
 } from "../player/PlayerProjectiles.js";
 import EnemySpawnManager from "../enemies/EnemySpawnManager.js";
 import WeatherShader from "../effects/WeatherShader.js";
+import {
+  atualizarSistemaInventario,
+  criarSistemaInventario,
+} from "../inventory/ItemPickup.js";
 
 const DEBUG_TELEPORTES = false;
 // =====================================================
@@ -237,6 +241,7 @@ class Level1 extends Phaser.Scene {
     // =====================================================
 
     criarControles(this);
+    criarSistemaInventario(this);
 
     // =====================================================
     // COMANDOS DE SPAWN DOS ROBÔS
@@ -361,6 +366,7 @@ class Level1 extends Phaser.Scene {
     // =====================================================
 
     atualizarControles(this);
+    atualizarSistemaInventario(this);
 
     // =====================================================
     // VIDA E ESTAMINA

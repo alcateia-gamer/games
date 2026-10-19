@@ -2,6 +2,7 @@
 import { carregarSonsInimigos } from "../sounds/inimigos.js";
 import { carregarSonsKatana } from "../sounds/katana.js";
 import { carregarSonsPersonagem } from "../sounds/personagem.js";
+import { preloadInventoryItemImages } from "../inventory/InventoryItems.js";
 
 class Preloader extends Phaser.Scene {
   constructor() {
@@ -359,6 +360,8 @@ class Preloader extends Phaser.Scene {
 
   carregarAssets() {
     this.load.setPath("./assets/");
+
+    preloadInventoryItemImages(this);
 
     carregarSonsPersonagem(this.load);
     carregarSonsKatana(this.load);
