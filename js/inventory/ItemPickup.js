@@ -153,9 +153,10 @@ function criarSistemaInventario(scene) {
     }
 
     const position = getItemPosition(object);
+    const displaySize = itemId === "gasolina" ? 36.4 : 28;
     const image = scene.add
       .image(position.x, position.y, item.image.key, item.image.frame)
-      .setDisplaySize(28, 28)
+      .setDisplaySize(displaySize, displaySize)
       .setDepth(scene.calcularDepthMundo?.(position.y) ?? 30);
 
     scene.itensColetaveis.push({
