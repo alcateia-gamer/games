@@ -7,6 +7,8 @@ function configurarControlesFixos(scene) {
 
   const botaoDev = scene.botaoDesenvolvedor;
   const textoDev = scene.textoBotaoDesenvolvedor;
+  const botaoLuzFabrica = scene.botaoLuzFabrica;
+  const textoLuzFabrica = scene.textoBotaoLuzFabrica;
   const joystick = scene.joystick;
 
   const atualizarPosicao = () => {
@@ -16,6 +18,8 @@ function configurarControlesFixos(scene) {
       !camera ||
       !botaoDev?.scene ||
       !textoDev?.scene ||
+      !botaoLuzFabrica?.scene ||
+      !textoLuzFabrica?.scene ||
       !joystick.base?.scene ||
       !joystick.thumb?.scene
     ) {
@@ -43,6 +47,15 @@ function configurarControlesFixos(scene) {
 
     botaoDev.setScale(1 / zoomX, 1 / zoomY);
     textoDev.setScale(1 / zoomX, 1 / zoomY);
+
+    const luzTelaX = camera.width - 130;
+    const luzX = origemX + (luzTelaX - origemX) / zoomX;
+    const luzY = origemY + (devTelaY - origemY) / zoomY;
+
+    botaoLuzFabrica.setPosition(luzX, luzY);
+    textoLuzFabrica.setPosition(luzX, luzY);
+    botaoLuzFabrica.setScale(1 / zoomX, 1 / zoomY);
+    textoLuzFabrica.setScale(1 / zoomX, 1 / zoomY);
 
     // =================================================
     // ANALÓGICO
@@ -133,6 +146,26 @@ function criarControlesInput(scene) {
     .setScrollFactor(0)
     .setDepth(201);
 
+  scene.botaoLuzFabrica = scene.add
+    .rectangle(670, 24, 100, 30, 0x1f2937, 0.9)
+    .setStrokeStyle(2, 0xfbbf24, 1)
+    .setScrollFactor(0)
+    .setDepth(200)
+    .setInteractive({ useHandCursor: true })
+    .setVisible(false);
+
+  scene.textoBotaoLuzFabrica = scene.add
+    .text(670, 24, "LUZ FAB", {
+      fontSize: "12px",
+      color: "#e5e7eb",
+      fontStyle: "bold",
+      fontFamily: "monospace",
+    })
+    .setOrigin(0.5)
+    .setScrollFactor(0)
+    .setDepth(201)
+    .setVisible(false);
+
   const atualizarEstadoBotaoDesenvolvedor = () => {
     const ligado = !!scene.developerMode;
 
@@ -141,11 +174,21 @@ function criarControlesInput(scene) {
     scene.botaoDesenvolvedor.setStrokeStyle(2, ligado ? 0x86efac : 0x6ee7b7, 1);
 
     scene.textoBotaoDesenvolvedor.setText(ligado ? "DEV ON" : "DEV");
+    scene.botaoLuzFabrica.setVisible(ligado);
+    scene.textoBotaoLuzFabrica.setVisible(ligado);
   };
 
   scene.botaoDesenvolvedor.on("pointerdown", () => {
     scene.developerMode = !scene.developerMode;
     atualizarEstadoBotaoDesenvolvedor();
+  });
+
+  scene.botaoLuzFabrica.on("pointerdown", () => {
+    scene.acenderLuzFabrica?.();
+    scene.botaoLuzFabrica.disableInteractive();
+    scene.botaoLuzFabrica.setFillStyle(0x166534, 0.9);
+    scene.botaoLuzFabrica.setStrokeStyle(2, 0x86efac, 1);
+    scene.textoBotaoLuzFabrica.setText("FAB ON");
   });
 
   atualizarEstadoBotaoDesenvolvedor();

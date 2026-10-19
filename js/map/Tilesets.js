@@ -5,7 +5,13 @@
 // Estes três tilesets possuem pixels extras no fim
 // da imagem que não formam linhas completas de 48px.
 
-const TILESETS_PARA_CORRIGIR = new Set(["!Chem-Tank", "RoboPB", "RoboV"]);
+const TILESETS_PARA_CORRIGIR = new Set([
+  "!Chem-Tank",
+  "RoboPB",
+  "RoboV",
+  "Tileset_Pixel_Art_de_Gerador_Industrial",
+  "Tileset_Pixel_Art_de_Eletrica_industrial",
+]);
 
 const TAMANHO_TILE_CORRECAO = 48;
 
@@ -331,6 +337,11 @@ function criarTilesetsFabrica(map, scene) {
     ["RoboV", "roboV"],
     ["!$ModernFloorLights", "modernFloorLights"],
     ["!ShopDoor", "shopDoor"],
+    ["Tileset_Pixel_Art_de_Gerador_Industrial", "industrialGenerator"],
+    [
+      "Tileset_Pixel_Art_de_Eletrica_industrial",
+      "industrialElectrical",
+    ],
   ];
 
   const tilesets = registrosTilesets

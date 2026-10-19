@@ -74,6 +74,7 @@ class Level1Parte2 extends Phaser.Scene {
   }
 
   init(data) {
+    this.luzFabricaAcesa = false;
     this.respawnX = data.spawnX ?? -1093;
     this.respawnY = data.spawnY ?? -5905;
 
@@ -162,7 +163,7 @@ class Level1Parte2 extends Phaser.Scene {
     this.physics.resume();
     this.physics.world.resume();
 
-    criarIluminacaoTerror(this);
+    this.removerLanternaParte2 = criarIluminacaoTerror(this);
     this.cameras.main.fadeIn(250, 0, 0, 0);
 
     this.input.keyboard.enabled = true;
@@ -246,6 +247,14 @@ class Level1Parte2 extends Phaser.Scene {
     this.inimigos = [];
     this.grupoRobosAtivado = false;
     this.inimigoTeste = null;
+  }
+
+  acenderLuzFabrica() {
+    if (this.luzFabricaAcesa) return;
+
+    this.removerLanternaParte2?.();
+    this.removerLanternaParte2 = null;
+    this.luzFabricaAcesa = true;
   }
 
   inicializarTrocaCamada() {

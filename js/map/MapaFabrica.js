@@ -36,6 +36,8 @@ const TILESETS_DIMENSOES_IRREGULARES = new Set([
   "RoboPB",
   "RoboV",
   "robo_novo",
+  "Tileset_Pixel_Art_de_Gerador_Industrial",
+  "Tileset_Pixel_Art_de_Eletrica_industrial",
 ]);
 
 // =====================================================

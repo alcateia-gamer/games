@@ -720,6 +720,16 @@ class Preloader extends Phaser.Scene {
     );
 
     this.load.image(
+      "industrialGenerator",
+      "../Tilesets/Industrial/Tileset_Pixel_Art_de_Gerador_Industrial.png",
+    );
+
+    this.load.image(
+      "industrialElectrical",
+      "../Tilesets/Industrial/Tileset_Pixel_Art_de_Eletrica_industrial.png",
+    );
+
+    this.load.image(
       "industrialA2",
       "../Tilesets/Industrial/A2_Industrial_Rasak.png",
     );

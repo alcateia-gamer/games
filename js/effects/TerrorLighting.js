@@ -211,15 +211,20 @@ function criarIluminacaoTerror(scene) {
   };
 
   const limparIluminacao = () => {
+    scene.events.off(Phaser.Scenes.Events.SHUTDOWN, limparIluminacao);
     scene.events.off(Phaser.Scenes.Events.PRE_RENDER, atualizarLanterna);
     overlay.destroy();
-    scene.textures.remove(TEXTURA_ESCURIDAO_PARTE2);
+    if (scene.textures.exists(TEXTURA_ESCURIDAO_PARTE2)) {
+      scene.textures.remove(TEXTURA_ESCURIDAO_PARTE2);
+    }
     coneCanvas.width = 0;
     coneCanvas.height = 0;
   };
 
   scene.events.on(Phaser.Scenes.Events.PRE_RENDER, atualizarLanterna);
   scene.events.once(Phaser.Scenes.Events.SHUTDOWN, limparIluminacao);
+
+  return limparIluminacao;
 }
 
 export default criarIluminacaoTerror;
