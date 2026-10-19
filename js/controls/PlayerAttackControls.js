@@ -13,7 +13,8 @@ function criarControlesAtaque(scene) {
   // BOTÃO DE ATAQUE
   // =====================================================
 
-  scene.botaoAtaque = scene.add.circle(720, 350, 46, 0xffffff, 0.9);
+  scene.botaoAtaque = scene.add.circle(720, 350, 46, 0xffffff, 1);
+  scene.botaoAtaque.setAlpha(0.75);
 
   scene.botaoAtaque
     .setStrokeStyle(4, 0x333333, 1)
@@ -27,8 +28,12 @@ function criarControlesAtaque(scene) {
 
   scene.iconeAtaque = scene.add.graphics();
 
-  scene.iconeAtaque.setPosition(720, 350).setScrollFactor(0).setDepth(101);
-
+  scene.iconeAtaque
+    .setPosition(720, 350)
+    .setScrollFactor(0)
+    .setDepth(101)
+    .setAlpha(0.75);
+  
   // =====================================================
   // LÂMINA
   // =====================================================

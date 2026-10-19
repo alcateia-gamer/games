@@ -1,3 +1,4 @@
+
 import { carregarSonsInimigos } from "../sounds/inimigos.js";
 import { carregarSonsKatana } from "../sounds/katana.js";
 import { carregarSonsPersonagem } from "../sounds/personagem.js";
@@ -59,20 +60,6 @@ class Preloader extends Phaser.Scene {
     // ===================================================
     // AJUSTES MANUAIS DE CENTRALIZAÇÃO
     // ===================================================
-    //
-    // Estes valores deslocam o conteúdo de todos
-    // os frames dentro de suas células.
-    //
-    // Não alteram a posição do raio no mapa.
-    //
-    // X positivo: direita.
-    // X negativo: esquerda.
-    //
-    // Y positivo: baixo.
-    // Y negativo: cima.
-    //
-    // Zero mantém a centralização automática.
-    // ===================================================
 
     const AJUSTE_CENTRO_X = 0;
     const AJUSTE_CENTRO_Y = 0;
@@ -82,49 +69,42 @@ class Preloader extends Phaser.Scene {
     // ===================================================
 
     if (!this.textures.exists(CHAVE_ORIGINAL)) {
-      console.error("Boss: imagem original do raio da base não carregada.");
+      console.error(
+        "Boss: imagem original do raio da base não carregada."
+      );
       return;
     }
 
     const texturaOriginal = this.textures.get(CHAVE_ORIGINAL);
-
     const imagem = texturaOriginal.getSourceImage();
 
     if (!imagem?.width || !imagem?.height) {
-      console.error("Boss: dimensões inválidas para o raio da base.");
+      console.error(
+        "Boss: dimensões inválidas para o raio da base."
+      );
       return;
     }
 
     // ===================================================
     // IDENTIFICAR OS LIMITES REAIS DOS QUADROS
     // ===================================================
-    //
-    // A imagem original não possui largura
-    // múltipla de 311.
-    //
-    // Por isso, NÃO tentamos recortar a imagem
-    // diretamente em células de 311x623.
-    //
-    // Primeiro identificamos os 7 quadros de
-    // cada linha original.
-    //
-    // Depois colocamos cada quadro inteiro,
-    // centralizado em sua célula de 311x623.
-    // ===================================================
 
     const larguraOriginal = imagem.width;
     const alturaOriginal = imagem.height;
 
-    const larguraMediaOrigem = larguraOriginal / COLUNAS_ORIGEM;
+    const larguraMediaOrigem =
+      larguraOriginal / COLUNAS_ORIGEM;
 
-    const alturaMediaOrigem = alturaOriginal / LINHAS_ORIGEM;
+    const alturaMediaOrigem =
+      alturaOriginal / LINHAS_ORIGEM;
 
-    // Verificar se cada quadro cabe na grade final.
     if (
       Math.ceil(larguraMediaOrigem) > FRAME_LARGURA ||
       Math.ceil(alturaMediaOrigem) > FRAME_ALTURA
     ) {
-      console.error("Boss: o tamanho dos quadros originais excede 311x623.");
+      console.error(
+        "Boss: o tamanho dos quadros originais excede 311x623."
+      );
       return;
     }
 
@@ -148,110 +128,106 @@ class Preloader extends Phaser.Scene {
     // CRIAR CANVAS COM A GRADE CORRETA
     // ===================================================
 
-    const larguraCanvas = COLUNAS_DESTINO * FRAME_LARGURA;
+    const larguraCanvas =
+      COLUNAS_DESTINO * FRAME_LARGURA;
 
-    const alturaCanvas = LINHAS_DESTINO * FRAME_ALTURA;
+    const alturaCanvas =
+      LINHAS_DESTINO * FRAME_ALTURA;
 
     const texturaCanvas = this.textures.createCanvas(
       CHAVE_CANVAS,
       larguraCanvas,
-      alturaCanvas,
+      alturaCanvas
     );
 
     if (!texturaCanvas) {
-      console.error("Boss: não foi possível criar a textura do raio.");
+      console.error(
+        "Boss: não foi possível criar a textura do raio."
+      );
       return;
     }
 
     const contexto = texturaCanvas.getContext();
 
-    // Não suavizar os pixels da arte.
     contexto.imageSmoothingEnabled = false;
-
-    contexto.clearRect(0, 0, larguraCanvas, alturaCanvas);
+    contexto.clearRect(
+      0,
+      0,
+      larguraCanvas,
+      alturaCanvas
+    );
 
     // ===================================================
     // COPIAR OS 24 FRAMES NA ORDEM ORIGINAL
     // ===================================================
 
     for (let i = 0; i < TOTAL_FRAMES; i++) {
-      // =================================================
-      // POSIÇÃO DO FRAME NA IMAGEM ORIGINAL
-      // =================================================
-
       const colunaOrigem = i % COLUNAS_ORIGEM;
-      const linhaOrigem = Math.floor(i / COLUNAS_ORIGEM);
 
-      // Limites reais calculados com base na largura
-      // e altura da imagem inteira.
-      //
-      // Isso evita acumular diferenças de pixels
-      // entre as colunas da imagem original.
-      const origemX = Math.round(colunaOrigem * larguraMediaOrigem);
+      const linhaOrigem =
+        Math.floor(i / COLUNAS_ORIGEM);
 
-      const origemDireita = Math.round((colunaOrigem + 1) * larguraMediaOrigem);
+      const origemX = Math.round(
+        colunaOrigem * larguraMediaOrigem
+      );
 
-      const origemY = Math.round(linhaOrigem * alturaMediaOrigem);
+      const origemDireita = Math.round(
+        (colunaOrigem + 1) * larguraMediaOrigem
+      );
 
-      const origemBaixo = Math.round((linhaOrigem + 1) * alturaMediaOrigem);
+      const origemY = Math.round(
+        linhaOrigem * alturaMediaOrigem
+      );
 
-      const larguraRecorte = origemDireita - origemX;
+      const origemBaixo = Math.round(
+        (linhaOrigem + 1) * alturaMediaOrigem
+      );
 
-      const alturaRecorte = origemBaixo - origemY;
+      const larguraRecorte =
+        origemDireita - origemX;
 
-      // =================================================
-      // POSIÇÃO NA GRADE FINAL DE 311x623
-      // =================================================
+      const alturaRecorte =
+        origemBaixo - origemY;
 
-      const colunaDestino = i % COLUNAS_DESTINO;
+      const colunaDestino =
+        i % COLUNAS_DESTINO;
 
-      const linhaDestino = Math.floor(i / COLUNAS_DESTINO);
+      const linhaDestino =
+        Math.floor(i / COLUNAS_DESTINO);
 
-      // =================================================
-      // CENTRALIZAR SEM ESTICAR O RAIO
-      // =================================================
+      const margemX = Math.floor(
+        (FRAME_LARGURA - larguraRecorte) / 2
+      );
 
-      const margemX = Math.floor((FRAME_LARGURA - larguraRecorte) / 2);
-
-      const margemY = Math.floor((FRAME_ALTURA - alturaRecorte) / 2);
+      const margemY = Math.floor(
+        (FRAME_ALTURA - alturaRecorte) / 2
+      );
 
       const destinoX =
-        colunaDestino * FRAME_LARGURA + margemX + AJUSTE_CENTRO_X;
+        colunaDestino * FRAME_LARGURA +
+        margemX +
+        AJUSTE_CENTRO_X;
 
-      const destinoY = linhaDestino * FRAME_ALTURA + margemY + AJUSTE_CENTRO_Y;
-
-      // =================================================
-      // COPIAR O FRAME ORIGINAL
-      // =================================================
-      //
-      // A largura e a altura da cópia são iguais às
-      // do recorte original.
-      //
-      // Portanto, nenhum redimensionamento acontece.
-      //
-      // Os pixels são apenas reposicionados dentro
-      // do frame final de 311x623.
-      // =================================================
+      const destinoY =
+        linhaDestino * FRAME_ALTURA +
+        margemY +
+        AJUSTE_CENTRO_Y;
 
       contexto.drawImage(
         imagem,
-
-        // Área de origem.
         origemX,
         origemY,
         larguraRecorte,
         alturaRecorte,
-
-        // Área de destino.
         destinoX,
         destinoY,
         larguraRecorte,
-        alturaRecorte,
+        alturaRecorte
       );
     }
 
     // ===================================================
-    // ATUALIZAR A TEXTURA DO CANVAS
+    // ATUALIZAR TEXTURA DO CANVAS
     // ===================================================
 
     texturaCanvas.refresh();
@@ -260,17 +236,18 @@ class Preloader extends Phaser.Scene {
     // CRIAR SPRITE SHEET FINAL DE 311x623
     // ===================================================
 
-    this.textures.addSpriteSheet(CHAVE_FINAL, texturaCanvas.getSourceImage(), {
-      frameWidth: FRAME_LARGURA,
-      frameHeight: FRAME_ALTURA,
-      endFrame: TOTAL_FRAMES - 1,
-    });
+    this.textures.addSpriteSheet(
+      CHAVE_FINAL,
+      texturaCanvas.getSourceImage(),
+      {
+        frameWidth: FRAME_LARGURA,
+        frameHeight: FRAME_ALTURA,
+        endFrame: TOTAL_FRAMES - 1,
+      }
+    );
 
-    // ===================================================
-    // VERIFICAR A QUANTIDADE DE FRAMES
-    // ===================================================
-
-    const texturaFinal = this.textures.get(CHAVE_FINAL);
+    const texturaFinal =
+      this.textures.get(CHAVE_FINAL);
 
     const framesCarregados = texturaFinal
       .getFrameNames()
@@ -279,18 +256,21 @@ class Preloader extends Phaser.Scene {
     if (framesCarregados.length !== TOTAL_FRAMES) {
       console.error(
         "Boss: quantidade incorreta de frames.",
-        framesCarregados.length,
+        framesCarregados.length
       );
       return;
     }
 
-    console.log("Boss: raio da base carregado corretamente.", {
-      frames: framesCarregados.length,
-      larguraFrame: FRAME_LARGURA,
-      alturaFrame: FRAME_ALTURA,
-      larguraSpritesheet: larguraCanvas,
-      alturaSpritesheet: alturaCanvas,
-    });
+    console.log(
+      "Boss: raio da base carregado corretamente.",
+      {
+        frames: framesCarregados.length,
+        larguraFrame: FRAME_LARGURA,
+        alturaFrame: FRAME_ALTURA,
+        larguraSpritesheet: larguraCanvas,
+        alturaSpritesheet: alturaCanvas,
+      }
+    );
   }
 
   // =====================================================
@@ -304,18 +284,23 @@ class Preloader extends Phaser.Scene {
       .rectangle(400, 305, 440, 115, 0x000000, 1)
       .setStrokeStyle(2, 0x00ff66, 0.8);
 
-    this.textoStatus = this.add.text(200, 280, "CARREGANDO ASSETS...", {
-      fontFamily: "monospace",
-      fontSize: "13px",
-      color: "#00ff66",
-    });
+    this.textoStatus = this.add.text(
+      200,
+      280,
+      "CARREGANDO ASSETS...",
+      {
+        fontFamily: "monospace",
+        fontSize: "13px",
+        color: "#00ff66",
+      }
+    );
 
     this.add
       .rectangle(400, 315, 404, 26, 0x000000, 1)
       .setStrokeStyle(2, 0x00ff66, 1);
 
     this.barra = this.add
-      .rectangle(204, 315, 0, 12, 0x00ff66, 1)
+      .rectangle(204, 315, 0, 12, 0x00ff66)
       .setOrigin(0, 0.5);
 
     this.porcentagem = this.add
@@ -328,13 +313,14 @@ class Preloader extends Phaser.Scene {
 
     this.load.on("progress", (progress) => {
       this.barra.width = 392 * progress;
-      this.porcentagem.setText(Math.floor(progress * 100) + "%");
+
+      this.porcentagem.setText(
+        Math.floor(progress * 100) + "%"
+      );
     });
 
     this.load.once("complete", () => {
-      // Preparar os frames do raio antes da partida.
       this.prepararNovoRaioBase();
-
       this.finalizarCarregamento();
     });
 
@@ -382,9 +368,15 @@ class Preloader extends Phaser.Scene {
     // MAPAS
     // =====================================================
 
-    this.load.tilemapTiledJSON("mapa", "map/InicioFase1 (1).json");
+    this.load.tilemapTiledJSON(
+      "mapa",
+      "map/InicioFase1 (1).json"
+    );
 
-    this.load.tilemapTiledJSON("mapaParte2", "map/parte2-fase1.json");
+    this.load.tilemapTiledJSON(
+      "mapaParte2",
+      "map/parte2-fase1.json"
+    );
 
     // =====================================================
     // PERSONAGEM 1 - KAI MERCER
@@ -396,7 +388,7 @@ class Preloader extends Phaser.Scene {
       {
         frameWidth: 128,
         frameHeight: 128,
-      },
+      }
     );
 
     this.load.spritesheet(
@@ -405,7 +397,7 @@ class Preloader extends Phaser.Scene {
       {
         frameWidth: 128,
         frameHeight: 128,
-      },
+      }
     );
 
     // =====================================================
@@ -418,7 +410,7 @@ class Preloader extends Phaser.Scene {
       {
         frameWidth: 64,
         frameHeight: 64,
-      },
+      }
     );
 
     this.load.spritesheet(
@@ -427,7 +419,7 @@ class Preloader extends Phaser.Scene {
       {
         frameWidth: 128,
         frameHeight: 128,
-      },
+      }
     );
 
     this.load.spritesheet(
@@ -436,7 +428,7 @@ class Preloader extends Phaser.Scene {
       {
         frameWidth: 48,
         frameHeight: 64,
-      },
+      }
     );
 
     // =====================================================
@@ -449,7 +441,7 @@ class Preloader extends Phaser.Scene {
       {
         frameWidth: 128,
         frameHeight: 128,
-      },
+      }
     );
 
     this.load.spritesheet(
@@ -458,7 +450,7 @@ class Preloader extends Phaser.Scene {
       {
         frameWidth: 64,
         frameHeight: 64,
-      },
+      }
     );
 
     this.load.spritesheet(
@@ -467,7 +459,7 @@ class Preloader extends Phaser.Scene {
       {
         frameWidth: 64,
         frameHeight: 64,
-      },
+      }
     );
 
     // =====================================================
@@ -480,7 +472,7 @@ class Preloader extends Phaser.Scene {
       {
         frameWidth: 64,
         frameHeight: 64,
-      },
+      }
     );
 
     this.load.spritesheet(
@@ -489,7 +481,7 @@ class Preloader extends Phaser.Scene {
       {
         frameWidth: 192,
         frameHeight: 192,
-      },
+      }
     );
 
     // =====================================================
@@ -503,51 +495,31 @@ class Preloader extends Phaser.Scene {
         frameWidth: 256,
         frameHeight: 256,
         endFrame: 15,
-      },
+      }
     );
 
-    // Animação do próprio Boss.
     this.load.spritesheet(
       "boss-raio-chao",
       "PERSONAGENS/INIMIGOS PRINCIPAIS/BOSS_FINAL/BOSS_RAIO_CHAO.png",
       {
         frameWidth: 256,
         frameHeight: 256,
-      },
+      }
     );
 
-    // Raio principal das zonas 1, 2 e 3.
     this.load.spritesheet(
       "boss-raio-zona",
       "PERSONAGENS/INIMIGOS PRINCIPAIS/BOSS_FINAL/RAIO_BOSS_1.png",
       {
         frameWidth: 311,
         frameHeight: 623,
-      },
+      }
     );
-
-    // =====================================================
-    // NOVO PNG DO RAIO DA BASE
-    // =====================================================
-    //
-    // Não carregar diretamente como spritesheet,
-    // pois as dimensões originais não são múltiplas
-    // de 311x623.
-    //
-    // Primeiro carrega como imagem.
-    //
-    // prepararNovoRaioBase() reorganiza os 24 frames,
-    // preservando seus pixels e a ordem original.
-    // =====================================================
 
     this.load.image(
       "boss-raio-base-original",
-      "PERSONAGENS/INIMIGOS PRINCIPAIS/BOSS_FINAL/RAIO_BOSS_BASE (1) (1).png",
+      "PERSONAGENS/INIMIGOS PRINCIPAIS/BOSS_FINAL/RAIO_BOSS_BASE (1) (1).png"
     );
-
-    // =====================================================
-    // RESTANTE DAS ANIMAÇÕES DO BOSS
-    // =====================================================
 
     this.load.spritesheet(
       "boss-rec-vida",
@@ -556,7 +528,7 @@ class Preloader extends Phaser.Scene {
         frameWidth: 256,
         frameHeight: 256,
         endFrame: 24,
-      },
+      }
     );
 
     this.load.spritesheet(
@@ -566,7 +538,7 @@ class Preloader extends Phaser.Scene {
         frameWidth: 256,
         frameHeight: 256,
         endFrame: 19,
-      },
+      }
     );
 
     // =====================================================
@@ -579,7 +551,7 @@ class Preloader extends Phaser.Scene {
       {
         frameWidth: 311,
         frameHeight: 421,
-      },
+      }
     );
 
     this.load.spritesheet(
@@ -588,7 +560,7 @@ class Preloader extends Phaser.Scene {
       {
         frameWidth: 311,
         frameHeight: 421,
-      },
+      }
     );
 
     this.load.spritesheet(
@@ -597,7 +569,7 @@ class Preloader extends Phaser.Scene {
       {
         frameWidth: 311,
         frameHeight: 421,
-      },
+      }
     );
 
     // =====================================================
@@ -610,7 +582,7 @@ class Preloader extends Phaser.Scene {
       {
         frameWidth: 278,
         frameHeight: 270,
-      },
+      }
     );
 
     // =====================================================
@@ -623,7 +595,7 @@ class Preloader extends Phaser.Scene {
       {
         frameWidth: 354,
         frameHeight: 256,
-      },
+      }
     );
 
     // =====================================================
@@ -633,7 +605,7 @@ class Preloader extends Phaser.Scene {
     this.load.plugin(
       "rexvirtualjoystickplugin",
       "../js/libs/rexvirtualjoystickplugin.min.js",
-      true,
+      true
     );
 
     // =====================================================
@@ -642,48 +614,63 @@ class Preloader extends Phaser.Scene {
 
     this.load.image(
       "cityShopping",
-      "../Tilesets/City/Tileset_SciFi_CityShopping_Rasak.png",
+      "../Tilesets/City/Tileset_SciFi_CityShopping_Rasak.png"
     );
 
     this.load.image(
       "street",
-      "../Tilesets/City/Tileset_SciFi_Street_Rasak.png",
+      "../Tilesets/City/Tileset_SciFi_Street_Rasak.png"
     );
 
     this.load.image(
       "street2",
-      "../Tilesets/City/Tileset_SciFi_Street_Rasak_DUP.png",
+      "../Tilesets/City/Tileset_SciFi_Street_Rasak_DUP.png"
     );
 
     this.load.image(
       "garbage",
-      "../Tilesets/City/Tileset_SciFi_Garbage_Rasak.png",
+      "../Tilesets/City/Tileset_SciFi_Garbage_Rasak.png"
     );
 
-    this.load.image("a5Street", "../Tilesets/City/A5_Street_Rasak.png");
+    this.load.image(
+      "a5Street",
+      "../Tilesets/City/A5_Street_Rasak.png"
+    );
 
-    this.load.image("slums", "../Tilesets/City/Tileset_SciFi_Slums_Rasak.png");
+    this.load.image(
+      "slums",
+      "../Tilesets/City/Tileset_SciFi_Slums_Rasak.png"
+    );
 
     this.load.image(
       "publicTransportation",
-      "../Tilesets/City/Tileset_SciFi_PublicTransportation_Slums_Rasak.png.png",
+      "../Tilesets/City/Tileset_SciFi_PublicTransportation_Slums_Rasak.png.png"
     );
 
-    this.load.image("a4Outside", "../Tilesets/City/A4_SciFi_Outside_Rasak.png");
+    this.load.image(
+      "a4Outside",
+      "../Tilesets/City/A4_SciFi_Outside_Rasak.png"
+    );
 
-    this.load.image("a3Outside", "../Tilesets/City/A3_SciFi_Outside_Rasak.png");
+    this.load.image(
+      "a3Outside",
+      "../Tilesets/City/A3_SciFi_Outside_Rasak.png"
+    );
 
     this.load.image(
       "A5_SciFi_Outside_Rasak",
-      "../Tilesets/City/A5_SciFi_Outside_Rasak.png",
+      "../Tilesets/City/A5_SciFi_Outside_Rasak.png"
     );
 
     this.load.image(
       "buildingExtras",
-      "../Tilesets/City/Tileset_SciFi_BuildingExtras.png",
+      "../Tilesets/City/Tileset_SciFi_BuildingExtras.png"
     );
 
-    this.load.image("torre", "../Tilesets/City/TorreTileset.png");
+    this.load.image(
+      "torre",
+      "../Tilesets/City/TorreTileset.png"
+    );
 
     // =====================================================
     // TILESETS - INTERIOR
@@ -691,14 +678,23 @@ class Preloader extends Phaser.Scene {
 
     this.load.image(
       "apartment2",
-      "../Tilesets/Inside/Tileset_SciFi_Arpartment_2_Rasak.png",
+      "../Tilesets/Inside/Tileset_SciFi_Arpartment_2_Rasak.png"
     );
 
-    this.load.image("insideA1", "../Tilesets/Inside/A1_SciFi_Inside_Rasak.png");
+    this.load.image(
+      "insideA1",
+      "../Tilesets/Inside/A1_SciFi_Inside_Rasak.png"
+    );
 
-    this.load.image("insideA2", "../Tilesets/Inside/A2_SciFi_Inside_Rasak.png");
+    this.load.image(
+      "insideA2",
+      "../Tilesets/Inside/A2_SciFi_Inside_Rasak.png"
+    );
 
-    this.load.image("club", "../Tilesets/Inside/Tileset_SciFi_Club_Rasak.png");
+    this.load.image(
+      "club",
+      "../Tilesets/Inside/Tileset_SciFi_Club_Rasak.png"
+    );
 
     // =====================================================
     // TILESETS - INDUSTRIAL
@@ -706,17 +702,17 @@ class Preloader extends Phaser.Scene {
 
     this.load.image(
       "ModernIndustrial2",
-      "../Tilesets/Industrial/Tileset_Modern_Industrial_2_Rasak.png",
+      "../Tilesets/Industrial/Tileset_Modern_Industrial_2_Rasak.png"
     );
 
     this.load.image(
       "ModernInsideFactoryA1",
-      "../Tilesets/Industrial/A1_Modern_Inside_Factory_Rasak.png",
+      "../Tilesets/Industrial/A1_Modern_Inside_Factory_Rasak.png"
     );
 
     this.load.image(
       "factoryInsideA1",
-      "../Tilesets/Industrial/A1_Modern_Inside_Factory_Rasak.png",
+      "../Tilesets/Industrial/A1_Modern_Inside_Factory_Rasak.png"
     );
 
     this.load.image(
@@ -731,45 +727,57 @@ class Preloader extends Phaser.Scene {
 
     this.load.image(
       "industrialA2",
-      "../Tilesets/Industrial/A2_Industrial_Rasak.png",
+      "../Tilesets/Industrial/A2_Industrial_Rasak.png"
     );
 
     this.load.image(
       "industrialA4",
-      "../Tilesets/Industrial/A4_Modern_Industrial_Rasak.png",
+      "../Tilesets/Industrial/A4_Modern_Industrial_Rasak.png"
     );
 
     this.load.image(
       "industrialA5",
-      "../Tilesets/Industrial/A5_SciFi_Industrial_Rasak.png",
+      "../Tilesets/Industrial/A5_SciFi_Industrial_Rasak.png"
     );
 
     this.load.image(
       "industrial1",
-      "../Tilesets/Industrial/Tileset_Modern_Industrial_1_Rasak.png",
+      "../Tilesets/Industrial/Tileset_Modern_Industrial_1_Rasak.png"
     );
 
     this.load.image(
       "industrial3",
-      "../Tilesets/Industrial/Tileset_Modern_Industrial_3_Rasak.png",
+      "../Tilesets/Industrial/Tileset_Modern_Industrial_3_Rasak.png"
     );
 
     this.load.image(
       "entertainingDistrict",
-      "../Tilesets/Entertaining_District/Tileset_ModernSciFi_Entertaining_District_Rasak.png",
+      "../Tilesets/Entertaining_District/Tileset_ModernSciFi_Entertaining_District_Rasak.png"
     );
 
-    this.load.image("insideA4", "../Tilesets/Inside/A4_SciFi_Inside_Rasak.png");
+    this.load.image(
+      "insideA4",
+      "../Tilesets/Inside/A4_SciFi_Inside_Rasak.png"
+    );
 
-    this.load.image("insideA5", "../Tilesets/Inside/A5_SciFi_Inside_Rasak.png");
+    this.load.image(
+      "insideA5",
+      "../Tilesets/Inside/A5_SciFi_Inside_Rasak.png"
+    );
 
-    this.load.image("a2Outside", "../Tilesets/City/A2_Scifi_Outside_Rasak.png");
+    this.load.image(
+      "a2Outside",
+      "../Tilesets/City/A2_Scifi_Outside_Rasak.png"
+    );
 
-    this.load.image("insideA3", "../Tilesets/Inside/A3_SciFi_Inside_Rasak.png");
+    this.load.image(
+      "insideA3",
+      "../Tilesets/Inside/A3_SciFi_Inside_Rasak.png"
+    );
 
     this.load.image(
       "apartment1",
-      "../Tilesets/Inside/Tileset_SciFi_Arpartment_1_Rasak.png",
+      "../Tilesets/Inside/Tileset_SciFi_Arpartment_1_Rasak.png"
     );
 
     // =====================================================
@@ -778,62 +786,62 @@ class Preloader extends Phaser.Scene {
 
     this.load.image(
       "securityDoor",
-      "../Tilesets/Animations/Doors/!Security Door.png",
+      "../Tilesets/Animations/Doors/!Security Door.png"
     );
 
     this.load.image(
       "industrialGate",
-      "../Tilesets/Animations/Doors/!Industrial Gate.png",
+      "../Tilesets/Animations/Doors/!Industrial Gate.png"
     );
 
     this.load.image(
       "industrialControls",
-      "../Tilesets/Animations/Industrial and Security/!$Controlls.png",
+      "../Tilesets/Animations/Industrial and Security/!$Controlls.png"
     );
 
     this.load.image(
       "industrialMachines",
-      "../Tilesets/Animations/Industrial and Security/!Industrial mashines.png",
+      "../Tilesets/Animations/Industrial and Security/!Industrial mashines.png"
     );
 
     this.load.image(
       "industrialSwitch",
-      "../Tilesets/Animations/Industrial and Security/!Switch_Rasak.png",
+      "../Tilesets/Animations/Industrial and Security/!Switch_Rasak.png"
     );
 
     this.load.image(
       "electricGenerator",
-      "../Tilesets/Animations/Industrial and Security/$ElectricGenerator.png",
+      "../Tilesets/Animations/Industrial and Security/$ElectricGenerator.png"
     );
 
     this.load.image(
       "generatorCharacter",
-      "../Tilesets/Animations/Industrial and Security/!$Generator_char.png",
+      "../Tilesets/Animations/Industrial and Security/!$Generator_char.png"
     );
 
     this.load.image(
       "satellite",
-      "../Tilesets/Animations/Industrial and Security/$Satalite.png",
+      "../Tilesets/Animations/Industrial and Security/$Satalite.png"
     );
 
     this.load.image(
       "ventilationSystem",
-      "../Tilesets/Animations/Industrial and Security/!Ventilation System.png",
+      "../Tilesets/Animations/Industrial and Security/!Ventilation System.png"
     );
 
     this.load.image(
       "shieldGenerator",
-      "../Tilesets/Animations/Industrial and Security/!$ShieldGenerator.png",
+      "../Tilesets/Animations/Industrial and Security/!$ShieldGenerator.png"
     );
 
     this.load.image(
       "chemTank",
-      "../Tilesets/Animations/Industrial and Security/!Chem-Tank.png",
+      "../Tilesets/Animations/Industrial and Security/!Chem-Tank.png"
     );
 
     this.load.image(
       "shieldDoorCharacter",
-      "../Tilesets/Animations/Industrial and Security/!$Shield_Door_char.png",
+      "../Tilesets/Animations/Industrial and Security/!$Shield_Door_char.png"
     );
 
     // =====================================================
@@ -842,44 +850,72 @@ class Preloader extends Phaser.Scene {
 
     this.load.image(
       "neonTubes1",
-      "../Tilesets/Animations/Lights/!$Neontubes1.png",
+      "../Tilesets/Animations/Lights/!$Neontubes1.png"
     );
 
     this.load.image(
       "neonTubes2",
-      "../Tilesets/Animations/Lights/!$Neontubes2.png",
+      "../Tilesets/Animations/Lights/!$Neontubes2.png"
     );
 
     this.load.image(
       "industrialLights1",
-      "../Tilesets/Animations/Lights/!Industrials_Lights1.png",
+      "../Tilesets/Animations/Lights/!Industrials_Lights1.png"
     );
 
     this.load.image(
       "modernFloorLights",
-      "../Tilesets/Animations/Lights/!$ModernFloorLights.png",
+      "../Tilesets/Animations/Lights/!$ModernFloorLights.png"
     );
 
     // =====================================================
     // EXTRAS
     // =====================================================
 
-    this.load.image("roboPB", "../Tilesets/extras/RoboPB.png");
+    this.load.image(
+      "roboPB",
+      "../Tilesets/extras/RoboPB.png"
+    );
 
-    this.load.image("energiaBoss", "../Tilesets/extras/EnergiaBoss.png");
+    this.load.image(
+      "energiaBoss",
+      "../Tilesets/extras/EnergiaBoss.png"
+    );
 
-    this.load.image("roboV", "../Tilesets/extras/RoboV.png");
+    this.load.image(
+      "roboV",
+      "../Tilesets/extras/RoboV.png"
+    );
+
+    // =====================================================
+    // NOVO BOTÃO DE DASH
+    // Ajuste o nome dash.png se o sprite tiver outro nome.
+    // =====================================================
+
+    this.load.image(
+      "botao-dash",
+      "../Tilesets/extras/botao-dash.png"
+    );
 
     this.load.image(
       "supercomputer",
-      "../Tilesets/Animations/Industrial and Security/Supercomputer.png",
+      "../Tilesets/Animations/Industrial and Security/Supercomputer.png"
     );
 
-    this.load.image("wallBorders", "../Tilesets/extras/parede-borda.png");
+    this.load.image(
+      "wallBorders",
+      "../Tilesets/extras/parede-borda.png"
+    );
 
-    this.load.image("wallBorder", "../Tilesets/extras/parede-borda.png");
+    this.load.image(
+      "wallBorder",
+      "../Tilesets/extras/parede-borda.png"
+    );
 
-    this.load.image("shopDoor", "../Tilesets/Animations/Doors/!ShopDoor.png");
+    this.load.image(
+      "shopDoor",
+      "../Tilesets/Animations/Doors/!ShopDoor.png"
+    );
 
     // =====================================================
     // TILESETS - VEÍCULOS
@@ -887,27 +923,27 @@ class Preloader extends Phaser.Scene {
 
     this.load.image(
       "VehiclesSpeederCivil5",
-      "../Tilesets/Animations/Vehicles/Flying cars/Speeder_civil5.png",
+      "../Tilesets/Animations/Vehicles/Flying cars/Speeder_civil5.png"
     );
 
     this.load.image(
       "Speeder_civil2",
-      "../Tilesets/Animations/Vehicles/Flying cars/Speeder_civil2.png",
+      "../Tilesets/Animations/Vehicles/Flying cars/Speeder_civil2.png"
     );
 
     this.load.image(
       "Transporter_Private",
-      "../Tilesets/Animations/Vehicles/Flying cars/Transporter_Private.png",
+      "../Tilesets/Animations/Vehicles/Flying cars/Transporter_Private.png"
     );
 
     this.load.image(
       "Transporter_Ambulance",
-      "../Tilesets/Animations/Vehicles/Flying cars/Transporter_Ambulance.png",
+      "../Tilesets/Animations/Vehicles/Flying cars/Transporter_Ambulance.png"
     );
 
     this.load.image(
       "Transporter_PoliceSwat",
-      "../Tilesets/Animations/Vehicles/Flying cars/Transporter_PoliceSwat.png",
+      "../Tilesets/Animations/Vehicles/Flying cars/Transporter_PoliceSwat.png"
     );
 
     // =====================================================
@@ -915,7 +951,11 @@ class Preloader extends Phaser.Scene {
     // =====================================================
 
     this.load.on("loaderror", (file) => {
-      console.error("ERRO AO CARREGAR:", file.key, file.src);
+      console.error(
+        "ERRO AO CARREGAR:",
+        file.key,
+        file.src
+      );
     });
   }
 
@@ -927,12 +967,15 @@ class Preloader extends Phaser.Scene {
     this.cameras.main.setBackgroundColor("#000000");
 
     this.personagemSelecionada =
-      this.scene.settings.data?.personagem || "kai-mercer";
+      this.scene.settings.data?.personagem ||
+      "kai-mercer";
 
-    this.multiplayer = this.scene.settings.data?.multiplayer === true;
+    this.multiplayer =
+      this.scene.settings.data?.multiplayer === true;
 
     this.iniciarCarregamento();
   }
 }
 
 export default Preloader;
+

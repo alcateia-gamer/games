@@ -2,11 +2,14 @@ import {
   configurarSomCorrida,
   atualizarSomCorrida,
 } from "../sounds/personagem.js";
+
 import {
   atualizarVelocidadeAnimacao,
   atualizarAnimacaoCaminhada,
   atualizarAnimacaoParado,
 } from "./PlayerAnimations.js";
+
+import { atualizarDash } from "./PlayerDashControls.js";
 
 function criarMovimento(scene) {
   configurarSomCorrida(scene);
@@ -17,13 +20,20 @@ function atualizarColisaoMapaPlayer(scene) {
     return;
   }
 
-  const atravessandoMapa =
-    !!scene.developerMode && !!scene.teclaEspaco?.isDown;
+  const atravessandoMapa = !!scene.developerMode && !!scene.teclaEspaco?.isDown;
+
   scene.colliderPlayerMapa.active = !atravessandoMapa;
 }
 
 function atualizarMovimento(scene) {
   atualizarColisaoMapaPlayer(scene);
+
+  // O dash controla a velocidade durante seu impulso.
+  // Evita que o movimento normal cancele o dash.
+  if (atualizarDash(scene)) {
+    atualizarSomCorrida(scene, false);
+    return;
+  }
 
   let movimentoX = 0;
   let movimentoY = 0;
@@ -59,9 +69,12 @@ function atualizarMovimento(scene) {
 
   const velocidadeBase = scene.speed ?? 200;
   const velocidadeTurbo = scene.speedTurbo ?? 400;
+
   const usandoTurbo =
     !!scene.developerMode && !!scene.teclaShift && scene.teclaShift.isDown;
+
   const velocidadeAtualBase = usandoTurbo ? velocidadeTurbo : velocidadeBase;
+
   const velocidadeAtual =
     !scene.multiplayer && scene.atacando
       ? velocidadeAtualBase * 0.72
@@ -70,6 +83,9 @@ function atualizarMovimento(scene) {
   // MOVIMENTO E CAMINHADA
   if (movimentoX !== 0 || movimentoY !== 0) {
     const direcao = new Phaser.Math.Vector2(movimentoX, movimentoY).normalize();
+
+    // Armazena a direção para o próximo dash.
+    scene.ultimaDirecaoDash?.copy(direcao);
 
     scene.player.setVelocity(
       direcao.x * velocidadeAtual,
