@@ -3,6 +3,7 @@ import criarLevel1Parte2Map from "../map/MapaFabrica.js";
 import {
   atualizarDepthGarras,
   atualizarDepthObjetosProducaoEArmazem,
+  atualizarDepthComputadoresPcAdm,
 } from "../map/ProfundidadeMapa.js";
 
 import criarAnimacoesPlayer, {
@@ -380,6 +381,7 @@ class Level1Parte2 extends Phaser.Scene {
 
     atualizarDepthObjetosProducaoEArmazem(this);
     atualizarDepthGarras(this);
+    atualizarDepthComputadoresPcAdm(this);
 
     if (
       (!this.multiplayer || this.isMultiplayerHost) &&

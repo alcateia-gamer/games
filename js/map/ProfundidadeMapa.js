@@ -69,6 +69,26 @@ function atualizarDepthGarras(scene) {
   });
 }
 
+function atualizarDepthComputadoresPcAdm(scene) {
+  const player = scene.player;
+  if (!player?.active || !Array.isArray(scene.objetosMapaParte2)) {
+    return;
+  }
+
+  const centroPlayerY = player.getBounds().centerY;
+
+  scene.objetosMapaParte2.forEach((visual) => {
+    if (!visual?.active || visual.getData("objectLayerName") !== "PcAdm") {
+      return;
+    }
+
+    const centroObjetoY = visual.getBounds().centerY;
+    const personagemAcima = centroPlayerY > centroObjetoY;
+
+    visual.setDepth(player.depth + (personagemAcima ? -0.01 : 0.01));
+  });
+}
+
 export {
   DEPTHS,
   depthFromWorldY,
@@ -76,4 +96,5 @@ export {
   PROFUNDIDADES_OBJETOS_PARTE2,
   atualizarDepthObjetosProducaoEArmazem,
   atualizarDepthGarras,
+  atualizarDepthComputadoresPcAdm,
 };
