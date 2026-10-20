@@ -109,6 +109,17 @@ test("registers gasoline with its image and supports collected quantities", () =
   assert.equal(inventory.getQuantity("gasolina"), 3);
 });
 
+test("registers battery with its image and hides its stack quantity", () => {
+  const battery = getInventoryItem("bateria");
+  const inventory = new Inventory({ slots: [], collectedItemIds: [] });
+
+  assert.equal(battery.name, "Bateria");
+  assert.equal(battery.image.path, "COLETAVEIS/bateria.png");
+  assert.equal(battery.showQuantity, false);
+  assert.equal(inventory.addItem("bateria", 3), true);
+  assert.equal(inventory.getQuantity("bateria"), 3);
+});
+
 test("shows stack quantities by default for other inventory items", () => {
   assert.equal(getInventoryItem("sucata").showQuantity, true);
   const item = registerTestItem("inventory-test-default-quantity");

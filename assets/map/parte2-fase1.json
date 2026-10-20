@@ -8646,20 +8646,43 @@
          "visible":true,
          "x":0,
          "y":0
-        },
-         {
-          "draworder":"topdown",
-          "id":46,
-          "name":"Itens",
-          "objects":[],
-          "opacity":1,
-          "type":"objectgroup",
-          "visible":true,
-          "x":0,
-          "y":0
+        }, 
+        {
+         "draworder":"topdown",
+         "id":46,
+         "name":"Itens",
+         "objects":[],
+         "opacity":1,
+         "type":"objectgroup",
+         "visible":true,
+         "x":0,
+         "y":0
+        }, 
+        {
+         "draworder":"topdown",
+         "id":47,
+         "name":"Interacoes",
+         "objects":[
+                {
+                 "height":126,
+                 "id":849,
+                 "name":"gerador01",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":220,
+                 "x":-647,
+                 "y":-1595
+                }],
+         "opacity":1,
+         "type":"objectgroup",
+         "visible":true,
+         "x":0,
+         "y":0
         }],
- "nextlayerid":47,
- "nextobjectid":849,
+ "nextlayerid":48,
+ "nextobjectid":850,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.12.2",

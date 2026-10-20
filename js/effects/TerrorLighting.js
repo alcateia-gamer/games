@@ -4,7 +4,7 @@ const MEIA_LARGURA_MAXIMA = 540;
 const MEIA_LARGURA_INICIAL = 1;
 const INTENSIDADE_NUCLEO = 0.42;
 const INTENSIDADE_HALO = 0.18;
-const DEPTH_ESCURIDAO = 150;
+const DEPTH_ESCURIDAO = 50;
 const DIRECOES_INICIAIS = {
   right: [1, 0],
   down: [0, 1],

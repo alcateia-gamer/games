@@ -9,11 +9,15 @@ import { obterInventarioDoJogador } from "./Inventory.js";
 const ITEM_LAYER_NAMES = ["Coletaveis", "Itens"];
 const DEFAULT_PICKUP_RANGE = 64;
 const PICKUP_BUTTON_DEPTH = 230;
+const CONFIG_BOTAO_COLETA = {
+  tamanho: 60,
+  distanciaXBotao: -30,
+  distanciaYBotao: 90,
+};
 
 function getProperty(object, propertyName) {
   return object.properties?.find(
-    (property) =>
-      property.name?.toLowerCase() === propertyName.toLowerCase(),
+    (property) => property.name?.toLowerCase() === propertyName.toLowerCase(),
   )?.value;
 }
 
@@ -35,25 +39,13 @@ function getItemPosition(object) {
 }
 
 function createPickupButton(scene) {
-  const background = scene.add
-    .rectangle(0, 0, 116, 38, 0x07121d, 0.96)
-    .setStrokeStyle(2, 0x16d9f5, 1)
-    .disableInteractive();
-  const label = scene.add
-    .text(0, 0, "E  PEGAR", {
-      fontFamily: "monospace",
-      fontSize: "13px",
-      color: "#b5fbff",
-      fontStyle: "bold",
-    })
-    .setOrigin(0.5);
-  const container = scene.add
-    .container(0, 0, [background, label])
+  return scene.add
+    .image(0, 0, "hand_icon")
+    .setDisplaySize(CONFIG_BOTAO_COLETA.tamanho, CONFIG_BOTAO_COLETA.tamanho)
     .setDepth(PICKUP_BUTTON_DEPTH)
     .setScrollFactor(0)
+    .setAlpha(0.75)
     .setVisible(false);
-
-  return { background, container, label };
 }
 
 function criarSistemaInventario(scene) {
@@ -71,33 +63,26 @@ function criarSistemaInventario(scene) {
   scene.itemColetavelProximo = null;
   scene.botaoColetarItemVisivel = false;
   let avisoInventarioCheio;
-  let avisoAtivo = false;
 
   const definirVisibilidadeBotao = (visivel) => {
     if (scene.botaoColetarItemVisivel === visivel) return;
 
     scene.botaoColetarItemVisivel = visivel;
-    scene.botaoColetarItem.container.setVisible(visivel);
+    scene.botaoColetarItem.setVisible(visivel);
 
     if (visivel) {
-      scene.botaoColetarItem.background.setInteractive({
-        useHandCursor: true,
-      });
+      scene.botaoColetarItem.setInteractive({ useHandCursor: true });
     } else {
-      scene.botaoColetarItem.background.disableInteractive();
+      scene.botaoColetarItem.disableInteractive();
     }
   };
 
   scene.mostrarAvisoInventarioCheio = () => {
-    avisoAtivo = true;
-    scene.botaoColetarItem.label.setText("SEM ESPAÇO");
-    scene.botaoColetarItem.background.setStrokeStyle(2, 0xff5577, 1);
+    scene.botaoColetarItem.setTint(0xff5577);
     avisoInventarioCheio?.remove(false);
     avisoInventarioCheio = scene.time.delayedCall(1100, () => {
       if (!scene.botaoColetarItem) return;
-      avisoAtivo = false;
-      scene.botaoColetarItem.label.setText("E  PEGAR");
-      scene.botaoColetarItem.background.setStrokeStyle(2, 0x16d9f5, 1);
+      scene.botaoColetarItem.clearTint();
     });
   };
 
@@ -191,7 +176,7 @@ function criarSistemaInventario(scene) {
   };
 
   scene.coletarItemProximo = coletarItemProximo;
-  scene.botaoColetarItem.background.on("pointerdown", coletarItemProximo);
+  scene.botaoColetarItem.on("pointerdown", coletarItemProximo);
   scene.atualizarColetaItens = () => {
     const player = scene.player;
     if (!player?.active) return;
@@ -209,9 +194,6 @@ function criarSistemaInventario(scene) {
     }, null);
 
     scene.itemColetavelProximo = nearest?.item ?? null;
-    if (!avisoAtivo) {
-      scene.botaoColetarItem.label.setText("E  PEGAR");
-    }
     definirVisibilidadeBotao(!!nearest);
 
     if (nearest && Phaser.Input.Keyboard.JustDown(scene.teclaColetarItem)) {
@@ -225,21 +207,27 @@ function criarSistemaInventario(scene) {
     const zoomY = camera.zoomY || camera.zoom || 1;
     const originX = camera.width * camera.originX;
     const originY = camera.height * camera.originY;
-    const screenX = camera.width - 68;
+    const screenX =
+      (scene.botaoAtaque?.x ?? camera.width - 80) -
+      CONFIG_BOTAO_COLETA.distanciaXBotao;
     const screenY = Math.max(
       42,
       Math.min(
         camera.height - 46,
-        (scene.botaoAtaque?.y ?? camera.height - 100) - 74,
+        (scene.botaoAtaque?.y ?? camera.height - 100) -
+          CONFIG_BOTAO_COLETA.distanciaYBotao,
       ),
     );
 
-    scene.botaoColetarItem.container
+    scene.botaoColetarItem
       .setPosition(
         originX + (screenX - originX) / zoomX,
         originY + (screenY - originY) / zoomY,
       )
-      .setScale(1 / zoomX, 1 / zoomY);
+      .setDisplaySize(
+        CONFIG_BOTAO_COLETA.tamanho / zoomX,
+        CONFIG_BOTAO_COLETA.tamanho / zoomY,
+      );
   };
 
   scene.events.on(
@@ -253,7 +241,7 @@ function criarSistemaInventario(scene) {
     );
     scene.itensColetaveis.forEach((item) => item.image.destroy());
     scene.itensColetaveis = [];
-    scene.botaoColetarItem.container.destroy();
+    scene.botaoColetarItem.destroy();
     scene.inventoryUI.destroy();
     scene.inventory.destroy();
     avisoInventarioCheio?.remove(false);

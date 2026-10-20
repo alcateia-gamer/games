@@ -127,6 +127,18 @@ registerInventoryItem({
   showQuantity: false,
 });
 
+registerInventoryItem({
+  id: "bateria",
+  name: "Bateria",
+  image: {
+    key: "inventory-bateria-icon",
+    path: "COLETAVEIS/bateria.png",
+  },
+  maxStack: 99,
+  category: "consumable",
+  showQuantity: false,
+});
+
 export {
   createBuiltinInventoryTextures,
   getInventoryItem,

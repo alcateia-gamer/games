@@ -322,18 +322,12 @@ class Level1 extends Phaser.Scene {
   update(time, delta) {
     this.weather?.update(time, delta);
 
-    if (
-      this.weather &&
-      Phaser.Input.Keyboard.JustDown(this.teclaClima)
-    ) {
+    if (this.weather && Phaser.Input.Keyboard.JustDown(this.teclaClima)) {
       this.climaAtivo = !this.climaAtivo;
       this.weather.shader.setVisible(this.climaAtivo);
     }
 
-    if (
-      this.weather &&
-      Phaser.Input.Keyboard.JustDown(this.teclaModoClima)
-    ) {
+    if (this.weather && Phaser.Input.Keyboard.JustDown(this.teclaModoClima)) {
       this.climaModo = this.climaModo === "rain" ? "snow" : "rain";
       this.weather.setMode(this.climaModo);
     }
@@ -553,7 +547,7 @@ class Level1 extends Phaser.Scene {
         "kai-mercer": "walk",
         "magnus-force": "personagem2-walk",
         "aria-kade": "personagem3-walk",
-        "nyx": "personagem4-walk",
+        nyx: "personagem4-walk",
       }[player.character];
       if (!texture) return;
       let remote = this.remotePlayers.get(player.id);

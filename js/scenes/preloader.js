@@ -362,6 +362,7 @@ class Preloader extends Phaser.Scene {
     this.load.setPath("./assets/");
 
     preloadInventoryItemImages(this);
+    this.load.image("hand_icon", "../Tilesets/extras/Hand_icon.png");
 
     carregarSonsPersonagem(this.load);
     carregarSonsKatana(this.load);
@@ -981,4 +982,3 @@ class Preloader extends Phaser.Scene {
 }
 
 export default Preloader;
-
