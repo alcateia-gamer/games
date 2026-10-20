@@ -1,5 +1,5 @@
 // =====================================================
-// NULLBORNS — HUD NÍTIDA FORA DO CANVAS DO PHASER
+// NULLBORNS — HUD NÍTIDA COM CARREGAMENTO ANTECIPADO
 // =====================================================
 
 const HUD_CONFIG = {
@@ -12,24 +12,78 @@ const HUD_CONFIG = {
   frameHeight: 725,
   quantidadeFrames: 4,
 
-  // POSIÇÃO EM UNIDADES DO JOGO.
+  // POSIÇÃO — VALORES ORIGINAIS.
   x: 10,
   y: 10,
 
-  // LARGURA MANTIDA EM 340.
+  // TAMANHO ATUAL — NÃO ALTERADO.
   largura: 350,
 
-  // Intensidade das barras vazias.
+  // COR DAS BARRAS VAZIAS — NÃO ALTERADA.
   intensidadeBarraVazia: 0.12,
 };
 
-// Ordem dos retratos no PNG.
 const HUD_FRAME_PERSONAGEM = {
   "kai-mercer": 0,
   "magnus-force": 1,
   "aria-kade": 2,
   nyx: 3,
 };
+
+// =====================================================
+// NOVO — CACHE ANTECIPADO DAS HUDS
+// =====================================================
+
+// Cada personagem terá sua HUD preparada uma única vez.
+// Ao iniciar ou trocar de cena, reutilizamos o resultado.
+
+const HUD_CACHE = new Map();
+
+// Começa a baixar a imagem assim que o módulo é
+// importado, antes de a partida começar.
+
+const HUD_IMAGEM_ANTECIPADA = typeof Image !== "undefined" ? new Image() : null;
+
+// Verifica se a imagem antecipada já está disponível.
+function imagemHUDDisponivel() {
+  return Boolean(
+    HUD_IMAGEM_ANTECIPADA?.complete && HUD_IMAGEM_ANTECIPADA.naturalWidth > 0,
+  );
+}
+
+// Prepara os quatro retratos antecipadamente.
+function prepararCacheAntecipado() {
+  if (!imagemHUDDisponivel()) return;
+
+  for (let i = 0; i < HUD_CONFIG.quantidadeFrames; i++) {
+    if (HUD_CACHE.has(i)) continue;
+
+    try {
+      const dados = prepararHUDOriginal(null, i);
+
+      HUD_CACHE.set(i, dados);
+    } catch (erro) {
+      console.warn(`[HUD] Falha ao antecipar o frame ${i}:`, erro);
+    }
+  }
+}
+
+if (HUD_IMAGEM_ANTECIPADA) {
+  HUD_IMAGEM_ANTECIPADA.decoding = "async";
+
+  // Prioriza o carregamento deste arquivo.
+  HUD_IMAGEM_ANTECIPADA.fetchPriority = "high";
+
+  HUD_IMAGEM_ANTECIPADA.addEventListener("load", prepararCacheAntecipado);
+
+  // O navegador começa a carregar o PNG agora,
+  // independentemente da cena do Phaser.
+  HUD_IMAGEM_ANTECIPADA.src = HUD_CONFIG.caminho;
+
+  if (imagemHUDDisponivel()) {
+    prepararCacheAntecipado();
+  }
+}
 
 // =====================================================
 // SOM DE DANO
@@ -63,11 +117,8 @@ function criarCanvasHUD(largura, altura) {
 }
 
 // =====================================================
-// LOCALIZAR A ÁREA VISÍVEL
+// LOCALIZAR ÁREA VISÍVEL
 // =====================================================
-
-// Identifica a arte sem contar as margens
-// transparentes existentes no PNG original.
 
 function encontrarAreaVisivel(pixels, largura, altura) {
   let esquerda = largura;
@@ -101,7 +152,7 @@ function encontrarAreaVisivel(pixels, largura, altura) {
 }
 
 // =====================================================
-// IDENTIFICAR AS CORES DAS BARRAS
+// IDENTIFICAR CORES DAS BARRAS
 // =====================================================
 
 function pixelEhBarra(pixels, i, tipo) {
@@ -120,7 +171,7 @@ function pixelEhBarra(pixels, i, tipo) {
 }
 
 // =====================================================
-// LOCALIZAR AS BARRAS
+// LOCALIZAR VIDA E ESTAMINA
 // =====================================================
 
 function encontrarBarra(pixels, largura, area, tipo) {
@@ -129,7 +180,6 @@ function encontrarBarra(pixels, largura, area, tipo) {
   let topo = Infinity;
   let baixo = -1;
 
-  // Ignora a região do rosto.
   const inicioX = Math.floor(area.x + area.width * 0.12);
 
   const fimX = area.x + area.width;
@@ -174,15 +224,31 @@ function encontrarBarra(pixels, largura, area, tipo) {
 }
 
 // =====================================================
-// PREPARAR A HUD NA RESOLUÇÃO ORIGINAL
+// PREPARAR HUD ORIGINAL
 // =====================================================
 
-// Aqui NÃO reduzimos a imagem para 340 pixels.
-// Mantemos sua resolução original até descobrir
-// quantos pixels ela ocupará na tela do navegador.
-
 function prepararHUDOriginal(scene, frameIndex) {
-  const imagem = scene.textures.get(HUD_CONFIG.chave).getSourceImage();
+  // NOVO:
+  // Se este personagem já está preparado,
+  // não repete o processamento da imagem.
+
+  if (HUD_CACHE.has(frameIndex)) {
+    return HUD_CACHE.get(frameIndex);
+  }
+
+  // Usa a imagem carregada antecipadamente.
+  // Se necessário, aceita a textura do Phaser.
+  let imagem = null;
+
+  if (imagemHUDDisponivel()) {
+    imagem = HUD_IMAGEM_ANTECIPADA;
+  } else if (scene?.textures?.exists(HUD_CONFIG.chave)) {
+    imagem = scene.textures.get(HUD_CONFIG.chave).getSourceImage();
+  }
+
+  if (!imagem) {
+    throw new Error("A imagem da HUD ainda não está disponível.");
+  }
 
   const larguraImagem = imagem.naturalWidth || imagem.width;
 
@@ -204,7 +270,10 @@ function prepararHUDOriginal(scene, frameIndex) {
         ((frameIndex + 1) * alturaImagem) / HUD_CONFIG.quantidadeFrames,
       );
 
-  // Extrai a HUD do personagem selecionado.
+  // ===================================================
+  // EXTRAIR FRAME
+  // ===================================================
+
   const frame = criarCanvasHUD(larguraFrame, fimY - inicioY);
 
   const ctxFrame = frame.getContext("2d", {
@@ -262,7 +331,7 @@ function prepararHUDOriginal(scene, frameIndex) {
   const dadosBase = imgBase.data;
 
   // ===================================================
-  // SEPARAR O PREENCHIMENTO DAS BARRAS
+  // SEPARAR PREENCHIMENTO DAS BARRAS
   // ===================================================
 
   function extrairPreenchimento(barra, tipo) {
@@ -282,13 +351,12 @@ function prepararHUDOriginal(scene, frameIndex) {
           continue;
         }
 
-        // Preserva a cor original do preenchimento.
+        // Preserva exatamente o preenchimento original.
         for (let c = 0; c < 4; c++) {
           saida[i + c] = dadosBase[i + c];
         }
 
-        // Escurece apenas o interior da barra.
-        // Não substitui a moldura nem o retrato.
+        // Escurece o interior da barra vazia.
         for (let c = 0; c < 3; c++) {
           dadosBase[i + c] = Math.round(
             dadosBase[i + c] * HUD_CONFIG.intensidadeBarraVazia,
@@ -308,7 +376,7 @@ function prepararHUDOriginal(scene, frameIndex) {
 
   ctxBase.putImageData(imgBase, 0, 0);
 
-  return {
+  const dados = {
     largura: area.width,
     altura: area.height,
 
@@ -319,23 +387,17 @@ function prepararHUDOriginal(scene, frameIndex) {
     vida,
     estamina,
   };
+
+  // NOVO:
+  // Guarda o resultado para não repetir este trabalho.
+  HUD_CACHE.set(frameIndex, dados);
+
+  return dados;
 }
 
 // =====================================================
 // CONVERTER PARA A RESOLUÇÃO REAL DA TELA
 // =====================================================
-
-// Exemplo:
-//
-// O jogo tem 800 unidades de largura.
-// O navegador pode exibir esse jogo em 1500 pixels.
-//
-// Uma HUD de 340 unidades ocupa aproximadamente
-// 638 pixels na tela.
-//
-// Em vez de gerar uma textura de 340 pixels
-// e ampliá-la, criamos a HUD diretamente
-// com os pixels necessários para sua exibição.
 
 function criarImagemDeTela(origem, larguraPx, alturaPx) {
   const saida = criarCanvasHUD(larguraPx, alturaPx);
@@ -378,7 +440,7 @@ function atualizarPosicaoHUD(scene) {
 
   const dpr = Math.max(1, window.devicePixelRatio || 1);
 
-  // A HUD continua com 340 unidades do jogo.
+  // Largura original preservada em 350.
   const larguraLogica = Math.min(
     HUD_CONFIG.largura,
     Math.max(1, larguraJogo - HUD_CONFIG.x - 10),
@@ -388,7 +450,6 @@ function atualizarPosicaoHUD(scene) {
 
   const alturaCss = (larguraCss * dados.altura) / dados.largura;
 
-  // Posição em relação ao canvas do Phaser.
   const posX = caixaJogo.left - caixaPai.left + HUD_CONFIG.x * escalaX;
 
   const posY = caixaJogo.top - caixaPai.top + HUD_CONFIG.y * escalaY;
@@ -398,15 +459,14 @@ function atualizarPosicaoHUD(scene) {
   overlay.style.top = `${Math.round(posY * dpr) / dpr}px`;
 
   overlay.style.width = `${larguraCss}px`;
+
   overlay.style.height = `${alturaCss}px`;
 
-  // RESOLUÇÃO REAL DO CANVAS DA HUD.
-  // Considera também telas de alta densidade.
   const larguraPx = Math.max(1, Math.round(larguraCss * dpr));
 
   const alturaPx = Math.max(1, Math.round(alturaCss * dpr));
 
-  // Só recria as texturas quando o tamanho mudar.
+  // Só recria texturas se a resolução mudar.
   if (overlay.width !== larguraPx || overlay.height !== alturaPx) {
     overlay.width = larguraPx;
     overlay.height = alturaPx;
@@ -416,7 +476,7 @@ function atualizarPosicaoHUD(scene) {
 }
 
 // =====================================================
-// ATUALIZAR AS BARRAS DA HUD
+// ATUALIZAR BARRAS
 // =====================================================
 
 function atualizarBarrasHUD(scene) {
@@ -431,7 +491,7 @@ function atualizarBarrasHUD(scene) {
 
   const chaveDimensoes = `${canvas.width}x${canvas.height}`;
 
-  // Prepara as imagens uma única vez por tamanho.
+  // Reutiliza as imagens se a resolução não mudou.
   if (hud.texturasDeTela?.chave !== chaveDimensoes) {
     hud.texturasDeTela = {
       chave: chaveDimensoes,
@@ -454,17 +514,15 @@ function atualizarBarrasHUD(scene) {
 
   const ctx = canvas.getContext("2d");
 
-  // Como as imagens já possuem a resolução final,
-  // não precisam de mais suavização.
   ctx.imageSmoothingEnabled = false;
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // Desenha retrato, moldura e barras escuras.
+  // Desenha retrato e moldura originais.
   ctx.drawImage(hud.texturasDeTela.base, 0, 0);
 
   // ===================================================
-  // RECORTAR SOMENTE O PREENCHIMENTO
+  // PREENCHIMENTO PROPORCIONAL
   // ===================================================
 
   function desenharPreenchimento(camada, barra, porcentagem) {
@@ -480,8 +538,6 @@ function atualizarBarrasHUD(scene) {
 
     ctx.beginPath();
 
-    // Diminui da direita para a esquerda,
-    // mantendo o começo da barra fixo.
     ctx.rect(
       barra.x * escalaX,
       barra.y * escalaY,
@@ -518,32 +574,25 @@ function atualizarBarrasHUD(scene) {
 function montarHUD(scene) {
   const frameIndex = HUD_FRAME_PERSONAGEM[scene.personagemSelecionada] ?? 0;
 
+  // Usa o cache antecipado, quando disponível.
   const dados = prepararHUDOriginal(scene, frameIndex);
 
-  // Remove a HUD DOM anterior, se existir.
   scene.hudStatus?.elemento?.remove();
 
   const canvasJogo = scene.game.canvas;
 
-  // O game-container já possui position: fixed
-  // no CSS do Nullborns.
   const pai = canvasJogo.parentElement || document.body;
 
   const overlay = document.createElement("canvas");
 
   overlay.setAttribute("aria-hidden", "true");
 
-  // Esta HUD fica acima da imagem do jogo,
-  // mas não interfere em cliques ou toques.
+  // Configurações visuais preservadas.
   overlay.style.position = "absolute";
   overlay.style.display = "block";
   overlay.style.zIndex = "100";
   overlay.style.pointerEvents = "none";
   overlay.style.touchAction = "none";
-
-  // Não queremos que o navegador amplie
-  // uma textura pequena: o canvas da HUD
-  // será desenhado na resolução da tela.
   overlay.style.imageRendering = "auto";
 
   pai.appendChild(overlay);
@@ -562,29 +611,38 @@ function montarHUD(scene) {
 }
 
 // =====================================================
-// CARREGAMENTO AUTOMÁTICO
+// CARREGAMENTO RÁPIDO DA HUD
 // =====================================================
 
 function iniciarHUD(scene) {
-  // Limpa a HUD de uma inicialização anterior.
   scene.limparPainelStatusFixo?.();
 
   let encerrado = false;
   let falhou = false;
+  let carregamentoPhaserIniciado = false;
 
   const evento = `filecomplete-image-${HUD_CONFIG.chave}`;
 
+  // Verifica se existe uma imagem utilizável.
+  function imagemDisponivel() {
+    return (
+      HUD_CACHE.size > 0 ||
+      imagemHUDDisponivel() ||
+      scene.textures.exists(HUD_CONFIG.chave)
+    );
+  }
+
+  // Monta imediatamente quando houver imagem.
   function montarComSeguranca() {
-    if (encerrado || falhou || !scene.textures.exists(HUD_CONFIG.chave)) {
-      return;
-    }
+    if (encerrado || falhou) return;
+    if (!imagemDisponivel()) return;
 
     try {
       montarHUD(scene);
     } catch (erro) {
       falhou = true;
 
-      console.error("[HUD HD] Não foi possível criar a HUD:", erro);
+      console.error("[HUD] Erro ao montar a HUD:", erro);
     }
   }
 
@@ -595,7 +653,47 @@ function iniciarHUD(scene) {
 
     falhou = true;
 
-    console.error("[HUD HD] Não foi possível carregar:", HUD_CONFIG.caminho);
+    console.error("[HUD] Não foi possível carregar:", HUD_CONFIG.caminho);
+  }
+
+  // Carregamento pelo Phaser como alternativa.
+  // Só é usado se a imagem antecipada falhar.
+  function carregarPeloPhaser() {
+    if (encerrado || falhou || carregamentoPhaserIniciado) {
+      return;
+    }
+
+    if (scene.textures.exists(HUD_CONFIG.chave)) {
+      montarComSeguranca();
+      return;
+    }
+
+    carregamentoPhaserIniciado = true;
+
+    scene.load.once(evento, montarComSeguranca);
+
+    scene.load.on("loaderror", aoFalhar);
+
+    scene.load.image(HUD_CONFIG.chave, HUD_CONFIG.caminho);
+
+    if (!scene.load.isLoading()) {
+      scene.load.start();
+    }
+  }
+
+  // Quando a imagem antecipada terminar de carregar.
+  function aoCarregarAntecipadamente() {
+    if (encerrado) return;
+
+    montarComSeguranca();
+  }
+
+  // Se o navegador não conseguir carregar antecipadamente,
+  // o Phaser faz a tentativa normal.
+  function aoErroAntecipado() {
+    if (encerrado) return;
+
+    carregarPeloPhaser();
   }
 
   // ===================================================
@@ -603,31 +701,34 @@ function iniciarHUD(scene) {
   // ===================================================
 
   function aCadaQuadro() {
-    if (encerrado || falhou || !scene.textures.exists(HUD_CONFIG.chave)) {
-      return;
-    }
+    if (encerrado || falhou) return;
+    if (!imagemDisponivel()) return;
 
     const desejado = HUD_FRAME_PERSONAGEM[scene.personagemSelecionada] ?? 0;
 
-    // Troca automaticamente o retrato.
     if (!scene.hudStatus?.active || scene.hudStatusFrame !== desejado) {
       montarComSeguranca();
     }
 
-    // A HUD acompanha o tamanho da tela,
-    // mas não acompanha o zoom da câmera.
     atualizarPosicaoHUD(scene);
     atualizarBarrasHUD(scene);
   }
 
   // ===================================================
-  // LIMPEZA AO ENCERRAR A CENA
+  // LIMPEZA
   // ===================================================
 
   function limpar() {
     if (encerrado) return;
 
     encerrado = true;
+
+    HUD_IMAGEM_ANTECIPADA?.removeEventListener(
+      "load",
+      aoCarregarAntecipadamente,
+    );
+
+    HUD_IMAGEM_ANTECIPADA?.removeEventListener("error", aoErroAntecipado);
 
     scene.load.off(evento, montarComSeguranca);
 
@@ -654,30 +755,63 @@ function iniciarHUD(scene) {
 
   scene.events.once(Phaser.Scenes.Events.SHUTDOWN, limpar);
 
-  // Se a imagem já estiver carregada.
+  // ===================================================
+  // PRIORIDADE 1 — CACHE JÁ PREPARADO
+  // ===================================================
+
+  if (HUD_CACHE.size > 0) {
+    montarComSeguranca();
+    return;
+  }
+
+  // ===================================================
+  // PRIORIDADE 2 — IMAGEM ANTECIPADA
+  // ===================================================
+
+  if (imagemHUDDisponivel()) {
+    montarComSeguranca();
+    return;
+  }
+
+  // ===================================================
+  // PRIORIDADE 3 — TEXTURA DO PHASER
+  // ===================================================
+
   if (scene.textures.exists(HUD_CONFIG.chave)) {
     montarComSeguranca();
     return;
   }
 
-  // Carregamento automático, sem mexer no preloader.
-  scene.load.once(evento, montarComSeguranca);
+  // ===================================================
+  // PRIORIDADE 4 — AGUARDAR DOWNLOAD ANTECIPADO
+  // ===================================================
 
-  scene.load.on("loaderror", aoFalhar);
+  if (HUD_IMAGEM_ANTECIPADA) {
+    HUD_IMAGEM_ANTECIPADA.addEventListener("load", aoCarregarAntecipadamente);
 
-  scene.load.image(HUD_CONFIG.chave, HUD_CONFIG.caminho);
+    HUD_IMAGEM_ANTECIPADA.addEventListener("error", aoErroAntecipado);
 
-  if (!scene.load.isLoading()) {
-    scene.load.start();
+    // Se o download já falhou antes de iniciar a cena,
+    // usa o carregamento normal do Phaser.
+    if (
+      HUD_IMAGEM_ANTECIPADA.complete &&
+      HUD_IMAGEM_ANTECIPADA.naturalWidth === 0
+    ) {
+      carregarPeloPhaser();
+    }
+
+    return;
   }
+
+  carregarPeloPhaser();
 }
 
 // =====================================================
-// CRIAÇÃO DO STATUS
+// CRIAÇÃO DOS STATUS
 // =====================================================
 
 function criarStatusPlayer(scene) {
-  // VIDA — valores mantidos.
+  // VIDA — VALORES ORIGINAIS.
   scene.vidaMaxima = 100;
   scene.vida = 100;
 
@@ -685,7 +819,7 @@ function criarStatusPlayer(scene) {
   scene.tempoSemDanoParaRegen = 4;
   scene.tempoSemDano = 0;
 
-  // ESTAMINA — valores mantidos.
+  // ESTAMINA — VALORES ORIGINAIS.
   scene.estaminaMaxima = 100;
   scene.estamina = 100;
 
@@ -744,12 +878,8 @@ function tomarDano(scene, quantidade) {
 
   scene.tempoSemDano = 0;
 
-  // DEV ON:
-  // O personagem recebe o efeito e o som de dano,
-  // mas não perde HP.
-  //
-  // DEV OFF:
-  // Perde HP normalmente.
+  // DEV ON: mantém o HP.
+  // DEV OFF: perde HP normalmente.
   if (!scene.developerMode) {
     scene.vida = Phaser.Math.Clamp(
       scene.vida - quantidade,
