@@ -53,6 +53,10 @@ import {
   atualizarSistemaInventario,
   criarSistemaInventario,
 } from "../inventory/ItemPickup.js";
+import {
+  FACTORY_GENERATOR_STATE_KEY,
+  criarInteracaoGeradorFabrica,
+} from "../interactions/FactoryGenerator.js";
 
 const CAMADAS_PISO_TROCA = new Set([
   "chão",
@@ -78,7 +82,8 @@ class Level1Parte2 extends Phaser.Scene {
   }
 
   init(data) {
-    this.luzFabricaAcesa = false;
+    this.luzFabricaAcesa =
+      this.game.registry.get(FACTORY_GENERATOR_STATE_KEY) === true;
     this.respawnX = data.spawnX ?? -1093;
     this.respawnY = data.spawnY ?? -5905;
 
@@ -220,6 +225,7 @@ class Level1Parte2 extends Phaser.Scene {
     criarStatusPlayer(this);
     criarControles(this);
     criarSistemaInventario(this);
+    criarInteracaoGeradorFabrica(this);
 
     if (this.multiplayer) {
       this.iniciarMultiplayer();
@@ -257,9 +263,9 @@ class Level1Parte2 extends Phaser.Scene {
   acenderLuzFabrica() {
     if (this.luzFabricaAcesa) return;
 
-    this.removerLanternaParte2?.();
-    this.removerLanternaParte2 = null;
     this.luzFabricaAcesa = true;
+    this.game.registry.set(FACTORY_GENERATOR_STATE_KEY, true);
+    this.definirIluminacaoFabrica(true);
   }
 
   inicializarTrocaCamada() {
@@ -364,6 +370,7 @@ class Level1Parte2 extends Phaser.Scene {
       this.combatHitStopRemaining = 0;
     }
 
+    this.atualizarInteracaoGeradorFabrica?.();
     atualizarControles(this);
     atualizarSistemaInventario(this);
     atualizarStatusPlayer(this, delta);

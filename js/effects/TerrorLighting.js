@@ -163,6 +163,13 @@ function criarIluminacaoTerror(scene) {
     .setDepth(DEPTH_ESCURIDAO)
     .setDisplaySize(width, height);
 
+  const definirIluminacaoFabrica = (ligada) => {
+    overlay.setVisible(!ligada);
+  };
+
+  scene.definirIluminacaoFabrica = definirIluminacaoFabrica;
+  definirIluminacaoFabrica(scene.luzFabricaAcesa === true);
+
   const ajustarOverlayAoZoom = (zoomX, zoomY) => {
     const centerX = camera.width * camera.originX;
     const centerY = camera.height * camera.originY;
@@ -213,6 +220,9 @@ function criarIluminacaoTerror(scene) {
   const limparIluminacao = () => {
     scene.events.off(Phaser.Scenes.Events.SHUTDOWN, limparIluminacao);
     scene.events.off(Phaser.Scenes.Events.PRE_RENDER, atualizarLanterna);
+    if (scene.definirIluminacaoFabrica === definirIluminacaoFabrica) {
+      scene.definirIluminacaoFabrica = null;
+    }
     overlay.destroy();
     if (scene.textures.exists(TEXTURA_ESCURIDAO_PARTE2)) {
       scene.textures.remove(TEXTURA_ESCURIDAO_PARTE2);

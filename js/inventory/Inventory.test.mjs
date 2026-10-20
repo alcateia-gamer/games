@@ -45,6 +45,43 @@ test("removes empty slots and notifies subscribers", () => {
   assert.equal(notifications, 2);
 });
 
+test("removes multiple requirements atomically and notifies once", () => {
+  const inventory = new Inventory({ slots: [], collectedItemIds: [] });
+  let notifications = 0;
+  inventory.onChange(() => {
+    notifications += 1;
+  });
+  inventory.addItem("gasolina", 2);
+  inventory.addItem("bateria", 1);
+  notifications = 0;
+
+  assert.equal(
+    inventory.removeItems([
+      { itemId: "gasolina", quantity: 1 },
+      { itemId: "bateria", quantity: 1 },
+    ]),
+    true,
+  );
+  assert.equal(inventory.getQuantity("gasolina"), 1);
+  assert.equal(inventory.getQuantity("bateria"), 0);
+  assert.equal(notifications, 1);
+});
+
+test("does not partially remove multiple requirements when one is missing", () => {
+  const inventory = new Inventory({ slots: [], collectedItemIds: [] });
+  inventory.addItem("gasolina", 1);
+
+  assert.equal(
+    inventory.removeItems([
+      { itemId: "gasolina", quantity: 1 },
+      { itemId: "bateria", quantity: 1 },
+    ]),
+    false,
+  );
+  assert.equal(inventory.getQuantity("gasolina"), 1);
+  assert.equal(inventory.getQuantity("bateria"), 0);
+});
+
 test("does not partially add an item when all 20 slots are occupied", () => {
   const slots = [];
 

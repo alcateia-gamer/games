@@ -178,6 +178,12 @@ function criarSistemaInventario(scene) {
   scene.coletarItemProximo = coletarItemProximo;
   scene.botaoColetarItem.on("pointerdown", coletarItemProximo);
   scene.atualizarColetaItens = () => {
+    if (scene.generatorMenuOpen) {
+      scene.itemColetavelProximo = null;
+      definirVisibilidadeBotao(false);
+      return;
+    }
+
     const player = scene.player;
     if (!player?.active) return;
 

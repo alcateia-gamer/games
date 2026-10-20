@@ -112,6 +112,55 @@ class Inventory {
     return removed;
   }
 
+  removeItems(requirements) {
+    if (!Array.isArray(requirements) || requirements.length === 0) {
+      return false;
+    }
+
+    const totalsByItem = new Map();
+
+    for (const requirement of requirements) {
+      if (
+        typeof requirement?.itemId !== "string" ||
+        !Number.isInteger(requirement.quantity) ||
+        requirement.quantity < 1
+      ) {
+        return false;
+      }
+
+      totalsByItem.set(
+        requirement.itemId,
+        (totalsByItem.get(requirement.itemId) ?? 0) + requirement.quantity,
+      );
+    }
+
+    for (const [itemId, quantity] of totalsByItem) {
+      if (this.getQuantity(itemId) < quantity) return false;
+    }
+
+    for (const [itemId, quantity] of totalsByItem) {
+      let remaining = quantity;
+
+      for (
+        let index = this.state.slots.length - 1;
+        index >= 0 && remaining > 0;
+        index -= 1
+      ) {
+        const slot = this.state.slots[index];
+        if (slot.itemId !== itemId) continue;
+
+        const amount = Math.min(remaining, slot.quantity);
+        slot.quantity -= amount;
+        remaining -= amount;
+
+        if (slot.quantity === 0) this.state.slots.splice(index, 1);
+      }
+    }
+
+    this.notifyChanged();
+    return true;
+  }
+
   hasCollected(itemId) {
     return this.state.collectedItemIds.includes(itemId);
   }

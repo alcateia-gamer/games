@@ -255,7 +255,12 @@ function iniciarDash(scene) {
   const estado = scene.estadoDash;
   const player = scene.player;
 
-  if (!estado || !player?.active || !player.body) {
+  if (
+    scene.movimentoBloqueado ||
+    !estado ||
+    !player?.active ||
+    !player.body
+  ) {
     return false;
   }
 

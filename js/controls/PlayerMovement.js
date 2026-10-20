@@ -28,6 +28,12 @@ function atualizarColisaoMapaPlayer(scene) {
 function atualizarMovimento(scene) {
   atualizarColisaoMapaPlayer(scene);
 
+  if (scene.movimentoBloqueado) {
+    scene.player.setVelocity(0, 0);
+    atualizarSomCorrida(scene, false);
+    return;
+  }
+
   // O dash controla a velocidade durante seu impulso.
   // Evita que o movimento normal cancele o dash.
   if (atualizarDash(scene)) {
