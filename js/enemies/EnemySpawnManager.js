@@ -1,5 +1,9 @@
 import { criarInimigoTeste } from "./EnemyTest.js";
 
+// =====================================================
+// ZONAS ORIGINAIS DE SPAWN
+// =====================================================
+
 const SPAWN_ZONES = [
   { id: 1, x: -316, y: 1304 },
   { id: 2, x: 1221, y: 1298 },
@@ -10,30 +14,85 @@ const SPAWN_ZONES = [
   { id: 7, x: -309, y: -1438 },
 ];
 
+// =====================================================
+// CONFIGURACOES
+// =====================================================
+
 const SPAWN_CONFIG = {
   spawnRadius: 250,
   activationRadius: 600,
+
   minEnemies: 3,
   maxEnemies: 5,
+
+  maxActiveEnemies: 10,
+
   minEnemyDistance: 70,
   minPlayerDistance: 150,
-  wallMargin: 32,
-  maxAttemptsPerEnemy: 150,
-  checkInterval: 200,
+
+  wallMargin: 14,
+  maxAttemptsPerEnemy: 65,
+
+  checkInterval: 400,
+  retryDelay: 2500,
+
+  despawnDistance: 1350,
+  despawnGraceMs: 5000,
+
   spawnOnce: true,
+
   debug: false,
-  debugRejectedLimit: 80,
+  debugRejectedLimit: 40,
 };
 
 const ROBOT_TYPES = ["padrao", "serra"];
 
-function obterLimitesDosChunks(map) {
-  const camadas = map?.data?.layers || map?.layers || [];
-  const chunks = camadas.flatMap((camada) => camada.chunks || []);
+const PERFIS = {
+  serra: {
+    frameWidth: 278,
+    frameHeight: 270,
+    scale: 0.36,
+    width: 190,
+    height: 100,
+    offsetX: 44,
+    offsetY: 160,
+  },
 
-  const tileWidth = Number(map.tileWidth || 1);
-  const tileHeight = Number(map.tileHeight || 1);
-  if (chunks.length === 0) {
+  padrao: {
+    frameWidth: 311,
+    frameHeight: 421,
+    scale: 0.23,
+    width: 180,
+    height: 110,
+    offsetX: 65,
+    offsetY: 270,
+  },
+};
+
+// =====================================================
+// DISTANCIA
+// =====================================================
+
+function distancia2(ax, ay, bx, by) {
+  const dx = ax - bx;
+  const dy = ay - by;
+
+  return dx * dx + dy * dy;
+}
+
+// =====================================================
+// LIMITES DO MAPA
+// =====================================================
+
+function limitesMapa(map) {
+  const layers = map?.data?.layers || map?.layers || [];
+
+  const chunks = layers.flatMap((l) => l.chunks || []);
+
+  const w = Number(map?.tileWidth || 1);
+  const h = Number(map?.tileHeight || 1);
+
+  if (!chunks.length) {
     return {
       left: -2304,
       top: -3072,
@@ -41,324 +100,641 @@ function obterLimitesDosChunks(map) {
       bottom: 9216,
     };
   }
+
   return chunks.reduce(
-    (bounds, chunk) => ({
-      left: Math.min(bounds.left, chunk.x * tileWidth),
-      top: Math.min(bounds.top, chunk.y * tileHeight),
-      right: Math.max(
-        bounds.right,
-        (chunk.x + chunk.width) * tileWidth,
-      ),
-      bottom: Math.max(
-        bounds.bottom,
-        (chunk.y + chunk.height) * tileHeight,
-      ),
+    (b, c) => ({
+      left: Math.min(b.left, c.x * w),
+
+      top: Math.min(b.top, c.y * h),
+
+      right: Math.max(b.right, (c.x + c.width) * w),
+
+      bottom: Math.max(b.bottom, (c.y + c.height) * h),
     }),
     {
-      left: Number.POSITIVE_INFINITY,
-      top: Number.POSITIVE_INFINITY,
-      right: Number.NEGATIVE_INFINITY,
-      bottom: Number.NEGATIVE_INFINITY,
+      left: Infinity,
+      top: Infinity,
+      right: -Infinity,
+      bottom: -Infinity,
     },
   );
 }
 
-function retanguloFootprint(x, y, tipoRobo, margem) {
-  const perfil =
-    tipoRobo === "serra"
-      ? {
-          frameWidth: 278,
-          frameHeight: 270,
-          scale: 0.36,
-          width: 190,
-          height: 100,
-          offsetX: 44,
-          offsetY: 160,
-        }
-      : {
-          frameWidth: 311,
-          frameHeight: 421,
-          scale: 0.23,
-          width: 180,
-          height: 110,
-          offsetX: 65,
-          offsetY: 270,
-        };
-  const displayWidth = perfil.frameWidth * perfil.scale;
-  const displayHeight = perfil.frameHeight * perfil.scale;
-  const bodyLeft = x - displayWidth / 2 + perfil.offsetX * perfil.scale;
-  const bodyTop = y - displayHeight / 2 + perfil.offsetY * perfil.scale;
+// =====================================================
+// HITBOX UTILIZADA NO SPAWN
+// =====================================================
+
+function footprint(x, y, tipo, margem) {
+  const p = PERFIS[tipo] || PERFIS.padrao;
+
+  const displayW = p.frameWidth * p.scale;
+
+  const displayH = p.frameHeight * p.scale;
+
   return new Phaser.Geom.Rectangle(
-    bodyLeft - margem,
-    bodyTop - margem,
-    perfil.width + margem * 2,
-    perfil.height + margem * 2,
+    x - displayW / 2 + p.offsetX * p.scale - margem,
+
+    y - displayH / 2 + p.offsetY * p.scale - margem,
+
+    p.width * p.scale + margem * 2,
+
+    p.height * p.scale + margem * 2,
   );
 }
 
-function distanciaQuadrada(aX, aY, bX, bY) {
-  const dx = aX - bX;
-  const dy = aY - bY;
-  return dx * dx + dy * dy;
+// =====================================================
+// LIMPEZA DE ELEMENTOS
+// =====================================================
+
+function destruirElementos(enemy) {
+  for (const nome of [
+    "debugHitboxDano",
+    "fundoVida",
+    "barraVida",
+    "bordaVida",
+  ]) {
+    enemy[nome]?.destroy?.();
+    enemy[nome] = null;
+  }
+
+  enemy.somPassoRobo?.stop?.();
+  enemy.somPassoRobo?.destroy?.();
+
+  enemy.somPassoRobo = null;
 }
 
-function retanguloDoCorpo(corpo) {
-  return new Phaser.Geom.Rectangle(corpo.x, corpo.y, corpo.width, corpo.height);
-}
+// =====================================================
+// GERENCIADOR PRINCIPAL
+// =====================================================
 
 class EnemySpawnManager {
   constructor(scene, map, config = {}) {
     this.scene = scene;
     this.map = map;
-    this.config = { ...SPAWN_CONFIG, ...config };
-    this.regions = SPAWN_ZONES.map((zone) => ({
-      id: zone.id,
-      center: { x: zone.x, y: zone.y },
+
+    this.config = {
+      ...SPAWN_CONFIG,
+      ...config,
+    };
+
+    this.regions = SPAWN_ZONES.map((z) => ({
+      id: z.id,
+
+      center: {
+        x: z.x,
+        y: z.y,
+      },
+
       activated: false,
+      nextAttempt: 0,
+
       enemies: [],
+      positions: [],
+      rejected: [],
     }));
-    this.mapBounds = obterLimitesDosChunks(map);
-    this.debugGraphics = scene.add.graphics().setDepth(190);
-    this.lastCheckAt = Number.NEGATIVE_INFINITY;
+
+    this.mapBounds = limitesMapa(map);
+
+    this.debugGraphics = this.config.debug
+      ? scene.add.graphics().setDepth(190)
+      : null;
+
+    this.enemyGroup = null;
+    this.colliders = [];
+
+    this.lastCheckAt = -Infinity;
+    this.destroyed = false;
 
     this.drawDebugRegions();
+
     scene.events.once(Phaser.Scenes.Events.SHUTDOWN, this.destroy, this);
   }
 
-  update(time) {
-    if (time - this.lastCheckAt < this.config.checkInterval) {
+  // ===================================================
+  // COLISOES COMPARTILHADAS
+  // ===================================================
+
+  prepararColisoes() {
+    if (this.enemyGroup || !this.scene.physics) {
       return;
     }
-    this.lastCheckAt = time;
-    this.checkSpawnZones();
+
+    this.enemyGroup = this.scene.physics.add.group({
+      runChildUpdate: false,
+    });
+
+    this.colliders.push(
+      this.scene.physics.add.collider(this.enemyGroup, this.enemyGroup),
+    );
+
+    if (this.scene.collisionGroup) {
+      this.colliders.push(
+        this.scene.physics.add.collider(
+          this.enemyGroup,
+          this.scene.collisionGroup,
+        ),
+      );
+    }
   }
 
-  checkSpawnZones() {
-    const { scene, config } = this;
-    const player = scene.player;
-    if (!player?.active || (scene.multiplayer && !scene.isMultiplayerHost)) {
+  // ===================================================
+  // QUANTIDADE DE INIMIGOS ATIVOS
+  // ===================================================
+
+  inimigosAtivos() {
+    return (this.scene.inimigos || []).filter(
+      (r) => r?.active && !r.morto && !r.remoteOnly,
+    ).length;
+  }
+
+  // ===================================================
+  // ATUALIZACAO
+  // ===================================================
+
+  update(time) {
+    if (this.destroyed || time - this.lastCheckAt < this.config.checkInterval) {
       return;
     }
 
-    const activationDistanceSquared = config.activationRadius ** 2;
+    this.lastCheckAt = time;
+
+    if (
+      !this.scene.player?.active ||
+      (this.scene.multiplayer && !this.scene.isMultiplayerHost)
+    ) {
+      return;
+    }
+
+    this.limparDistantes(time);
+    this.checkSpawnZones(time);
+  }
+
+  // ===================================================
+  // REMOVER ROBOS MUITO DISTANTES
+  // ===================================================
+
+  limparDistantes(time) {
+    const player = this.scene.player;
+
+    const limite2 = this.config.despawnDistance ** 2;
+
+    for (const region of this.regions) {
+      region.enemies = region.enemies.filter((r) => {
+        if (!r?.active || r.morto) {
+          return false;
+        }
+
+        const distanciaAtual = distancia2(r.x, r.y, player.x, player.y);
+
+        if (distanciaAtual <= limite2) {
+          r.tempoLongeSpawnManager = null;
+          return true;
+        }
+
+        if (r.tempoLongeSpawnManager == null) {
+          r.tempoLongeSpawnManager = time;
+          return true;
+        }
+
+        if (time - r.tempoLongeSpawnManager < this.config.despawnGraceMs) {
+          return true;
+        }
+
+        this.removerInimigoDistante(r);
+
+        return false;
+      });
+    }
+  }
+
+  // ===================================================
+  // REMOCAO SEGURA
+  // ===================================================
+
+  removerInimigoDistante(enemy) {
+    if (!enemy?.active || enemy.morto) {
+      return;
+    }
+
+    this.enemyGroup?.remove(enemy, false, false);
+
+    enemy.setVelocity?.(0, 0);
+
+    destruirElementos(enemy);
+
+    enemy.hitboxDano = null;
+
+    if (enemy.body) {
+      enemy.body.enable = false;
+    }
+
+    enemy.destroy();
+
+    this.scene.inimigos = (this.scene.inimigos || []).filter(
+      (r) => r !== enemy,
+    );
+
+    if (this.scene.inimigoTeste === enemy) {
+      this.scene.inimigoTeste =
+        this.scene.inimigos.find((r) => r?.active) || null;
+    }
+  }
+
+  // ===================================================
+  // VERIFICAR ZONAS DE SPAWN
+  // ===================================================
+
+  checkSpawnZones(time = this.scene.time?.now ?? 0) {
+    const player = this.scene.player;
+
+    if (!player?.active) return;
+
+    const raio2 = this.config.activationRadius ** 2;
+
     for (const region of this.regions) {
       if (
         (this.config.spawnOnce && region.activated) ||
-        distanciaQuadrada(
-          player.x,
-          player.y,
-          region.center.x,
-          region.center.y,
-        ) > activationDistanceSquared
+        time < region.nextAttempt
       ) {
         continue;
       }
-      if (this.config.debug) {
-        console.log("[SpawnManager] Posição válida encontrada");
-      }
 
-      region.activated = true;
-      if (config.debug) {
-        console.log(`[SpawnManager] Jogador entrou na zona ${region.id}`);
-      }
-      this.spawnRegion(region);
-    }
-  }
+      const distanciaZona = distancia2(
+        player.x,
+        player.y,
+        region.center.x,
+        region.center.y,
+      );
 
-  spawnRegion(region) {
-    const quantidade = Phaser.Math.Between(
-      this.config.minEnemies,
-      this.config.maxEnemies,
-    );
-    const criados = [];
-    const escolhidas = [];
-
-    for (let index = 0; index < quantidade; index += 1) {
-      const tipoRobo = ROBOT_TYPES[
-        Math.floor(Math.random() * ROBOT_TYPES.length)
-      ];
-      const position = this.findPosition(region, tipoRobo, escolhidas);
-      if (!position) {
-        console.warn(`[SpawnManager] Sem posição válida na zona ${region.id}`);
+      if (distanciaZona > raio2) {
         continue;
       }
-      const enemy = criarInimigoTeste(this.scene, {
-        x: position.x,
-        y: position.y,
-        tipoRobo,
-        velocidade: tipoRobo === "serra" ? 62 : 50,
-        distanciaDeteccao: tipoRobo === "serra" ? 600 : 550,
-        distanciaAtaque: tipoRobo === "serra" ? 68 : 180,
-        distanciaGrupo: 220,
-        vidaMaxima: tipoRobo === "serra" ? 120 : 100,
-        danoContato: 12,
-      });
-      criados.push(enemy);
-      escolhidas.push(position);
-      region.enemies.push(enemy);
+
+      // =========================================
+      // VERIFICAR VAGAS
+      // =========================================
+
+      const vagas = this.config.maxActiveEnemies - this.inimigosAtivos();
+
+      const tiposAtivos = new Set(
+        region.enemies
+          .filter((r) => r?.active && !r.morto)
+          .map((r) => r.tipoRobo),
+      );
+
+      // Garantir que os dois tipos existam.
+      const faltantes = ROBOT_TYPES.filter((tipo) => !tiposAtivos.has(tipo));
+
+      if (vagas < faltantes.length || vagas <= 0) {
+        region.nextAttempt = time + this.config.retryDelay;
+
+        continue;
+      }
+
+      // =========================================
+      // CRIAR GRUPO
+      // =========================================
+
+      const criados = this.spawnRegion(region, vagas);
+
+      const presentes = new Set(
+        region.enemies
+          .filter((r) => r?.active && !r.morto)
+          .map((r) => r.tipoRobo),
+      );
+
+      // So considera a zona ativada se
+      // houver robo-serra E robo atirador.
+      region.activated = ROBOT_TYPES.every((tipo) => presentes.has(tipo));
+
+      region.nextAttempt = time + this.config.retryDelay;
+
       if (this.config.debug) {
-        console.log(`[SpawnManager] Robô ${tipoRobo} criado`);
+        console.log(
+          `[SpawnManager] Zona ${region.id}: ` +
+            `${criados} criados; ` +
+            `serra=${presentes.has("serra")}, ` +
+            `disparo=${presentes.has("padrao")}`,
+        );
       }
     }
-
-    if (this.config.debug) {
-      console.log(
-        `[SpawnManager] ${criados.length}/${quantidade} robôs gerados`,
-      );
-    }
-    this.addCollidersForNewEnemies(criados);
-    this.drawDebugRegions();
   }
 
-  findPosition(region, tipoRobo, positions) {
-    const rejected = [];
-    for (let attempt = 0; attempt < this.config.maxAttemptsPerEnemy; attempt += 1) {
-      const angle = Math.random() * Math.PI * 2;
-      const radius = Math.sqrt(Math.random()) * this.config.spawnRadius;
-      const candidate = {
-        x: region.center.x + Math.cos(angle) * radius,
-        y: region.center.y + Math.sin(angle) * radius,
-      };
-      if (this.isValidPosition(candidate, tipoRobo, positions)) {
-        region.positions = positions.concat(candidate);
-        region.rejected = rejected;
-        return candidate;
+  // ===================================================
+  // GERAR ROBOS DE UMA REGIAO
+  // ===================================================
+
+  spawnRegion(region, vagas = Infinity) {
+    region.enemies = region.enemies.filter((r) => r?.active && !r.morto);
+
+    const existentes = region.enemies.length;
+
+    const min = Math.max(2, Math.floor(this.config.minEnemies));
+
+    const max = Math.max(min, Math.floor(this.config.maxEnemies));
+
+    if (!Number.isFinite(region.targetCount)) {
+      region.targetCount = Phaser.Math.Between(min, max);
+    }
+
+    // =========================================
+    // IDENTIFICAR TIPOS OBRIGATORIOS
+    // =========================================
+
+    const tiposAtivos = new Set(region.enemies.map((r) => r.tipoRobo));
+
+    const necessarios = ROBOT_TYPES.filter((tipo) => !tiposAtivos.has(tipo));
+
+    if (vagas < necessarios.length) {
+      return 0;
+    }
+
+    const total = Math.min(Math.max(0, region.targetCount - existentes), vagas);
+
+    // Primeiro garante uma unidade de cada classe.
+    const tipos = [...necessarios];
+
+    // Outros robos sorteados normalmente.
+    while (tipos.length < total) {
+      tipos.push(ROBOT_TYPES[Math.floor(Math.random() * ROBOT_TYPES.length)]);
+    }
+
+    // =========================================
+    // PLANEJAR POSICOES ANTES DE CRIAR
+    // =========================================
+
+    const escolhidas = [];
+    const planejados = [];
+
+    for (const tipo of tipos) {
+      const pos = this.findPosition(region, tipo, escolhidas);
+
+      if (!pos) {
+        // Se falhar um dos tipos obrigatorios,
+        // nao cria um grupo desequilibrado.
+        if (necessarios.includes(tipo)) {
+          return 0;
+        }
+
+        continue;
       }
-      if (rejected.length < this.config.debugRejectedLimit) {
-        rejected.push(candidate);
+
+      escolhidas.push(pos);
+
+      planejados.push({
+        tipo,
+        pos,
+      });
+    }
+
+    // =========================================
+    // CRIAR SPRITES
+    // =========================================
+
+    const criados = [];
+
+    for (const { tipo, pos } of planejados) {
+      this.scene.networkEnemyId = (this.scene.networkEnemyId || 0) + 1;
+
+      const enemy = criarInimigoTeste(this.scene, {
+        x: pos.x,
+        y: pos.y,
+
+        tipoRobo: tipo,
+
+        networkId: `${
+          this.scene.multiplayerManager?.playerId || "local"
+        }-zone-${region.id}-${this.scene.networkEnemyId}`,
+
+        formacaoIndex: this.scene.inimigos.length,
+
+        velocidade: tipo === "serra" ? 62 : 50,
+
+        distanciaDeteccao: tipo === "serra" ? 600 : 550,
+
+        distanciaAtaque: tipo === "serra" ? 68 : 180,
+
+        distanciaGrupo: 220,
+
+        vidaMaxima: tipo === "serra" ? 120 : 100,
+
+        danoContato: 12,
+
+        // Robos atiradores mais perigosos.
+        tempoEntreTiros: tipo === "padrao" ? 600 : 720,
+
+        danoLaser: tipo === "padrao" ? 6 : 5,
+      });
+
+      if (!enemy) continue;
+
+      this.prepararColisoes();
+
+      this.enemyGroup?.add(enemy);
+
+      region.enemies.push(enemy);
+      criados.push(enemy);
+    }
+
+    region.positions = escolhidas;
+
+    this.drawDebugRegions();
+
+    return criados.length;
+  }
+
+  // ===================================================
+  // PROCURAR POSICAO DE SPAWN
+  // ===================================================
+
+  findPosition(region, tipoRobo, positions) {
+    const rejeitados = [];
+
+    for (
+      let tentativa = 0;
+      tentativa < this.config.maxAttemptsPerEnemy;
+      tentativa++
+    ) {
+      const ang = Math.random() * Math.PI * 2;
+
+      const raio = Math.sqrt(Math.random()) * this.config.spawnRadius;
+
+      const ponto = {
+        x: region.center.x + Math.cos(ang) * raio,
+
+        y: region.center.y + Math.sin(ang) * raio,
+      };
+
+      if (this.isValidPosition(ponto, tipoRobo, positions)) {
+        region.rejected = rejeitados;
+        return ponto;
+      }
+
+      if (rejeitados.length < this.config.debugRejectedLimit) {
+        rejeitados.push(ponto);
       }
     }
-    region.rejected = rejected;
+
+    region.rejected = rejeitados;
     return null;
   }
 
+  // ===================================================
+  // VERIFICAR POSICAO LIVRE
+  // ===================================================
+
   isValidPosition(candidate, tipoRobo, positions) {
-    const footprint = retanguloFootprint(
+    const rect = footprint(
       candidate.x,
       candidate.y,
       tipoRobo,
       this.config.wallMargin,
     );
-    const bounds = this.mapBounds;
+
+    const b = this.mapBounds;
+
+    // Limites do mapa.
     if (
-      footprint.left < bounds.left ||
-      footprint.top < bounds.top ||
-      footprint.right > bounds.right ||
-      footprint.bottom > bounds.bottom
+      rect.left < b.left ||
+      rect.right > b.right ||
+      rect.top < b.top ||
+      rect.bottom > b.bottom
     ) {
       return false;
     }
 
-    const minDistanceSquared = this.config.minEnemyDistance ** 2;
+    const min2 = this.config.minEnemyDistance ** 2;
+
+    // Distancia de outras posicoes planejadas.
     if (
       positions.some(
-        (position) =>
-          distanciaQuadrada(candidate.x, candidate.y, position.x, position.y) <
-          minDistanceSquared,
+        (p) => distancia2(candidate.x, candidate.y, p.x, p.y) < min2,
       )
     ) {
       return false;
     }
 
+    // Distancia do jogador.
     const player = this.scene.player;
+
     if (
       player?.active &&
-      distanciaQuadrada(candidate.x, candidate.y, player.x, player.y) <
+      distancia2(candidate.x, candidate.y, player.x, player.y) <
         this.config.minPlayerDistance ** 2
     ) {
       return false;
     }
 
-    const corpos = this.scene.collisionGroup?.getChildren?.() || [];
-    if (
-      corpos.some(
-        (corpo) =>
-          corpo?.body &&
-          Phaser.Geom.Intersects.RectangleToRectangle(
-            footprint,
-            retanguloDoCorpo(corpo.body),
-          ),
-      )
-    ) {
-      return false;
+    // Colisoes do mapa.
+    for (const bloco of this.scene.collisionGroup?.getChildren?.() || []) {
+      if (!bloco?.body || bloco.body.enable === false) {
+        continue;
+      }
+
+      const bb = new Phaser.Geom.Rectangle(
+        bloco.body.x,
+        bloco.body.y,
+        bloco.body.width,
+        bloco.body.height,
+      );
+
+      if (Phaser.Geom.Intersects.RectangleToRectangle(rect, bb)) {
+        return false;
+      }
     }
 
-    const inimigos = this.scene.inimigos || [];
-    return !inimigos.some(
-      (inimigo) =>
-        inimigo?.active &&
-        distanciaQuadrada(candidate.x, candidate.y, inimigo.x, inimigo.y) <
-          minDistanceSquared,
+    // Outros inimigos.
+    return !(this.scene.inimigos || []).some(
+      (r) =>
+        r?.active &&
+        !r.morto &&
+        distancia2(candidate.x, candidate.y, r.x, r.y) < min2,
     );
   }
+
+  // ===================================================
+  // COMPATIBILIDADE COM CHAMADAS ANTERIORES
+  // ===================================================
 
   addCollidersForNewEnemies(enemies) {
-    const { scene } = this;
-    if (!scene.physics || enemies.length === 0) {
-      return;
-    }
+    if (!enemies?.length) return;
 
-    const existing = (scene.inimigos || []).filter(
-      (enemy) => enemy.active && !enemies.includes(enemy),
-    );
+    this.prepararColisoes();
+
     for (const enemy of enemies) {
-      if (scene.collisionGroup) {
-        scene.physics.add.collider(enemy, scene.collisionGroup);
-      }
-      for (const other of existing) {
-        scene.physics.add.collider(enemy, other);
-      }
-      for (const other of enemies) {
-        if (other !== enemy && enemies.indexOf(other) < enemies.indexOf(enemy)) {
-          scene.physics.add.collider(enemy, other);
-        }
+      if (enemy?.active && !this.enemyGroup.contains(enemy)) {
+        this.enemyGroup.add(enemy);
       }
     }
   }
 
+  // ===================================================
+  // DEBUG DAS ZONAS
+  // ===================================================
+
   drawDebugRegions() {
-    if (!this.config.debug) {
-      this.debugGraphics.clear();
+    const g = this.debugGraphics;
+
+    if (!g || !this.config.debug) {
       return;
     }
 
-    const graphics = this.debugGraphics;
-    graphics.clear();
+    g.clear();
+
     for (const region of this.regions) {
-      graphics.lineStyle(2, 0xffcc00, 0.8);
-      graphics.strokeCircle(
-        region.center.x,
-        region.center.y,
-        this.config.spawnRadius,
-      );
-      graphics.lineStyle(2, 0x00ccff, 0.8);
-      graphics.strokeCircle(
+      g.lineStyle(2, 0xffcc00, 0.8);
+
+      g.strokeCircle(region.center.x, region.center.y, this.config.spawnRadius);
+
+      g.lineStyle(2, 0x00ccff, 0.8);
+
+      g.strokeCircle(
         region.center.x,
         region.center.y,
         this.config.activationRadius,
       );
-      graphics.fillStyle(0xffffff, 1);
-      graphics.fillCircle(region.center.x, region.center.y, 5);
 
-      if (region.activated) {
-        graphics.fillStyle(0xff3333, 0.9);
-        (region.positions || []).forEach((position) =>
-          graphics.fillCircle(position.x, position.y, 7),
-        );
-        graphics.fillStyle(0xff00ff, 0.5);
-        (region.rejected || []).forEach((position) =>
-          graphics.fillCircle(position.x, position.y, 3),
-        );
+      if (!region.activated) continue;
+
+      g.fillStyle(0xff3333, 0.9);
+
+      for (const p of region.positions) {
+        g.fillCircle(p.x, p.y, 7);
+      }
+
+      g.fillStyle(0xff00ff, 0.5);
+
+      for (const p of region.rejected) {
+        g.fillCircle(p.x, p.y, 3);
       }
     }
   }
 
+  // ===================================================
+  // DESTRUIR GERENCIADOR
+  // ===================================================
+
   destroy() {
+    if (this.destroyed) return;
+
+    this.destroyed = true;
+
+    for (const c of this.colliders) {
+      c?.destroy?.();
+    }
+
+    this.colliders = [];
+
+    this.enemyGroup?.destroy(false);
+    this.enemyGroup = null;
+
     this.debugGraphics?.destroy();
     this.debugGraphics = null;
+
     this.regions = [];
   }
 }
 
 export { SPAWN_CONFIG, SPAWN_ZONES, EnemySpawnManager };
+
 export default EnemySpawnManager;

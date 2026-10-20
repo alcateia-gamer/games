@@ -1,48 +1,234 @@
-function obterObstaculosMapa(scene) {
-  if (!scene?.collisionGroup?.getChildren) {
+const CONFIG = Object.freeze({
+  tamanhoCelula: 32,
+  tamanhoIndice: 128,
+  margemRota: 220,
+  distanciaMaximaRota: 960,
+  expansoesMaximas: 2600,
+  buscasPorFrame: 2,
+  intervaloRecalculo: 1350,
+  toleranciaPonto: 15,
+});
+
+const caches = new WeakMap();
+
+const direcoes = [
+  [0, -1, 1],
+  [1, 0, 1],
+  [0, 1, 1],
+  [-1, 0, 1],
+  [1, -1, Math.SQRT2],
+  [1, 1, Math.SQRT2],
+  [-1, 1, Math.SQRT2],
+  [-1, -1, Math.SQRT2],
+];
+
+// =====================================================
+// LEITURA SEGURA DOS GRUPOS
+// =====================================================
+
+function obterFilhosGrupoSeguro(grupo) {
+  if (!grupo?.getChildren) return [];
+
+  try {
+    const filhos = grupo.getChildren();
+    return Array.isArray(filhos) ? filhos : [];
+  } catch (_) {
     return [];
   }
-
-  const blocos = obterFilhosGrupoSeguro(scene.collisionGroup);
-  return blocos.filter((bloco) => bloco && bloco.body);
 }
 
-function calcularBoundsInimigoParaPosicao(inimigo, x, y) {
-  if (!inimigo || !inimigo.body) {
-    return new Phaser.Geom.Rectangle(x - 8, y - 8, 16, 16);
+function chave(x, y) {
+  return `${x},${y}`;
+}
+
+// =====================================================
+// ÍNDICE ESPACIAL COMPARTILHADO
+// =====================================================
+
+function criarIndice(scene) {
+  const grupo = scene?.collisionGroup;
+  const filhos = obterFilhosGrupoSeguro(grupo);
+
+  const anterior = caches.get(scene);
+
+  if (
+    anterior &&
+    anterior.grupo === grupo &&
+    anterior.quantidade === filhos.length
+  ) {
+    return anterior;
   }
 
-  const largura = inimigo.body.width || 32;
-  const altura = inimigo.body.height || 32;
-  return new Phaser.Geom.Rectangle(
-    x - largura / 2,
-    y - altura / 2,
-    largura,
-    altura,
-  );
+  const indice = new Map();
+  const grandes = [];
+
+  for (const bloco of filhos) {
+    const body = bloco?.body;
+
+    if (
+      !body ||
+      body.enable === false ||
+      !(body.width > 0) ||
+      !(body.height > 0)
+    ) {
+      continue;
+    }
+
+    const rect = new Phaser.Geom.Rectangle(
+      body.x,
+      body.y,
+      body.width,
+      body.height,
+    );
+
+    const minX = Math.floor(rect.left / CONFIG.tamanhoIndice);
+
+    const maxX = Math.floor(rect.right / CONFIG.tamanhoIndice);
+
+    const minY = Math.floor(rect.top / CONFIG.tamanhoIndice);
+
+    const maxY = Math.floor(rect.bottom / CONFIG.tamanhoIndice);
+
+    const totalCelulas = (maxX - minX + 1) * (maxY - minY + 1);
+
+    if (totalCelulas > 256) {
+      grandes.push({ rect, body });
+      continue;
+    }
+
+    const item = { rect, body };
+
+    for (let cy = minY; cy <= maxY; cy++) {
+      for (let cx = minX; cx <= maxX; cx++) {
+        const id = chave(cx, cy);
+
+        if (!indice.has(id)) {
+          indice.set(id, []);
+        }
+
+        indice.get(id).push(item);
+      }
+    }
+  }
+
+  const cache = {
+    grupo,
+    quantidade: filhos.length,
+    indice,
+    grandes,
+    frameBusca: -1,
+    buscasNoFrame: 0,
+  };
+
+  caches.set(scene, cache);
+
+  return cache;
 }
+
+// Chamar quando portas ou outras colisões
+// estáticas mudarem de tamanho ou posição
+// sem alterar a quantidade de objetos.
+
+function invalidarCacheNavegacao(scene) {
+  if (scene) {
+    caches.delete(scene);
+  }
+}
+
+// =====================================================
+// BUSCA DE OBSTÁCULOS PRÓXIMOS
+// =====================================================
+
+function candidatos(cache, rect) {
+  const resultado = [];
+  const vistos = new Set();
+
+  const minX = Math.floor(rect.left / CONFIG.tamanhoIndice);
+
+  const maxX = Math.floor(rect.right / CONFIG.tamanhoIndice);
+
+  const minY = Math.floor(rect.top / CONFIG.tamanhoIndice);
+
+  const maxY = Math.floor(rect.bottom / CONFIG.tamanhoIndice);
+
+  for (let y = minY; y <= maxY; y++) {
+    for (let x = minX; x <= maxX; x++) {
+      const itens = cache.indice.get(chave(x, y)) || [];
+
+      for (const item of itens) {
+        if (vistos.has(item)) continue;
+
+        vistos.add(item);
+        resultado.push(item);
+      }
+    }
+  }
+
+  return resultado.concat(cache.grandes);
+}
+
+// =====================================================
+// VERIFICAR SE UMA ÁREA ESTÁ LIVRE
+// =====================================================
+
+function retanguloLivreDoMapa(scene, rect) {
+  if (!scene || !rect) return false;
+
+  const cache = criarIndice(scene);
+
+  for (const item of candidatos(cache, rect)) {
+    if (item.body.enable === false) {
+      continue;
+    }
+
+    if (Phaser.Geom.Intersects.RectangleToRectangle(rect, item.rect)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+// =====================================================
+// VERIFICAR LINHA DE VISÃO / CAMINHO
+// =====================================================
 
 function caminhoDiretoBloqueado(scene, inimigo, alvo) {
   if (!scene || !inimigo || !alvo) {
     return false;
   }
 
-  const blocos = obterObstaculosMapa(scene);
-  if (blocos.length === 0) {
+  const coordenadas = [inimigo.x, inimigo.y, alvo.x, alvo.y];
+
+  if (!coordenadas.every(Number.isFinite)) {
+    return true;
+  }
+
+  const cache = criarIndice(scene);
+
+  if (!cache.indice.size && !cache.grandes.length) {
     return false;
   }
 
+  const x = Math.min(inimigo.x, alvo.x);
+
+  const y = Math.min(inimigo.y, alvo.y);
+
+  const area = new Phaser.Geom.Rectangle(
+    x,
+    y,
+    Math.max(1, Math.abs(alvo.x - inimigo.x)),
+    Math.max(1, Math.abs(alvo.y - inimigo.y)),
+  );
+
   const linha = new Phaser.Geom.Line(inimigo.x, inimigo.y, alvo.x, alvo.y);
 
-  for (const bloco of blocos) {
-    const rect = new Phaser.Geom.Rectangle(
-      bloco.body.x,
-      bloco.body.y,
-      bloco.body.width,
-      bloco.body.height,
-    );
+  for (const item of candidatos(cache, area)) {
+    if (item.body.enable === false) {
+      continue;
+    }
 
-    if (Phaser.Geom.Intersects.LineToRectangle(linha, rect)) {
+    if (Phaser.Geom.Intersects.LineToRectangle(linha, item.rect)) {
       return true;
     }
   }
@@ -50,19 +236,34 @@ function caminhoDiretoBloqueado(scene, inimigo, alvo) {
   return false;
 }
 
-function posicaoLivreParaDesvio(scene, inimigo, x, y) {
-  const bounds = calcularBoundsInimigoParaPosicao(inimigo, x, y);
-  const blocos = obterObstaculosMapa(scene);
+// =====================================================
+// VERIFICAR ESPAÇO PARA O CORPO DO ROBÔ
+// =====================================================
 
-  for (const bloco of blocos) {
-    const rect = new Phaser.Geom.Rectangle(
-      bloco.body.x,
-      bloco.body.y,
-      bloco.body.width,
-      bloco.body.height,
-    );
+function livreParaInimigo(scene, inimigo, x, y, cache) {
+  const largura = Math.max(14, Number(inimigo.body?.width) || 24);
 
-    if (Phaser.Geom.Intersects.RectangleToRectangle(bounds, rect)) {
+  const altura = Math.max(14, Number(inimigo.body?.height) || 24);
+
+  const deslocamentoX =
+    (inimigo.body?.x ?? inimigo.x - largura / 2) + largura / 2 - inimigo.x;
+
+  const deslocamentoY =
+    (inimigo.body?.y ?? inimigo.y - altura / 2) + altura / 2 - inimigo.y;
+
+  const rect = new Phaser.Geom.Rectangle(
+    x + deslocamentoX - largura / 2,
+    y + deslocamentoY - altura / 2,
+    largura,
+    altura,
+  );
+
+  for (const item of candidatos(cache, rect)) {
+    if (item.body.enable === false) {
+      continue;
+    }
+
+    if (Phaser.Geom.Intersects.RectangleToRectangle(rect, item.rect)) {
       return false;
     }
   }
@@ -70,287 +271,269 @@ function posicaoLivreParaDesvio(scene, inimigo, x, y) {
   return true;
 }
 
-function escolherDirecaoDesvio(scene, inimigo, alvo) {
-  const deslocamentos = [
-    { x: -55, y: 0 },
-    { x: 55, y: 0 },
-    { x: 0, y: -55 },
-    { x: 0, y: 55 },
-    { x: -80, y: -30 },
-    { x: -80, y: 30 },
-    { x: 80, y: -30 },
-    { x: 80, y: 30 },
-  ];
-
-  let melhor = null;
-  let melhorScore = Number.POSITIVE_INFINITY;
-
-  for (const deslocamento of deslocamentos) {
-    const xDestino = inimigo.x + deslocamento.x;
-    const yDestino = inimigo.y + deslocamento.y;
-
-    if (!posicaoLivreParaDesvio(scene, inimigo, xDestino, yDestino)) {
-      continue;
-    }
-
-    const distancia = Phaser.Math.Distance.Between(
-      xDestino,
-      yDestino,
-      alvo.x,
-      alvo.y,
-    );
-    const score =
-      distancia +
-      Math.abs(deslocamento.x) * 0.05 +
-      Math.abs(deslocamento.y) * 0.05;
-
-    if (score < melhorScore) {
-      melhorScore = score;
-      melhor = { x: xDestino, y: yDestino };
-    }
-  }
-
-  return melhor;
-}
-
 // =====================================================
-// ATUALIZA INIMIGO
+// A* OTIMIZADO
 // =====================================================
 
-function obterFilhosGrupoSeguro(grupo) {
-  if (!grupo?.getChildren) {
+function calcularRotaAStar(scene, inimigo, alvo) {
+  const cache = criarIndice(scene);
+
+  if (!cache.indice.size && !cache.grandes.length) {
     return [];
   }
 
-  try {
-    const filhos = grupo.getChildren();
-    return Array.isArray(filhos) ? filhos : [];
-  } catch {
+  const d = Phaser.Math.Distance.Between(inimigo.x, inimigo.y, alvo.x, alvo.y);
+
+  if (!Number.isFinite(d) || d > CONFIG.distanciaMaximaRota) {
     return [];
   }
-}
 
-function construirGridNavegacao(scene, inimigo, cellSize = 24) {
-  const blocos = obterObstaculosMapa(scene);
+  const cel = CONFIG.tamanhoCelula;
+  const margem = CONFIG.margemRota;
 
-  if (!blocos.length) {
-    return null;
-  }
+  const minX = Math.floor((Math.min(inimigo.x, alvo.x) - margem) / cel);
 
-  const margem = Math.ceil(
-    Math.max(inimigo?.body?.width || 30, inimigo?.body?.height || 15) * 0.5 +
-      12,
-  );
-  let minX = Infinity;
-  let maxX = -Infinity;
-  let minY = Infinity;
-  let maxY = -Infinity;
+  const maxX = Math.ceil((Math.max(inimigo.x, alvo.x) + margem) / cel);
 
-  for (const bloco of blocos) {
-    const rect = new Phaser.Geom.Rectangle(
-      bloco.body.x,
-      bloco.body.y,
-      bloco.body.width,
-      bloco.body.height,
-    );
+  const minY = Math.floor((Math.min(inimigo.y, alvo.y) - margem) / cel);
 
-    minX = Math.min(minX, rect.x - margem);
-    maxX = Math.max(maxX, rect.right + margem);
-    minY = Math.min(minY, rect.y - margem);
-    maxY = Math.max(maxY, rect.bottom + margem);
-  }
+  const maxY = Math.ceil((Math.max(inimigo.y, alvo.y) + margem) / cel);
 
-  const cols = Math.ceil((maxX - minX) / cellSize) + 2;
-  const rows = Math.ceil((maxY - minY) / cellSize) + 2;
-  const grid = Array.from({ length: rows }, () => Array(cols).fill(0));
+  const inicio = {
+    x: Math.floor(inimigo.x / cel),
+    y: Math.floor(inimigo.y / cel),
+  };
 
-  for (const bloco of blocos) {
-    const rect = new Phaser.Geom.Rectangle(
-      bloco.body.x,
-      bloco.body.y,
-      bloco.body.width,
-      bloco.body.height,
-    );
+  let fim = {
+    x: Math.floor(alvo.x / cel),
+    y: Math.floor(alvo.y / cel),
+  };
 
-    const startCol = Math.floor((rect.x - margem - minX) / cellSize);
-    const endCol = Math.floor((rect.right + margem - minX) / cellSize);
-    const startRow = Math.floor((rect.y - margem - minY) / cellSize);
-    const endRow = Math.floor((rect.bottom + margem - minY) / cellSize);
+  const livres = new Map();
 
-    for (
-      let row = Math.max(0, startRow);
-      row <= Math.min(rows - 1, endRow);
-      row += 1
-    ) {
-      for (
-        let col = Math.max(0, startCol);
-        col <= Math.min(cols - 1, endCol);
-        col += 1
-      ) {
-        grid[row][col] = 1;
-      }
+  function podePassar(x, y) {
+    if (x < minX || x > maxX || y < minY || y > maxY) {
+      return false;
     }
+
+    const id = chave(x, y);
+
+    if (livres.has(id)) {
+      return livres.get(id);
+    }
+
+    const valor = livreParaInimigo(
+      scene,
+      inimigo,
+      (x + 0.5) * cel,
+      (y + 0.5) * cel,
+      cache,
+    );
+
+    livres.set(id, valor);
+
+    return valor;
   }
 
-  return {
-    grid,
-    cols,
-    rows,
-    cellSize,
-    minX,
-    minY,
-    margem,
-  };
-}
+  // Se o destino encostou numa parede,
+  // procura uma célula livre próxima.
 
-function cellParaCoordenada(gridInfo, col, row) {
-  return {
-    x: gridInfo.minX + col * gridInfo.cellSize + gridInfo.cellSize / 2,
-    y: gridInfo.minY + row * gridInfo.cellSize + gridInfo.cellSize / 2,
-  };
-}
+  if (!podePassar(fim.x, fim.y)) {
+    let maisProximo = Infinity;
+    let novoFim = null;
 
-function mundoParaCell(gridInfo, x, y) {
-  const col = Math.floor((x - gridInfo.minX) / gridInfo.cellSize);
-  const row = Math.floor((y - gridInfo.minY) / gridInfo.cellSize);
-  return { col, row };
-}
+    for (let ry = -3; ry <= 3; ry++) {
+      for (let rx = -3; rx <= 3; rx++) {
+        const x = fim.x + rx;
+        const y = fim.y + ry;
 
-function celulaCaminhavel(gridInfo, col, row) {
-  if (!gridInfo) {
-    return false;
-  }
-
-  if (col < 0 || row < 0 || col >= gridInfo.cols || row >= gridInfo.rows) {
-    return false;
-  }
-
-  return gridInfo.grid[row]?.[col] !== 1;
-}
-
-function heuristica(a, b) {
-  return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
-}
-
-function calcularRotaAStar(scene, inimigo, alvo, cellSize = 24) {
-  const gridInfo = construirGridNavegacao(scene, inimigo, cellSize);
-
-  if (!gridInfo) {
-    return [];
-  }
-
-  const startCell = mundoParaCell(gridInfo, inimigo.x, inimigo.y);
-  const goalCell = mundoParaCell(gridInfo, alvo.x, alvo.y);
-
-  if (!celulaCaminhavel(gridInfo, startCell.col, startCell.row)) {
-    return [];
-  }
-
-  if (!celulaCaminhavel(gridInfo, goalCell.col, goalCell.row)) {
-    let melhor = null;
-    let melhorDistancia = Infinity;
-
-    for (
-      let y = Math.max(0, goalCell.row - 2);
-      y <= Math.min(gridInfo.rows - 1, goalCell.row + 2);
-      y += 1
-    ) {
-      for (
-        let x = Math.max(0, goalCell.col - 2);
-        x <= Math.min(gridInfo.cols - 1, goalCell.col + 2);
-        x += 1
-      ) {
-        if (!celulaCaminhavel(gridInfo, x, y)) {
+        if (!podePassar(x, y)) {
           continue;
         }
 
-        const dist = Math.abs(x - goalCell.col) + Math.abs(y - goalCell.row);
-        if (dist < melhorDistancia) {
-          melhorDistancia = dist;
-          melhor = { col: x, row: y };
+        const pontuacao = rx * rx + ry * ry;
+
+        if (pontuacao < maisProximo) {
+          maisProximo = pontuacao;
+
+          novoFim = {
+            x,
+            y,
+          };
         }
       }
     }
 
-    if (!melhor) {
-      return [];
-    }
+    if (!novoFim) return [];
 
-    goalCell.col = melhor.col;
-    goalCell.row = melhor.row;
+    fim = novoFim;
   }
 
-  const openSet = [
+  function heuristica(x, y) {
+    return Math.hypot(fim.x - x, fim.y - y);
+  }
+
+  const inicial = chave(inicio.x, inicio.y);
+
+  const aberto = [
     {
-      x: startCell.col,
-      y: startCell.row,
-      g: 0,
-      f: heuristica(startCell, goalCell),
+      x: inicio.x,
+      y: inicio.y,
+      f: heuristica(inicio.x, inicio.y),
     },
   ];
-  const cameFrom = new Map();
-  const gScore = new Map();
 
-  gScore.set(`${startCell.col},${startCell.row}`, 0);
+  const g = new Map([[inicial, 0]]);
 
-  while (openSet.length > 0) {
-    openSet.sort((a, b) => a.f - b.f || a.g - b.g);
-    const atual = openSet.shift();
-    const atualKey = `${atual.x},${atual.y}`;
+  const pais = new Map();
+  const fechados = new Set();
 
-    if (atual.x === goalCell.col && atual.y === goalCell.row) {
-      const caminho = [];
-      let cursor = atualKey;
+  let expansoes = 0;
 
-      while (cursor) {
-        const [cx, cy] = cursor.split(",").map(Number);
-        caminho.push(cellParaCoordenada(gridInfo, cx, cy));
+  // ============================================
+  // FILA DE PRIORIDADE: MIN-HEAP
+  // ============================================
 
-        if (cameFrom.has(cursor)) {
-          cursor = cameFrom.get(cursor);
-        } else {
-          break;
-        }
+  function push(no) {
+    aberto.push(no);
+
+    let i = aberto.length - 1;
+
+    while (i > 0) {
+      const pai = Math.floor((i - 1) / 2);
+
+      if (aberto[pai].f <= aberto[i].f) {
+        break;
       }
 
-      caminho.reverse();
-      return caminho;
+      [aberto[pai], aberto[i]] = [aberto[i], aberto[pai]];
+
+      i = pai;
+    }
+  }
+
+  function pop() {
+    if (!aberto.length) return null;
+
+    const primeiro = aberto[0];
+    const ultimo = aberto.pop();
+
+    if (aberto.length) {
+      aberto[0] = ultimo;
+
+      let i = 0;
+
+      while (true) {
+        const e = i * 2 + 1;
+        const d = e + 1;
+
+        let menor = i;
+
+        if (e < aberto.length && aberto[e].f < aberto[menor].f) {
+          menor = e;
+        }
+
+        if (d < aberto.length && aberto[d].f < aberto[menor].f) {
+          menor = d;
+        }
+
+        if (menor === i) break;
+
+        [aberto[i], aberto[menor]] = [aberto[menor], aberto[i]];
+
+        i = menor;
+      }
     }
 
-    const vizinhos = [
-      { x: 0, y: -1 },
-      { x: 1, y: 0 },
-      { x: 0, y: 1 },
-      { x: -1, y: 0 },
-      { x: 1, y: -1 },
-      { x: 1, y: 1 },
-      { x: -1, y: -1 },
-      { x: -1, y: 1 },
-    ];
+    return primeiro;
+  }
 
-    for (const vizinho of vizinhos) {
-      const nx = atual.x + vizinho.x;
-      const ny = atual.y + vizinho.y;
+  // ============================================
+  // LOOP PRINCIPAL DO A*
+  // ============================================
 
-      if (!celulaCaminhavel(gridInfo, nx, ny)) {
+  while (aberto.length && expansoes < CONFIG.expansoesMaximas) {
+    const atual = pop();
+
+    const id = chave(atual.x, atual.y);
+
+    if (fechados.has(id)) {
+      continue;
+    }
+
+    fechados.add(id);
+    expansoes++;
+
+    // ==========================================
+    // DESTINO ENCONTRADO
+    // ==========================================
+
+    if (atual.x === fim.x && atual.y === fim.y) {
+      const pontos = [];
+
+      let atualId = id;
+
+      while (atualId && pontos.length < CONFIG.expansoesMaximas) {
+        const [cx, cy] = atualId.split(",").map(Number);
+
+        pontos.push({
+          x: (cx + 0.5) * cel,
+          y: (cy + 0.5) * cel,
+        });
+
+        atualId = pais.get(atualId);
+      }
+
+      pontos.reverse();
+
+      if (pontos.length) {
+        pontos.shift();
+      }
+
+      return pontos;
+    }
+
+    // ==========================================
+    // ANALISAR VIZINHOS
+    // ==========================================
+
+    for (const [dx, dy, custo] of direcoes) {
+      const nx = atual.x + dx;
+      const ny = atual.y + dy;
+
+      if (!podePassar(nx, ny)) {
         continue;
       }
 
-      const vizinhoKey = `${nx},${ny}`;
-      const custo = Math.abs(vizinho.x) + Math.abs(vizinho.y) === 2 ? 1.4 : 1;
-      const tentativeG = (gScore.get(atualKey) ?? Infinity) + custo;
-
-      if ((gScore.get(vizinhoKey) ?? Infinity) <= tentativeG) {
+      // Impede atravessar quinas na diagonal.
+      if (
+        dx !== 0 &&
+        dy !== 0 &&
+        (!podePassar(atual.x + dx, atual.y) ||
+          !podePassar(atual.x, atual.y + dy))
+      ) {
         continue;
       }
 
-      cameFrom.set(vizinhoKey, atualKey);
-      gScore.set(vizinhoKey, tentativeG);
-      openSet.push({
+      const vizinho = chave(nx, ny);
+
+      if (fechados.has(vizinho)) {
+        continue;
+      }
+
+      const custoTotal = (g.get(id) ?? Infinity) + custo;
+
+      if (custoTotal >= (g.get(vizinho) ?? Infinity)) {
+        continue;
+      }
+
+      pais.set(vizinho, id);
+      g.set(vizinho, custoTotal);
+
+      push({
         x: nx,
         y: ny,
-        g: tentativeG,
-        f: tentativeG + heuristica({ x: nx, y: ny }, goalCell),
+        f: custoTotal + heuristica(nx, ny),
       });
     }
   }
@@ -358,192 +541,233 @@ function calcularRotaAStar(scene, inimigo, alvo, cellSize = 24) {
   return [];
 }
 
-function gerarRotaParaJogador(scene, inimigo, alvo) {
-  const rota = calcularRotaAStar(scene, inimigo, alvo);
+// =====================================================
+// ATUALIZAÇÃO DA ROTA DE UM INIMIGO
+// =====================================================
 
-  if (!Array.isArray(rota) || rota.length < 2) {
-    return [];
-  }
-
-  const rotaSuavizada = [rota[0]];
-  for (let index = 1; index < rota.length - 1; index += 1) {
-    const pontoAtual = rota[index];
-    const pontoAnterior = rotaSuavizada[rotaSuavizada.length - 1];
-    const pontoProximo = rota[index + 1];
-
-    const distanciaAnterior = Phaser.Math.Distance.Between(
-      pontoAnterior.x,
-      pontoAnterior.y,
-      pontoAtual.x,
-      pontoAtual.y,
-    );
-    const distanciaProxima = Phaser.Math.Distance.Between(
-      pontoAtual.x,
-      pontoAtual.y,
-      pontoProximo.x,
-      pontoProximo.y,
-    );
-
-    if (distanciaAnterior < 18 && distanciaProxima < 18) {
-      continue;
-    }
-
-    rotaSuavizada.push(pontoAtual);
-  }
-
-  if (
-    rotaSuavizada[rotaSuavizada.length - 1] !== rota[rota.length - 1] &&
-    rota.length > 0
-  ) {
-    rotaSuavizada.push(rota[rota.length - 1]);
-  }
-
-  return rotaSuavizada;
-}
-
-function atualizarRotaSeguindoInimigo(scene, inimigo, alvo, time) {
-  if (!scene || !inimigo || !alvo) {
+function atualizarRotaSeguindoInimigo(scene, inimigo, alvo, time = 0) {
+  if (!scene || !inimigo?.active || !alvo) {
     return false;
   }
 
-  const caminhoDiretoObstruido = caminhoDiretoBloqueado(scene, inimigo, alvo);
-  if (
-    !caminhoDiretoObstruido &&
-    Array.isArray(inimigo.rotaAtual) &&
-    inimigo.rotaAtual.length > 0
-  ) {
+  // Se o caminho direto ficou livre,
+  // não precisa manter uma rota A*.
+
+  if (!caminhoDiretoBloqueado(scene, inimigo, alvo)) {
     inimigo.rotaAtual = [];
     inimigo.indiceRota = 0;
+
     return false;
   }
 
-  const precisaRecalcular =
-    !Array.isArray(inimigo.rotaAtual) ||
-    inimigo.rotaAtual.length === 0 ||
-    time > (inimigo.ultimoCalculoRota || 0) + 1200 ||
-    (inimigo.ultimaPosicaoRota &&
-      Phaser.Math.Distance.Between(
-        inimigo.ultimaPosicaoRota.x,
-        inimigo.ultimaPosicaoRota.y,
-        inimigo.x,
-        inimigo.y,
-      ) < 8 &&
-      time > (inimigo.tempoPreso || 0) + 1600);
-
-  if (
-    !caminhoDiretoObstruido &&
-    !(Array.isArray(inimigo.rotaAtual) && inimigo.rotaAtual.length > 0)
-  ) {
-    return false;
-  }
-
-  if (
-    !precisaRecalcular &&
+  const rotaExistente =
     Array.isArray(inimigo.rotaAtual) &&
-    inimigo.rotaAtual.length > 0
+    inimigo.indiceRota < inimigo.rotaAtual.length;
+
+  const destino = inimigo.ultimoDestinoRota;
+
+  const mudouAlvo =
+    !destino ||
+    Phaser.Math.Distance.Between(destino.x, destino.y, alvo.x, alvo.y) > 90;
+
+  if (
+    rotaExistente &&
+    !mudouAlvo &&
+    time < (inimigo.ultimoCalculoRota || 0) + CONFIG.intervaloRecalculo
   ) {
     return true;
   }
 
-  const rota = gerarRotaParaJogador(scene, inimigo, alvo);
-  if (!Array.isArray(rota) || rota.length < 2) {
-    inimigo.rotaAtual = [];
-    inimigo.indiceRota = 0;
-    inimigo.ultimoCalculoRota = time;
-    return false;
+  if (time < (inimigo.ultimoCalculoRota || -Infinity) + 500) {
+    return rotaExistente;
   }
 
-  inimigo.rotaAtual = rota;
-  inimigo.indiceRota = 0;
+  // ============================================
+  // ORÇAMENTO DE BUSCAS POR FRAME
+  // ============================================
+
+  const cache = criarIndice(scene);
+
+  const frame = Math.floor(time / 16.6667);
+
+  if (cache.frameBusca !== frame) {
+    cache.frameBusca = frame;
+    cache.buscasNoFrame = 0;
+  }
+
+  if (cache.buscasNoFrame >= CONFIG.buscasPorFrame) {
+    return rotaExistente;
+  }
+
+  cache.buscasNoFrame++;
+
   inimigo.ultimoCalculoRota = time;
-  inimigo.ultimaPosicaoRota = { x: inimigo.x, y: inimigo.y };
-  inimigo.tempoPreso = time;
-  return true;
-}
 
-function seguirRotaAtual(scene, inimigo, alvo, time, atualizarDirecao) {
-  if (!Array.isArray(inimigo.rotaAtual) || inimigo.rotaAtual.length === 0) {
-    return false;
-  }
+  inimigo.ultimoDestinoRota = {
+    x: alvo.x,
+    y: alvo.y,
+  };
 
-  const alvoRota =
-    inimigo.rotaAtual[inimigo.indiceRota] ||
-    inimigo.rotaAtual[inimigo.rotaAtual.length - 1];
+  const rota = calcularRotaAStar(scene, inimigo, alvo);
 
-  if (!alvoRota) {
-    inimigo.rotaAtual = [];
+  if (rota.length) {
+    inimigo.rotaAtual = rota;
     inimigo.indiceRota = 0;
-    return false;
-  }
 
-  const dist = Phaser.Math.Distance.Between(
-    inimigo.x,
-    inimigo.y,
-    alvoRota.x,
-    alvoRota.y,
-  );
+    inimigo.ultimaPosicaoRota = {
+      x: inimigo.x,
+      y: inimigo.y,
+    };
 
-  if (dist <= 16) {
-    inimigo.indiceRota += 1;
-    inimigo.ultimaPosicaoRota = { x: inimigo.x, y: inimigo.y };
     inimigo.tempoPreso = time;
 
-    if (inimigo.indiceRota >= inimigo.rotaAtual.length) {
+    return true;
+  }
+
+  inimigo.rotaAtual = [];
+  inimigo.indiceRota = 0;
+
+  return false;
+}
+
+// =====================================================
+// SEGUIR ROTA ATUAL
+// =====================================================
+
+function seguirRotaAtual(scene, inimigo, alvo, time, atualizarDirecao) {
+  if (!Array.isArray(inimigo?.rotaAtual) || !inimigo.rotaAtual.length) {
+    return false;
+  }
+
+  // Pula pontos já alcançados.
+  while (inimigo.indiceRota < inimigo.rotaAtual.length) {
+    const ponto = inimigo.rotaAtual[inimigo.indiceRota];
+
+    const distancia = Phaser.Math.Distance.Between(
+      inimigo.x,
+      inimigo.y,
+      ponto.x,
+      ponto.y,
+    );
+
+    if (distancia > CONFIG.toleranciaPonto) {
+      break;
+    }
+
+    inimigo.indiceRota++;
+
+    inimigo.ultimaPosicaoRota = {
+      x: inimigo.x,
+      y: inimigo.y,
+    };
+
+    inimigo.tempoPreso = time;
+  }
+
+  // Rota concluída.
+  if (inimigo.indiceRota >= inimigo.rotaAtual.length) {
+    inimigo.rotaAtual = [];
+    inimigo.indiceRota = 0;
+
+    inimigo.setVelocity(0, 0);
+
+    return false;
+  }
+
+  // ============================================
+  // DETECÇÃO DE ROBÔ PRESO
+  // ============================================
+
+  const posAnterior = inimigo.ultimaPosicaoRota;
+
+  if (time - (inimigo.tempoPreso || time) > 1400) {
+    if (
+      posAnterior &&
+      Phaser.Math.Distance.Between(
+        posAnterior.x,
+        posAnterior.y,
+        inimigo.x,
+        inimigo.y,
+      ) < 10
+    ) {
       inimigo.rotaAtual = [];
       inimigo.indiceRota = 0;
+
+      inimigo.setVelocity(0, 0);
+
       return false;
     }
 
-    return true;
+    inimigo.ultimaPosicaoRota = {
+      x: inimigo.x,
+      y: inimigo.y,
+    };
+
+    inimigo.tempoPreso = time;
   }
 
-  scene.physics.moveTo(
-    inimigo,
-    alvoRota.x,
-    alvoRota.y,
-    inimigo.velocidade * 1.75,
-  );
-  atualizarDirecao(scene, inimigo);
+  // ============================================
+  // MOVIMENTO AO PRÓXIMO PONTO
+  // ============================================
+
+  const ponto = inimigo.rotaAtual[inimigo.indiceRota];
+
+  scene.physics.moveTo(inimigo, ponto.x, ponto.y, inimigo.velocidade);
+
+  if (typeof atualizarDirecao === "function") {
+    atualizarDirecao(scene, inimigo);
+  }
+
   return true;
 }
 
+// =====================================================
+// VISUALIZAÇÃO DE DEBUG DA ROTA
+// =====================================================
+
 function desenharDebugRotaInimigo(scene, inimigo) {
-  if (!scene || !inimigo || !scene.debugRotaRobos) {
+  if (!scene?.debugRotaRobos || !inimigo) {
     return;
   }
 
   if (!scene.debugRotaGraphics) {
-    scene.debugRotaGraphics = scene.add.graphics();
-    scene.debugRotaGraphics.setDepth(200);
+    scene.debugRotaGraphics = scene.add.graphics().setDepth(200);
   }
 
-  scene.debugRotaGraphics.clear();
-  scene.debugRotaGraphics.lineStyle(2, 0xffcc00, 1);
+  const g = scene.debugRotaGraphics;
 
-  if (Array.isArray(inimigo.rotaAtual) && inimigo.rotaAtual.length > 1) {
-    for (let index = 0; index < inimigo.rotaAtual.length - 1; index += 1) {
-      const pontoAtual = inimigo.rotaAtual[index];
-      const proximo = inimigo.rotaAtual[index + 1];
-      scene.debugRotaGraphics.lineBetween(
-        pontoAtual.x,
-        pontoAtual.y,
-        proximo.x,
-        proximo.y,
-      );
-    }
+  g.clear();
+
+  g.lineStyle(2, 0xffcc00, 1);
+
+  let anterior = {
+    x: inimigo.x,
+    y: inimigo.y,
+  };
+
+  const pontos = (inimigo.rotaAtual || []).slice(inimigo.indiceRota || 0);
+
+  for (const p of pontos) {
+    g.lineBetween(anterior.x, anterior.y, p.x, p.y);
+
+    anterior = p;
   }
 
-  if (Array.isArray(inimigo.rotaAtual) && inimigo.rotaAtual.length > 0) {
-    const waypointAtual =
-      inimigo.rotaAtual[
-        Math.min(inimigo.indiceRota, inimigo.rotaAtual.length - 1)
-      ];
-    scene.debugRotaGraphics.fillStyle(0x00ff00, 1);
-    scene.debugRotaGraphics.fillCircle(waypointAtual.x, waypointAtual.y, 4);
-  }
+  g.fillStyle(0xff0000, 1);
 
-  scene.debugRotaGraphics.fillStyle(0xff0000, 1);
-  scene.debugRotaGraphics.fillCircle(inimigo.x, inimigo.y, 3);
+  g.fillCircle(inimigo.x, inimigo.y, 3);
 }
 
-export { obterFilhosGrupoSeguro, caminhoDiretoBloqueado, atualizarRotaSeguindoInimigo, seguirRotaAtual, desenharDebugRotaInimigo };
+// =====================================================
+// EXPORTAÇÕES
+// =====================================================
+
+export {
+  obterFilhosGrupoSeguro,
+  caminhoDiretoBloqueado,
+  atualizarRotaSeguindoInimigo,
+  seguirRotaAtual,
+  desenharDebugRotaInimigo,
+  retanguloLivreDoMapa,
+  invalidarCacheNavegacao,
+};

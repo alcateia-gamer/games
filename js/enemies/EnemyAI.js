@@ -6,7 +6,6 @@ import {
   pararAnimacaoInimigo,
 } from "./EnemyAnimations.js";
 import {
-  obterFilhosGrupoSeguro,
   caminhoDiretoBloqueado,
   atualizarRotaSeguindoInimigo,
   seguirRotaAtual,
@@ -14,439 +13,838 @@ import {
 } from "./EnemyPathfinding.js";
 import { causarDanoPlayer, tentarDispararLaser } from "./EnemyLaser.js";
 
-function aplicarSeparacaoGrupo(inimigo, scene) {
-  if (!Array.isArray(scene.inimigos)) {
-    return;
-  }
+// =====================================================
+// CONFIGURACOES GERAIS DA IA
+// =====================================================
+// Distancias em pixels; tempos em milissegundos.
 
-  const minDist = 90;
-  const fator = 0.24;
+const IA = Object.freeze({
+  visaoIntervalo: 180,
+  visaoProxima: 100,
 
-  for (const aliado of scene.inimigos) {
-    if (!aliado || !aliado.active || aliado === inimigo) {
-      continue;
-    }
+  memoriaAlvoMs: 5500,
+  investigarMs: 2600,
+  perseguicaoMaxMs: 16000,
+  pausaAposDesistirMs: 4500,
 
-    const distancia = Phaser.Math.Distance.Between(
-      inimigo.x,
-      inimigo.y,
-      aliado.x,
-      aliado.y,
-    );
+  alcanceMaximoDoSpawn: 790,
+  alcanceRetornoDoSpawn: 870,
+  alertaAliadoRaio: 230,
 
-    if (distancia >= minDist) {
-      continue;
-    }
+  patrulhaRaio: 130,
+  patrulhaEsperaMinMs: 650,
+  patrulhaEsperaMaxMs: 1600,
+  patrulhaTempoMaxMs: 3200,
+  distanciaChegada: 22,
 
-    const angulo = Phaser.Math.Angle.Between(
-      aliado.x,
-      aliado.y,
-      inimigo.x,
-      inimigo.y,
-    );
+  atiradorRecuarAbaixo: 85,
+  atiradorPararRecuo: 125,
+  atiradorAproximarAcima: 170,
+  atiradorPassoRecuo: 65,
 
-    const empurrar = (minDist - distancia) * fator;
-    const deslocamentoX = Math.cos(angulo) * empurrar;
-    const deslocamentoY = Math.sin(angulo) * empurrar;
+  distanciaSono: 1550,
+  sonoIntervalo: 750,
+});
 
-    inimigo.x += deslocamentoX;
-    inimigo.y += deslocamentoY;
-  }
+// =====================================================
+// FUNCOES AUXILIARES
+// =====================================================
+
+function distancia(a, b) {
+  return Math.hypot(a.x - b.x, a.y - b.y);
 }
 
-function obterAlvoInimigo(scene, inimigo) {
-  const alvoRemoto = scene.multiplayerManager?.room?.players?.find(
-    (player) => player.id === inimigo.alvoPlayerId,
+function obterAlvo(scene, robo) {
+  const remoto = scene.multiplayerManager?.room?.players?.find(
+    (p) => p.id === robo.alvoPlayerId,
   );
-  if (alvoRemoto) {
-    return { ...alvoRemoto, active: true };
+
+  return remoto ? { ...remoto, active: true } : scene.player;
+}
+
+function origem(robo) {
+  return (
+    robo.patrolCenter || {
+      x: robo.x,
+      y: robo.y,
+    }
+  );
+}
+
+function olharPara(robo, ponto) {
+  const dx = ponto.x - robo.x;
+  const dy = ponto.y - robo.y;
+
+  if (Math.abs(dx) > Math.abs(dy)) {
+    robo.direcaoAtual = dx < 0 ? "left" : "right";
+  } else if (dx !== 0 || dy !== 0) {
+    robo.direcaoAtual = dy < 0 ? "up" : "down";
   }
-  return scene.player;
+}
+
+function olharMovimento(robo) {
+  const vx = robo.body?.velocity?.x || 0;
+  const vy = robo.body?.velocity?.y || 0;
+
+  if (Math.hypot(vx, vy) > 5) {
+    olharPara(robo, {
+      x: robo.x + vx,
+      y: robo.y + vy,
+    });
+  }
+}
+
+function linhaLivre(scene, robo, alvo) {
+  return !caminhoDiretoBloqueado(scene, robo, alvo);
+}
+
+function parar(scene, robo, viu = false, d = Infinity) {
+  robo.setVelocity(0, 0);
+
+  if (robo.estado !== "atacando" || !robo.anims?.isPlaying) {
+    pararAnimacaoInimigo(robo);
+  }
+
+  atualizarSomPassoRobo(scene, robo, viu, d, false);
+}
+
+function mover(scene, robo, ponto, velocidade, viu = false, d = Infinity) {
+  scene.physics.moveTo(robo, ponto.x, ponto.y, velocidade);
+
+  olharMovimento(robo);
+  tocarAnimacaoInimigo(robo);
+
+  atualizarSomPassoRobo(scene, robo, viu, d, true);
+}
+
+function limparRota(robo) {
+  robo.rotaAtual = [];
+  robo.indiceRota = 0;
 }
 
 // =====================================================
-// CRIA ANIMAÇÕES
+// VISAO EM SEMICIRCULO DE 180 GRAUS
+// =====================================================
+//
+// O robo enxerga somente na metade frontal.
+//
+// Exemplo quando olha para cima:
+//
+//          VISAO
+//       \         /
+//        \       /
+//         \     /
+//          ROBO
+//
+//       PONTO CEGO
+//
+// O jogador atras do robo nao e detectado,
+// nem mesmo a menos de 100 pixels.
+//
+// As paredes bloqueiam a visao.
+//
+
+function temVisao(scene, robo, alvo, agora) {
+  const dx = alvo.x - robo.x;
+  const dy = alvo.y - robo.y;
+
+  const d = Math.hypot(dx, dy);
+
+  const alcance = Number(robo.distanciaDeteccao) || 550;
+
+  // ============================================
+  // 1. DISTANCIA MAXIMA
+  // ============================================
+
+  if (!Number.isFinite(d) || d > alcance) {
+    robo.iaViu = false;
+    return false;
+  }
+
+  // ============================================
+  // 2. DIRECAO FRONTAL DO ROBO
+  // ============================================
+
+  let frenteX = 0;
+  let frenteY = 0;
+
+  switch (robo.direcaoAtual) {
+    case "up":
+      frenteY = -1;
+      break;
+
+    case "left":
+      frenteX = -1;
+      break;
+
+    case "right":
+      frenteX = 1;
+      break;
+
+    case "down":
+    default:
+      frenteY = 1;
+      break;
+  }
+
+  // ============================================
+  // 3. TESTE DO SEMICIRCULO
+  // ============================================
+
+  // Produto escalar:
+  // Positivo: jogador esta na frente.
+  // Zero: jogador esta exatamente ao lado.
+  // Negativo: jogador esta atras.
+  //
+  // Isso forma um campo de visao de 180 graus.
+
+  const produtoEscalar = dx * frenteX + dy * frenteY;
+
+  if (produtoEscalar < -0.00001) {
+    robo.iaViu = false;
+
+    // Permite verificar novamente assim
+    // que o jogador entrar na area frontal.
+    robo.iaProximaVisao = agora;
+
+    return false;
+  }
+
+  // ============================================
+  // 4. IDENTIFICAR MUDANCA DE DIRECAO
+  // ============================================
+
+  const mudouDirecao = robo.iaDirecaoUltimaVisao !== robo.direcaoAtual;
+
+  robo.iaDirecaoUltimaVisao = robo.direcaoAtual;
+
+  // ============================================
+  // 5. DETECCAO PROXIMA GARANTIDA
+  // ============================================
+
+  // A menos de 100 pixels, na metade frontal,
+  // verifica imediatamente a linha de visao.
+  //
+  // A parede continua bloqueando a deteccao.
+
+  if (d <= IA.visaoProxima) {
+    robo.iaViu = linhaLivre(scene, robo, alvo);
+
+    robo.iaProximaVisao = agora + IA.visaoIntervalo;
+
+    return robo.iaViu;
+  }
+
+  // ============================================
+  // 6. OTIMIZACAO DA VISAO DISTANTE
+  // ============================================
+
+  // Nao verifica paredes em todos os frames.
+  // Se o robo mudou de direcao, verifica logo.
+
+  if (!mudouDirecao && agora < (robo.iaProximaVisao || 0)) {
+    return Boolean(robo.iaViu);
+  }
+
+  robo.iaProximaVisao =
+    agora + IA.visaoIntervalo + ((robo.formacaoIndex || 0) % 4) * 25;
+
+  // ============================================
+  // 7. DETECCAO DE PAREDES
+  // ============================================
+
+  robo.iaViu = linhaLivre(scene, robo, alvo);
+
+  return robo.iaViu;
+}
+
+// =====================================================
+// INICIALIZACAO DA INTELIGENCIA ARTIFICIAL
 // =====================================================
 
-function temVisaoDoPlayer(scene, inimigo) {
-  const alvo = obterAlvoInimigo(scene, inimigo);
-  if (!alvo || alvo.active === false || !inimigo || !inimigo.active) {
-    return false;
+function iniciarIA(robo, agora) {
+  if (robo.iaInicializada) return;
+
+  robo.iaInicializada = true;
+  robo.iaEstado = "patrulha";
+  robo.iaDesde = agora;
+
+  robo.iaUltimaVisao = -Infinity;
+  robo.iaComecouPerseguir = -Infinity;
+
+  robo.iaIgnorarAlvoAte = 0;
+  robo.iaProximaVisao = 0;
+  robo.iaDirecaoUltimaVisao = null;
+  robo.iaViu = false;
+
+  robo.iaUltimaPosicao = null;
+  robo.iaDestinoPatrulha = null;
+
+  robo.iaProximoPatrulha = 0;
+  robo.iaProximaRota = 0;
+  robo.iaRecuando = false;
+
+  robo.patrolCenter ||= {
+    x: robo.x,
+    y: robo.y,
+  };
+}
+
+// =====================================================
+// SISTEMA DE ESTADOS
+// =====================================================
+
+function mudarEstado(robo, estado, agora) {
+  if (robo.iaEstado === estado) return;
+
+  robo.iaEstado = estado;
+  robo.iaDesde = agora;
+
+  robo.iaDestinoPatrulha = null;
+  robo.iaRecuando = false;
+
+  limparRota(robo);
+}
+
+function entrarCombate(robo, alvo, agora) {
+  if (robo.iaEstado !== "combate") {
+    robo.iaComecouPerseguir = agora;
+
+    mudarEstado(robo, "combate", agora);
   }
 
-  const dx = alvo.x - inimigo.x;
-  const dy = alvo.y - inimigo.y;
-  const distancia = Math.hypot(dx, dy);
+  robo.alerta = true;
+  robo.iaUltimaVisao = agora;
 
-  if (distancia > inimigo.distanciaDeteccao) {
-    return false;
-  }
-
-  const frenteX =
-    inimigo.x + Math.cos(anguloDirecao(inimigo.direcaoAtual)) * 120;
-  const frenteY =
-    inimigo.y + Math.sin(anguloDirecao(inimigo.direcaoAtual)) * 120;
-  const linha = new Phaser.Geom.Line(inimigo.x, inimigo.y, frenteX, frenteY);
-
-  const dot =
-    (dx * Math.cos(anguloDirecao(inimigo.direcaoAtual)) +
-      dy * Math.sin(anguloDirecao(inimigo.direcaoAtual))) /
-    distancia;
-  if (dot < 0.2) {
-    return false;
-  }
-
-  const centroPlayer = {
+  robo.iaUltimaPosicao = {
     x: alvo.x,
     y: alvo.y,
   };
+}
 
-  const playerDentroCono =
-    Phaser.Math.Distance.Between(
-      inimigo.x,
-      inimigo.y,
-      centroPlayer.x,
-      centroPlayer.y,
-    ) <= inimigo.distanciaDeteccao;
+// =====================================================
+// ALERTA ENTRE ROBOS
+// =====================================================
 
-  if (!playerDentroCono) {
+function notificarGrupo(scene, roboOrigem, motivo = "dano") {
+  if (!roboOrigem?.active || motivo !== "dano") {
+    return;
+  }
+
+  const agora = scene.time?.now ?? 0;
+
+  for (const outro of scene.inimigos || []) {
+    if (
+      !outro?.active ||
+      outro.morto ||
+      outro.remoteOnly ||
+      outro === roboOrigem
+    ) {
+      continue;
+    }
+
+    if (distancia(outro, roboOrigem) > IA.alertaAliadoRaio) {
+      continue;
+    }
+
+    iniciarIA(outro, agora);
+
+    if (outro.iaEstado === "combate") {
+      continue;
+    }
+
+    outro.iaUltimaPosicao = {
+      x: roboOrigem.x,
+      y: roboOrigem.y,
+    };
+
+    outro.alerta = true;
+
+    mudarEstado(outro, "investigar", agora);
+  }
+}
+
+// =====================================================
+// MOVIMENTACAO COM DESVIO DE OBSTACULOS
+// =====================================================
+
+function irAte(scene, robo, destino, agora, velocidade, viu, d) {
+  if (!destino || !Number.isFinite(destino.x) || !Number.isFinite(destino.y)) {
+    parar(scene, robo, viu, d);
     return false;
   }
 
-  const linhaParaPlayer = new Phaser.Geom.Line(
-    inimigo.x,
-    inimigo.y,
-    alvo.x,
-    alvo.y,
-  );
+  if (distancia(robo, destino) <= IA.distanciaChegada) {
+    limparRota(robo);
 
-  if (!scene.collisionGroup || !scene.collisionGroup.getChildren) {
+    parar(scene, robo, viu, d);
+
     return true;
   }
 
-  const blocos = obterFilhosGrupoSeguro(scene.collisionGroup);
+  // ============================================
+  // CAMINHO DIRETO LIVRE
+  // ============================================
 
-  for (const bloco of blocos) {
-    if (!bloco || !bloco.body) {
-      continue;
-    }
+  if (linhaLivre(scene, robo, destino)) {
+    limparRota(robo);
 
-    const rect = new Phaser.Geom.Rectangle(
-      bloco.body.x,
-      bloco.body.y,
-      bloco.body.width,
-      bloco.body.height,
+    mover(scene, robo, destino, velocidade, viu, d);
+
+    return true;
+  }
+
+  // ============================================
+  // CALCULO DE ROTA A*
+  // ============================================
+
+  if (agora >= (robo.iaProximaRota || 0)) {
+    atualizarRotaSeguindoInimigo(scene, robo, destino, agora);
+
+    robo.iaProximaRota = agora + 1400 + ((robo.formacaoIndex || 0) % 4) * 120;
+  }
+
+  if (robo.rotaAtual?.length) {
+    const seguindo = seguirRotaAtual(scene, robo, destino, agora, (_scene, r) =>
+      olharMovimento(r),
     );
 
-    if (Phaser.Geom.Intersects.LineToRectangle(linhaParaPlayer, rect)) {
-      return false;
+    if (seguindo) {
+      olharMovimento(robo);
+      tocarAnimacaoInimigo(robo);
+
+      atualizarSomPassoRobo(scene, robo, viu, d, true);
+
+      desenharDebugRotaInimigo(scene, robo);
+
+      return true;
     }
   }
 
-  return true;
+  // Nao forca movimento atraves de paredes.
+  parar(scene, robo, viu, d);
+
+  return false;
 }
 
-function anguloDirecao(direcao) {
-  if (direcao === "left") return Math.PI;
-  if (direcao === "right") return 0;
-  if (direcao === "up") return -Math.PI / 2;
-  return Math.PI / 2;
-}
+// =====================================================
+// SISTEMA DE PATRULHA
+// =====================================================
 
-function notificarGrupo(scene, inimigoAlvo, origem = "dano") {
-  if (!Array.isArray(scene.inimigos)) {
+function patrulhar(scene, robo, agora, d) {
+  robo.estado = "idle";
+  robo.alerta = false;
+  robo.foiFerido = false;
+
+  const centro = origem(robo);
+
+  // Se saiu da area de patrulha, retorna.
+  if (distancia(robo, centro) > IA.patrulhaRaio + 95) {
+    mudarEstado(robo, "retorno", agora);
     return;
   }
 
-  for (const aliado of scene.inimigos) {
-    if (!aliado || !aliado.active || aliado === inimigoAlvo) {
-      continue;
-    }
+  // ============================================
+  // ESCOLHER UM PONTO DE PATRULHA
+  // ============================================
 
-    const distanciaAliado = Phaser.Math.Distance.Between(
-      aliado.x,
-      aliado.y,
-      inimigoAlvo.x,
-      inimigoAlvo.y,
-    );
+  if (!robo.iaDestinoPatrulha && agora >= robo.iaProximoPatrulha) {
+    for (let tentativa = 0; tentativa < 12; tentativa++) {
+      const angulo = Math.random() * Math.PI * 2;
 
-    const podeAlerta =
-      distanciaAliado <= inimigoAlvo.distanciaGrupo * 1.5 || origem === "visao";
+      const raio = 30 + Math.random() * IA.patrulhaRaio;
 
-    if (podeAlerta) {
-      aliado.alerta = true;
-      aliado.estado = "alerta";
+      const ponto = {
+        x: centro.x + Math.cos(angulo) * raio,
 
-      if (origem === "dano") {
-        aliado.foiFerido = true;
+        y: centro.y + Math.sin(angulo) * raio,
+      };
+
+      if (linhaLivre(scene, robo, ponto)) {
+        robo.iaDestinoPatrulha = ponto;
+
+        robo.iaPatrulhaLimite = agora + IA.patrulhaTempoMaxMs;
+
+        break;
       }
     }
+
+    if (!robo.iaDestinoPatrulha) {
+      robo.iaProximoPatrulha = agora + 1200;
+    }
   }
+
+  // ============================================
+  // ROBO PARADO DE VIGIA
+  // ============================================
+
+  if (!robo.iaDestinoPatrulha) {
+    if (agora >= (robo.iaProximaVirada || 0)) {
+      const direcoes = ["up", "down", "left", "right"];
+
+      robo.direcaoAtual = direcoes[Math.floor(Math.random() * 4)];
+
+      robo.iaProximaVirada = agora + 900 + Math.random() * 1200;
+    }
+
+    parar(scene, robo, false, d);
+    return;
+  }
+
+  // ============================================
+  // CHEGOU AO DESTINO OU FICOU PRESO
+  // ============================================
+
+  if (
+    distancia(robo, robo.iaDestinoPatrulha) <= IA.distanciaChegada ||
+    agora > robo.iaPatrulhaLimite ||
+    !linhaLivre(scene, robo, robo.iaDestinoPatrulha)
+  ) {
+    robo.iaDestinoPatrulha = null;
+
+    robo.iaProximoPatrulha =
+      agora +
+      IA.patrulhaEsperaMinMs +
+      Math.random() * (IA.patrulhaEsperaMaxMs - IA.patrulhaEsperaMinMs);
+
+    parar(scene, robo, false, d);
+    return;
+  }
+
+  // ============================================
+  // CAMINHAR PELA PATRULHA
+  // ============================================
+
+  mover(scene, robo, robo.iaDestinoPatrulha, robo.velocidade * 0.55, false, d);
 }
 
-function tentarAtaqueSerra(scene, time, inimigo, distancia) {
-  if (
-    inimigo.tipoRobo !== "serra" ||
-    distancia > inimigo.distanciaAtaque ||
-    caminhoDiretoBloqueado(scene, inimigo, scene.player)
-  ) {
+// =====================================================
+// ATAQUE DO ROBO SERRA
+// =====================================================
+
+function atacarSerra(scene, robo, alvo, agora, d) {
+  if (d > robo.distanciaAtaque || !linhaLivre(scene, robo, alvo)) {
     return false;
   }
 
-  inimigo.setVelocity(0, 0);
-  atualizarDirecaoInimigo(scene, inimigo);
-  atualizarSomPassoRobo(scene, inimigo, true, distancia, false);
+  olharPara(robo, alvo);
+  parar(scene, robo, true, d);
 
-  if (time >= inimigo.ultimoAtaque + inimigo.tempoEntreAtaques) {
-    inimigo.ultimoAtaque = time;
-    tocarAnimacaoAtaqueInimigo(inimigo);
-    causarDanoPlayer(scene, inimigo.danoContato);
-  } else if (inimigo.estado !== "atacando" || !inimigo.anims.isPlaying) {
-    pararAnimacaoInimigo(inimigo);
+  if (agora >= robo.ultimoAtaque + robo.tempoEntreAtaques) {
+    robo.ultimoAtaque = agora;
+
+    tocarAnimacaoAtaqueInimigo(robo);
+
+    if (!scene.multiplayer || alvo === scene.player) {
+      causarDanoPlayer(scene, robo.danoContato);
+    } else if (alvo.id && scene.isMultiplayerHost) {
+      scene.multiplayerManager?.publishPlayerDamage(alvo.id, robo.danoContato);
+    }
   }
 
   return true;
 }
 
-function perseguirComSerra(scene, inimigo, time, distancia) {
-  if (tentarAtaqueSerra(scene, time, inimigo, distancia)) {
+// =====================================================
+// COMBATE DO ROBO SERRA
+// =====================================================
+
+function combaterSerra(scene, robo, alvo, agora, d, vendo) {
+  if (vendo && atacarSerra(scene, robo, alvo, agora, d)) {
     return;
   }
 
-  const linhaBloqueada = caminhoDiretoBloqueado(scene, inimigo, scene.player);
-  if (linhaBloqueada) {
-    const rotaValida = atualizarRotaSeguindoInimigo(
-      scene,
-      inimigo,
-      scene.player,
-      time,
-    );
-    if (
-      (rotaValida || inimigo.rotaAtual?.length > 0) &&
-      seguirRotaAtual(
-        scene,
-        inimigo,
-        scene.player,
-        time,
-        atualizarDirecaoInimigo,
-      )
-    ) {
-      atualizarDirecaoInimigo(scene, inimigo);
-      atualizarSomPassoRobo(scene, inimigo, true, distancia, true);
-      tocarAnimacaoInimigo(inimigo);
-      desenharDebugRotaInimigo(scene, inimigo);
-      return;
-    }
-  }
+  // Se perdeu a visao, busca a ultima posicao.
+  const destino = vendo ? alvo : robo.iaUltimaPosicao;
 
-  inimigo.rotaAtual = [];
-  inimigo.indiceRota = 0;
-  scene.physics.moveToObject(inimigo, scene.player, inimigo.velocidade);
-  atualizarDirecaoInimigo(scene, inimigo);
-  atualizarSomPassoRobo(scene, inimigo, true, distancia, true);
-  tocarAnimacaoInimigo(inimigo);
+  irAte(scene, robo, destino, agora, robo.velocidade, vendo, d);
 }
 
-function atualizarIAInimigo(scene, time, inimigo = scene.inimigoTeste) {
-  const alvo = obterAlvoInimigo(scene, inimigo);
-  if (!alvo || alvo.active === false || !inimigo || !inimigo.active) {
+// =====================================================
+// COMBATE DO ROBO ATIRADOR
+// =====================================================
+
+function combaterAtirador(scene, robo, alvo, agora, d, vendo) {
+  // ============================================
+  // PERDEU O JOGADOR
+  // ============================================
+
+  if (!vendo) {
+    robo.iaRecuando = false;
+
+    irAte(
+      scene,
+      robo,
+      robo.iaUltimaPosicao,
+      agora,
+      robo.velocidade * 0.8,
+      false,
+      d,
+    );
+
     return;
   }
+
+  olharPara(robo, alvo);
+
+  const alcanceTiro = Number(robo.distanciaAtaque) || 180;
+
+  // ============================================
+  // DECIDIR SE PRECISA RECUAR
+  // ============================================
+
+  if (d < IA.atiradorRecuarAbaixo) {
+    robo.iaRecuando = true;
+  }
+
+  if (d >= IA.atiradorPararRecuo) {
+    robo.iaRecuando = false;
+  }
+
+  // ============================================
+  // RECUAR SE O JOGADOR ESTIVER MUITO PERTO
+  // ============================================
+
+  if (robo.iaRecuando && d > 1) {
+    const ux = (robo.x - alvo.x) / d;
+
+    const uy = (robo.y - alvo.y) / d;
+
+    const destino = {
+      x: robo.x + ux * IA.atiradorPassoRecuo,
+
+      y: robo.y + uy * IA.atiradorPassoRecuo,
+    };
+
+    if (
+      distancia(destino, origem(robo)) <= IA.alcanceMaximoDoSpawn &&
+      linhaLivre(scene, robo, destino)
+    ) {
+      mover(scene, robo, destino, robo.velocidade * 0.8, true, d);
+    } else {
+      parar(scene, robo, true, d);
+    }
+
+    // ============================================
+    // APROXIMAR CASO ESTEJA LONGE
+    // ============================================
+  } else if (d > Math.min(IA.atiradorAproximarAcima, alcanceTiro - 10)) {
+    irAte(scene, robo, alvo, agora, robo.velocidade * 0.85, true, d);
+
+    // ============================================
+    // PARAR E PRIORIZAR DISPAROS
+    // ============================================
+  } else {
+    parar(scene, robo, true, d);
+  }
+
+  // ============================================
+  // ATACAR MESMO DURANTE O RECUO
+  // ============================================
+
+  if (d <= alcanceTiro && linhaLivre(scene, robo, alvo)) {
+    olharPara(robo, alvo);
+
+    robo.alvoAtual = alvo;
+
+    tentarDispararLaser(scene, agora, robo);
+  }
+}
+
+// =====================================================
+// ATUALIZACAO PRINCIPAL DA IA
+// =====================================================
+
+function atualizarIAInimigo(scene, time, robo = scene.inimigoTeste) {
+  if (!robo?.active || robo.morto || robo.remoteOnly || !robo.body?.enable) {
+    return;
+  }
+
+  const alvo = obterAlvo(scene, robo);
 
   if (
-    scene.multiplayer !== true &&
-    inimigo.combatKnockbackUntil > time
+    !alvo ||
+    alvo.active === false ||
+    !Number.isFinite(alvo.x) ||
+    !Number.isFinite(alvo.y)
   ) {
+    parar(scene, robo);
     return;
   }
 
-  inimigo.alvoAtual = alvo;
-
-  const distancia = Phaser.Math.Distance.Between(
-    inimigo.x,
-    inimigo.y,
-    alvo.x,
-    alvo.y,
-  );
-
-  const viuPlayer = temVisaoDoPlayer(scene, inimigo);
-  const foiFerido = inimigo.foiFerido && inimigo.vida < inimigo.vidaMaxima;
-
-  if (viuPlayer) {
-    notificarGrupo(scene, inimigo, "visao");
-  }
-
-  if (foiFerido || inimigo.alerta || viuPlayer) {
-    inimigo.alerta = true;
-    if (inimigo.estado !== "atacando" || !inimigo.anims.isPlaying) {
-      inimigo.estado = "alerta";
-    }
-  }
-
-  atualizarEstadoVisualRobo(inimigo);
-
-  if (inimigo.tipoRobo === "serra") {
-    perseguirComSerra(scene, inimigo, time, distancia);
+  // Preserva o knockback.
+  if (!scene.multiplayer && robo.combatKnockbackUntil > time) {
     return;
   }
 
-  if (inimigo.alerta || viuPlayer || foiFerido) {
-    const linhaBloqueada = caminhoDiretoBloqueado(scene, inimigo, alvo);
-    const rotaAtiva =
-      Array.isArray(inimigo.rotaAtual) && inimigo.rotaAtual.length > 0;
+  iniciarIA(robo, time);
 
-    if (linhaBloqueada || rotaAtiva) {
-      const deveUsarRota = linhaBloqueada || rotaAtiva;
+  robo.alvoAtual = alvo;
 
-      if (deveUsarRota) {
-        const rotaValida = atualizarRotaSeguindoInimigo(
-          scene,
-          inimigo,
-          alvo,
-          time,
-        );
-        if (rotaValida || rotaAtiva) {
-          const seguiuRota = seguirRotaAtual(
-            scene,
-            inimigo,
-            alvo,
-            time,
-            atualizarDirecaoInimigo,
-          );
-          if (seguiuRota) {
-            atualizarDirecaoInimigo(scene, inimigo);
-            aplicarSeparacaoGrupo(inimigo, scene);
-            atualizarSomPassoRobo(scene, inimigo, viuPlayer, distancia, true);
-            tocarAnimacaoInimigo(inimigo);
-            desenharDebugRotaInimigo(scene, inimigo);
-            if (distancia <= inimigo.distanciaAtaque) {
-              inimigo.setVelocity(0, 0);
-              pararAnimacaoInimigo(inimigo);
-              atualizarSomPassoRobo(
-                scene,
-                inimigo,
-                viuPlayer,
-                distancia,
-                false,
-              );
-              tentarDispararLaser(scene, time, inimigo);
-            }
-            return;
-          }
-        }
-      }
+  const d = distancia(robo, alvo);
+
+  const dOrigem = distancia(robo, origem(robo));
+
+  // ============================================
+  // ECONOMIA DE PROCESSAMENTO
+  // ============================================
+
+  if (d > IA.distanciaSono && robo.iaEstado === "patrulha") {
+    if (time < (robo.iaAcordarEm || 0)) {
+      return;
     }
 
-    const raioOrbit =
-      120 + inimigo.formacaoIndex * 30 + (inimigo.distanciaGrupo || 180) * 0.2;
-    const anguloOrbit =
-      time * 0.0015 +
-      inimigo.orbitaAngulo +
-      inimigo.formacaoIndex * (Math.PI / 2.1);
-    const alvoOrbitX = alvo.x + Math.cos(anguloOrbit) * raioOrbit;
-    const alvoOrbitY = alvo.y + Math.sin(anguloOrbit) * raioOrbit;
+    robo.iaAcordarEm = time + IA.sonoIntervalo;
 
-    scene.physics.moveTo(
-      inimigo,
-      alvoOrbitX,
-      alvoOrbitY,
-      inimigo.velocidade * 1.75,
-    );
-    atualizarDirecaoInimigo(scene, inimigo);
-    aplicarSeparacaoGrupo(inimigo, scene);
+    parar(scene, robo, false, d);
+    return;
+  }
 
-    if (distancia <= inimigo.distanciaAtaque) {
-      inimigo.setVelocity(0, 0);
-      pararAnimacaoInimigo(inimigo);
-      atualizarSomPassoRobo(scene, inimigo, viuPlayer, distancia, false);
-      tentarDispararLaser(scene, time, inimigo);
+  // ============================================
+  // VERIFICAR VISAO
+  // ============================================
+
+  const vendo = temVisao(scene, robo, alvo, time);
+
+  const ferido = Boolean(robo.foiFerido && robo.vida < robo.vidaMaxima);
+
+  // ============================================
+  // DETECTOU O JOGADOR
+  // ============================================
+
+  if (
+    robo.iaEstado !== "retorno" &&
+    time >= robo.iaIgnorarAlvoAte &&
+    vendo &&
+    dOrigem <= IA.alcanceMaximoDoSpawn
+  ) {
+    entrarCombate(robo, alvo, time);
+  } else if (robo.iaEstado === "patrulha" && ferido) {
+    robo.iaUltimaPosicao = {
+      x: alvo.x,
+      y: alvo.y,
+    };
+
+    robo.alerta = true;
+
+    mudarEstado(robo, "investigar", time);
+  }
+
+  // ============================================
+  // LIMITE DE PERSEGUICAO
+  // ============================================
+
+  if (
+    (robo.iaEstado === "combate" || robo.iaEstado === "investigar") &&
+    (dOrigem >= IA.alcanceRetornoDoSpawn ||
+      (robo.iaEstado === "combate" &&
+        time - robo.iaComecouPerseguir >= IA.perseguicaoMaxMs))
+  ) {
+    mudarEstado(robo, "retorno", time);
+
+    robo.iaIgnorarAlvoAte = time + IA.pausaAposDesistirMs;
+
+    robo.alerta = false;
+    robo.foiFerido = false;
+  }
+
+  // ============================================
+  // PERDEU O JOGADOR DE VISTA
+  // ============================================
+
+  if (
+    robo.iaEstado === "combate" &&
+    !vendo &&
+    time - robo.iaUltimaVisao >= IA.memoriaAlvoMs
+  ) {
+    mudarEstado(robo, "investigar", time);
+  }
+
+  // ============================================
+  // ESTADO: COMBATE
+  // ============================================
+
+  if (robo.iaEstado === "combate") {
+    robo.alerta = true;
+
+    if (robo.estado !== "atacando" || !robo.anims?.isPlaying) {
+      robo.estado = "alerta";
+    }
+
+    atualizarEstadoVisualRobo(robo);
+
+    if (robo.tipoRobo === "serra") {
+      combaterSerra(scene, robo, alvo, time, d, vendo);
     } else {
-      atualizarSomPassoRobo(scene, inimigo, viuPlayer, distancia, true);
-      tocarAnimacaoInimigo(inimigo);
+      combaterAtirador(scene, robo, alvo, time, d, vendo);
     }
 
     return;
   }
 
-  if (!inimigo.alerta && !viuPlayer && !foiFerido) {
-    const distPatrulha = Phaser.Math.Distance.Between(
-      inimigo.x,
-      inimigo.y,
-      inimigo.patrolCenter.x,
-      inimigo.patrolCenter.y,
-    );
+  // ============================================
+  // ESTADO: INVESTIGACAO
+  // ============================================
 
-    const deslocamento =
-      time * 0.0009 + inimigo.formacaoIndex * (Math.PI / 2.2);
+  if (robo.iaEstado === "investigar") {
+    robo.alerta = true;
+    robo.estado = "alerta";
 
-    const patrolX =
-      inimigo.patrolCenter.x +
-      Math.cos(deslocamento) * (inimigo.distanciaGrupo * 0.7);
-    const patrolY =
-      inimigo.patrolCenter.y +
-      Math.sin(deslocamento) * (inimigo.distanciaGrupo * 0.55);
+    atualizarEstadoVisualRobo(robo);
 
-    if (distPatrulha > 10) {
-      scene.physics.moveTo(inimigo, patrolX, patrolY, inimigo.velocidade * 0.7);
-      aplicarSeparacaoGrupo(inimigo, scene);
-      atualizarSomPassoRobo(scene, inimigo, viuPlayer, distancia, true);
-      tocarAnimacaoInimigo(inimigo);
+    if (time - robo.iaDesde >= IA.investigarMs) {
+      mudarEstado(robo, "retorno", time);
+
+      robo.alerta = false;
+      parar(scene, robo, false, d);
     } else {
-      inimigo.setVelocity(0, 0);
-      pararAnimacaoInimigo(inimigo);
-      atualizarSomPassoRobo(scene, inimigo, viuPlayer, distancia, false);
+      irAte(
+        scene,
+        robo,
+        robo.iaUltimaPosicao || origem(robo),
+        time,
+        robo.velocidade * 0.65,
+        false,
+        d,
+      );
     }
 
     return;
   }
 
-  atualizarDirecaoInimigo(scene, inimigo);
+  // ============================================
+  // ESTADO: RETORNO A ORIGEM
+  // ============================================
 
-  if (distancia <= inimigo.distanciaAtaque) {
-    inimigo.setVelocity(0, 0);
-    pararAnimacaoInimigo(inimigo);
-    atualizarSomPassoRobo(scene, inimigo, viuPlayer, distancia, false);
-    tentarDispararLaser(scene, time, inimigo);
+  if (robo.iaEstado === "retorno") {
+    robo.alerta = false;
+    robo.foiFerido = false;
+    robo.estado = "idle";
+
+    atualizarEstadoVisualRobo(robo);
+
+    if (distancia(robo, origem(robo)) <= 35) {
+      mudarEstado(robo, "patrulha", time);
+
+      parar(scene, robo, false, d);
+    } else {
+      irAte(scene, robo, origem(robo), time, robo.velocidade * 0.7, false, d);
+    }
+
     return;
   }
 
-  aplicarSeparacaoGrupo(inimigo, scene);
-  scene.physics.moveToObject(inimigo, alvo, inimigo.velocidade);
-  atualizarSomPassoRobo(scene, inimigo, viuPlayer, distancia, true);
-  tocarAnimacaoInimigo(inimigo);
+  // ============================================
+  // ESTADO: PATRULHA
+  // ============================================
+
+  atualizarEstadoVisualRobo(robo);
+
+  patrulhar(scene, robo, time, d);
 }
 
 // =====================================================
-// DIREÇÃO DO INIMIGO
-// =====================================================
-
-function atualizarDirecaoInimigo(scene, inimigo = scene.inimigoTeste) {
-  const velocidadeX = inimigo.body ? inimigo.body.velocity.x : 0;
-  const velocidadeY = inimigo.body ? inimigo.body.velocity.y : 0;
-  const velocidadeTotal = Math.hypot(velocidadeX, velocidadeY);
-
-  if (velocidadeTotal > 8) {
-    if (Math.abs(velocidadeX) > Math.abs(velocidadeY)) {
-      inimigo.direcaoAtual = velocidadeX < 0 ? "left" : "right";
-    } else {
-      inimigo.direcaoAtual = velocidadeY < 0 ? "up" : "down";
-    }
-    return;
-  }
-
-  const alvo = obterAlvoInimigo(scene, inimigo);
-  const diferencaX = alvo.x - inimigo.x;
-  const diferencaY = alvo.y - inimigo.y;
-
-  if (Math.abs(diferencaX) > Math.abs(diferencaY)) {
-    inimigo.direcaoAtual = diferencaX < 0 ? "left" : "right";
-  } else {
-    inimigo.direcaoAtual = diferencaY < 0 ? "up" : "down";
-  }
-}
-
-// =====================================================
-// TOCA ANIMAÇÃO
+// EXPORTACOES
 // =====================================================
 
 export { atualizarIAInimigo, notificarGrupo };
