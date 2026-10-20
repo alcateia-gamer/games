@@ -123,6 +123,10 @@ function criarTransicaoParaParte2(scene) {
   scene.transicaoEmAndamento = false;
   scene.portaParte2AbertaAoEntrar = scene.portaAbertaAoEntrar === true;
 
+  scene.teclaTeleporteParte2 = scene.input.keyboard.addKey(
+    Phaser.Input.Keyboard.KeyCodes.P,
+  );
+
   // O trigger fica sobre o tile inferior da porta.
   scene.entradaFabrica = scene.add.zone(PORTA_X, PORTA_INFERIOR_Y - 24, 40, 48);
 
@@ -155,6 +159,16 @@ function criarTransicaoParaParte2(scene) {
 }
 
 function atualizarTransicaoParaParte2(scene) {
+  // No modo dev, P usa a mesma transição da porta de qualquer ponto do mapa.
+  if (
+    Phaser.Input.Keyboard.JustDown(scene.teclaTeleporteParte2) &&
+    scene.developerMode &&
+    !scene.morteEmAndamento
+  ) {
+    iniciarTransicao(scene);
+    return;
+  }
+
   if (
     !scene.portaParte2Superior ||
     scene.transicaoEmAndamento ||

@@ -558,21 +558,24 @@ function criarControlesDash(scene) {
   });
 
   // ===================================================
-  // ATALHO TECLADO Q
+  // ATALHOS TECLADO Q E F
   // ===================================================
 
   const teclaQ = scene.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.Q);
+  const teclaF = scene.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.F);
 
-  const pressionarQ = () => iniciarDash(scene);
+  const pressionarDash = () => iniciarDash(scene);
 
-  teclaQ?.on("down", pressionarQ);
+  teclaQ?.on("down", pressionarDash);
+  teclaF?.on("down", pressionarDash);
 
   // ===================================================
   // LIMPEZA AO TROCAR DE CENA
   // ===================================================
 
   const limpar = () => {
-    teclaQ?.off("down", pressionarQ);
+    teclaQ?.off("down", pressionarDash);
+    teclaF?.off("down", pressionarDash);
 
     scene.events.off(Phaser.Scenes.Events.SHUTDOWN, limpar);
 

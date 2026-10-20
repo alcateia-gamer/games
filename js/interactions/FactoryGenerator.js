@@ -96,9 +96,8 @@ function criarInteracaoGeradorFabrica(scene) {
   const inventory = scene.inventory;
   let dialogOpen = false;
   let isActivating = false;
-  let interactionMessageEvent = null;
   let activationCloseEvent = null;
-  let statusBeforeMessage = "";
+  scene.geradorInteracaoDisponivel = false;
 
   const modal = scene.add.container(0, 0).setDepth(1000).setScrollFactor(0);
   const backdrop = scene.add
@@ -207,20 +206,6 @@ function criarInteracaoGeradorFabrica(scene) {
   ]);
   modal.setVisible(false);
 
-  const prompt = scene.add
-    .text(0, 0, "", {
-      color: "#e7fbff",
-      backgroundColor: "#08131b",
-      fontFamily: "monospace",
-      fontSize: "15px",
-      fontStyle: "bold",
-      padding: { x: 10, y: 7 },
-    })
-    .setOrigin(0.5)
-    .setScrollFactor(0)
-    .setDepth(250)
-    .setVisible(false);
-
   const escapeKey = scene.input.keyboard.addKey(
     Phaser.Input.Keyboard.KeyCodes.ESC,
   );
@@ -242,7 +227,7 @@ function criarInteracaoGeradorFabrica(scene) {
   };
 
   const posicionarElementosFixos = () => {
-    if (!modal.scene && !prompt.scene) return;
+    if (!modal.scene) return;
 
     const zoomX = camera.zoomX || camera.zoom || 1;
     const zoomY = camera.zoomY || camera.zoom || 1;
@@ -257,12 +242,6 @@ function criarInteracaoGeradorFabrica(scene) {
       )
       .setScale(1 / zoomX, 1 / zoomY);
     backdrop.setSize(camera.width, camera.height);
-    prompt
-      .setPosition(
-        originX + (screenCenterX - originX) / zoomX,
-        originY + (camera.height - 90 - originY) / zoomY,
-      )
-      .setScale(1 / zoomX, 1 / zoomY);
   };
 
   const fecharModal = () => {
@@ -279,6 +258,7 @@ function criarInteracaoGeradorFabrica(scene) {
     if (dialogOpen || scene.luzFabricaAcesa) return;
     dialogOpen = true;
     scene.generatorMenuOpen = true;
+    scene.geradorInteracaoDisponivel = false;
     scene.movimentoBloqueado = true;
     scene.player?.setVelocity(0, 0);
     feedback.setText("");
@@ -290,16 +270,8 @@ function criarInteracaoGeradorFabrica(scene) {
     modal.setVisible(true);
   };
 
-  const mostrarMensagemInteracao = (message) => {
-    if (!prompt.visible) return;
-    interactionMessageEvent?.remove(false);
-    statusBeforeMessage = scene.luzFabricaAcesa
-      ? "E - GERADOR EM FUNCIONAMENTO"
-      : "E - INTERAGIR";
-    prompt.setText(message);
-    interactionMessageEvent = scene.time.delayedCall(1600, () => {
-      if (prompt.scene && prompt.visible) prompt.setText(statusBeforeMessage);
-    });
+  scene.interagirGerador = () => {
+    if (scene.geradorInteracaoDisponivel) abrirModal();
   };
 
   const ativarGerador = () => {
@@ -372,10 +344,6 @@ function criarInteracaoGeradorFabrica(scene) {
   scene.atualizarInteracaoGeradorFabrica = () => {
     if (dialogOpen) {
       atualizarModal();
-      if (Phaser.Input.Keyboard.JustDown(scene.teclaColetarItem)) {
-        ativarGerador();
-        return;
-      }
       if (
         !isActivating &&
         Phaser.Input.Keyboard.JustDown(escapeKey)
@@ -385,32 +353,18 @@ function criarInteracaoGeradorFabrica(scene) {
       return;
     }
 
-    scene.player?.getCenter(playerCenter);
-    const dentroDaArea =
+    // A aproximação usa a hitbox no chão, deslocada do centro visual do sprite.
+    const bodyCenter = scene.player?.body?.center;
+    if (bodyCenter) {
+      playerCenter.copy(bodyCenter);
+    } else {
+      scene.player?.getCenter(playerCenter);
+    }
+    scene.geradorInteracaoDisponivel =
+      !scene.luzFabricaAcesa &&
       !!scene.player?.active &&
       distanceToInteractionArea(playerCenter.x, playerCenter.y, area) <=
         GENERATOR_INTERACTION_RANGE;
-    prompt.setVisible(dentroDaArea);
-
-    if (!dentroDaArea) return;
-
-    const normalPrompt = scene.luzFabricaAcesa
-      ? "E - GERADOR EM FUNCIONAMENTO"
-      : "E - INTERAGIR";
-    if (
-      !interactionMessageEvent?.getProgress ||
-      interactionMessageEvent.getProgress() >= 1
-    ) {
-      prompt.setText(normalPrompt);
-    }
-
-    if (Phaser.Input.Keyboard.JustDown(scene.teclaColetarItem)) {
-      if (scene.luzFabricaAcesa) {
-        mostrarMensagemInteracao("GERADOR EM FUNCIONAMENTO");
-      } else {
-        abrirModal();
-      }
-    }
   };
 
   posicionarElementosFixos();
@@ -422,13 +376,13 @@ function criarInteracaoGeradorFabrica(scene) {
       posicionarElementosFixos,
     );
     scene.input.off("pointerdown", handleMenuPointerDown);
-    interactionMessageEvent?.remove(false);
     activationCloseEvent?.remove(false);
     modal.destroy();
-    prompt.destroy();
     escapeKey.destroy();
     scene.generatorMenuOpen = false;
     scene.movimentoBloqueado = false;
+    scene.geradorInteracaoDisponivel = false;
+    scene.interagirGerador = null;
     scene.atualizarInteracaoGeradorFabrica = null;
   };
 

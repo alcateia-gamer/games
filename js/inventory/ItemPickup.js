@@ -186,7 +186,13 @@ function criarSistemaInventario(scene) {
   };
 
   scene.coletarItemProximo = coletarItemProximo;
-  scene.botaoColetarItem.on("pointerdown", coletarItemProximo);
+  scene.botaoColetarItem.on("pointerdown", () => {
+    if (interagirComMundo || scene.itemColetavelProximo) {
+      coletarItemProximo();
+    } else if (scene.geradorInteracaoDisponivel) {
+      scene.interagirGerador?.();
+    }
+  });
   scene.atualizarColetaItens = () => {
     interagirComMundo = null;
     if (scene.generatorMenuOpen) {
@@ -216,7 +222,7 @@ function criarSistemaInventario(scene) {
     interagirComMundo = useWorldInteraction ? interaction.interact : null;
     scene.itemColetavelProximo = useWorldInteraction ? null : nearest?.item ?? null;
     const canInteract = !!nearest || !!useWorldInteraction;
-    definirVisibilidadeBotao(canInteract);
+    definirVisibilidadeBotao(canInteract || !!scene.geradorInteracaoDisponivel);
 
     if (canInteract && Phaser.Input.Keyboard.JustDown(scene.teclaColetarItem)) {
       coletarItemProximo();

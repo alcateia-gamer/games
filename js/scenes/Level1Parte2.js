@@ -872,8 +872,8 @@ class Level1Parte2 extends Phaser.Scene {
 
   criarTeleporteRetornoParte1() {
     const x = 95;
-    const y = -965;
-    const largura = 16;
+    const y = -916;
+    const largura = 100;
     const altura = 8;
 
     this.teleporteRetornoParte1 = this.add.zone(x, y, largura, altura);
