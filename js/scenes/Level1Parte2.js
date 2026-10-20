@@ -1,4 +1,5 @@
 import criarLevel1Parte2Map from "../map/MapaFabrica.js";
+import MiniMapManager from "../ui/MiniMapManager.js";
 
 import {
   atualizarDepthGarras,
@@ -229,6 +230,7 @@ class Level1Parte2 extends Phaser.Scene {
     criarSistemaInventario(this);
     criarInteracaoGeradorFabrica(this);
     criarInteracaoPortaFabrica(this);
+    this.minimap = new MiniMapManager(this, this.map, "fabrica");
 
     if (this.multiplayer) {
       this.iniciarMultiplayer();
@@ -359,6 +361,7 @@ class Level1Parte2 extends Phaser.Scene {
   // =====================================================
 
   update(time, delta) {
+    this.minimap?.update(time);
     if (this.morteEmAndamento) {
       return;
     }

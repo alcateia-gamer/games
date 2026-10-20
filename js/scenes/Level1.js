@@ -48,6 +48,7 @@ import {
 } from "../player/PlayerProjectiles.js";
 import EnemySpawnManager from "../enemies/EnemySpawnManager.js";
 import WeatherShader from "../effects/WeatherShader.js";
+import MiniMapManager from "../ui/MiniMapManager.js";
 import {
   atualizarSistemaInventario,
   criarSistemaInventario,
@@ -242,6 +243,7 @@ class Level1 extends Phaser.Scene {
 
     criarControles(this);
     criarSistemaInventario(this);
+    this.minimap = new MiniMapManager(this, this.map, "cidade");
 
     // =====================================================
     // COMANDOS DE SPAWN DOS ROBÔS
@@ -320,6 +322,7 @@ class Level1 extends Phaser.Scene {
   // =====================================================
 
   update(time, delta) {
+    this.minimap?.update(time);
     this.weather?.update(time, delta);
 
     if (this.weather && Phaser.Input.Keyboard.JustDown(this.teclaClima)) {

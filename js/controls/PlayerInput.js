@@ -31,13 +31,14 @@ function configurarControlesFixos(scene) {
 
     const origemX = camera.width * camera.originX;
     const origemY = camera.height * camera.originY;
+    scene.minimap?.layout(camera);
 
     // =================================================
     // BOTÃO DEV
     // =================================================
 
     const devTelaX = camera.width - 40;
-    const devTelaY = 24;
+    const devTelaY = scene.minimap?.devScreenY ?? 24;
 
     const devX = origemX + (devTelaX - origemX) / zoomX;
     const devY = origemY + (devTelaY - origemY) / zoomY;
@@ -56,6 +57,13 @@ function configurarControlesFixos(scene) {
     textoLuzFabrica.setPosition(luzX, luzY);
     botaoLuzFabrica.setScale(1 / zoomX, 1 / zoomY);
     textoLuzFabrica.setScale(1 / zoomX, 1 / zoomY);
+
+    if (scene.botaoFullscreen?.scene) {
+      const fullscreenTelaX = camera.width - (botaoLuzFabrica.visible ? 210 : 100);
+      const fullscreenX = origemX + (fullscreenTelaX - origemX) / zoomX;
+      scene.botaoFullscreen.setPosition(fullscreenX, devY).setScale(1 / zoomX, 1 / zoomY);
+      scene.textoBotaoFullscreen?.setPosition(fullscreenX, devY).setScale(1 / zoomX, 1 / zoomY);
+    }
 
     // =================================================
     // ANALÓGICO
