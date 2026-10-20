@@ -63,6 +63,7 @@ function criarSistemaInventario(scene) {
   scene.itemColetavelProximo = null;
   scene.botaoColetarItemVisivel = false;
   let avisoInventarioCheio;
+  let interagirComMundo = null;
 
   const definirVisibilidadeBotao = (visivel) => {
     if (scene.botaoColetarItemVisivel === visivel) return;
@@ -157,6 +158,15 @@ function criarSistemaInventario(scene) {
   }
 
   const coletarItemProximo = () => {
+    if (scene.generatorMenuOpen) return false;
+    if (interagirComMundo) {
+      const interagiu = interagirComMundo();
+      if (interagiu) {
+        interagirComMundo = null;
+        definirVisibilidadeBotao(false);
+      }
+      return interagiu;
+    }
     const pickup = scene.itemColetavelProximo;
     if (!pickup || scene.inventory.hasCollected(pickup.uniqueId)) return false;
 
@@ -178,6 +188,7 @@ function criarSistemaInventario(scene) {
   scene.coletarItemProximo = coletarItemProximo;
   scene.botaoColetarItem.on("pointerdown", coletarItemProximo);
   scene.atualizarColetaItens = () => {
+    interagirComMundo = null;
     if (scene.generatorMenuOpen) {
       scene.itemColetavelProximo = null;
       definirVisibilidadeBotao(false);
@@ -199,10 +210,15 @@ function criarSistemaInventario(scene) {
         : closest;
     }, null);
 
-    scene.itemColetavelProximo = nearest?.item ?? null;
-    definirVisibilidadeBotao(!!nearest);
+    const interaction = scene.interacaoMundoProxima;
+    const useWorldInteraction = interaction &&
+      (!nearest || interaction.distance < nearest.distance);
+    interagirComMundo = useWorldInteraction ? interaction.interact : null;
+    scene.itemColetavelProximo = useWorldInteraction ? null : nearest?.item ?? null;
+    const canInteract = !!nearest || !!useWorldInteraction;
+    definirVisibilidadeBotao(canInteract);
 
-    if (nearest && Phaser.Input.Keyboard.JustDown(scene.teclaColetarItem)) {
+    if (canInteract && Phaser.Input.Keyboard.JustDown(scene.teclaColetarItem)) {
       coletarItemProximo();
     }
   };

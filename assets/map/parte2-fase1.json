@@ -8879,6 +8879,18 @@
                  "width":220,
                  "x":-647,
                  "y":-1595
+                },
+                {
+                 "height":96,
+                 "id":853,
+                 "name":"porta01",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":144,
+                 "x":-1152,
+                 "y":-1584
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -8887,7 +8899,7 @@
          "y":0
         }],
  "nextlayerid":49,
- "nextobjectid":853,
+ "nextobjectid":854,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.12.2",

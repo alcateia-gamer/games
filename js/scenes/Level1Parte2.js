@@ -58,6 +58,7 @@ import {
   FACTORY_GENERATOR_STATE_KEY,
   criarInteracaoGeradorFabrica,
 } from "../interactions/FactoryGenerator.js";
+import { criarInteracaoPortaFabrica } from "../interactions/FactoryDoor.js";
 
 const CAMADAS_PISO_TROCA = new Set([
   "chão",
@@ -227,6 +228,7 @@ class Level1Parte2 extends Phaser.Scene {
     criarControles(this);
     criarSistemaInventario(this);
     criarInteracaoGeradorFabrica(this);
+    criarInteracaoPortaFabrica(this);
 
     if (this.multiplayer) {
       this.iniciarMultiplayer();
@@ -372,6 +374,7 @@ class Level1Parte2 extends Phaser.Scene {
     }
 
     this.atualizarInteracaoGeradorFabrica?.();
+    this.atualizarInteracaoPortaFabrica?.();
     atualizarControles(this);
     atualizarSistemaInventario(this);
     atualizarStatusPlayer(this, delta);
