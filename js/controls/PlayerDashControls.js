@@ -1,7 +1,7 @@
 import { gastarEstamina } from "../player/PlayerStatus.js";
 
 // =====================================================
-// DASH SANDEVISTAN - SOMBRA TEMPORAL
+// DASH SANDEVISTAN - CORES POR PERSONAGEM
 // =====================================================
 
 const CONFIG_DASH = {
@@ -10,7 +10,7 @@ const CONFIG_DASH = {
   recarga: 1500,
   custoEstamina: 25,
 
-  // Botão - mantém sua configuração
+  // BOTÃO
   distanciaXBotao: 90,
   distanciaYBotao: -30,
   tamanhoBotao: 86,
@@ -18,34 +18,71 @@ const CONFIG_DASH = {
   opacidadeNormal: 0.75,
   opacidadeRecarga: 0.35,
 
-  // Rastros
+  // RASTROS
   intervaloRastro: 25,
   intervaloRastroPosDash: 45,
   duracaoRastroPosDash: 300,
 
-  // Tempo de vida de cada sombra
+  // TEMPO DE VIDA
   duracaoRastro: 380,
 
-  // Cores e opacidade
-  corSombra: 0x276b8d,
-  corBrilho: 0x28dfff,
+  // OPACIDADES
   opacidadeSombra: 0.62,
   opacidadeBrilho: 0.17,
 
-  // Evita cópias sobrepostas no mesmo lugar
+  // DISTÂNCIA ENTRE CÓPIAS
   distanciaMinimaRastro: 3,
   distanciaMinimaRastroWalk: 11,
 
-  // Limite de segurança para mobile
+  // OTIMIZAÇÃO MOBILE
   maximoRastros: 24,
 
-  // Flash inicial
-  corFlash: 0x00e5ff,
+  // FLASH
   duracaoFlash: 160,
 };
 
 // =====================================================
-// DIREÇÃO DO DASH
+// PALETA DE CORES DE CADA PERSONAGEM
+// =====================================================
+
+const CORES_SANDEVISTAN = {
+  "kai-mercer": {
+    sombra: 0x2376c7,
+    brilho: 0x31c8ff,
+    flash: 0x00bfff,
+  },
+
+  "magnus-force": {
+    sombra: 0xd96617,
+    brilho: 0xffb340,
+    flash: 0xff8c00,
+  },
+
+  "aria-kade": {
+    sombra: 0xd94c95,
+    brilho: 0xff91ce,
+    flash: 0xff4da6,
+  },
+
+  nyx: {
+    sombra: 0x7132b0,
+    brilho: 0xb975ff,
+    flash: 0x9933ff,
+  },
+};
+
+// =====================================================
+// IDENTIFICAR A PALETA DO PERSONAGEM
+// =====================================================
+
+function obterCoresSandevistan(scene) {
+  const personagem = scene.personagemSelecionada ?? "kai-mercer";
+
+  return CORES_SANDEVISTAN[personagem] ?? CORES_SANDEVISTAN["kai-mercer"];
+}
+
+// =====================================================
+// IDENTIFICAR DIREÇÃO DO DASH
 // =====================================================
 
 function obterDirecaoDash(scene) {
@@ -76,7 +113,7 @@ function obterDirecaoDash(scene) {
 }
 
 // =====================================================
-// CRIAR SOMBRA TEMPORAL
+// CRIAR RASTRO TEMPORAL
 // =====================================================
 
 function criarRastroTemporal(scene) {
@@ -97,7 +134,16 @@ function criarRastroTemporal(scene) {
     return;
   }
 
-  // Evita gerar sombras repetidas no mesmo ponto.
+  // ===================================================
+  // IDENTIFICAR COR DO PERSONAGEM
+  // ===================================================
+
+  const cores = obterCoresSandevistan(scene);
+
+  // ===================================================
+  // DISTÂNCIA ENTRE SOMBRAS
+  // ===================================================
+
   const distancia = Phaser.Math.Distance.Between(
     player.x,
     player.y,
@@ -105,13 +151,17 @@ function criarRastroTemporal(scene) {
     estado.ultimoRastroY,
   );
 
- const distanciaMinima = estado.ativo
-   ? CONFIG_DASH.distanciaMinimaRastro
-   : CONFIG_DASH.distanciaMinimaRastroWalk;
+  const distanciaMinima = estado.ativo
+    ? CONFIG_DASH.distanciaMinimaRastro
+    : CONFIG_DASH.distanciaMinimaRastroWalk;
 
- if (distancia < distanciaMinima) {
-   return;
- }
+  if (distancia < distanciaMinima) {
+    return;
+  }
+
+  // ===================================================
+  // TEXTURA DO PERSONAGEM
+  // ===================================================
 
   const textura = player.texture?.key;
   const frame = player.frame?.name;
@@ -121,7 +171,7 @@ function criarRastroTemporal(scene) {
   }
 
   // ===================================================
-  // CONTAINER QUE MANTÉ A CÓPIA PARADA NO MUNDO
+  // CONTAINER DA SOMBRA TEMPORAL
   // ===================================================
 
   const grupo = scene.add.container(player.x, player.y);
@@ -129,7 +179,7 @@ function criarRastroTemporal(scene) {
   grupo.setDepth(player.depth - 0.01);
 
   // ===================================================
-  // SOMBRA PRINCIPAL
+  // CAMADA PRINCIPAL DA SOMBRA
   // ===================================================
 
   const sombra = scene.add.image(0, 0, textura, frame);
@@ -142,12 +192,13 @@ function criarRastroTemporal(scene) {
 
   sombra.setAngle(player.angle);
 
-  sombra.setTint(CONFIG_DASH.corSombra);
+  // COR EXCLUSIVA DO PERSONAGEM
+  sombra.setTint(cores.sombra);
 
   sombra.setAlpha(CONFIG_DASH.opacidadeSombra);
 
   // ===================================================
-  // CAMADA SUTIL DE ENERGIA CIANO
+  // CAMADA DE BRILHO
   // ===================================================
 
   const brilho = scene.add.image(0, 0, textura, frame);
@@ -160,16 +211,19 @@ function criarRastroTemporal(scene) {
 
   brilho.setAngle(player.angle);
 
-  brilho.setTint(CONFIG_DASH.corBrilho);
+  // BRILHO EXCLUSIVO DO PERSONAGEM
+  brilho.setTint(cores.brilho);
 
   brilho.setAlpha(CONFIG_DASH.opacidadeBrilho);
 
   brilho.setBlendMode(Phaser.BlendModes.ADD);
 
-  // Preserva a ordem das duas camadas.
+  // ===================================================
+  // MONTAR SOMBRA COMPLETA
+  // ===================================================
+
   grupo.add([sombra, brilho]);
 
-  // A cópia continua fixa na posição onde nasceu.
   estado.rastros.add(grupo);
 
   estado.ultimoRastroX = player.x;
@@ -179,8 +233,6 @@ function criarRastroTemporal(scene) {
   // DESAPARECIMENTO SUAVE
   // ===================================================
 
-  // A sombra começa visível e desaparece
-  // continuamente, sem uma pausa longa.
   scene.tweens.add({
     targets: grupo,
 
@@ -201,7 +253,7 @@ function criarRastroTemporal(scene) {
 }
 
 // =====================================================
-// FLASH DE ATIVAÇÃO
+// FLASH DE ATIVAÇÃO DO DASH
 // =====================================================
 
 function criarFlashDash(scene) {
@@ -212,15 +264,12 @@ function criarFlashDash(scene) {
     return;
   }
 
-  const flash = scene.add.circle(
-    player.x,
-    player.y,
-    15,
-    CONFIG_DASH.corFlash,
-    0.1,
-  );
+  // O FLASH USA A COR DO PERSONAGEM
+  const cores = obterCoresSandevistan(scene);
 
-  flash.setStrokeStyle(2, CONFIG_DASH.corFlash, 0.55);
+  const flash = scene.add.circle(player.x, player.y, 15, cores.flash, 0.1);
+
+  flash.setStrokeStyle(2, cores.flash, 0.55);
 
   flash.setDepth(player.depth - 0.02);
 
@@ -255,25 +304,23 @@ function iniciarDash(scene) {
   const estado = scene.estadoDash;
   const player = scene.player;
 
-  if (
-    scene.movimentoBloqueado ||
-    !estado ||
-    !player?.active ||
-    !player.body
-  ) {
+  if (scene.movimentoBloqueado || !estado || !player?.active || !player.body) {
     return false;
   }
 
   const agora = scene.time.now;
 
+  // IMPEDE DASH DUPLO
   if (estado.ativo) {
     return false;
   }
 
+  // COOLDOWN
   if (agora < estado.proximoDash) {
     return false;
   }
 
+  // NÃO INTERROMPER ATAQUE
   if (scene.atacando) {
     return false;
   }
@@ -294,13 +341,17 @@ function iniciarDash(scene) {
   }
 
   // ===================================================
-  // DEFINIR DIREÇÃO E TEMPOS
+  // DEFINIR DIREÇÃO
   // ===================================================
 
   const direcao = obterDirecaoDash(scene);
 
   estado.ativo = true;
   estado.direcao.copy(direcao);
+
+  // ===================================================
+  // DEFINIR TEMPOS
+  // ===================================================
 
   estado.fim = agora + CONFIG_DASH.duracao;
 
@@ -310,7 +361,7 @@ function iniciarDash(scene) {
 
   estado.proximoRastro = agora;
 
-  // Permite a primeira sombra imediatamente.
+  // PERMITE A PRIMEIRA SOMBRA
   estado.ultimoRastroX = Infinity;
   estado.ultimoRastroY = Infinity;
 
@@ -323,10 +374,18 @@ function iniciarDash(scene) {
     direcao.y * CONFIG_DASH.velocidade,
   );
 
+  // ===================================================
+  // EFEITOS DO SANDEVISTAN
+  // ===================================================
+
   criarFlashDash(scene);
   criarRastroTemporal(scene);
 
   estado.proximoRastro = agora + CONFIG_DASH.intervaloRastro;
+
+  // ===================================================
+  // BOTÃO EM RECARGA
+  // ===================================================
 
   if (scene.botaoDash?.active) {
     scene.botaoDash.setAlpha(CONFIG_DASH.opacidadeRecarga);
@@ -336,7 +395,7 @@ function iniciarDash(scene) {
 }
 
 // =====================================================
-// ATUALIZAR DASH E EFEITOS VISUAIS
+// ATUALIZAR DASH E EFEITOS
 // =====================================================
 
 function atualizarDash(scene) {
@@ -350,7 +409,7 @@ function atualizarDash(scene) {
   const agora = scene.time.now;
 
   // ===================================================
-  // ESTADO DO BOTÃO
+  // ATUALIZAR OPACIDADE DO BOTÃO
   // ===================================================
 
   if (scene.botaoDash?.active) {
@@ -365,23 +424,21 @@ function atualizarDash(scene) {
   }
 
   // ===================================================
-  // TERMINAR IMPULSO
+  // FINALIZAR IMPULSO
   // ===================================================
 
- if (estado.ativo && agora >= estado.fim) {
-   // Encerra somente o impulso físico.
-   estado.ativo = false;
+  if (estado.ativo && agora >= estado.fim) {
+    // Finaliza somente o movimento especial.
+    estado.ativo = false;
 
-   // Gera uma sombra exatamente no final do dash.
-   criarRastroTemporal(scene);
+    // Mantém a transição para o walk sem lacunas.
+    criarRastroTemporal(scene);
 
-   // Reinicia o intervalo de geração para
-   // iniciar imediatamente a sequência de caminhada.
-   estado.proximoRastro = agora;
- }
+    estado.proximoRastro = agora;
+  }
 
   // ===================================================
-  // GERAR SOMBRAS DE FORMA CONTÍNUA
+  // RASTROS DURANTE DASH E WALK
   // ===================================================
 
   const efeitoVisualAtivo = estado.ativo || agora < estado.fimEfeitoVisual;
@@ -397,15 +454,17 @@ function atualizarDash(scene) {
   }
 
   // ===================================================
-  // DEVOLVER CONTROLE AO MOVIMENTO NORMAL
+  // RETORNAR AO MOVIMENTO NORMAL
   // ===================================================
 
   if (!estado.ativo) {
     return false;
   }
 
-  // Mantém o dash independente do WASD/joystick
-  // enquanto o impulso ainda estiver acontecendo.
+  // ===================================================
+  // MANTER VELOCIDADE DO DASH
+  // ===================================================
+
   player.setVelocity(
     estado.direcao.x * CONFIG_DASH.velocidade,
     estado.direcao.y * CONFIG_DASH.velocidade,
@@ -428,6 +487,7 @@ function criarControlesDash(scene) {
 
     fim: 0,
     fimEfeitoVisual: 0,
+
     proximoDash: 0,
     proximoRastro: 0,
 
@@ -455,6 +515,10 @@ function criarControlesDash(scene) {
 
   const y = ataque.y - CONFIG_DASH.distanciaYBotao;
 
+  // ===================================================
+  // CARREGAR SPRITE DO BOTÃO
+  // ===================================================
+
   if (scene.textures.exists("botao-dash")) {
     scene.botaoDash = scene.add.image(x, y, "botao-dash");
 
@@ -474,6 +538,10 @@ function criarControlesDash(scene) {
     scene.botaoDash.setStrokeStyle(3, 0x00d9ff);
   }
 
+  // ===================================================
+  // CONFIGURAÇÃO VISUAL
+  // ===================================================
+
   scene.botaoDash
     .setScrollFactor(0)
     .setDepth(110)
@@ -481,7 +549,7 @@ function criarControlesDash(scene) {
     .setInteractive({ useHandCursor: true });
 
   // ===================================================
-  // MOBILE E MOUSE
+  // BOTÃO MOBILE / MOUSE
   // ===================================================
 
   scene.botaoDash.on("pointerdown", (pointer) => {
@@ -490,7 +558,7 @@ function criarControlesDash(scene) {
   });
 
   // ===================================================
-  // TECLA Q
+  // ATALHO TECLADO Q
   // ===================================================
 
   const teclaQ = scene.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.Q);
@@ -500,7 +568,7 @@ function criarControlesDash(scene) {
   teclaQ?.on("down", pressionarQ);
 
   // ===================================================
-  // LIMPEZA DOS EFEITOS
+  // LIMPEZA AO TROCAR DE CENA
   // ===================================================
 
   const limpar = () => {
@@ -511,11 +579,13 @@ function criarControlesDash(scene) {
     const estado = scene.estadoDash;
 
     if (estado) {
+      // REMOVER RASTROS
       for (const objeto of estado.rastros) {
         scene.tweens.killTweensOf(objeto);
         objeto.destroy();
       }
 
+      // REMOVER FLASHES
       for (const objeto of estado.efeitos) {
         scene.tweens.killTweensOf(objeto);
         objeto.destroy();
@@ -525,6 +595,7 @@ function criarControlesDash(scene) {
       estado.efeitos.clear();
     }
 
+    // REMOVER BOTÃO
     if (scene.botaoDash?.active) {
       scene.botaoDash.destroy();
     }
@@ -542,4 +613,15 @@ function criarControlesDash(scene) {
   scene.events.once(Phaser.Scenes.Events.SHUTDOWN, limpar);
 }
 
-export { CONFIG_DASH, criarControlesDash, atualizarDash, iniciarDash };
+// =====================================================
+// EXPORTAÇÕES
+// =====================================================
+
+export {
+  CONFIG_DASH,
+  CORES_SANDEVISTAN,
+  obterCoresSandevistan,
+  criarControlesDash,
+  atualizarDash,
+  iniciarDash,
+};
