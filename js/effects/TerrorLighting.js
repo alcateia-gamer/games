@@ -3,6 +3,27 @@
  * com o jogador e o zoom.
  */
 
+import { GENERATOR_LOOP_START_SECONDS } from "../sounds/gerador.js";
+
+// Tentativas de partida, quedas breves de tensão e recuperação final, sem flashes brancos.
+const PARTIDA_GERADOR = [
+  [0, 0], [0.06, 0.025], [0.13, 0.09], [0.18, 0.03],
+  [0.28, 0.22], [0.34, 0.08], [0.46, 0.4], [0.5, 0.14],
+  [0.62, 0.56], [0.66, 0.28], [0.78, 0.78], [0.83, 0.69],
+  [0.92, 0.94], [1, 1],
+];
+
+function intensidadeLuzPartida(progresso) {
+  const p = Math.max(0, Math.min(1, progresso));
+  for (let i = 1; i < PARTIDA_GERADOR.length; i += 1) {
+    const [fim, luzFim] = PARTIDA_GERADOR[i];
+    if (p > fim) continue;
+    const [inicio, luzInicio] = PARTIDA_GERADOR[i - 1];
+    return luzInicio + (luzFim - luzInicio) * smoothstep(inicio, fim, p);
+  }
+  return 1;
+}
+
 const TEXTURA_ESCURIDAO_PARTE2 = "level1-parte2-escuridao";
 const ALCANCE_LANTERNA = 290;
 const MEIA_LARGURA_MAXIMA = 540;
@@ -185,11 +206,19 @@ function criarIluminacaoTerror(scene) {
     .setDepth(DEPTH_ESCURIDAO)
     .setDisplaySize(width, height);
 
+  let partida = null;
+  const aplicarIntensidade = (intensidade) => {
+    overlay.setAlpha(1 - intensidade).setVisible(intensidade < 1);
+  };
+
   /**
-   * Oculta a camada de escuridão quando a energia da fábrica está ligada.
+   * Usa o relógio do áudio durante a partida; visitas posteriores já começam iluminadas.
    */
-  const definirIluminacaoFabrica = (ligada) => {
-    overlay.setVisible(!ligada);
+  const definirIluminacaoFabrica = (ligada, obterProgresso = null) => {
+    partida = ligada && obterProgresso
+      ? { obterProgresso, inicio: scene.time.now }
+      : null;
+    aplicarIntensidade(ligada && !partida ? 1 : 0);
   };
 
   scene.definirIluminacaoFabrica = definirIluminacaoFabrica;
@@ -214,6 +243,15 @@ function criarIluminacaoTerror(scene) {
    * Atualiza direção e origem da lanterna e transforma suas coordenadas de mundo para a tela.
    */
   const atualizarLanterna = () => {
+    if (partida) {
+      // Sem áudio disponível, mantém o efeito visual com a mesma duração de partida.
+      // Se o áudio estiver bloqueado ou pausado, seu progresso também segura a luz.
+      const progresso = partida.obterProgresso() ??
+        (scene.time.now - partida.inicio) / (GENERATOR_LOOP_START_SECONDS * 1000);
+      aplicarIntensidade(intensidadeLuzPartida(progresso));
+      if (progresso >= 1) partida = null;
+    }
+
     const player = scene.player;
     const zoomX = camera.zoomX || camera.zoom || 1;
     const zoomY = camera.zoomY || camera.zoom || 1;
@@ -255,6 +293,7 @@ function criarIluminacaoTerror(scene) {
   const limparIluminacao = () => {
     scene.events.off(Phaser.Scenes.Events.SHUTDOWN, limparIluminacao);
     scene.events.off(Phaser.Scenes.Events.PRE_RENDER, atualizarLanterna);
+    partida = null;
     if (scene.definirIluminacaoFabrica === definirIluminacaoFabrica) {
       scene.definirIluminacaoFabrica = null;
     }
@@ -272,4 +311,5 @@ function criarIluminacaoTerror(scene) {
   return limparIluminacao;
 }
 
+export { intensidadeLuzPartida };
 export default criarIluminacaoTerror;

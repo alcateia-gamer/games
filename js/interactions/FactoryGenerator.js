@@ -3,6 +3,8 @@
  * recursos e restaura a iluminação.
  */
 
+import { criarSomGerador } from "../sounds/gerador.js";
+
 const INTERACTION_LAYER_NAMES = ["interacoes", "coletaveis"];
 const GENERATOR_OBJECT_NAME = "gerador01";
 const GENERATOR_INTERACTION_RANGE = 48;
@@ -125,6 +127,7 @@ function criarInteracaoGeradorFabrica(scene) {
   const camera = scene.cameras.main;
   const playerCenter = new Phaser.Math.Vector2();
   const inventory = scene.inventory;
+  const generatorSound = criarSomGerador(scene);
   let dialogOpen = false;
   let isActivating = false;
   let activationCloseEvent = null;
@@ -354,11 +357,14 @@ function criarInteracaoGeradorFabrica(scene) {
       return;
     }
 
-    scene.acenderLuzFabrica();
-    state.setText("ENERGIA RESTABELECIDA").setColor("#72f2a0");
+    scene.acenderLuzFabrica(() => generatorSound.getStartupProgress());
+    generatorSound.update(
+      distanceToInteractionArea(playerCenter.x, playerCenter.y, area),
+    );
+    state.setText("GERADOR INICIANDO").setColor("#72f2a0");
     feedback
       .setColor("#72f2a0")
-      .setText("A FÁBRICA VOLTOU A TER ENERGIA.");
+      .setText("O MOTOR ESTÁ GANHANDO FORÇA. A ENERGIA ESTÁ ESTABILIZANDO...");
     activateButton.text.setText("GERADOR LIGADO");
     cancelButton.text.setText("FECHANDO...");
     activateButton.button.disableInteractive();
@@ -403,6 +409,18 @@ function criarInteracaoGeradorFabrica(scene) {
    * Atualiza a proximidade pela hitbox do jogador e permite fechar o menu com Esc.
    */
   scene.atualizarInteracaoGeradorFabrica = () => {
+    // A aproximação usa a hitbox no chão, deslocada do centro visual do sprite.
+    const bodyCenter = scene.player?.body?.center;
+    if (bodyCenter) {
+      playerCenter.copy(bodyCenter);
+    } else {
+      scene.player?.getCenter(playerCenter);
+    }
+    const distance = scene.player?.active
+      ? distanceToInteractionArea(playerCenter.x, playerCenter.y, area)
+      : Infinity;
+    generatorSound.update(distance);
+
     if (dialogOpen) {
       atualizarModal();
       if (
@@ -414,18 +432,10 @@ function criarInteracaoGeradorFabrica(scene) {
       return;
     }
 
-    // A aproximação usa a hitbox no chão, deslocada do centro visual do sprite.
-    const bodyCenter = scene.player?.body?.center;
-    if (bodyCenter) {
-      playerCenter.copy(bodyCenter);
-    } else {
-      scene.player?.getCenter(playerCenter);
-    }
     scene.geradorInteracaoDisponivel =
       !scene.luzFabricaAcesa &&
       !!scene.player?.active &&
-      distanceToInteractionArea(playerCenter.x, playerCenter.y, area) <=
-        GENERATOR_INTERACTION_RANGE;
+      distance <= GENERATOR_INTERACTION_RANGE;
   };
 
   posicionarElementosFixos();
@@ -441,6 +451,7 @@ function criarInteracaoGeradorFabrica(scene) {
     );
     scene.input.off("pointerdown", handleMenuPointerDown);
     activationCloseEvent?.remove(false);
+    generatorSound.destroy();
     modal.destroy();
     escapeKey.destroy();
     scene.generatorMenuOpen = false;

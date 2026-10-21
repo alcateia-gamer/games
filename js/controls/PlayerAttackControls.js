@@ -139,6 +139,9 @@ function criarControlesAtaque(scene) {
    * Solicita o ataque e inicia o som de tensão apenas quando a Aria começa uma nova carga.
    */
   const iniciarAtaqueComSom = () => {
+    // Cliques no menu do gerador não podem disparar ataque, som ou consumir estamina.
+    if (scene.generatorMenuOpen) return;
+
     const jaEstavaAtacando = scene.atacando;
 
     // Mantém a lógica de ataque original.

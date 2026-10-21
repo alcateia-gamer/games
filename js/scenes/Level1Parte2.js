@@ -292,12 +292,12 @@ class Level1Parte2 extends Phaser.Scene {
    * Liga a iluminação uma única vez e persiste o estado do gerador no registry entre visitas
    * ao mapa.
    */
-  acenderLuzFabrica() {
+  acenderLuzFabrica(obterProgressoPartida = null) {
     if (this.luzFabricaAcesa) return;
 
     this.luzFabricaAcesa = true;
     this.game.registry.set(FACTORY_GENERATOR_STATE_KEY, true);
-    this.definirIluminacaoFabrica(true);
+    this.definirIluminacaoFabrica(true, obterProgressoPartida);
   }
 
   /**
