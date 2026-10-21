@@ -151,7 +151,7 @@ function atualizarEstadoVisualRobo(inimigo) {
 
 /**
  * Executa a caminhada direcional do robô comum ou o frame direcional da serra, preservando seu
- * ataque ativo.
+ * ataque ativo. O atirador inverte os passos ao recuar sem virar as costas para o alvo.
  */
 function tocarAnimacaoInimigo(inimigo) {
   if (inimigo.tipoRobo === "serra") {
@@ -168,14 +168,29 @@ function tocarAnimacaoInimigo(inimigo) {
   const animacaoBase =
     inimigo.visualAtual === "alerta" ? "robo-alerta" : "robo";
 
-  if (inimigo.direcaoAtual === "down") {
-    inimigo.anims.play(`${animacaoBase}-down`, true);
-  } else if (inimigo.direcaoAtual === "left") {
-    inimigo.anims.play(`${animacaoBase}-left`, true);
-  } else if (inimigo.direcaoAtual === "right") {
-    inimigo.anims.play(`${animacaoBase}-right`, true);
-  } else if (inimigo.direcaoAtual === "up") {
-    inimigo.anims.play(`${animacaoBase}-up`, true);
+  const direcao = inimigo.direcaoAtual;
+  if (
+    direcao !== "down" && direcao !== "left" &&
+    direcao !== "right" && direcao !== "up"
+  ) {
+    return;
+  }
+
+  const alvo = inimigo.alvoAtual;
+  const velocidade = inimigo.body?.velocity;
+  const andandoDeCostas = Boolean(
+    inimigo.iaRecuando && alvo && velocidade &&
+    (velocidade.x * (alvo.x - inimigo.x) +
+      velocidade.y * (alvo.y - inimigo.y)) < 0,
+  );
+  const chave = `${animacaoBase}-${direcao}`;
+  // No Phaser, ignorar o mesmo clip também ignora a troca de play para playReverse.
+  const ignorarSeTocando = Boolean(inimigo.anims.inReverse) === andandoDeCostas;
+
+  if (andandoDeCostas) {
+    inimigo.anims.playReverse(chave, ignorarSeTocando);
+  } else {
+    inimigo.anims.play(chave, ignorarSeTocando);
   }
 }
 

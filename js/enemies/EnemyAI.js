@@ -12,6 +12,7 @@ import {
 } from "./EnemyAnimations.js";
 import {
   caminhoDiretoBloqueado,
+  caminhoMovimentoBloqueado,
   atualizarRotaSeguindoInimigo,
   seguirRotaAtual,
   desenharDebugRotaInimigo,
@@ -25,16 +26,17 @@ import { causarDanoPlayer, tentarDispararLaser } from "./EnemyLaser.js";
 
 const IA = Object.freeze({
   visaoIntervalo: 180,
-  visaoProxima: 100,
+  visaoProxima: 130,
 
-  memoriaAlvoMs: 5500,
-  investigarMs: 2600,
-  perseguicaoMaxMs: 16000,
+  memoriaAlvoMs: 9000,
+  investigarMs: 3600,
+  investigarDeslocamentoMaxMs: 12000,
   pausaAposDesistirMs: 4500,
 
-  alcanceMaximoDoSpawn: 790,
-  alcanceRetornoDoSpawn: 870,
-  alertaAliadoRaio: 230,
+  alcanceMaximoDoSpawn: 1100,
+  alcanceRetornoDoSpawn: 1250,
+  alertaAliadoRaio: 420,
+  alertaIntervaloMs: 1600,
 
   patrulhaRaio: 130,
   patrulhaEsperaMinMs: 650,
@@ -42,10 +44,10 @@ const IA = Object.freeze({
   patrulhaTempoMaxMs: 3200,
   distanciaChegada: 22,
 
-  atiradorRecuarAbaixo: 85,
-  atiradorPararRecuo: 125,
-  atiradorAproximarAcima: 170,
-  atiradorPassoRecuo: 65,
+  atiradorRecuarAbaixo: 190,
+  atiradorPararRecuo: 265,
+  atiradorAproximarAcima: 300,
+  atiradorPassoRecuo: 110,
 
   distanciaSono: 1550,
   sonoIntervalo: 750,
@@ -128,6 +130,7 @@ function linhaLivre(scene, robo, alvo) {
  */
 function parar(scene, robo, viu = false, d = Infinity) {
   robo.setVelocity(0, 0);
+  robo.iaAndando = false;
 
   if (robo.estado !== "atacando" || !robo.anims?.isPlaying) {
     pararAnimacaoInimigo(robo);
@@ -139,10 +142,12 @@ function parar(scene, robo, viu = false, d = Infinity) {
 /**
  * Move o robô até um ponto e sincroniza direção, animação e som dos passos.
  */
-function mover(scene, robo, ponto, velocidade, viu = false, d = Infinity) {
+function mover(scene, robo, ponto, velocidade, viu = false, d = Infinity, foco = null) {
   scene.physics.moveTo(robo, ponto.x, ponto.y, velocidade);
+  robo.iaAndando = true;
 
-  olharMovimento(robo);
+  if (foco) olharPara(robo, foco);
+  else olharMovimento(robo);
   tocarAnimacaoInimigo(robo);
 
   atualizarSomPassoRobo(scene, robo, viu, d, true);
@@ -173,7 +178,7 @@ function limparRota(robo) {
 //       PONTO CEGO
 //
 // O jogador atras do robo nao e detectado,
-// nem mesmo a menos de 100 pixels.
+// nem mesmo de perto.
 //
 // As paredes bloqueiam a visao.
 //
@@ -188,7 +193,7 @@ function temVisao(scene, robo, alvo, agora) {
 
   const d = Math.hypot(dx, dy);
 
-  const alcance = Number(robo.distanciaDeteccao) || 550;
+  const alcance = Number(robo.distanciaDeteccao) || 760;
 
   // ============================================
   // 1. DISTANCIA MAXIMA
@@ -252,30 +257,19 @@ function temVisao(scene, robo, alvo, agora) {
   // 4. IDENTIFICAR MUDANCA DE DIRECAO
   // ============================================
 
-  const mudouDirecao = robo.iaDirecaoUltimaVisao !== robo.direcaoAtual;
+  const idAlvo = alvo.id ?? alvo;
+  const mudouDirecao =
+    robo.iaDirecaoUltimaVisao !== robo.direcaoAtual ||
+    robo.iaIdUltimaVisao !== idAlvo;
 
   robo.iaDirecaoUltimaVisao = robo.direcaoAtual;
+  robo.iaIdUltimaVisao = idAlvo;
 
   // ============================================
-  // 5. DETECCAO PROXIMA GARANTIDA
+  // 5. FREQUENCIA DA CONSULTA DE VISAO
   // ============================================
 
-  // A menos de 100 pixels, na metade frontal,
-  // verifica imediatamente a linha de visao.
-  //
-  // A parede continua bloqueando a deteccao.
-
-  if (d <= IA.visaoProxima) {
-    robo.iaViu = linhaLivre(scene, robo, alvo);
-
-    robo.iaProximaVisao = agora + IA.visaoIntervalo;
-
-    return robo.iaViu;
-  }
-
-  // ============================================
-  // 6. OTIMIZACAO DA VISAO DISTANTE
-  // ============================================
+  // De perto a consulta é mais frequente, sem repetir interseções a cada frame.
 
   // Nao verifica paredes em todos os frames.
   // Se o robo mudou de direcao, verifica logo.
@@ -285,10 +279,11 @@ function temVisao(scene, robo, alvo, agora) {
   }
 
   robo.iaProximaVisao =
-    agora + IA.visaoIntervalo + ((robo.formacaoIndex || 0) % 4) * 25;
+    agora + (d <= IA.visaoProxima ? 75 : IA.visaoIntervalo) +
+    ((robo.formacaoIndex || 0) % 4) * 20;
 
   // ============================================
-  // 7. DETECCAO DE PAREDES
+  // 6. DETECCAO DE PAREDES
   // ============================================
 
   robo.iaViu = linhaLivre(scene, robo, alvo);
@@ -311,7 +306,6 @@ function iniciarIA(robo, agora) {
   robo.iaDesde = agora;
 
   robo.iaUltimaVisao = -Infinity;
-  robo.iaComecouPerseguir = -Infinity;
 
   robo.iaIgnorarAlvoAte = 0;
   robo.iaProximaVisao = 0;
@@ -324,6 +318,8 @@ function iniciarIA(robo, agora) {
   robo.iaProximoPatrulha = 0;
   robo.iaProximaRota = 0;
   robo.iaRecuando = false;
+  robo.iaProximoAlerta = 0;
+  robo.iaAndando = false;
 
   robo.patrolCenter ||= {
     x: robo.x,
@@ -346,6 +342,16 @@ function mudarEstado(robo, estado, agora) {
 
   robo.iaDestinoPatrulha = null;
   robo.iaRecuando = false;
+  robo.iaDestinoRecuo = null;
+  robo.iaReavaliarRecuo = 0;
+  robo.iaBuscaDesde = null;
+  robo.iaProximaRota = 0;
+  robo.iaMonitorMovimento = null;
+
+  if (estado === "patrulha") {
+    robo.iaUltimaPosicao = null;
+    robo.iaUltimaVisao = -Infinity;
+  }
 
   limparRota(robo);
 }
@@ -355,8 +361,6 @@ function mudarEstado(robo, estado, agora) {
  */
 function entrarCombate(robo, alvo, agora) {
   if (robo.iaEstado !== "combate") {
-    robo.iaComecouPerseguir = agora;
-
     mudarEstado(robo, "combate", agora);
   }
 
@@ -374,20 +378,31 @@ function entrarCombate(robo, alvo, agora) {
 // =====================================================
 
 /**
- * Alerta aliados próximos após dano e os direciona para investigar a posição do robô atingido.
+ * Compartilha somente a última posição conhecida. O rádio alcança aliados próximos, mas
+ * receber um aviso não equivale a enxergar o jogador nem dispara uma cadeia de avisos.
  */
-function notificarGrupo(scene, roboOrigem, motivo = "dano") {
-  if (!roboOrigem?.active || motivo !== "dano") {
+function notificarGrupo(scene, roboOrigem, motivo = "dano", agora = scene.time?.now ?? 0) {
+  if (
+    !roboOrigem?.active || roboOrigem.morto || roboOrigem.remoteOnly ||
+    (motivo !== "dano" && motivo !== "visao")
+  ) {
     return;
   }
 
-  const agora = scene.time?.now ?? 0;
+  iniciarIA(roboOrigem, agora);
+  if (agora < roboOrigem.iaProximoAlerta) return;
+  roboOrigem.iaProximoAlerta = agora + IA.alertaIntervaloMs;
+
+  const lembrancaRecente = agora - roboOrigem.iaUltimaVisao <= IA.memoriaAlvoMs;
+  const posicao = (lembrancaRecente ? roboOrigem.iaUltimaPosicao : null) ||
+    (motivo === "visao" ? roboOrigem.alvoAtual : null) || roboOrigem;
 
   for (const outro of scene.inimigos || []) {
     if (
       !outro?.active ||
       outro.morto ||
       outro.remoteOnly ||
+      outro.body?.enable === false ||
       outro === roboOrigem
     ) {
       continue;
@@ -399,19 +414,53 @@ function notificarGrupo(scene, roboOrigem, motivo = "dano") {
 
     iniciarIA(outro, agora);
 
-    if (outro.iaEstado === "combate") {
+    if (
+      outro.iaEstado === "combate" ||
+      agora < outro.iaIgnorarAlvoAte ||
+      distancia(outro, origem(outro)) >= IA.alcanceRetornoDoSpawn
+    ) {
       continue;
     }
 
-    outro.iaUltimaPosicao = {
-      x: roboOrigem.x,
-      y: roboOrigem.y,
-    };
-
-    outro.alerta = true;
-
+    const mudouPosicao = !outro.iaUltimaPosicao || distancia(outro.iaUltimaPosicao, posicao) > 48;
     mudarEstado(outro, "investigar", agora);
+    outro.iaUltimaPosicao = {
+      x: posicao.x,
+      y: posicao.y,
+    };
+    outro.alvoPlayerId = roboOrigem.alvoPlayerId;
+    outro.iaUltimaVisao = agora;
+    outro.iaProximaVisao = 0;
+    if (mudouPosicao) {
+      outro.iaBuscaDesde = null;
+      outro.iaDesde = agora;
+      outro.iaProximaRota = 0;
+    }
+    outro.alerta = true;
   }
+}
+
+/**
+ * Detecta falta de avanço também no movimento direto, que não passa pelo seguidor A*.
+ * A próxima busca considera os aliados para sair de filas e colisões em corredores.
+ */
+function verificarProgresso(robo, agora) {
+  const anterior = robo.iaMonitorMovimento;
+  if (!robo.iaAndando || !anterior) {
+    robo.iaMonitorMovimento = { x: robo.x, y: robo.y, tempo: agora };
+    return;
+  }
+  if (agora - anterior.tempo < 450) return;
+
+  if (distancia(robo, anterior) < 4) {
+    limparRota(robo);
+    robo.iaProximaRota = 0;
+    robo.ultimoCalculoRota = -Infinity;
+    robo.iaForcarRotaAte = agora + 1800;
+    robo.iaDestinoRecuo = null;
+    robo.iaReavaliarRecuo = 0;
+  }
+  robo.iaMonitorMovimento = { x: robo.x, y: robo.y, tempo: agora };
 }
 
 // =====================================================
@@ -421,7 +470,7 @@ function notificarGrupo(scene, roboOrigem, motivo = "dano") {
 /**
  * Usa movimento direto ou rota A* para alcançar um destino; para se não houver caminho válido.
  */
-function irAte(scene, robo, destino, agora, velocidade, viu, d) {
+function irAte(scene, robo, destino, agora, velocidade, viu, d, foco = null) {
   if (!destino || !Number.isFinite(destino.x) || !Number.isFinite(destino.y)) {
     parar(scene, robo, viu, d);
     return false;
@@ -439,10 +488,10 @@ function irAte(scene, robo, destino, agora, velocidade, viu, d) {
   // CAMINHO DIRETO LIVRE
   // ============================================
 
-  if (linhaLivre(scene, robo, destino)) {
+  if (agora >= (robo.iaForcarRotaAte || 0) && !caminhoMovimentoBloqueado(scene, robo, destino)) {
     limparRota(robo);
 
-    mover(scene, robo, destino, velocidade, viu, d);
+    mover(scene, robo, destino, velocidade, viu, d, foco);
 
     return true;
   }
@@ -454,16 +503,21 @@ function irAte(scene, robo, destino, agora, velocidade, viu, d) {
   if (agora >= (robo.iaProximaRota || 0)) {
     atualizarRotaSeguindoInimigo(scene, robo, destino, agora);
 
-    robo.iaProximaRota = agora + 1400 + ((robo.formacaoIndex || 0) % 4) * 120;
+    robo.iaProximaRota = robo.rotaPendente
+      ? Math.max(agora + 50, robo.proximaTentativaRota || 0)
+      : agora + 550 + ((robo.formacaoIndex || 0) % 4) * 60;
   }
 
   if (robo.rotaAtual?.length) {
-    const seguindo = seguirRotaAtual(scene, robo, destino, agora, (_scene, r) =>
-      olharMovimento(r),
-    );
+    const seguindo = seguirRotaAtual(scene, robo, destino, agora, (_scene, r) => {
+      if (foco) olharPara(r, foco);
+      else olharMovimento(r);
+    }, velocidade);
 
     if (seguindo) {
-      olharMovimento(robo);
+      robo.iaAndando = true;
+      if (foco) olharPara(robo, foco);
+      else olharMovimento(robo);
       tocarAnimacaoInimigo(robo);
 
       atualizarSomPassoRobo(scene, robo, viu, d, true);
@@ -516,7 +570,7 @@ function patrulhar(scene, robo, agora, d) {
         y: centro.y + Math.sin(angulo) * raio,
       };
 
-      if (linhaLivre(scene, robo, ponto)) {
+      if (!caminhoMovimentoBloqueado(scene, robo, ponto)) {
         robo.iaDestinoPatrulha = ponto;
 
         robo.iaPatrulhaLimite = agora + IA.patrulhaTempoMaxMs;
@@ -554,7 +608,7 @@ function patrulhar(scene, robo, agora, d) {
   if (
     distancia(robo, robo.iaDestinoPatrulha) <= IA.distanciaChegada ||
     agora > robo.iaPatrulhaLimite ||
-    !linhaLivre(scene, robo, robo.iaDestinoPatrulha)
+    caminhoMovimentoBloqueado(scene, robo, robo.iaDestinoPatrulha)
   ) {
     robo.iaDestinoPatrulha = null;
 
@@ -571,7 +625,7 @@ function patrulhar(scene, robo, agora, d) {
   // CAMINHAR PELA PATRULHA
   // ============================================
 
-  mover(scene, robo, robo.iaDestinoPatrulha, robo.velocidade * 0.55, false, d);
+  irAte(scene, robo, robo.iaDestinoPatrulha, agora, robo.velocidade * 0.55, false, d);
 }
 
 // =====================================================
@@ -604,6 +658,15 @@ function atacarSerra(scene, robo, alvo, agora, d) {
   return true;
 }
 
+/** Gira de forma espaçada ao alcançar uma pista, procurando nas saídas ao redor. */
+function varrerArea(robo, agora) {
+  if (agora < (robo.iaProximaVarredura || 0)) return;
+  const direcoes = ["up", "right", "down", "left"];
+  robo.direcaoAtual = direcoes[(direcoes.indexOf(robo.direcaoAtual) + 1) % 4];
+  robo.iaProximaVarredura = agora + 650;
+  robo.iaProximaVisao = 0;
+}
+
 // =====================================================
 // COMBATE DO ROBO SERRA
 // =====================================================
@@ -619,7 +682,56 @@ function combaterSerra(scene, robo, alvo, agora, d, vendo) {
   // Se perdeu a visao, busca a ultima posicao.
   const destino = vendo ? alvo : robo.iaUltimaPosicao;
 
-  irAte(scene, robo, destino, agora, robo.velocidade, vendo, d);
+  irAte(scene, robo, destino, agora, robo.velocidade, vendo, d, vendo ? alvo : null);
+  if (!vendo && destino && distancia(robo, destino) <= IA.distanciaChegada) {
+    varrerArea(robo, agora);
+  }
+}
+
+/**
+ * Escolhe um recuo livre para a hitbox inteira. Se a saída traseira estiver fechada,
+ * tenta diagonais e laterais, mantendo a escolha por alguns instantes para não oscilar.
+ */
+function escolherRecuo(scene, robo, alvo, agora, d) {
+  if (!robo.iaDestinoRecuo && agora < robo.iaReavaliarRecuo) return null;
+  if (
+    robo.iaDestinoRecuo && agora < robo.iaReavaliarRecuo &&
+    distancia(robo, robo.iaDestinoRecuo) > IA.distanciaChegada &&
+    distancia(robo.iaDestinoRecuo, alvo) > d + 8 &&
+    !caminhoMovimentoBloqueado(scene, robo, robo.iaDestinoRecuo)
+  ) return robo.iaDestinoRecuo;
+
+  const base = d > 1 ? Math.atan2(robo.y - alvo.y, robo.x - alvo.x) :
+    ({ up: Math.PI / 2, down: -Math.PI / 2, left: 0, right: Math.PI })[robo.direcaoAtual];
+  const lado = (robo.formacaoIndex || 0) % 2 ? -1 : 1;
+  let melhor = null;
+  let melhorNota = -Infinity;
+  for (const giro of [0, lado * Math.PI / 4, -lado * Math.PI / 4, lado * Math.PI / 2, -lado * Math.PI / 2]) {
+    const angulo = base + giro;
+    for (const passo of [IA.atiradorPassoRecuo, IA.atiradorPassoRecuo * 0.55]) {
+      const ponto = { x: robo.x + Math.cos(angulo) * passo, y: robo.y + Math.sin(angulo) * passo };
+      if (
+        distancia(ponto, origem(robo)) > IA.alcanceMaximoDoSpawn ||
+        caminhoMovimentoBloqueado(scene, robo, ponto)
+      ) continue;
+
+      let nota = distancia(ponto, alvo) - Math.abs(giro) * 14;
+      for (const aliado of scene.inimigos || []) {
+        if (aliado !== robo && aliado?.active && !aliado.morto && distancia(aliado, ponto) < 65) {
+          nota -= 90;
+        }
+      }
+      // Dá preferência a recuos que preservam a linha de tiro na posição escolhida.
+      if (!caminhoDiretoBloqueado(scene, ponto, alvo)) nota += 35;
+      if (nota > melhorNota) {
+        melhor = ponto;
+        melhorNota = nota;
+      }
+    }
+  }
+  robo.iaDestinoRecuo = melhor;
+  robo.iaReavaliarRecuo = agora + (melhor ? 500 : 220);
+  return melhor;
 }
 
 // =====================================================
@@ -637,6 +749,8 @@ function combaterAtirador(scene, robo, alvo, agora, d, vendo) {
 
   if (!vendo) {
     robo.iaRecuando = false;
+    robo.iaDestinoRecuo = null;
+    robo.iaReavaliarRecuo = 0;
 
     irAte(
       scene,
@@ -648,45 +762,40 @@ function combaterAtirador(scene, robo, alvo, agora, d, vendo) {
       d,
     );
 
+    if (robo.iaUltimaPosicao && distancia(robo, robo.iaUltimaPosicao) <= IA.distanciaChegada) {
+      varrerArea(robo, agora);
+    }
+
     return;
   }
 
   olharPara(robo, alvo);
 
-  const alcanceTiro = Number(robo.distanciaAtaque) || 180;
+  const alcanceTiro = Number(robo.distanciaAtaque) || 330;
+  const escalaDistancia = Math.min(1, alcanceTiro / 330);
 
   // ============================================
   // DECIDIR SE PRECISA RECUAR
   // ============================================
 
-  if (d < IA.atiradorRecuarAbaixo) {
+  if (d < IA.atiradorRecuarAbaixo * escalaDistancia) {
     robo.iaRecuando = true;
   }
 
-  if (d >= IA.atiradorPararRecuo) {
+  if (d >= IA.atiradorPararRecuo * escalaDistancia) {
     robo.iaRecuando = false;
+    robo.iaDestinoRecuo = null;
+    robo.iaReavaliarRecuo = 0;
   }
 
   // ============================================
   // RECUAR SE O JOGADOR ESTIVER MUITO PERTO
   // ============================================
 
-  if (robo.iaRecuando && d > 1) {
-    const ux = (robo.x - alvo.x) / d;
-
-    const uy = (robo.y - alvo.y) / d;
-
-    const destino = {
-      x: robo.x + ux * IA.atiradorPassoRecuo,
-
-      y: robo.y + uy * IA.atiradorPassoRecuo,
-    };
-
-    if (
-      distancia(destino, origem(robo)) <= IA.alcanceMaximoDoSpawn &&
-      linhaLivre(scene, robo, destino)
-    ) {
-      mover(scene, robo, destino, robo.velocidade * 0.8, true, d);
+  if (robo.iaRecuando) {
+    const destino = escolherRecuo(scene, robo, alvo, agora, d);
+    if (destino) {
+      irAte(scene, robo, destino, agora, robo.velocidade * 0.9, true, d, alvo);
     } else {
       parar(scene, robo, true, d);
     }
@@ -694,8 +803,8 @@ function combaterAtirador(scene, robo, alvo, agora, d, vendo) {
     // ============================================
     // APROXIMAR CASO ESTEJA LONGE
     // ============================================
-  } else if (d > Math.min(IA.atiradorAproximarAcima, alcanceTiro - 10)) {
-    irAte(scene, robo, alvo, agora, robo.velocidade * 0.85, true, d);
+  } else if (d > IA.atiradorAproximarAcima * escalaDistancia) {
+    irAte(scene, robo, alvo, agora, robo.velocidade * 0.9, true, d, alvo);
 
     // ============================================
     // PARAR E PRIORIZAR DISPAROS
@@ -708,8 +817,13 @@ function combaterAtirador(scene, robo, alvo, agora, d, vendo) {
   // ATACAR MESMO DURANTE O RECUO
   // ============================================
 
-  if (d <= alcanceTiro && linhaLivre(scene, robo, alvo)) {
-    olharPara(robo, alvo);
+  // A direção e o semicírculo de visão acompanham o alvo até entre dois disparos.
+  olharPara(robo, alvo);
+
+  if (
+    d <= alcanceTiro && agora >= robo.ultimoTiro + robo.tempoEntreTiros &&
+    linhaLivre(scene, robo, alvo)
+  ) {
 
     robo.alvoAtual = alvo;
 
@@ -734,6 +848,7 @@ function atualizarIAInimigo(scene, time, robo = scene.inimigoTeste) {
 
   if (
     !alvo ||
+    scene.morteEmAndamento ||
     alvo.active === false ||
     !Number.isFinite(alvo.x) ||
     !Number.isFinite(alvo.y)
@@ -748,6 +863,7 @@ function atualizarIAInimigo(scene, time, robo = scene.inimigoTeste) {
   }
 
   iniciarIA(robo, time);
+  verificarProgresso(robo, time);
 
   robo.alvoAtual = alvo;
 
@@ -759,7 +875,7 @@ function atualizarIAInimigo(scene, time, robo = scene.inimigoTeste) {
   // ECONOMIA DE PROCESSAMENTO
   // ============================================
 
-  if (d > IA.distanciaSono && robo.iaEstado === "patrulha") {
+  if (d > IA.distanciaSono && robo.iaEstado === "patrulha" && !robo.foiFerido && !robo.alerta) {
     if (time < (robo.iaAcordarEm || 0)) {
       return;
     }
@@ -783,17 +899,19 @@ function atualizarIAInimigo(scene, time, robo = scene.inimigoTeste) {
   // ============================================
 
   if (
-    robo.iaEstado !== "retorno" &&
     time >= robo.iaIgnorarAlvoAte &&
     vendo &&
     dOrigem <= IA.alcanceMaximoDoSpawn
   ) {
+    const adquiriuAlvo = robo.iaEstado !== "combate";
     entrarCombate(robo, alvo, time);
+    if (adquiriuAlvo) robo.iaProximoAlerta = 0;
+    notificarGrupo(scene, robo, "visao", time);
   } else if (robo.iaEstado === "patrulha" && ferido) {
-    robo.iaUltimaPosicao = {
-      x: alvo.x,
-      y: alvo.y,
-    };
+    // Sem contato visual, o dano é uma pista local; não revela o alvo atrás de paredes.
+    if (!robo.iaUltimaPosicao || time - robo.iaUltimaVisao > IA.memoriaAlvoMs) {
+      robo.iaUltimaPosicao = { x: robo.x, y: robo.y };
+    }
 
     robo.alerta = true;
 
@@ -806,9 +924,7 @@ function atualizarIAInimigo(scene, time, robo = scene.inimigoTeste) {
 
   if (
     (robo.iaEstado === "combate" || robo.iaEstado === "investigar") &&
-    (dOrigem >= IA.alcanceRetornoDoSpawn ||
-      (robo.iaEstado === "combate" &&
-        time - robo.iaComecouPerseguir >= IA.perseguicaoMaxMs))
+    dOrigem >= IA.alcanceRetornoDoSpawn
   ) {
     mudarEstado(robo, "retorno", time);
 
@@ -862,16 +978,31 @@ function atualizarIAInimigo(scene, time, robo = scene.inimigoTeste) {
 
     atualizarEstadoVisualRobo(robo);
 
-    if (time - robo.iaDesde >= IA.investigarMs) {
+    const pista = robo.iaUltimaPosicao || origem(robo);
+    const chegou = distancia(robo, pista) <= IA.distanciaChegada;
+    if (chegou && robo.iaBuscaDesde == null) robo.iaBuscaDesde = time;
+
+    if (
+      (robo.iaBuscaDesde != null && time - robo.iaBuscaDesde >= IA.investigarMs) ||
+      time - robo.iaDesde >= IA.investigarDeslocamentoMaxMs + IA.investigarMs
+    ) {
       mudarEstado(robo, "retorno", time);
 
       robo.alerta = false;
+      parar(scene, robo, false, d);
+    } else if (chegou) {
+      varrerArea(robo, time);
+      parar(scene, robo, false, d);
+    } else if (time - robo.iaDesde >= IA.investigarDeslocamentoMaxMs) {
+      // Uma pista inacessível ainda merece uma última varredura antes do retorno.
+      robo.iaBuscaDesde ??= time;
+      varrerArea(robo, time);
       parar(scene, robo, false, d);
     } else {
       irAte(
         scene,
         robo,
-        robo.iaUltimaPosicao || origem(robo),
+        pista,
         time,
         robo.velocidade * 0.65,
         false,

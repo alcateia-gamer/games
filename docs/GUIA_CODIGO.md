@@ -124,6 +124,21 @@ menor que 0,0005 para respeitar pisos e camadas posicionadas em passos de 0,001.
 
 ### Inimigos e boss
 
+Os robôs enxergam em um semicírculo frontal de 180°, com o cenário bloqueando a
+visão. O raio é de 760 px para o atirador e 820 px para a serra. Ao avistar o
+jogador ou receber dano, o robô alerta aliados em até 420 px. O aviso compartilha
+a última posição conhecida, sem dar visão através de paredes. A memória de 9 s
+mantém a perseguição quando o alvo sai de vista; a investigação faz uma varredura
+ao chegar à pista. O combate continua enquanto houver contato visual dentro do
+limite de perseguição da origem. A navegação considera largura e deslocamento da
+hitbox dos pés, evita cortar quinas e recalcula rotas ao detectar falta de avanço.
+
+O atirador dispara em até 330 px e começa a recuar quando o jogador chega a menos
+de 190 px, afastando-se até 265 px. Durante o recuo, continua olhando para o
+jogador com os passos invertidos e tenta saídas laterais se houver parede atrás.
+A serra mantém o alcance de ataque corpo a corpo de 68 px. Esses valores
+são usados tanto na criação direta quanto no spawn por zonas.
+
 | Arquivo | Responsabilidade |
 | --- | --- |
 | [js/enemies/EnemyAI.js](../js/enemies/EnemyAI.js) | Máquina de estados dos robôs: patrulha, combate, investigação e retorno. Usa visão frontal, memória do alvo e navegação compartilhada. |

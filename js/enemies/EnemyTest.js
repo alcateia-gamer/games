@@ -71,9 +71,11 @@ function criarInimigoTeste(scene, config = {}) {
 
   inimigo.velocidade = Number(config.velocidade ?? 50);
   inimigo.orbitaAngulo = Math.random() * Math.PI * 2;
-  inimigo.distanciaDeteccao = Number(config.distanciaDeteccao ?? 550);
+  inimigo.distanciaDeteccao = Number(
+    config.distanciaDeteccao ?? (tipoRobo === "serra" ? 820 : 760),
+  );
   inimigo.distanciaAtaque = Number(
-    config.distanciaAtaque ?? (tipoRobo === "serra" ? 68 : 180),
+    config.distanciaAtaque ?? (tipoRobo === "serra" ? 68 : 330),
   );
   inimigo.distanciaGrupo = Number(config.distanciaGrupo ?? 180);
   inimigo.danoBase = Number(config.danoLaser ?? 5);
@@ -158,7 +160,7 @@ function criarRoboSerra(scene) {
     x: scene.player.x + Math.cos(angulo) * 140,
     y: scene.player.y + Math.sin(angulo) * 140,
     velocidade: 62,
-    distanciaDeteccao: 600,
+    distanciaDeteccao: 820,
     distanciaAtaque: 68,
     distanciaGrupo: 180,
     vidaMaxima: 120,
@@ -286,8 +288,8 @@ function criarRobos(
       networkId: `${scene.multiplayerManager?.playerId || "local"}-enemy-${scene.networkEnemyId}-${robosExistentes + index}`,
       formacaoIndex: robosExistentes + index,
       velocidade: 50,
-      distanciaDeteccao: 550,
-      distanciaAtaque: 180,
+      distanciaDeteccao: 760,
+      distanciaAtaque: 330,
       distanciaGrupo: 220,
       tempoEntreTiros: 680 - index * 40,
       tempoPatrulha: 1200 + index * 120,

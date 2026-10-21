@@ -556,9 +556,9 @@ class EnemySpawnManager {
 
         velocidade: tipo === "serra" ? 62 : 50,
 
-        distanciaDeteccao: tipo === "serra" ? 600 : 550,
+        distanciaDeteccao: tipo === "serra" ? 820 : 760,
 
-        distanciaAtaque: tipo === "serra" ? 68 : 180,
+        distanciaAtaque: tipo === "serra" ? 68 : 330,
 
         distanciaGrupo: 220,
 
