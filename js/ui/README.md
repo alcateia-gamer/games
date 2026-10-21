@@ -29,7 +29,8 @@ a partir dele, sem cruzar colisões, recebem a mesma cor e compartilham o contor
 conectando visualmente os trechos de rua.
 Cada trecho conectado de calçada é desenhado inteiro, ignorando recortes de
 objetos sobre ele. Calçadas isoladas, pisos internos e marcações decorativas
-não são preenchidos.
+não são preenchidos, exceto o piso e o tapete da loja de armas. O interior da loja
+aparece como uma área sólida com contorno, acompanhando o jogador após o teleporte.
 `MiniMapData.js` calcula os limites do mapa e as transformações da interface.
 O minimapa não altera os tiles, as colisões ou a câmera do jogo.
 
@@ -41,6 +42,17 @@ atualizado a cada frame. Robôs comuns e de serra dentro da janela aparecem como
 pontos vermelhos com uma seta na direção em que olham. Os marcadores acompanham
 movimento e mudanças de direção mesmo com o jogador parado, e somem ao morrer
 ou sair da janela. Também usam os estados dos robôs remotos no multiplayer.
+Itens coletáveis aparecem como exclamações amarelas com contorno escuro. O mesmo
+ícone flutua acima do item no cenário, mas permanece fixo na posição do chão no
+minimapa. Os dois avisos desaparecem ao recolher o item.
+Um raio amarelo fixo marca o centro da área de interação do gerador e desaparece
+quando a luz da fábrica acende. A escala local de 0,09 mostra aproximadamente 956 pixels do cenário
+por lado na janela de 86 pixels.
+Uma katana amarela marca a entrada da loja de armas na cidade,
+acompanhando as coordenadas do teleporte de entrada.
+Uma lupa amarela fixa marca o ponto X=26, Y=-219 no minimapa da cidade.
+Ela desaparece quando o jogador passa a até 32 pixels do ponto e continua oculta
+ao se afastar.
 Não há acesso ao armazenamento de exploração antigo.
 
 O posicionamento utiliza o listener de controles fixos em `PlayerInput.js`.

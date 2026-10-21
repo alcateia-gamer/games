@@ -115,7 +115,12 @@ Os arquivos de teste aparecem junto do sistema que verificam. Os quatro arquivos
 | [js/map/ColisoesMapa.js](../js/map/ColisoesMapa.js) | Converte as áreas de colisão do Tiled em corpos estáticos invisíveis da física Arcade. |
 | [js/map/ProfundidadeMapa.js](../js/map/ProfundidadeMapa.js) | Regras de sobreposição visual da cidade e fábrica. Ajusta depth pelo Y ou pela posição relativa ao personagem. |
 | [js/map/LuzesMapa.js](../js/map/LuzesMapa.js) | Iluminação dos postes da cidade. Os comentários locais detalham as texturas de brilho, feixe e mancha no chão. |
-| [js/map/ProfundidadeMapa.test.mjs](../js/map/ProfundidadeMapa.test.mjs) | Testes da sobreposição dos computadores PcAdm com o personagem e do tratamento de jogador ausente. |
+| [js/map/ProfundidadeMapa.test.mjs](../js/map/ProfundidadeMapa.test.mjs) | Testes da sobreposição dos computadores e da ordenação de personagens e robôs. |
+
+Personagem e robôs comuns ou de serra usam `calcularDepthAtor` com a base da hitbox
+dos pés. Na cidade, seguem a escala de Y do mundo. Na fábrica, os robôs ficam na
+mesma faixa do personagem: quem está mais abaixo aparece à frente, com uma variação
+menor que 0,0005 para respeitar pisos e camadas posicionadas em passos de 0,001.
 
 ### Inimigos e boss
 

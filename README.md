@@ -253,6 +253,8 @@ Criada pela própria AXIOM, utiliza a foice **Eclipse** para eliminar inimigos c
 
 No modo solo, o jogador escolhe **apenas um agente** para realizar toda a campanha.
 
+Na tela inicial ou nos menus de abertura, pressione **K** para iniciar direto no modo solo com **Kai Mercer**.
+
 Durante a jornada, ele será acompanhado pela unidade robótica **N.O.V.A (Núcleo Operacional de Vigilância e Assistência)**.
 
 A N.O.V.A fornece suporte tecnológico, analisa ambientes, identifica ameaças, acessa sistemas da cidade e auxilia na exploração, tornando-se uma companheira essencial para quem enfrenta Night City sozinho.

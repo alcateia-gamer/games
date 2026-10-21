@@ -20,6 +20,24 @@ function depthFromWorldY(y) {
 }
 
 /**
+ * Usa a mesma ordenação pelos pés para personagens e robôs, respeitando a faixa da fábrica.
+ */
+function calcularDepthAtor(scene, footY) {
+  if (Number.isFinite(scene.profundidadePersonagemParte2)) {
+    const player = scene.player;
+    const playerFootY = player?.body?.bottom ?? player?.getBounds().bottom ?? footY;
+    // As camadas da fábrica podem ficar a apenas 0,001 do personagem.
+    // Limita a variação a ±0,0005, mantendo a ordem dos pés sem atravessar essas camadas.
+    const offset = Math.atan((footY - playerFootY) / 100) / Math.PI * 0.001;
+    return scene.profundidadePersonagemParte2 + offset;
+  }
+
+  return scene.calcularDepthMundo
+    ? scene.calcularDepthMundo(footY)
+    : depthFromWorldY(footY);
+}
+
+/**
  * Acrescenta um pequeno ajuste por Y à profundidade base de uma camada de objetos.
  */
 function calcularDepthObjeto(profundidadeCamada, y) {
@@ -117,6 +135,7 @@ function atualizarDepthComputadoresPcAdm(scene) {
 export {
   DEPTHS,
   depthFromWorldY,
+  calcularDepthAtor,
   calcularDepthObjeto,
   PROFUNDIDADES_OBJETOS_PARTE2,
   atualizarDepthObjetosProducaoEArmazem,

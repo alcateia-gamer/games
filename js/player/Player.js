@@ -10,6 +10,7 @@ import { causarDanoInimigo } from "../enemies/EnemyTest.js";
 import { causarDanoBoss } from "../enemies/BossFinal.js";
 import { tocarSomKatanaAcerto, tocarSomKatanaErro } from "../sounds/katana.js";
 import { COMBAT_FEEL } from "../combat/CombatEffects.js";
+import { calcularDepthAtor } from "../map/ProfundidadeMapa.js";
 import {
   obterConfiguracaoHitboxAtaque,
   obterConfiguracaoHitboxWalk,
@@ -132,9 +133,7 @@ function atualizarDepthPlayer(scene) {
   }
 
   const footY = calcularFootYPlayer(scene);
-  const depth = scene.calcularDepthMundo
-    ? scene.calcularDepthMundo(footY)
-    : 12.5 + footY * 0.0003;
+  const depth = calcularDepthAtor(scene, footY);
 
   scene.player.setDepth(depth);
 

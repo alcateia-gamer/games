@@ -189,6 +189,7 @@ class Level1 extends Phaser.Scene {
     teleporteA.body.debugShowBody = false;
 
     const teleporteB = this.add.zone(816, -860, 90, 12).setVisible(false);
+    this.entradaLojaArmas = teleporteB;
     this.physics.add.existing(teleporteB, true);
     teleporteB.body.setSize(60, 12);
     teleporteB.body.debugShowBody = false;
@@ -230,7 +231,8 @@ class Level1 extends Phaser.Scene {
     });
 
     this.physics.add.overlap(this.player, teleporteB, () => {
-      teleportarComFadeNovo(-1405, 475);
+      // Chega dentro da loja, antes do gatilho de saída em Y 9000.
+      teleportarComFadeNovo(-436, 8940);
     });
 
     criarSistemaProjeteis(this);
@@ -856,16 +858,6 @@ class Level1 extends Phaser.Scene {
       });
     }
 
-    if (Array.isArray(this.inimigos)) {
-      this.inimigos.forEach((inimigo) => {
-        if (!inimigo || !inimigo.active) {
-          return;
-        }
-
-        const footY = inimigo.body?.bottom ?? inimigo.getBounds().bottom;
-        inimigo.setDepth(this.calcularDepthMundo(footY));
-      });
-    }
   }
 }
 

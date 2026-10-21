@@ -16,7 +16,7 @@ import criarAnimacoesPlayer, {
   criarAnimacoesPersonagensRemotos,
 } from "../player/PlayerAnimations.js";
 
-import { criarPlayer, atualizarHitboxDanoPlayer } from "../player/Player.js";
+import { criarPlayer, atualizarHitboxDanoPlayer, atualizarDepthPlayer } from "../player/Player.js";
 
 import {
   criarControles,
@@ -940,7 +940,7 @@ class Level1Parte2 extends Phaser.Scene {
 
     this.profundidadePersonagemParte2 = valor;
 
-    this.player?.setDepth(valor);
+    atualizarDepthPlayer(this);
   }
 
   // =====================================================

@@ -4,6 +4,7 @@
  */
 
 import { configurarSomPassoRobo } from "../sounds/inimigos.js";
+import { calcularDepthAtor } from "../map/ProfundidadeMapa.js";
 import {
   criarAnimacoesInimigo,
   atualizarEstadoVisualRobo,
@@ -32,7 +33,6 @@ function criarInimigoTeste(scene, config = {}) {
   inimigo.networkId = config.networkId || null;
   inimigo.remoteOnly = Boolean(config.remoteOnly);
 
-  inimigo.setDepth(12);
   inimigo.setScale(tipoRobo === "serra" ? 0.36 : 0.23);
   inimigo.baseScaleX = inimigo.scaleX;
   inimigo.baseScaleY = inimigo.scaleY;
@@ -50,6 +50,8 @@ function criarInimigoTeste(scene, config = {}) {
   // Mantém a mesma área física do robô antigo e reposiciona a hitbox para o
   // novo sprite maior sem alterar a lógica do inimigo.
   configurarHitboxPeInimigo(inimigo);
+  inimigo.body.updateFromGameObject();
+  atualizarDepthInimigo(inimigo, scene);
 
   inimigo.formacaoIndex = Number(config.formacaoIndex ?? 0);
   inimigo.patrolCenter = {
@@ -386,16 +388,12 @@ function atualizarHitboxDanoInimigo(inimigo) {
  * Ordena o inimigo pela posição de seus pés usando a regra de profundidade da cena.
  */
 function atualizarDepthInimigo(inimigo, scene) {
-  if (!inimigo || !scene || !scene.player || !scene.player.active) {
+  if (!inimigo?.active || !scene) {
     return;
   }
 
   const inimigoFootY = inimigo.body?.bottom ?? inimigo.getBounds().bottom;
-  const calcularDepth =
-    scene.calcularDepthMundo || ((worldY) => 12.5 + worldY * 0.0003);
-
-  // O player é ordenado pela cena; este sistema só atualiza o inimigo.
-  inimigo.setDepth(calcularDepth(inimigoFootY));
+  inimigo.setDepth(calcularDepthAtor(scene, inimigoFootY));
 }
 
 /**

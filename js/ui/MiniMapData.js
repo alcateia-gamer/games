@@ -12,11 +12,17 @@ const MINI_MAP_LABEL_HEIGHT = 18;
 export const MINI_MAP_PROFILES = {
   cidade: {
     id: "minimap_mapa1_cidade", cacheKey: "mapa", label: "NIGHT CITY",
+    searchPoint: { x: 26, y: -219 },
     floors: ["Chão"], roads: [],
     asphalt: {
       tileset: "A5_Street_Rasak",
       // Bloco de calçada no canto inferior esquerdo da folha de tiles.
       excludedTiles: [104, 105, 106, 112, 113, 114, 120, 121, 122],
+    },
+    // Piso da loja de armas e tapete da entrada, em índices locais dos tilesets.
+    interiorFloorTiles: {
+      A5_SciFi_Inside_Rasak: [3],
+      A5_SciFi_Outside_Rasak: [9],
     },
     buildings: ["Prédios", "TetoPredio", "ContainerTorre"],
     vehicles: ["Vehicles"],
@@ -49,6 +55,8 @@ export function buildMiniMapGeometry(map, profile, warn = console.warn) {
   const objects = map?.objects ?? [];
   const asphaltTileset = map?.tilesets?.find(tileset => tileset.name === profile.asphalt?.tileset);
   const excludedAsphaltTiles = new Set(profile.asphalt?.excludedTiles ?? []);
+  const interiorFloorTiles = new Set((map?.tilesets ?? []).flatMap(tileset =>
+    (profile.interiorFloorTiles?.[tileset.name] ?? []).map(index => tileset.firstgid + index)));
   const excludedTileRanges = (map?.tilesets ?? [])
     .filter(tileset => profile.excludedTilesets?.includes(tileset.name))
     .map(tileset => ({ start: tileset.firstgid, end: tileset.firstgid + (tileset.total ?? tileset.tilecount) }));
@@ -100,6 +108,7 @@ export function buildMiniMapGeometry(map, profile, warn = console.warn) {
             if (!isAsphalt) radarKind = asphaltTileset && excludedAsphaltTiles.has(localIndex)
               ? "sidewalks" : "background";
           }
+          if (kind === "floors" && interiorFloorTiles.has(tile.index)) radarKind = "interiors";
           const x = originX + (tile.pixelX ?? tile.x * width) * scaleX;
           const y = originY + (tile.pixelY ?? tile.y * height) * scaleY;
           const vehicleId = kind === "vehicles" || kind === "vehicleAttachments"
@@ -165,7 +174,7 @@ export function collisionShape(object) {
  */
 export function createMapTransform(bounds, width, height, x, y) {
   // Janela local sem distorção. Mapas pequenos são centralizados e cabem inteiros.
-  const localScale = Math.min(0.12, width / 400, height / 300);
+  const localScale = Math.min(0.09, width / 400, height / 300);
   /**
    * Calcula o deslocamento de um eixo e limita a janela aos limites do mapa.
    */

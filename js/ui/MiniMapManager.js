@@ -7,11 +7,14 @@ import {
   createMapTransform, worldToMiniMap, miniMapLayout,
 } from "./MiniMapData.js";
 import { drawMiniMapAtlas, RADAR_COLORS } from "./MiniMapAtlas.js";
+import { drawCollectibleMarker, COLLECTIBLE_MARKER_COLOR } from "./CollectibleMarker.js";
+import { findGeneratorInteraction } from "../interactions/FactoryGenerator.js";
 
 const WIDTH = MINI_MAP_SIZE, HEIGHT = MINI_MAP_SIZE;
 const VIEW_X = 2, VIEW_Y = 2, VIEW_WIDTH = WIDTH - 4, VIEW_HEIGHT = HEIGHT - 4;
 const UPDATE_INTERVAL = 100;
 const ENEMY_MARKER_MARGIN = 7;
+const SEARCH_POINT_RANGE = 32;
 const LOOK_DIRECTIONS = {
   up: { x: 0, y: -1 }, right: { x: 1, y: 0 },
   down: { x: 0, y: 1 }, left: { x: -1, y: 0 },
@@ -41,11 +44,17 @@ export default class MiniMapManager {
   constructor(scene, map, profileName) {
     this.scene = scene;
     this.profile = MINI_MAP_PROFILES[profileName];
+    this.searchPointVisited = false;
     this.destroyed = false;
     const entry = getCachedMap(scene, map, this.profile);
     if (!entry) return;
     this.geometry = entry.geometry;
     this.atlas = entry.atlas;
+    const generator = findGeneratorInteraction(map);
+    this.generatorPosition = generator.status === "ok" ? {
+      x: generator.object.x + generator.object.width / 2,
+      y: generator.object.y + generator.object.height / 2,
+    } : null;
     this.textureKey = `nullborns-minimap-${++nextTextureId}`;
     // Só esta textura pequena é enviada à GPU, mesmo em mapas muito extensos.
     this.texture = scene.textures.createCanvas(this.textureKey, VIEW_WIDTH * 2, VIEW_HEIGHT * 2);
@@ -66,12 +75,13 @@ export default class MiniMapManager {
     this.image = scene.add.image(VIEW_X, VIEW_Y, this.textureKey).setOrigin(0, 0)
       .setDisplaySize(VIEW_WIDTH, VIEW_HEIGHT);
     this.enemyMarkers = scene.add.graphics();
+    this.itemMarkers = scene.add.graphics();
     this.marker = scene.add.container(0, 0);
     const glow = scene.add.circle(0, 0, 5.5, 0x071d18, 0.7);
     const heading = scene.add.graphics().lineStyle(1.5, RADAR_COLORS.player, 1);
     heading.beginPath().moveTo(-3, 2).lineTo(0, -4).lineTo(3, 2).strokePath();
     this.marker.add([glow, heading]);
-    this.root.add([frame, this.image, this.enemyMarkers, title, this.marker]);
+    this.root.add([frame, this.image, this.enemyMarkers, this.itemMarkers, title, this.marker]);
     // Nenhum elemento é interativo: os toques continuam chegando aos controles.
     this.lastX = NaN; this.lastY = NaN;
     this.nextUpdate = 0;
@@ -105,12 +115,14 @@ export default class MiniMapManager {
     if (!player?.active) {
       this.marker.setVisible(false);
       this.enemyMarkers.clear();
+      this.itemMarkers.clear();
       return;
     }
     const x = player.x, y = player.y;
     if (!Number.isFinite(x) || !Number.isFinite(y)) {
       this.marker.setVisible(false);
       this.enemyMarkers.clear();
+      this.itemMarkers.clear();
       return;
     }
     const { bounds } = this.geometry;
@@ -123,6 +135,10 @@ export default class MiniMapManager {
     }
     if (!this.transform) return;
     this.updateEnemyMarkers();
+    this.updateItemMarkers();
+    this.updateGeneratorMarker();
+    this.updateWeaponShopMarker();
+    this.updateSearchMarker();
     const position = worldToMiniMap(this.transform, x, y);
     const inside = x >= bounds.x && y >= bounds.y && x <= bounds.x + bounds.width && y <= bounds.y + bounds.height &&
       position.x >= 7 && position.y >= 7 && position.x <= VIEW_WIDTH - 7 && position.y <= VIEW_HEIGHT - 7;
@@ -161,6 +177,99 @@ export default class MiniMapManager {
   }
 
   /**
+   * Marca os coletáveis na posição do chão, sem acompanhar a flutuação do aviso no mundo.
+   */
+  updateItemMarkers() {
+    const graphics = this.itemMarkers;
+    graphics.clear();
+    const { bounds } = this.geometry;
+    for (const item of this.scene.itensColetaveis ?? []) {
+      if (!item.image?.active || !Number.isFinite(item.x) || !Number.isFinite(item.y)) continue;
+      if (item.x < bounds.x || item.y < bounds.y ||
+          item.x > bounds.x + bounds.width || item.y > bounds.y + bounds.height) continue;
+      const position = worldToMiniMap(this.transform, item.x, item.y);
+      if (position.x < 7 || position.y < 7 ||
+          position.x > VIEW_WIDTH - 7 || position.y > VIEW_HEIGHT - 7) continue;
+      drawCollectibleMarker(graphics, VIEW_X + position.x, VIEW_Y + position.y, 10);
+    }
+  }
+
+  /**
+   * Desenha um raio fixo no centro da área do gerador enquanto a fábrica está sem luz.
+   */
+  updateGeneratorMarker() {
+    if (this.scene.luzFabricaAcesa) return;
+    const generator = this.generatorPosition;
+    if (!generator || !Number.isFinite(generator.x) || !Number.isFinite(generator.y)) return;
+    const { bounds } = this.geometry;
+    if (generator.x < bounds.x || generator.y < bounds.y ||
+        generator.x > bounds.x + bounds.width || generator.y > bounds.y + bounds.height) return;
+    const position = worldToMiniMap(this.transform, generator.x, generator.y);
+    if (position.x < 7 || position.y < 7 ||
+        position.x > VIEW_WIDTH - 7 || position.y > VIEW_HEIGHT - 7) return;
+    const x = VIEW_X + position.x, y = VIEW_Y + position.y;
+    const points = [[1, -6], [-4, 1], [0, 1], [-1, 6], [4, -1], [0, -1]]
+      .map(([dx, dy]) => ({ x: x + dx, y: y + dy }));
+    this.itemMarkers.lineStyle(1.5, 0x30250a, 1)
+      .fillStyle(COLLECTIBLE_MARKER_COLOR, 1)
+      .fillPoints(points, true).strokePoints(points, true);
+  }
+
+  /**
+   * Marca a entrada da loja com uma katana, usando a posição do próprio teleporte.
+   */
+  updateWeaponShopMarker() {
+    const entrance = this.scene.entradaLojaArmas;
+    if (!entrance?.active || !Number.isFinite(entrance.x) || !Number.isFinite(entrance.y)) return;
+    const { bounds } = this.geometry;
+    if (entrance.x < bounds.x || entrance.y < bounds.y ||
+        entrance.x > bounds.x + bounds.width || entrance.y > bounds.y + bounds.height) return;
+    const position = worldToMiniMap(this.transform, entrance.x, entrance.y);
+    if (position.x < 8 || position.y < 8 ||
+        position.x > VIEW_WIDTH - 8 || position.y > VIEW_HEIGHT - 8) return;
+    const x = VIEW_X + position.x, y = VIEW_Y + position.y;
+    const blade = [[-3, 0], [2, -5], [5, -7], [3, -3], [-2, 1]]
+      .map(([dx, dy]) => ({ x: x + dx, y: y + dy }));
+    const graphics = this.itemMarkers;
+    // Lâmina, guarda e cabo amarelos, com contorno escuro para dar contraste.
+    graphics.lineStyle(3.5, 0x30250a, 1)
+      .lineBetween(x - 3, y + 2, x - 6, y + 5);
+    graphics.lineStyle(1.5, 0x30250a, 1).fillStyle(COLLECTIBLE_MARKER_COLOR, 1)
+      .fillPoints(blade, true).strokePoints(blade, true);
+    graphics.lineStyle(3.5, 0x30250a, 1)
+      .lineBetween(x - 4, y - 2, x, y + 2);
+    graphics.lineStyle(1.5, COLLECTIBLE_MARKER_COLOR, 1)
+      .lineBetween(x - 4, y - 2, x, y + 2)
+      .lineBetween(x - 3, y + 2, x - 6, y + 5);
+  }
+
+  /**
+   * Mostra a lupa até o jogador passar pelo ponto de investigação.
+   */
+  updateSearchMarker() {
+    const point = this.profile?.searchPoint;
+    if (!point || this.searchPointVisited) return;
+    const player = this.scene.player;
+    if (Math.hypot(player.x - point.x, player.y - point.y) <= SEARCH_POINT_RANGE) {
+      this.searchPointVisited = true;
+      return;
+    }
+    const { bounds } = this.geometry;
+    if (point.x < bounds.x || point.y < bounds.y ||
+        point.x > bounds.x + bounds.width || point.y > bounds.y + bounds.height) return;
+    const position = worldToMiniMap(this.transform, point.x, point.y);
+    if (position.x < 8 || position.y < 8 ||
+        position.x > VIEW_WIDTH - 8 || position.y > VIEW_HEIGHT - 8) return;
+    const x = VIEW_X + position.x, y = VIEW_Y + position.y;
+    this.itemMarkers.lineStyle(4, 0x30250a, 1)
+      .lineBetween(x + 2, y + 2, x + 5, y + 5)
+      .fillStyle(0x30250a, 1).fillCircle(x - 1, y - 1, 5)
+      .lineStyle(1.75, COLLECTIBLE_MARKER_COLOR, 1).strokeCircle(x - 1, y - 1, 3.25)
+      .lineStyle(2, COLLECTIBLE_MARKER_COLOR, 1)
+      .lineBetween(x + 2, y + 2, x + 5, y + 5);
+  }
+
+  /**
    * Desenha o cenário completo na janela local, sem recortes por exploração ou linha de visão.
    */
   drawView() {
@@ -193,6 +302,7 @@ export default class MiniMapManager {
     this.texture = null; this.atlas = null;
     this.geometry = null; this.root = null; this.marker = null; this.image = null;
     this.enemyMarkers = null;
+    this.itemMarkers = null;
     if (this.scene.minimap === this) this.scene.minimap = null;
   }
 }

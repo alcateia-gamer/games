@@ -12,6 +12,7 @@ import {
 } from "./MiniMapData.js";
 import { drawMiniMapAtlas, RADAR_COLORS } from "./MiniMapAtlas.js";
 import MiniMapManager from "./MiniMapManager.js";
+import { createCollectibleMarker, COLLECTIBLE_MARKER_COLOR } from "./CollectibleMarker.js";
 import { connectSidewalks } from "./MiniMapConnections.js";
 import { mergeMiniMapRects, connectedSidewalkBlocks, miniMapBarriers } from "./MiniMapBlocks.js";
 import { connectedVehicleRects, solidVehicleBlocks, vehicleInstanceKey } from "./MiniMapVehicles.js";
@@ -201,7 +202,7 @@ test("vehicle layers accept the ObjSobPerso name and honor each layer's world or
   assert.deepEqual(vehicles.map(rect => [rect.x, rect.y]), [[-240, -240], [-192, -240], [-144, -240]]);
 });
 
-test("city radar fills only asphalt, excluding sidewalks, indoor floors and decorative road markings", () => {
+test("city radar keeps asphalt separate from sidewalks, shop interiors and decorative road markings", () => {
   const map = loadRealMap("InicioFase1 (1).json");
   const geometry = buildMiniMapGeometry(map, MINI_MAP_PROFILES.cidade);
   const floor = map.layers.find(layer => layer.name === "Chão");
@@ -247,6 +248,29 @@ test("the sidewalk near X -92 Y -341 connects the two asphalt regions from the s
   for (let index = 0; index < xSamples.length; index++) {
     assert.deepEqual([...result.slice(index * 4, index * 4 + 4)], [98, 105, 112, 255]);
   }
+});
+
+test("the weapon shop floor and entrance mat are visible at the interior teleport destination", t => {
+  const geometry = buildMiniMapGeometry(loadRealMap("InicioFase1 (1).json"), MINI_MAP_PROFILES.cidade);
+  const interior = geometry.rects.filter(rect => rect.kind === "interiors");
+  assert.equal(interior.length, 48, "inclui os 46 tiles de piso e os dois tiles do tapete");
+  assert.deepEqual(mergeMiniMapRects(interior), [
+    { kind: "interiors", x: -672, y: 8736, width: 384, height: 288 },
+  ]);
+  const canvases = [];
+  useGlobal(t, "document", { createElement() {
+    const canvas = recordingCanvas(); canvases.push(canvas); return canvas;
+  } });
+  drawMiniMapAtlas({ ...geometry, rects: interior });
+  const floor = canvases[1].calls.find(call => call[0] === "fillRect" && call[1] === "source-over");
+  assert.deepEqual(floor.slice(3), [-672, 8736, 384, 288]);
+  assert.equal(floor[2], RADAR_COLORS.paths);
+  const transform = createMapTransform(geometry.bounds, 86, 86, -436, 8940);
+  const player = worldToMiniMap(transform, -436, 8940);
+  const corner = worldToMiniMap(transform, floor[3], floor[4]);
+  assert.ok(player.x >= 7 && player.x <= 79 && player.y >= 7 && player.y <= 79);
+  assert.ok(player.x > corner.x && player.x < corner.x + floor[5] * transform.scale);
+  assert.ok(player.y > corner.y && player.y < corner.y + floor[6] * transform.scale);
 });
 
 test("sidewalk connects in asphalt gray only through open passages, including around obstacles", () => {
@@ -522,6 +546,9 @@ test("minimap shows unvisited tiles immediately and follows the player without s
   useGlobal(t, "Phaser", { Scenes: { Events: { SHUTDOWN: "shutdown" } } });
   const map = simpleMap();
   map.layers[0].name = "Chão";
+  map.objects.push({ name: "Coletaveis", objects: [
+    { name: "gerador01", x: -190, y: -240, width: 40, height: 40 },
+  ] });
   map.tilesets = [{ name: "A5_Street_Rasak", firstgid: 1, total: 128 }];
   map.layers[0].data = [[0, 5000].map(pixelX => ({ index: 1,
     pixelX, pixelY: 0, baseWidth: 48, baseHeight: 48 }))];
@@ -542,6 +569,7 @@ test("minimap shows unvisited tiles immediately and follows the player without s
     },
   };
   const minimap = new MiniMapManager(scene, map, "cidade");
+  assert.deepEqual(minimap.generatorPosition, { x: -170, y: -220 });
   assert.equal(canvases.length, 2, "atlas e máscara dos caminhos são criados uma única vez");
   const floors = canvases[1].calls.filter(call => call[0] === "fillRect" && call[1] === "source-over");
   assert.equal(floors.length, 2, "até o piso distante aparece antes de visitar a região");
@@ -563,6 +591,15 @@ test("minimap shows unvisited tiles immediately and follows the player without s
 
 function enemyRadarFixture(enemies) {
   const commands = [];
+  const itemCommands = [];
+  const itemGraphics = {
+    clear() { itemCommands.length = 0; return this; },
+    fillStyle(color) { this.color = color; return this; },
+    fillRect(...args) { itemCommands.push([this.color, ...args]); return this; },
+    lineStyle() { return this; },
+    fillPoints(points) { itemCommands.push(["bolt", this.color, points]); return this; },
+    strokePoints() { return this; },
+  };
   const graphics = {
     clear() { commands.length = 0; return this; },
     fillStyle() { return this; },
@@ -576,10 +613,10 @@ function enemyRadarFixture(enemies) {
     scene: { player: { active: true, x: 0, y: 0 }, inimigos: enemies },
     geometry: { bounds: { x: -1000, y: -1000, width: 2000, height: 2000 } },
     transform: { scale: 0.12, x: 43, y: 43 },
-    lastX: 0, lastY: 0, nextUpdate: 0, enemyMarkers: graphics, marker,
+    lastX: 0, lastY: 0, nextUpdate: 0, enemyMarkers: graphics, itemMarkers: itemGraphics, marker,
     drawView() { assert.fail("movimentar os robôs não deve redesenhar o cenário"); },
   });
-  return { radar, commands };
+  return { radar, commands, itemCommands };
 }
 
 test("robot markers show positions and all four look directions", () => {
@@ -634,4 +671,79 @@ test("robot markers stay inside the viewport and ignore inactive or invalid enem
   radar.scene.player.active = false;
   radar.update(2);
   assert.equal(commands.length, 0);
+});
+
+test("collectible warnings float above their item and stop when it is removed", () => {
+  const image = Object.assign(new EventEmitter(), { x: -200, y: 100, displayHeight: 28 });
+  const colors = [];
+  let tween, destroyed = false, stopped = false;
+  const marker = {
+    setPosition(x, y) { this.x = x; this.y = y; return this; },
+    setDepth() { return this; },
+    fillStyle(color) { colors.push(color); return this; },
+    fillRect() { return this; },
+    destroy() { destroyed = true; },
+  };
+  const scene = {
+    add: { graphics: () => marker },
+    tweens: {
+      add(config) { tween = config; },
+      killTweensOf(target) { assert.equal(target, marker); stopped = true; },
+    },
+  };
+  assert.equal(createCollectibleMarker(scene, image), marker);
+  assert.equal(marker.x, image.x);
+  assert.ok(marker.y + 11 < image.y - image.displayHeight / 2);
+  assert.ok(colors.includes(COLLECTIBLE_MARKER_COLOR));
+  assert.equal(tween.targets, marker);
+  assert.ok(tween.y < marker.y);
+  assert.equal(tween.yoyo, true);
+  assert.equal(tween.repeat, -1);
+  image.emit("destroy");
+  assert.equal(stopped, true);
+  assert.equal(destroyed, true);
+});
+
+test("collectibles keep a fixed radar icon while floating and disappear after pickup", () => {
+  const { radar, itemCommands } = enemyRadarFixture([]);
+  const item = { x: -100, y: 0, image: { active: true }, marker: { y: -30 } };
+  radar.scene.itensColetaveis = [item,
+    { x: 350, y: 0, image: { active: true } },
+    { x: 0, y: NaN, image: { active: true } },
+    { x: 0, y: 0, image: { active: false } },
+  ];
+  radar.update(0);
+  assert.equal(itemCommands.length, 4);
+  const first = structuredClone(itemCommands);
+  assert.equal(first[2][0], COLLECTIBLE_MARKER_COLOR);
+  assert.equal(first[2][1], 33 - 2 * 10 / 16);
+  item.marker.y -= 5;
+  radar.update(1);
+  assert.deepEqual(itemCommands, first);
+  item.image.active = false;
+  radar.scene.itensColetaveis = [];
+  radar.update(2);
+  assert.equal(itemCommands.length, 0);
+});
+
+test("the generator hides its lightning icon when the lights turn on and stays within the radar", () => {
+  const { radar, itemCommands } = enemyRadarFixture([]);
+  radar.generatorPosition = { x: 100, y: 0 };
+  radar.update(0);
+  assert.equal(itemCommands.length, 1);
+  assert.equal(itemCommands[0][0], "bolt");
+  assert.equal(itemCommands[0][1], COLLECTIBLE_MARKER_COLOR);
+  assert.deepEqual(itemCommands[0][2][0], { x: 58, y: 39 });
+  radar.scene.luzFabricaAcesa = true;
+  radar.update(1);
+  assert.equal(itemCommands.length, 0);
+  radar.scene.luzFabricaAcesa = false;
+  radar.update(2);
+  assert.equal(itemCommands.length, 1);
+  radar.generatorPosition.x = 350;
+  radar.update(3);
+  assert.equal(itemCommands.length, 0);
+  radar.generatorPosition = null;
+  radar.update(4);
+  assert.equal(itemCommands.length, 0);
 });

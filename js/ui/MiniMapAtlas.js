@@ -51,7 +51,7 @@ export function drawMiniMapAtlas(geometry) {
   mask.scale(scale, scale);
   mask.translate(-bounds.x, -bounds.y);
   mask.fillStyle = RADAR_COLORS.paths;
-  const floors = rects.filter(rect => rect.kind === "floors" || rect.kind === "roads");
+  const floors = rects.filter(rect => rect.kind === "floors" || rect.kind === "roads" || rect.kind === "interiors");
   for (const rect of mergeMiniMapRects(floors)) {
     mask.fillRect(rect.x, rect.y, rect.width, rect.height);
   }

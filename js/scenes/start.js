@@ -94,6 +94,18 @@ class Start extends Phaser.Scene {
     this.columns = [];
     this.sequenceStarted = false;
     this.selectedCharacter = "kai-mercer";
+    this.startingGame = false;
+
+    // Disponível desde a tela JOGAR e durante os menus desta cena.
+    const quickStart = (event) => {
+      if (event.repeat || event.ctrlKey || event.altKey || event.metaKey) return;
+      this.selectedCharacter = "kai-mercer";
+      this.startSoloGame();
+    };
+    this.input.keyboard.on("keydown-K", quickStart);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.input.keyboard.off("keydown-K", quickStart);
+    });
 
     if (this.scene.settings.data?.abrirMenu) {
       this.mode = "menu";
@@ -868,8 +880,11 @@ class Start extends Phaser.Scene {
    * Entra no preloader passando o ID do personagem selecionado para a partida solo.
    */
   startSoloGame() {
+    if (this.startingGame) return;
+    this.startingGame = true;
     this.scene.start("preloader", {
       personagem: this.selectedCharacter,
+      multiplayer: false,
     });
   }
 

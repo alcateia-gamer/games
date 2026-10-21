@@ -10,6 +10,7 @@ import {
   listInventoryItems,
 } from "./InventoryItems.js";
 import { obterInventarioDoJogador } from "./Inventory.js";
+import { createCollectibleMarker } from "../ui/CollectibleMarker.js";
 
 const ITEM_LAYER_NAMES = ["Coletaveis", "Itens"];
 const DEFAULT_PICKUP_RANGE = 64;
@@ -182,6 +183,7 @@ function criarSistemaInventario(scene) {
       itemId,
       quantity,
       image,
+      marker: createCollectibleMarker(scene, image),
       x: position.x,
       y: position.y,
       range,
