@@ -139,6 +139,18 @@ registerInventoryItem({
   showQuantity: false,
 });
 
+registerInventoryItem({
+  id: "card",
+  name: "Crachá de Segurança",
+  image: {
+    key: "inventory-card-icon",
+    path: "ACESSORIOS/Crachá_Segurança.png",
+  },
+  maxStack: 1,
+  category: "key",
+  showQuantity: false,
+});
+
 export {
   createBuiltinInventoryTextures,
   getInventoryItem,

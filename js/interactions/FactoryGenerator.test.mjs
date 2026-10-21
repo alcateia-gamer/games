@@ -1,12 +1,33 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 
 import {
   GENERATOR_REQUIREMENTS,
   distanceToInteractionArea,
+  findFactoryInteraction,
   findGeneratorInteraction,
   pointerDentroDoBotao,
 } from "./FactoryGenerator.js";
+
+test("finds the generator and door in the current factory map", () => {
+  const map = JSON.parse(readFileSync(
+    new URL("../../assets/map/parte2-fase1.json", import.meta.url),
+  ));
+  for (const name of ["gerador01", "porta01"]) {
+    const result = findFactoryInteraction(map, name);
+    assert.equal(result.status, "ok");
+    assert.equal(result.object.name, name);
+  }
+});
+
+test("finds interactions in Coletaveis even when Interacoes also exists", () => {
+  const object = { name: "gerador01", x: 10, y: 20, width: 40, height: 30 };
+  assert.deepEqual(findGeneratorInteraction({ objects: [
+    { name: "Interacoes", objects: [] },
+    { name: "COLETAVEIS", objects: [object] },
+  ] }), { status: "ok", object });
+});
 
 test("finds the named interaction area without depending on layer casing", () => {
   const object = {

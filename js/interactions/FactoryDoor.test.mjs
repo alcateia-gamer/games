@@ -4,18 +4,25 @@ import { EventEmitter } from "node:events";
 import { readFileSync } from "node:fs";
 import { FACTORY_DOOR_STATE_KEY, criarInteracaoPortaFabrica } from "./FactoryDoor.js";
 import { criarSistemaInventario } from "../inventory/ItemPickup.js";
+import { criarInteracaoGeradorFabrica, findGeneratorInteraction } from "./FactoryGenerator.js";
 
 globalThis.Phaser = {
   Scenes: { Events: { PRE_RENDER: "prerender", SHUTDOWN: "shutdown" } },
   Input: { Keyboard: {
-    KeyCodes: { E: 69 },
+    KeyCodes: { E: 69, ESC: 27 },
     JustDown(key) {
       const pressed = key.pressed;
       key.pressed = false;
       return pressed;
     },
   } },
-  Math: { Distance: { Between: (x, y, a, b) => Math.hypot(x - a, y - b) } },
+  Math: {
+    Distance: { Between: (x, y, a, b) => Math.hypot(x - a, y - b) },
+    Vector2: class {
+      constructor(x = 0, y = 0) { this.x = x; this.y = y; }
+      copy(other) { this.x = other.x; this.y = other.y; return this; }
+    },
+  },
 };
 
 class DisplayObject extends EventEmitter {
@@ -25,6 +32,9 @@ class DisplayObject extends EventEmitter {
   setScale() { return this; }
   setAlpha() { return this; }
   setStrokeStyle() { return this; }
+  setText() { return this; }
+  setColor() { return this; }
+  setSize() { return this; }
   removeAll() { return this; }
   add() { return this; }
   setInteractive() { return this; }
@@ -66,14 +76,25 @@ function createScene(registry = new Map()) {
   const scene = {
     events: new EventEmitter(), game: { registry },
     scene: { key: "Level1Parte2" },
-    player: { active: true, x: -1076, y: -1445 },
+    player: {
+      active: true, x: -1076, y: -1445,
+      getCenter(out) { return out.copy(this); },
+      setVelocity() {},
+    },
     map: { objects: raw.layers, getLayer: () => ({ tilemapLayer: layer }),
       getObjectLayer: (name) => raw.layers.find((item) => item.name === name) },
     add: Object.fromEntries(["image", "text", "container", "rectangle"].map((type) =>
       [type, (x, y) => new DisplayObject(x, y)])),
     textures: { exists: () => true },
     cameras: { main: { width: 800, height: 450, zoom: 1, originX: 0.5, originY: 0.5 } },
-    input: { keyboard: { addKey: () => ({ pressed: false }) } },
+    input: Object.assign(new EventEmitter(), {
+      keyboard: { addKey: () => Object.assign(new DisplayObject(), { pressed: false }) },
+    }),
+    time: { delayedCall(delay, callback) {
+      scene.finishActivation = callback;
+      return { remove() {} };
+    } },
+    acenderLuzFabrica() { this.luzFabricaAcesa = true; },
     collisionGroup: { create(x, y) {
       const body = new DisplayObject(x, y);
       bodies.add(body);
@@ -83,6 +104,7 @@ function createScene(registry = new Map()) {
     tweens: { add(config) { scene.animation = config; return { stop() {} }; } },
   };
   criarSistemaInventario(scene);
+  criarInteracaoGeradorFabrica(scene);
   criarInteracaoPortaFabrica(scene);
   return { scene, bodies, tiles, texture, layer };
 }
@@ -152,4 +174,63 @@ test("nearby collectibles keep priority and opened doors stay open after returni
   assert.equal(returned.bodies.size, 0);
   assert.equal(returned.scene.interacaoMundoProxima, null);
   returned.scene.events.emit("shutdown");
+});
+
+function approachGenerator(scene) {
+  const { object: area } = findGeneratorInteraction(scene.map);
+  scene.player.x = area.x + area.width / 2;
+  scene.player.y = area.y + area.height + 20;
+  scene.atualizarInteracaoGeradorFabrica();
+  scene.atualizarInteracaoPortaFabrica();
+}
+
+test("E opens the generator menu in the current map and activation consumes its resources", () => {
+  const { scene } = createScene();
+  approachGenerator(scene);
+  scene.teclaColetarItem.pressed = true;
+  scene.atualizarColetaItens();
+  assert.equal(scene.generatorMenuOpen, true);
+  assert.equal(scene.movimentoBloqueado, true);
+
+  const activate = () => scene.input.emit("pointerdown", { x: 305, y: 344 });
+  activate();
+  assert.notEqual(scene.luzFabricaAcesa, true);
+  scene.inventory.addItem("gasolina", 2);
+  scene.inventory.addItem("bateria", 1);
+  activate();
+  assert.equal(scene.luzFabricaAcesa, true);
+  assert.equal(scene.inventory.getQuantity("gasolina"), 1);
+  assert.equal(scene.inventory.getQuantity("bateria"), 0);
+  scene.finishActivation();
+  assert.equal(scene.generatorMenuOpen, false);
+  assert.equal(scene.movimentoBloqueado, false);
+  scene.events.emit("shutdown");
+});
+
+test("the shared touch button opens the generator and an open menu blocks collection", () => {
+  const { scene } = createScene();
+  approachGenerator(scene);
+  scene.atualizarColetaItens();
+  assert.equal(scene.botaoColetarItem.visible, true);
+  scene.botaoColetarItem.emit("pointerdown");
+  assert.equal(scene.generatorMenuOpen, true);
+  assert.equal(scene.coletarItemProximo(), false);
+  scene.events.emit("shutdown");
+});
+
+test("collecting an item keeps priority over the nearby generator", () => {
+  const { scene } = createScene();
+  approachGenerator(scene);
+  scene.itensColetaveis.push({
+    uniqueId: "test:generator-gasolina", itemId: "gasolina", quantity: 1,
+    x: scene.player.x, y: scene.player.y, range: 64, image: new DisplayObject(),
+  });
+  scene.teclaColetarItem.pressed = true;
+  scene.atualizarColetaItens();
+  assert.equal(scene.inventory.getQuantity("gasolina"), 1);
+  assert.notEqual(scene.generatorMenuOpen, true);
+  scene.teclaColetarItem.pressed = true;
+  scene.atualizarColetaItens();
+  assert.equal(scene.generatorMenuOpen, true);
+  scene.events.emit("shutdown");
 });

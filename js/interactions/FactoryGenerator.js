@@ -1,4 +1,4 @@
-const GENERATOR_LAYER_NAME = "interacoes";
+const INTERACTION_LAYER_NAMES = ["interacoes", "coletaveis"];
 const GENERATOR_OBJECT_NAME = "gerador01";
 const GENERATOR_INTERACTION_RANGE = 48;
 const FACTORY_GENERATOR_STATE_KEY = "factoryGeneratorPowered";
@@ -15,21 +15,21 @@ const GENERATOR_REQUIREMENTS = Object.freeze([
   }),
 ]);
 
-function findGeneratorInteraction(map) {
+function findFactoryInteraction(map, objectName) {
   const objectLayers = Array.isArray(map?.objects)
     ? map.objects
     : map?.layers;
-  const layer = objectLayers?.find(
+  const layers = objectLayers?.filter(
     (objectLayer) =>
-      objectLayer.name?.toLowerCase() === GENERATOR_LAYER_NAME,
+      INTERACTION_LAYER_NAMES.includes(objectLayer.name?.toLowerCase()),
   );
 
-  if (!layer) {
+  if (!layers?.length) {
     return { status: "missing-layer" };
   }
 
-  const object = layer.objects?.find(
-    (mapObject) => mapObject.name === GENERATOR_OBJECT_NAME,
+  const object = layers.flatMap((layer) => layer.objects ?? []).find(
+    (mapObject) => mapObject.name === objectName,
   );
 
   if (!object) {
@@ -47,6 +47,10 @@ function findGeneratorInteraction(map) {
   }
 
   return { status: "ok", object };
+}
+
+function findGeneratorInteraction(map) {
+  return findFactoryInteraction(map, GENERATOR_OBJECT_NAME);
 }
 
 function distanceToInteractionArea(x, y, area) {
@@ -76,15 +80,15 @@ function criarInteracaoGeradorFabrica(scene) {
   if (result.status !== "ok") {
     const details = {
       "missing-layer":
-        "camada de objetos 'interacoes' (o nome não diferencia maiúsculas)",
+        "camada de objetos 'Interacoes' ou 'Coletaveis' (o nome não diferencia maiúsculas)",
       "missing-object":
-        "objeto retangular 'gerador01' dentro da camada 'interacoes'",
+        "objeto retangular 'gerador01' em 'Interacoes' ou 'Coletaveis'",
       "invalid-area":
         "objeto 'gerador01' com largura e altura maiores que zero",
     }[result.status];
     console.warn(
       `[Gerador] Não foi possível configurar a interação: falta ${details}. ` +
-        "No Tiled, crie a camada de objetos 'interacoes' e adicione nela " +
+        "No Tiled, use a camada de objetos 'Interacoes' ou 'Coletaveis' e adicione nela " +
         "um objeto retangular chamado 'gerador01' cobrindo a área de interação.",
     );
     return () => {};
@@ -271,7 +275,9 @@ function criarInteracaoGeradorFabrica(scene) {
   };
 
   scene.interagirGerador = () => {
-    if (scene.geradorInteracaoDisponivel) abrirModal();
+    if (!scene.geradorInteracaoDisponivel) return false;
+    abrirModal();
+    return dialogOpen;
   };
 
   const ativarGerador = () => {
@@ -395,6 +401,7 @@ export {
   GENERATOR_REQUIREMENTS,
   criarInteracaoGeradorFabrica,
   distanceToInteractionArea,
+  findFactoryInteraction,
   findGeneratorInteraction,
   listarRecursosFaltantes,
   pointerDentroDoBotao,

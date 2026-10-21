@@ -94,6 +94,7 @@ function criarSistemaInventario(scene) {
 
   for (const object of itemLayers.flatMap((layer) => layer.objects ?? [])) {
     const itemId = getProperty(object, "itemId");
+    if (itemId == null) continue;
     const itemUid = getProperty(object, "itemUid");
     const item = getInventoryItem(itemId);
 
@@ -143,7 +144,11 @@ function criarSistemaInventario(scene) {
     const image = scene.add
       .image(position.x, position.y, item.image.key, item.image.frame)
       .setDisplaySize(displaySize, displaySize)
-      .setDepth(scene.calcularDepthMundo?.(position.y) ?? 30);
+      .setDepth(
+        itemId === "card"
+          ? (scene.player?.depth ?? 30) - 0.01
+          : scene.calcularDepthMundo?.(position.y) ?? 30,
+      );
 
     scene.itensColetaveis.push({
       uniqueId,
@@ -168,7 +173,12 @@ function criarSistemaInventario(scene) {
       return interagiu;
     }
     const pickup = scene.itemColetavelProximo;
-    if (!pickup || scene.inventory.hasCollected(pickup.uniqueId)) return false;
+    if (!pickup) {
+      return scene.geradorInteracaoDisponivel
+        ? scene.interagirGerador?.() ?? false
+        : false;
+    }
+    if (scene.inventory.hasCollected(pickup.uniqueId)) return false;
 
     if (!scene.inventory.addItem(pickup.itemId, pickup.quantity)) {
       scene.mostrarAvisoInventarioCheio?.();
@@ -186,13 +196,7 @@ function criarSistemaInventario(scene) {
   };
 
   scene.coletarItemProximo = coletarItemProximo;
-  scene.botaoColetarItem.on("pointerdown", () => {
-    if (interagirComMundo || scene.itemColetavelProximo) {
-      coletarItemProximo();
-    } else if (scene.geradorInteracaoDisponivel) {
-      scene.interagirGerador?.();
-    }
-  });
+  scene.botaoColetarItem.on("pointerdown", coletarItemProximo);
   scene.atualizarColetaItens = () => {
     interagirComMundo = null;
     if (scene.generatorMenuOpen) {
@@ -221,8 +225,9 @@ function criarSistemaInventario(scene) {
       (!nearest || interaction.distance < nearest.distance);
     interagirComMundo = useWorldInteraction ? interaction.interact : null;
     scene.itemColetavelProximo = useWorldInteraction ? null : nearest?.item ?? null;
-    const canInteract = !!nearest || !!useWorldInteraction;
-    definirVisibilidadeBotao(canInteract || !!scene.geradorInteracaoDisponivel);
+    const canInteract = !!nearest || !!useWorldInteraction ||
+      !!scene.geradorInteracaoDisponivel;
+    definirVisibilidadeBotao(canInteract);
 
     if (canInteract && Phaser.Input.Keyboard.JustDown(scene.teclaColetarItem)) {
       coletarItemProximo();

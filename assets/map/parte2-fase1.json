@@ -8904,7 +8904,7 @@
         {
          "draworder":"topdown",
          "id":47,
-         "name":"Interacoes",
+         "name":"Coletaveis",
          "objects":[
                 {
                  "height":126,
@@ -8917,7 +8917,7 @@
                  "width":220,
                  "x":-633.166666666667,
                  "y":-1579.5
-                },
+                }, 
                 {
                  "height":96,
                  "id":853,
@@ -8929,6 +8929,30 @@
                  "width":144,
                  "x":-1152,
                  "y":-1584
+                }, 
+                {
+                 "height":0,
+                 "id":856,
+                 "name":"Card",
+                 "opacity":1,
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"ItemID",
+                         "type":"string",
+                         "value":"card"
+                        }, 
+                        {
+                         "name":"Quantidade",
+                         "type":"int",
+                         "value":1
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":781.5,
+                 "y":-1951.5
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -8937,7 +8961,7 @@
          "y":0
         }],
  "nextlayerid":49,
- "nextobjectid":856,
+ "nextobjectid":857,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.12.2",

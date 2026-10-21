@@ -1,13 +1,13 @@
-import { distanceToInteractionArea } from "./FactoryGenerator.js";
+import { distanceToInteractionArea, findFactoryInteraction } from "./FactoryGenerator.js";
 
 const FACTORY_DOOR_STATE_KEY = "factoryDoorOpen";
 const INTERACTION_RANGE = 64;
 const OPEN_DURATION = 850;
 
 function criarInteracaoPortaFabrica(scene) {
-  const area = scene.map.objects
-    .find((layer) => layer.name.toLowerCase() === "interacoes")
-    ?.objects.find((object) => object.name === "porta01");
+  const result = findFactoryInteraction(scene.map, "porta01");
+  if (result.status !== "ok") return;
+  const area = result.object;
   const layer = scene.map.getLayer("Portas")?.tilemapLayer;
   if (!area || !layer) return;
 
