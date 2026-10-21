@@ -115,3 +115,4 @@ window.onload = () => {
   const game = new Game();
   registrarAtualizacaoDeViewport(game);
 };
+git

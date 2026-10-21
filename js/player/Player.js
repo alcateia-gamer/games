@@ -249,8 +249,11 @@ function criarPlayer(scene) {
       scene.attackBufferedUntil > scene.time.now
     ) {
       scene.attackBufferedUntil = 0;
-      atacar(scene);
-      return;
+      // Só mantém a textura e a hitbox de ataque se o próximo golpe realmente começar.
+      // Sem estamina, ainda é necessário restaurar a caminhada abaixo.
+      if (atacar(scene)) {
+        return;
+      }
     }
     scene.attackBufferedUntil = 0;
 
@@ -648,7 +651,7 @@ function criarHitboxKatana(scene) {
 
 /**
  * Consome estamina e inicia o ataque do personagem; no solo, guarda um comando recente se já
- * houver ataque em andamento.
+ * houver ataque em andamento. Retorna se um novo ataque foi iniciado.
  */
 function atacar(scene) {
   // =====================================================
@@ -660,7 +663,7 @@ function atacar(scene) {
       scene.attackBufferedUntil =
         scene.time.now + COMBAT_FEEL.inputBufferMs;
     }
-    return;
+    return false;
   }
 
   // =====================================================
@@ -670,7 +673,7 @@ function atacar(scene) {
   const podeAtacar = gastarEstamina(scene, scene.custoAtaque);
 
   if (!podeAtacar) {
-    return;
+    return false;
   }
 
   // =====================================================
@@ -694,7 +697,7 @@ function atacar(scene) {
     scene.ariaAtaqueCarregando = true;
     scene.player.anims.play(`aria-charge-${scene.direcaoAtaque}`, false);
     configurarHitboxAtaque(scene);
-    return;
+    return true;
   }
 
   // =====================================================
@@ -757,6 +760,7 @@ function atacar(scene) {
   // =====================================================
 
   configurarHitboxAtaque(scene);
+  return true;
 }
 
 /**

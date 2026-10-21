@@ -928,7 +928,10 @@ function criarStatusPlayer(scene) {
  */
 function atualizarStatusPlayer(scene, delta) {
   // REGENERAÇÃO DA ESTAMINA.
-  if (!scene.atacando && scene.estamina < scene.estaminaMaxima) {
+  if (
+    !aplicarEstaminaInfinitaDev(scene) &&
+    !scene.atacando && scene.estamina < scene.estaminaMaxima
+  ) {
     scene.estamina += scene.regeneracaoEstamina * (delta / 1000);
 
     scene.estamina = Math.min(scene.estamina, scene.estaminaMaxima);
@@ -950,11 +953,24 @@ function atualizarStatusPlayer(scene, delta) {
 // GASTAR ESTAMINA
 // =====================================================
 
+/** Mantém a estamina cheia enquanto o modo desenvolvedor estiver ativo. */
+function aplicarEstaminaInfinitaDev(scene) {
+  if (!scene.developerMode) return false;
+
+  scene.estamina = scene.estaminaMaxima;
+  return true;
+}
+
 /**
  * Consome estamina se houver saldo suficiente e atualiza a HUD; informa se o gasto foi
  * possível.
  */
 function gastarEstamina(scene, quantidade) {
+  if (aplicarEstaminaInfinitaDev(scene)) {
+    atualizarBarrasHUD(scene);
+    return true;
+  }
+
   if (scene.estamina < quantidade) {
     return false;
   }
@@ -1018,6 +1034,7 @@ export {
   criarStatusPlayer,
   atualizarStatusPlayer,
   atualizarPosicaoHUD,
+  aplicarEstaminaInfinitaDev,
   gastarEstamina,
   tomarDano,
   recuperarVida,

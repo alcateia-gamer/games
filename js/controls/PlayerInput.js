@@ -3,6 +3,8 @@
  * fixos durante o zoom.
  */
 
+import { aplicarEstaminaInfinitaDev } from "../player/PlayerStatus.js";
+
 // =====================================================
 // FIXAR DEV E ANALÓGICO NA TELA
 // =====================================================
@@ -211,6 +213,7 @@ function criarControlesInput(scene) {
 
   scene.botaoDesenvolvedor.on("pointerdown", () => {
     scene.developerMode = !scene.developerMode;
+    aplicarEstaminaInfinitaDev(scene);
     atualizarEstadoBotaoDesenvolvedor();
   });
 

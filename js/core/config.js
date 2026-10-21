@@ -21,7 +21,7 @@ var config = {
     default: "arcade",
     arcade: {
       gravity: { x: 0, y: 0 },
-      debug: false,
+      debug: true,
     },
   },
   // Configura ponteiros adicionais para uso simultâneo dos controles por toque.
