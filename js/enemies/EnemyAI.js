@@ -1,3 +1,8 @@
+/**
+ * @file Máquina de estados dos robôs: patrulha, combate, investigação e retorno. Usa visão
+ * frontal, memória do alvo e navegação compartilhada.
+ */
+
 import { atualizarSomPassoRobo } from "../sounds/inimigos.js";
 import {
   atualizarEstadoVisualRobo,
@@ -50,10 +55,17 @@ const IA = Object.freeze({
 // FUNCOES AUXILIARES
 // =====================================================
 
+/**
+ * Calcula a distância entre dois objetos com coordenadas x e y.
+ */
 function distancia(a, b) {
   return Math.hypot(a.x - b.x, a.y - b.y);
 }
 
+/**
+ * Resolve o jogador remoto selecionado como alvo ou usa o jogador local quando não há alvo
+ * remoto.
+ */
 function obterAlvo(scene, robo) {
   const remoto = scene.multiplayerManager?.room?.players?.find(
     (p) => p.id === robo.alvoPlayerId,
@@ -62,6 +74,9 @@ function obterAlvo(scene, robo) {
   return remoto ? { ...remoto, active: true } : scene.player;
 }
 
+/**
+ * Retorna o centro de patrulha do robô ou sua posição atual como referência de origem.
+ */
 function origem(robo) {
   return (
     robo.patrolCenter || {
@@ -71,6 +86,9 @@ function origem(robo) {
   );
 }
 
+/**
+ * Escolhe a direção visual principal para que o robô olhe para o ponto informado.
+ */
 function olharPara(robo, ponto) {
   const dx = ponto.x - robo.x;
   const dy = ponto.y - robo.y;
@@ -82,6 +100,10 @@ function olharPara(robo, ponto) {
   }
 }
 
+/**
+ * Atualiza a direção visual com base na velocidade física quando há deslocamento
+ * significativo.
+ */
 function olharMovimento(robo) {
   const vx = robo.body?.velocity?.x || 0;
   const vy = robo.body?.velocity?.y || 0;
@@ -94,10 +116,16 @@ function olharMovimento(robo) {
   }
 }
 
+/**
+ * Consulta se os obstáculos do mapa deixam uma linha direta livre até o alvo.
+ */
 function linhaLivre(scene, robo, alvo) {
   return !caminhoDiretoBloqueado(scene, robo, alvo);
 }
 
+/**
+ * Para o corpo e o som de passos sem interromper a animação de ataque ativa.
+ */
 function parar(scene, robo, viu = false, d = Infinity) {
   robo.setVelocity(0, 0);
 
@@ -108,6 +136,9 @@ function parar(scene, robo, viu = false, d = Infinity) {
   atualizarSomPassoRobo(scene, robo, viu, d, false);
 }
 
+/**
+ * Move o robô até um ponto e sincroniza direção, animação e som dos passos.
+ */
 function mover(scene, robo, ponto, velocidade, viu = false, d = Infinity) {
   scene.physics.moveTo(robo, ponto.x, ponto.y, velocidade);
 
@@ -117,6 +148,9 @@ function mover(scene, robo, ponto, velocidade, viu = false, d = Infinity) {
   atualizarSomPassoRobo(scene, robo, viu, d, true);
 }
 
+/**
+ * Descarta os pontos e o índice de uma rota anterior.
+ */
 function limparRota(robo) {
   robo.rotaAtual = [];
   robo.indiceRota = 0;
@@ -144,6 +178,10 @@ function limparRota(robo) {
 // As paredes bloqueiam a visao.
 //
 
+/**
+ * Testa alcance, metade frontal e obstáculos; armazena o resultado para reduzir testes de
+ * visão distantes.
+ */
 function temVisao(scene, robo, alvo, agora) {
   const dx = alvo.x - robo.x;
   const dy = alvo.y - robo.y;
@@ -262,6 +300,9 @@ function temVisao(scene, robo, alvo, agora) {
 // INICIALIZACAO DA INTELIGENCIA ARTIFICIAL
 // =====================================================
 
+/**
+ * Inicializa uma única vez a memória, temporizadores e estado de patrulha do robô.
+ */
 function iniciarIA(robo, agora) {
   if (robo.iaInicializada) return;
 
@@ -294,6 +335,9 @@ function iniciarIA(robo, agora) {
 // SISTEMA DE ESTADOS
 // =====================================================
 
+/**
+ * Troca o estado da IA, registra o instante da mudança e limpa rota e decisões anteriores.
+ */
 function mudarEstado(robo, estado, agora) {
   if (robo.iaEstado === estado) return;
 
@@ -306,6 +350,9 @@ function mudarEstado(robo, estado, agora) {
   limparRota(robo);
 }
 
+/**
+ * Marca o robô em combate e atualiza a posição e o instante em que o alvo foi visto.
+ */
 function entrarCombate(robo, alvo, agora) {
   if (robo.iaEstado !== "combate") {
     robo.iaComecouPerseguir = agora;
@@ -326,6 +373,9 @@ function entrarCombate(robo, alvo, agora) {
 // ALERTA ENTRE ROBOS
 // =====================================================
 
+/**
+ * Alerta aliados próximos após dano e os direciona para investigar a posição do robô atingido.
+ */
 function notificarGrupo(scene, roboOrigem, motivo = "dano") {
   if (!roboOrigem?.active || motivo !== "dano") {
     return;
@@ -368,6 +418,9 @@ function notificarGrupo(scene, roboOrigem, motivo = "dano") {
 // MOVIMENTACAO COM DESVIO DE OBSTACULOS
 // =====================================================
 
+/**
+ * Usa movimento direto ou rota A* para alcançar um destino; para se não houver caminho válido.
+ */
 function irAte(scene, robo, destino, agora, velocidade, viu, d) {
   if (!destino || !Number.isFinite(destino.x) || !Number.isFinite(destino.y)) {
     parar(scene, robo, viu, d);
@@ -431,6 +484,9 @@ function irAte(scene, robo, destino, agora, velocidade, viu, d) {
 // SISTEMA DE PATRULHA
 // =====================================================
 
+/**
+ * Escolhe destinos próximos da origem, alternando caminhada e pausas de vigilância.
+ */
 function patrulhar(scene, robo, agora, d) {
   robo.estado = "idle";
   robo.alerta = false;
@@ -522,6 +578,9 @@ function patrulhar(scene, robo, agora, d) {
 // ATAQUE DO ROBO SERRA
 // =====================================================
 
+/**
+ * Executa o golpe da serra dentro do alcance e da recarga, aplicando dano local ou pelo host.
+ */
 function atacarSerra(scene, robo, alvo, agora, d) {
   if (d > robo.distanciaAtaque || !linhaLivre(scene, robo, alvo)) {
     return false;
@@ -549,6 +608,9 @@ function atacarSerra(scene, robo, alvo, agora, d) {
 // COMBATE DO ROBO SERRA
 // =====================================================
 
+/**
+ * Persegue o alvo visível ou sua última posição e tenta o ataque de contato da serra.
+ */
 function combaterSerra(scene, robo, alvo, agora, d, vendo) {
   if (vendo && atacarSerra(scene, robo, alvo, agora, d)) {
     return;
@@ -564,6 +626,10 @@ function combaterSerra(scene, robo, alvo, agora, d, vendo) {
 // COMBATE DO ROBO ATIRADOR
 // =====================================================
 
+/**
+ * Mantém distância para disparar, recua quando necessário e busca a última posição do jogador
+ * ao perder visão.
+ */
 function combaterAtirador(scene, robo, alvo, agora, d, vendo) {
   // ============================================
   // PERDEU O JOGADOR
@@ -655,6 +721,10 @@ function combaterAtirador(scene, robo, alvo, agora, d, vendo) {
 // ATUALIZACAO PRINCIPAL DA IA
 // =====================================================
 
+/**
+ * Atualiza visão e estados do robô, respeitando retorno à origem, limites de perseguição e
+ * economia para inimigos distantes.
+ */
 function atualizarIAInimigo(scene, time, robo = scene.inimigoTeste) {
   if (!robo?.active || robo.morto || robo.remoteOnly || !robo.body?.enable) {
     return;

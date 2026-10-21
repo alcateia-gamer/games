@@ -1,3 +1,8 @@
+/**
+ * @file Resolução de dano entre jogador e boss. Controla invulnerabilidade, janelas de soco e
+ * katana, cura por frame e derrota.
+ */
+
 import {
   curaRecVidaPorFrame,
   danoAtaqueChao,
@@ -26,6 +31,10 @@ const COR_DANO = 0xff4040;
 // OBTER RETANGULO DE UM OBJETO
 // =====================================================
 
+/**
+ * Obtém o retângulo do corpo físico habilitado ou usa os limites visuais do objeto como
+ * alternativa.
+ */
 function obterRetanguloCorpo(objeto) {
   if (!objeto) {
     return null;
@@ -47,6 +56,10 @@ function obterRetanguloCorpo(objeto) {
 // CAUSAR DANO AO JOGADOR
 // =====================================================
 
+/**
+ * Aplica dano ao jogador com janela de invulnerabilidade e retorno visual, acionando a morte
+ * quando necessário.
+ */
 export function causarDanoJogador(boss, quantidade) {
   const scene = boss.scene;
   const player = scene?.player;
@@ -105,6 +118,10 @@ export function causarDanoJogador(boss, quantidade) {
 //    no maximo um acerto.
 // =====================================================
 
+/**
+ * Testa o golpe do boss nos frames válidos e evita atingir o jogador mais de uma vez no mesmo
+ * ataque.
+ */
 export function aplicarDanoDoAtaque(boss) {
   if (!boss?.active || boss.morto) {
     return;
@@ -160,6 +177,9 @@ export function aplicarDanoDoAtaque(boss) {
 // RECUPERACAO DE VIDA DO BOSS
 // =====================================================
 
+/**
+ * Recupera vida nos frames de cura configurados sem reaplicar a cura ao mesmo frame.
+ */
 export function aplicarCuraDoFrame(boss) {
   const ia = boss.iaCombate;
   const frame = ia.frame;
@@ -205,6 +225,10 @@ export function aplicarCuraDoFrame(boss) {
 // de scripts ou eventos do jogo.
 // =====================================================
 
+/**
+ * Valida o dano e a região de acerto opcional, atualiza a vida e emite derrota ao chegar a
+ * zero.
+ */
 export function causarDanoBoss(scene, quantidade, regiaoAtaque = null) {
   const boss = scene?.bossFinal;
 
@@ -266,6 +290,9 @@ export function causarDanoBoss(scene, quantidade, regiaoAtaque = null) {
 // OBTER HITBOX DA KATANA
 // =====================================================
 
+/**
+ * Calcula a área da katana conforme a posição do jogador e a direção do ataque.
+ */
 function obterRetanguloKatana(scene) {
   const player = scene.player;
 
@@ -319,6 +346,10 @@ function obterRetanguloKatana(scene) {
 // PROCESSAR ATAQUES DO JOGADOR CONTRA O BOSS
 // =====================================================
 
+/**
+ * Processa a janela curta da katana e impactos de projéteis contra as regiões vulneráveis do
+ * boss.
+ */
 export function processarAtaquesJogadorContraBoss(scene, delta = 16.67) {
   const boss = scene.bossFinal;
 

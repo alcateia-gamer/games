@@ -1,3 +1,8 @@
+/**
+ * @file Interface e persistência do minimapa. Reutiliza o atlas estático, revela o mapa por
+ * proximidade e salva a exploração por perfil.
+ */
+
 import {
   MINI_MAP_PROFILES, MAP_COLORS, buildMiniMapGeometry, ExplorationGrid,
   createMapTransform, worldToMiniMap, miniMapLayout,
@@ -9,12 +14,18 @@ const UPDATE_INTERVAL = 100, SAVE_INTERVAL = 2000;
 const cache = new WeakMap();
 let nextTextureId = 0;
 
+/**
+ * Cria um canvas com as dimensões necessárias para uma etapa de desenho do minimapa.
+ */
 function canvas(width, height) {
   const result = document.createElement("canvas");
   result.width = width; result.height = height;
   return result;
 }
 
+/**
+ * Desenha a geometria estática em um atlas limitado a 1024 pixels no maior eixo.
+ */
 function drawAtlas(geometry) {
   const { bounds } = geometry;
   const scale = Math.min(1 / 12, 1024 / Math.max(bounds.width, bounds.height));
@@ -40,6 +51,9 @@ function drawAtlas(geometry) {
   return { image, scale };
 }
 
+/**
+ * Recupera ou cria a geometria e o atlas compartilhados para o recurso de mapa.
+ */
 function getCachedMap(scene, map, profile) {
   const key = scene.cache.tilemap.get(profile.cacheKey)?.data ?? map;
   let entry = cache.get(key);
@@ -53,6 +67,10 @@ function getCachedMap(scene, map, profile) {
 }
 
 export default class MiniMapManager {
+  /**
+   * Restaura exploração, monta moldura e marcador e conecta os eventos de salvamento e
+   * limpeza.
+   */
   constructor(scene, map, profileName) {
     this.scene = scene;
     this.profile = MINI_MAP_PROFILES[profileName];
@@ -103,7 +121,13 @@ export default class MiniMapManager {
     // Nenhum elemento é interativo: os toques continuam chegando aos controles.
     this.lastX = NaN; this.lastY = NaN;
     this.nextUpdate = 0; this.nextSave = 0; this.dirty = false;
+    /**
+     * Salva a exploração quando a página fica oculta ou é abandonada.
+     */
     this.onPageHide = () => this.save();
+    /**
+     * Destrói os recursos locais do minimapa ao encerrar a cena.
+     */
     this.onShutdown = () => this.destroy();
     globalThis.addEventListener?.("pagehide", this.onPageHide);
     scene.events.once(Phaser.Scenes.Events.SHUTDOWN, this.onShutdown);
@@ -111,6 +135,9 @@ export default class MiniMapManager {
     this.update(0);
   }
 
+  /**
+   * Copia do atlas apenas os trechos correspondentes às novas células descobertas.
+   */
   paintDiscovered(cells) {
     if (!cells.length) return;
     const context = this.known.getContext("2d");
@@ -126,6 +153,9 @@ export default class MiniMapManager {
     context.restore();
   }
 
+  /**
+   * Posiciona a interface e a oculta quando falta espaço ou o menu do gerador está aberto.
+   */
   layout(camera) {
     if (!this.root || this.destroyed) return;
     const result = miniMapLayout(camera, this.scene.botaoDesenvolvedor,
@@ -135,12 +165,19 @@ export default class MiniMapManager {
       .setVisible(result.visible && !this.scene.generatorMenuOpen);
   }
 
+  /**
+   * Expõe a colisão da porta fechada como obstáculo dinâmico para a descoberta.
+   */
   dynamicObstacles() {
     const body = this.scene.portaFabrica?.colisao?.body;
     return body?.enable !== false && body?.width > 0
       ? [{ x: body.x, y: body.y, width: body.width, height: body.height }] : [];
   }
 
+  /**
+   * Atualiza marcador e exploração em intervalos controlados e agenda os salvamentos
+   * necessários.
+   */
   update(time = 0) {
     if (this.destroyed || !this.grid) return;
     const player = this.scene.player;
@@ -174,6 +211,9 @@ export default class MiniMapManager {
     this.marker.setRotation({ up: 0, right: Math.PI / 2, down: Math.PI, left: -Math.PI / 2 }[this.scene.direcaoAtual] ?? 0);
   }
 
+  /**
+   * Desenha a janela local descoberta e atualiza a textura pequena enviada à GPU.
+   */
   drawView() {
     const context = this.texture.getContext();
     const { bounds, cellSize, columns } = this.geometry;
@@ -203,6 +243,10 @@ export default class MiniMapManager {
     this.texture.refresh();
   }
 
+  /**
+   * Grava a descoberta compactada no armazenamento local e mantém o progresso de sessão em
+   * caso de falha.
+   */
   save() {
     if (!this.dirty || !this.grid) return;
     if (this.storage) {
@@ -215,6 +259,10 @@ export default class MiniMapManager {
     this.dirty = false;
   }
 
+  /**
+   * Salva o progresso e remove textura, interface e listeners sem destruir o atlas
+   * compartilhado.
+   */
   destroy() {
     if (this.destroyed) return;
     this.save(); this.destroyed = true;

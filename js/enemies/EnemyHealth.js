@@ -1,7 +1,16 @@
+/**
+ * @file Dano e destruição de inimigos. Encaminha solicitações remotas ao host e coordena
+ * alerta, efeitos e animação de morte.
+ */
+
 import { notificarGrupo } from "./EnemyAI.js";
 import { tocarSomMorteRobo } from "../sounds/inimigos.js";
 import { playHitEffects } from "../combat/CombatEffects.js";
 
+/**
+ * Resolve o alvo, aplica dano ou o solicita ao host, alerta o grupo e inicia a morte quando a
+ * vida chega a zero.
+ */
 function causarDanoInimigo(
   scene,
   alvoOuQuantidade,
@@ -55,6 +64,10 @@ function causarDanoInimigo(
 // DESTRÓI INIMIGO
 // =====================================================
 
+/**
+ * Desativa o combate e a colisão; executa fade da serra ou animação direcional de explosão do
+ * robô comum.
+ */
 function destruirInimigoTeste(scene, inimigo = scene.inimigoTeste) {
   if (!inimigo || !scene || inimigo.morto) {
     return;
@@ -205,6 +218,9 @@ function destruirInimigoTeste(scene, inimigo = scene.inimigoTeste) {
   );
 }
 
+/**
+ * Remove definitivamente os elementos restantes e registra quando não há mais robôs na cena.
+ */
 function finalizarDestruicaoInimigo(scene, inimigo) {
   if (!inimigo || !scene || !inimigo.active) {
     return;

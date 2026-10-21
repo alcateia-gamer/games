@@ -1,3 +1,12 @@
+/**
+ * @file Criação das camadas de tiles e definição de sua ordem visual; depth maior aparece
+ * sobre depth menor.
+ */
+
+/**
+ * Cria as camadas da cidade, configura profundidade e sombras e retorna as cercas usadas pela
+ * ordenação dinâmica.
+ */
 function criarCamadasCidade(map, tilesets, depths) {
   const camadaChao = map.createLayer("Chão", tilesets);
   const camadaFaixasRua = map.createLayer("FaixasRua", tilesets);
@@ -68,6 +77,10 @@ function criarCamadasCidade(map, tilesets, depths) {
   };
 }
 
+/**
+ * Cria as camadas da fábrica e retorna os registros e paredes usados na troca de ordem durante
+ * a passagem do jogador.
+ */
 function criarCamadasFabrica(map, tilesets, scene, registrosTilesets) {
   const camadaChao = map.createLayer("chão", tilesets);
   const camadaDetalhesChao = map.createLayer("detalhes do chão", tilesets);

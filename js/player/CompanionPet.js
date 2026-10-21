@@ -1,3 +1,8 @@
+/**
+ * @file Companheiro robótico do modo solo. Segue o jogador com desvio de obstáculos,
+ * afastamento de inimigos e recuperação quando fica preso.
+ */
+
 const COMPANION_CONFIG = {
   minDistance: 32,
   preferredDistance: 58,
@@ -15,6 +20,9 @@ const COMPANION_CONFIG = {
   candidateCount: 14,
 };
 
+/**
+ * Registra as quatro sequências direcionais de animação do robô companheiro.
+ */
 function criarAnimacoesCompanionPet(scene) {
   // Intervalos inclusivos da folha robo-pet: down = baixo, left = esquerda,
   // right = direita e up = cima. Ajuste os índices conforme a ordem da imagem.
@@ -42,6 +50,9 @@ function criarAnimacoesCompanionPet(scene) {
   });
 }
 
+/**
+ * Obtém os retângulos físicos dos obstáculos ativos presentes no mapa.
+ */
 function obterRetangulosObstaculos(scene) {
   return scene.collisionGroup?.getChildren
     ? scene.collisionGroup
@@ -59,6 +70,10 @@ function obterRetangulosObstaculos(scene) {
     : [];
 }
 
+/**
+ * Calcula o retângulo do corpo em uma posição hipotética, preservando o deslocamento da
+ * hitbox.
+ */
 function retanguloCorpo(object, x = object.x, y = object.y) {
   const largura = object.body?.width ?? 24;
   const altura = object.body?.height ?? 16;
@@ -72,6 +87,9 @@ function retanguloCorpo(object, x = object.x, y = object.y) {
   );
 }
 
+/**
+ * Valida uma posição contra o cenário e, quando solicitado, contra os inimigos próximos.
+ */
 function posicaoLivre(scene, pet, x, y, incluirInimigos = true) {
   const bounds = retanguloCorpo(pet, x, y);
   if (
@@ -106,6 +124,9 @@ function posicaoLivre(scene, pet, x, y, incluirInimigos = true) {
   return true;
 }
 
+/**
+ * Retorna a menor distância aos inimigos ativos, limitada pelo valor padrão de mil pixels.
+ */
 function distanciaAoInimigoMaisProximo(scene, x, y) {
   return Math.min(
     ...(scene.inimigos || [])
@@ -117,6 +138,10 @@ function distanciaAoInimigoMaisProximo(scene, x, y) {
   );
 }
 
+/**
+ * Avalia posições ao redor do jogador e escolhe um destino que equilibra distância, obstáculos
+ * e inimigos.
+ */
 function escolherAlvo(scene, pet, distancia) {
   const player = scene.player;
   const velocidade = player.body?.velocity;
@@ -175,6 +200,10 @@ function escolherAlvo(scene, pet, distancia) {
   return melhor || { x: player.x, y: player.y };
 }
 
+/**
+ * Testa direções alternativas e escolhe uma velocidade que se aproxima do destino sem
+ * atravessar obstáculos.
+ */
 function escolherDirecao(scene, pet, alvo, velocidade) {
   const dx = alvo.x - pet.x;
   const dy = alvo.y - pet.y;
@@ -209,6 +238,9 @@ function escolherDirecao(scene, pet, alvo, velocidade) {
   return melhor;
 }
 
+/**
+ * Cria o companheiro, configura a física e inicializa seus estados de seguimento e repouso.
+ */
 function criarCompanionPet(scene, profundidadeFixa = null) {
   criarAnimacoesCompanionPet(scene);
   const pet = scene.physics.add.sprite(
@@ -248,6 +280,10 @@ function criarCompanionPet(scene, profundidadeFixa = null) {
   return pet;
 }
 
+/**
+ * Alterna repouso, seguimento e recuperação conforme distância ao jogador e tempo sem
+ * deslocamento.
+ */
 function atualizarCompanionPet(scene, _time, delta) {
   const pet = scene.companionPet;
   const player = scene.player;
@@ -377,6 +413,10 @@ function atualizarCompanionPet(scene, _time, delta) {
   }
 }
 
+/**
+ * Interpola a velocidade com suavização ajustada ao delta para evitar mudanças bruscas de
+ * direção.
+ */
 function aplicarVelocidadeSuave(pet, alvoX, alvoY, delta) {
   const fator =
     1 -
@@ -387,6 +427,10 @@ function aplicarVelocidadeSuave(pet, alvoX, alvoY, delta) {
   return { x: velocidadeX, y: velocidadeY };
 }
 
+/**
+ * Alterna olhares durante períodos de repouso e retorna à direção de descanso ao concluir a
+ * sequência.
+ */
 function atualizarOlharOcioso(pet, delta) {
   if (!pet.olharAtivo && pet.tempoParado < pet.config.idleLookDelay) {
     pet.anims.play(`companion-pet-walk-${pet.direcaoRepouso}`, true);
@@ -416,6 +460,10 @@ function atualizarOlharOcioso(pet, delta) {
   pet.setFrame({ down: 0, left: 13, right: 26, up: 39 }[direcao]);
 }
 
+/**
+ * Escolhe a animação direcional pela velocidade ou mantém um frame parado quando não há
+ * movimento.
+ */
 function atualizarAnimacaoCompanionPet(pet, velocidadeX, velocidadeY) {
   const movimento = Math.hypot(velocidadeX, velocidadeY);
   if (movimento > 5) {
@@ -433,6 +481,9 @@ function atualizarAnimacaoCompanionPet(pet, velocidadeX, velocidadeY) {
   pet.setFrame(framesParados[pet.direcaoAtual]);
 }
 
+/**
+ * Aplica a profundidade fixa configurada ou calcula a ordem de desenho pela posição dos pés.
+ */
 function atualizarDepthCompanionPet(scene) {
   const pet = scene.companionPet;
   if (!pet?.active) {

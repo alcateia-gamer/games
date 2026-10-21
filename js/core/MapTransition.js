@@ -1,3 +1,8 @@
+/**
+ * @file Porta de passagem entre a cidade e a fábrica. Coordena animação, aproximação, fade e
+ * troca de cena.
+ */
+
 import { limparGrupoRobos } from "../enemies/EnemyTest.js";
 
 const PORTA_X = 72;
@@ -10,6 +15,9 @@ const DISTANCIA_FECHAR = 96;
 const COLUNA_PORTA = 4;
 const LINHAS_PORTA = [0, 2, 4, 6];
 
+/**
+ * Recorta as duas metades da porta e registra as animações de abertura e fechamento.
+ */
 function criarAnimacoesPorta(scene) {
   const textura = scene.textures.get("shopDoor");
 
@@ -86,6 +94,9 @@ function criarAnimacoesPorta(scene) {
   }
 }
 
+/**
+ * Bloqueia transições repetidas, pausa a física e entra na fábrica após o fade da câmera.
+ */
 function iniciarTransicao(scene) {
   if (scene.transicaoEmAndamento) {
     return;
@@ -106,6 +117,9 @@ function iniciarTransicao(scene) {
   });
 }
 
+/**
+ * Cria os sprites da porta e a área de passagem, preservando o estado ao voltar da fábrica.
+ */
 function criarTransicaoParaParte2(scene) {
   criarAnimacoesPorta(scene);
 
@@ -158,6 +172,9 @@ function criarTransicaoParaParte2(scene) {
   });
 }
 
+/**
+ * Abre ou fecha a porta conforme a distância e permite o teleporte de desenvolvedor com P.
+ */
 function atualizarTransicaoParaParte2(scene) {
   // No modo dev, P usa a mesma transição da porta de qualquer ponto do mapa.
   if (

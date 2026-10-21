@@ -1,3 +1,8 @@
+/**
+ * @file Integra o núcleo do boss ao efeito de rachaduras permanentes no chão e reexporta sua
+ * API de combate.
+ */
+
 // =====================================================
 // BOSS FINAL - INTEGRAÇÃO DOS SISTEMAS
 // =====================================================
@@ -34,6 +39,10 @@ import { configurarChaoQuebradoBoss } from "./BossChaoQuebrado.js";
 // VINCULAR O BOSS À CENA
 // =====================================================
 
+/**
+ * Cria e vincula o boss pelo núcleo e acrescenta os listeners que desenham as rachaduras de
+ * impacto.
+ */
 function vincularIABoss(scene) {
   // Criar e configurar o Boss normalmente.
   const boss = vincularIABossOriginal(scene);

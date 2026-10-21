@@ -1,3 +1,8 @@
+/**
+ * @file Escuridão da fábrica e cone de lanterna. Desenha uma máscara em canvas e a acompanha
+ * com o jogador e o zoom.
+ */
+
 const TEXTURA_ESCURIDAO_PARTE2 = "level1-parte2-escuridao";
 const ALCANCE_LANTERNA = 290;
 const MEIA_LARGURA_MAXIMA = 540;
@@ -12,11 +17,18 @@ const DIRECOES_INICIAIS = {
   up: [0, -1],
 };
 
+/**
+ * Interpola suavemente entre zero e um dentro do intervalo informado para suavizar bordas de
+ * luz.
+ */
 function smoothstep(minimo, maximo, valor) {
   const normalizado = Math.max(0, Math.min(1, (valor - minimo) / (maximo - minimo)));
   return normalizado * normalizado * (3 - 2 * normalizado);
 }
 
+/**
+ * Desenha um halo elíptico suave ao redor da origem da lanterna.
+ */
 function desenharDispersaoLocal(context, centerX, centerY, zoomX, zoomY) {
   const radius = 72;
 
@@ -38,6 +50,9 @@ function desenharDispersaoLocal(context, centerX, centerY, zoomX, zoomY) {
   context.restore();
 }
 
+/**
+ * Prepara a máscara do cone com núcleo e halo graduais, reutilizada no desenho dos quadros.
+ */
 function criarMascaraCone() {
   const canvas = document.createElement("canvas");
   canvas.width = ALCANCE_LANTERNA;
@@ -95,6 +110,10 @@ function criarMascaraCone() {
   return canvas;
 }
 
+/**
+ * Cria o overlay escuro, conecta sua atualização e expõe o controle que acende a iluminação da
+ * fábrica.
+ */
 function criarIluminacaoTerror(scene) {
   const camera = scene.cameras.main;
   const width = Math.ceil(camera.width);
@@ -118,6 +137,9 @@ function criarIluminacaoTerror(scene) {
     direcaoInicial[1],
   );
 
+  /**
+   * Redesenha a escuridão e subtrai o cone e a dispersão de luz na posição atual da lanterna.
+   */
   const desenharEscuridao = (
     centerX,
     centerY,
@@ -163,6 +185,9 @@ function criarIluminacaoTerror(scene) {
     .setDepth(DEPTH_ESCURIDAO)
     .setDisplaySize(width, height);
 
+  /**
+   * Oculta a camada de escuridão quando a energia da fábrica está ligada.
+   */
   const definirIluminacaoFabrica = (ligada) => {
     overlay.setVisible(!ligada);
   };
@@ -170,6 +195,9 @@ function criarIluminacaoTerror(scene) {
   scene.definirIluminacaoFabrica = definirIluminacaoFabrica;
   definirIluminacaoFabrica(scene.luzFabricaAcesa === true);
 
+  /**
+   * Compensa o zoom para manter a máscara cobrindo a mesma área da tela.
+   */
   const ajustarOverlayAoZoom = (zoomX, zoomY) => {
     const centerX = camera.width * camera.originX;
     const centerY = camera.height * camera.originY;
@@ -182,6 +210,9 @@ function criarIluminacaoTerror(scene) {
       .setScale(1 / zoomX, 1 / zoomY);
   };
 
+  /**
+   * Atualiza direção e origem da lanterna e transforma suas coordenadas de mundo para a tela.
+   */
   const atualizarLanterna = () => {
     const player = scene.player;
     const zoomX = camera.zoomX || camera.zoom || 1;
@@ -217,6 +248,10 @@ function criarIluminacaoTerror(scene) {
     );
   };
 
+  /**
+   * Remove listeners, overlay, textura e referência do controle de iluminação ao encerrar a
+   * cena.
+   */
   const limparIluminacao = () => {
     scene.events.off(Phaser.Scenes.Events.SHUTDOWN, limparIluminacao);
     scene.events.off(Phaser.Scenes.Events.PRE_RENDER, atualizarLanterna);

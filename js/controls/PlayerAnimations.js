@@ -1,5 +1,12 @@
+/**
+ * @file Escolhe as animações de movimento sem interromper ataques em andamento.
+ */
+
 import { atualizarDirecaoAtaqueAria } from "../player/Player.js";
 
+/**
+ * Reproduz uma animação quando necessário, preservando ataques e a direção da carga da Aria.
+ */
 function tocarAnimacaoSeNecessario(scene, chave) {
   if (
     scene.atacando &&
@@ -22,6 +29,10 @@ function tocarAnimacaoSeNecessario(scene, chave) {
   scene.player.anims.play(chave);
 }
 
+/**
+ * Ajusta a velocidade da animação quando o turbo de desenvolvedor aumenta a velocidade do
+ * jogador.
+ */
 function atualizarVelocidadeAnimacao(scene) {
   if (!scene.player || !scene.player.anims) {
     return;
@@ -38,11 +49,17 @@ function atualizarVelocidadeAnimacao(scene) {
     velocidadeAtual > velocidadeBase ? velocidadeAtual / velocidadeBase : 1;
 }
 
+/**
+ * Guarda a direção atual e solicita a animação de caminhada correspondente.
+ */
 function atualizarAnimacaoCaminhada(scene, direcao) {
   scene.direcaoAtual = direcao;
   tocarAnimacaoSeNecessario(scene, `walk-${direcao}`);
 }
 
+/**
+ * Exibe o estado parado de cada personagem sem cancelar um ataque em andamento.
+ */
 function atualizarAnimacaoParado(scene) {
   if (scene.atacando) {
     return;

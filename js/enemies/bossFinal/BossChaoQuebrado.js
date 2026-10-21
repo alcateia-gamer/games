@@ -1,3 +1,8 @@
+/**
+ * @file Rachaduras permanentes dentro da cena da arena. Escuta impactos do boss e avança a
+ * sequência visual do chão sem modificar as regras de combate.
+ */
+
 import { framesImpactoChao } from "./BossConfig.js";
 
 // =====================================================
@@ -91,6 +96,10 @@ const PROFUNDIDADE_CHAO = 5.3;
 // 3. CONFIGURAR SISTEMA DAS RACHADURAS
 // =====================================================
 
+/**
+ * Configura os listeners de ataque e o carregamento da textura das rachaduras, evitando
+ * configuração duplicada.
+ */
 export function configurarChaoQuebradoBoss(scene, boss) {
   if (!scene || !boss?.active || boss.chaoQuebradoConfigurado) {
     return;
@@ -112,6 +121,10 @@ export function configurarChaoQuebradoBoss(scene, boss) {
   // 4. ATUALIZAR IMAGEM DO CHÃO
   // ===================================================
 
+  /**
+   * Cria ou atualiza o desenho do chão conforme a quantidade de impactos, mantendo o último
+   * frame após a sequência.
+   */
   function atualizarVisualChao() {
     if (!estado.ativo) {
       return;
@@ -213,6 +226,9 @@ export function configurarChaoQuebradoBoss(scene, boss) {
   // 5. INÍCIO DE NOVO ATAQUE
   // ===================================================
 
+  /**
+   * Reinicia o controle de frame de impacto quando começa uma nova sequência de socos no chão.
+   */
   function aoIniciarAtaque(evento) {
     if (evento?.boss !== boss || evento.estado !== "ataqueChao") {
       return;
@@ -235,6 +251,9 @@ export function configurarChaoQuebradoBoss(scene, boss) {
   // Cada impacto avança um frame do PNG.
   // ===================================================
 
+  /**
+   * Conta uma vez cada frame de impacto válido e avança o estado visual das rachaduras.
+   */
   function aoFrameAtaque(evento) {
     if (!estado.ativo) {
       return;
@@ -306,6 +325,9 @@ export function configurarChaoQuebradoBoss(scene, boss) {
 
   const EVENTO_ARQUIVO_CARREGADO = `filecomplete-spritesheet-${TEXTURA_CHAO_QUEBRADO}`;
 
+  /**
+   * Aplica o estado visual pendente assim que a textura termina de carregar.
+   */
   function aoCarregarTextura() {
     if (!estado.ativo) {
       return;
@@ -314,6 +336,9 @@ export function configurarChaoQuebradoBoss(scene, boss) {
     atualizarVisualChao();
   }
 
+  /**
+   * Registra o erro de carregamento quando o arquivo afetado é a textura do chão quebrado.
+   */
   function aoErroCarregamento(arquivo) {
     if (arquivo?.key !== TEXTURA_CHAO_QUEBRADO) {
       return;
@@ -349,6 +374,10 @@ export function configurarChaoQuebradoBoss(scene, boss) {
   // remove a imagem.
   // ===================================================
 
+  /**
+   * Desconecta eventos de ataque e loader e destrói o sprite das rachaduras ao liberar o
+   * sistema.
+   */
   function limparSistemaChao() {
     if (!estado.ativo) {
       return;

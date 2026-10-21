@@ -1,3 +1,7 @@
+/**
+ * @file Monta o mapa da cidade a partir do JSON: tilesets, camadas, objetos, luzes e colisões.
+ */
+
 import { DEPTHS, depthFromWorldY } from "./ProfundidadeMapa.js";
 import { criarTilesetsCidade } from "./Tilesets.js";
 import { criarCamadasCidade } from "./CamadasMapa.js";
@@ -5,6 +9,10 @@ import { criarObjetosCidade } from "./ObjetosMapa.js";
 import { criarColisoesCidade } from "./ColisoesMapa.js";
 import { criarLuzesPostes } from "./LuzesMapa.js";
 
+/**
+ * Cria o tilemap da cidade, conecta seus componentes e disponibiliza na cena as referências e
+ * a regra de profundidade por Y.
+ */
 function criarLevel1Map(scene) {
   const map = scene.make.tilemap({
     key: "mapa",

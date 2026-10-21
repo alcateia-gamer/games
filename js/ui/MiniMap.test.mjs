@@ -1,3 +1,8 @@
+/**
+ * @file Testes de geometria dos mapas reais, exploração com oclusão, persistência compactada,
+ * limites de memória e posicionamento do minimapa durante zoom e orientação.
+ */
+
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -8,6 +13,10 @@ import {
 
 const profile = { label: "TESTE", floors: ["Chão"], roads: [], buildings: [],
   walls: [], doors: [], objects: [], collision: "Collision" };
+/**
+ * Monta um mapa pequeno com origem negativa e colisões configuráveis para os cenários de
+ * teste.
+ */
 function simpleMap(shapes = []) {
   return { tileWidth: 48, tileHeight: 48,
     layers: [{ name: "Chão", x: -240, y: -240,
@@ -18,6 +27,10 @@ function simpleMap(shapes = []) {
 
 // Reproduz apenas o contrato LayerData usado pelo Phaser: origem da camada
 // em pixels e coordenadas locais dos tiles após a decodificação dos chunks.
+/**
+ * Lê o JSON real e reproduz a origem e os tiles locais das camadas decodificadas, sem criar
+ * uma cena Phaser.
+ */
 function loadRealMap(filename) {
   const raw = JSON.parse(readFileSync(new URL(`../../assets/map/${filename}`, import.meta.url)));
   return { tileWidth: raw.tilewidth, tileHeight: raw.tileheight,

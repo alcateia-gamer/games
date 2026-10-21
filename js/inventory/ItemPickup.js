@@ -1,3 +1,8 @@
+/**
+ * @file Coleta de itens dos mapas Tiled e botão compartilhado de interação. A tecla E atende
+ * itens, porta e gerador, respeitando o menu aberto.
+ */
+
 import { InventoryUI } from "./InventoryUI.js";
 import {
   createBuiltinInventoryTextures,
@@ -15,12 +20,19 @@ const CONFIG_BOTAO_COLETA = {
   distanciaYBotao: 90,
 };
 
+/**
+ * Lê uma propriedade de um objeto Tiled sem diferenciar maiúsculas e minúsculas no nome.
+ */
 function getProperty(object, propertyName) {
   return object.properties?.find(
     (property) => property.name?.toLowerCase() === propertyName.toLowerCase(),
   )?.value;
 }
 
+/**
+ * Converte pontos, retângulos e objetos de tile para a posição central onde o coletável será
+ * desenhado.
+ */
 function getItemPosition(object) {
   if (object.point) return { x: object.x, y: object.y };
 
@@ -38,6 +50,9 @@ function getItemPosition(object) {
   return { x: object.x, y: object.y };
 }
 
+/**
+ * Cria o botão de mão fixo na tela, inicialmente oculto.
+ */
 function createPickupButton(scene) {
   return scene.add
     .image(0, 0, "hand_icon")
@@ -48,6 +63,10 @@ function createPickupButton(scene) {
     .setVisible(false);
 }
 
+/**
+ * Cria inventário, interface e coletáveis; restaura objetos já coletados e conecta as
+ * interações por E e toque.
+ */
 function criarSistemaInventario(scene) {
   createBuiltinInventoryTextures(scene);
   scene.inventoryItems = new Map(
@@ -65,6 +84,9 @@ function criarSistemaInventario(scene) {
   let avisoInventarioCheio;
   let interagirComMundo = null;
 
+  /**
+   * Alterna a visibilidade e a área clicável do botão apenas quando seu estado muda.
+   */
   const definirVisibilidadeBotao = (visivel) => {
     if (scene.botaoColetarItemVisivel === visivel) return;
 
@@ -78,6 +100,9 @@ function criarSistemaInventario(scene) {
     }
   };
 
+  /**
+   * Destaca temporariamente o botão quando o inventário não tem espaço para a coleta.
+   */
   scene.mostrarAvisoInventarioCheio = () => {
     scene.botaoColetarItem.setTint(0xff5577);
     avisoInventarioCheio?.remove(false);
@@ -94,6 +119,7 @@ function criarSistemaInventario(scene) {
 
   for (const object of itemLayers.flatMap((layer) => layer.objects ?? [])) {
     const itemId = getProperty(object, "itemId");
+    // Áreas de porta e gerador podem dividir esta camada, mas não são itens.
     if (itemId == null) continue;
     const itemUid = getProperty(object, "itemUid");
     const item = getInventoryItem(itemId);
@@ -117,6 +143,7 @@ function criarSistemaInventario(scene) {
     }
 
     const mapKey = scene.scene.key;
+    // Combina mapa e objeto para distinguir itens com o mesmo ID em fases diferentes.
     const uniqueId = `${mapKey}:${itemUid ?? object.id}`;
 
     if (scene.inventory.hasCollected(uniqueId)) continue;
@@ -162,6 +189,10 @@ function criarSistemaInventario(scene) {
     });
   }
 
+  /**
+   * Executa a interação selecionada ou coleta o item próximo; usa o gerador quando não há item
+   * ou porta selecionados.
+   */
   const coletarItemProximo = () => {
     if (scene.generatorMenuOpen) return false;
     if (interagirComMundo) {
@@ -197,6 +228,9 @@ function criarSistemaInventario(scene) {
 
   scene.coletarItemProximo = coletarItemProximo;
   scene.botaoColetarItem.on("pointerdown", coletarItemProximo);
+  /**
+   * Seleciona o item ao alcance ou a interação de mundo mais próxima e processa a tecla E.
+   */
   scene.atualizarColetaItens = () => {
     interagirComMundo = null;
     if (scene.generatorMenuOpen) {
@@ -234,6 +268,9 @@ function criarSistemaInventario(scene) {
     }
   };
 
+  /**
+   * Compensa o zoom para manter o botão de coleta próximo ao botão de ataque na tela.
+   */
   scene.posicionarBotaoColetarItem = () => {
     const camera = scene.cameras.main;
     const zoomX = camera.zoomX || camera.zoom || 1;
@@ -290,6 +327,9 @@ function criarSistemaInventario(scene) {
   });
 }
 
+/**
+ * Executa a atualização de coleta quando o sistema está disponível na cena.
+ */
 function atualizarSistemaInventario(scene) {
   scene.atualizarColetaItens?.();
 }

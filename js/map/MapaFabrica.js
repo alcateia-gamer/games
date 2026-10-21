@@ -1,3 +1,8 @@
+/**
+ * @file Monta o mapa da fábrica. Corrige metadados de tilesets irregulares antes de criar suas
+ * camadas, objetos e colisões.
+ */
+
 import { criarTilesetsFabrica } from "./Tilesets.js";
 import { criarCamadasFabrica } from "./CamadasMapa.js";
 import { criarObjetosFabrica } from "./ObjetosMapa.js";
@@ -51,6 +56,9 @@ const TILESETS_DIMENSOES_IRREGULARES = new Set([
 // apenas nos metadados do mapa.
 // =====================================================
 
+/**
+ * Calcula a dimensão que contém apenas tiles completos, respeitando margem e espaçamento.
+ */
 function calcularDimensaoValida(
   dimensao,
   tamanhoTile,
@@ -84,6 +92,10 @@ function calcularDimensaoValida(
 // CORRIGIR METADADOS ANTES DE CRIAR O TILEMAP
 // =====================================================
 
+/**
+ * Ajusta em memória os metadados dos tilesets irregulares para evitar recortes inválidos pelo
+ * Phaser.
+ */
 function corrigirDimensoesTilesetsFabrica(scene) {
   // Recuperar o mapa já carregado pelo Preloader.
   const entrada = scene.cache.tilemap.get("mapaParte2");
@@ -154,6 +166,10 @@ function corrigirDimensoesTilesetsFabrica(scene) {
 // CRIAR MAPA DA FÁBRICA - PARTE 2
 // =====================================================
 
+/**
+ * Cria o tilemap da fábrica e seus componentes e guarda na cena as referências usadas para
+ * ordenar camadas.
+ */
 function criarLevel1Parte2Map(scene) {
   // ===================================================
   // NOVO: CORRIGIR TILESETS ANTES DO PHASER LER O MAPA

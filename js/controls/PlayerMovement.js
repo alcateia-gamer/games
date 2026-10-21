@@ -1,3 +1,8 @@
+/**
+ * @file Converte WASD ou joystick em movimento normalizado, respeitando bloqueios, dash e
+ * animações.
+ */
+
 import {
   configurarSomCorrida,
   atualizarSomCorrida,
@@ -11,10 +16,16 @@ import {
 
 import { atualizarDash } from "./PlayerDashControls.js";
 
+/**
+ * Prepara o som de caminhada ou corrida usado pelo sistema de movimento.
+ */
 function criarMovimento(scene) {
   configurarSomCorrida(scene);
 }
 
+/**
+ * Desativa a colisão com o mapa enquanto o modo desenvolvedor e a tecla Espaço estão ativos.
+ */
 function atualizarColisaoMapaPlayer(scene) {
   if (!scene.colliderPlayerMapa) {
     return;
@@ -25,6 +36,10 @@ function atualizarColisaoMapaPlayer(scene) {
   scene.colliderPlayerMapa.active = !atravessandoMapa;
 }
 
+/**
+ * Aplica a entrada de movimento; o teclado tem prioridade sobre o joystick e o dash assume a
+ * velocidade durante seu impulso.
+ */
 function atualizarMovimento(scene) {
   atualizarColisaoMapaPlayer(scene);
 

@@ -1,3 +1,8 @@
+/**
+ * @file Cena que carrega mapas, personagens, sons, interface e tilesets. Mostra progresso e
+ * prepara a textura final do raio antes de entrar na fase.
+ */
+
 
 import { carregarSonsInimigos } from "../sounds/inimigos.js";
 import { carregarSonsKatana } from "../sounds/katana.js";
@@ -5,6 +10,9 @@ import { carregarSonsPersonagem } from "../sounds/personagem.js";
 import { preloadInventoryItemImages } from "../inventory/InventoryItems.js";
 
 class Preloader extends Phaser.Scene {
+  /**
+   * Registra a cena de carregamento com a chave usada pelos menus.
+   */
   constructor() {
     super("preloader");
   }
@@ -34,6 +42,10 @@ class Preloader extends Phaser.Scene {
   // Não modifica o PNG original.
   // =====================================================
 
+  /**
+   * Reorganiza em memória os 24 quadros do raio da base em uma folha de frames de 311 × 623
+   * pixels.
+   */
   prepararNovoRaioBase() {
     const CHAVE_ORIGINAL = "boss-raio-base-original";
     const CHAVE_FINAL = "boss-raio-base";
@@ -278,6 +290,9 @@ class Preloader extends Phaser.Scene {
   // INICIAR CARREGAMENTO
   // =====================================================
 
+  /**
+   * Cria a interface de progresso, conecta a conclusão e inicia a fila de recursos do jogo.
+   */
   iniciarCarregamento() {
     this.carregandoAtivos = true;
 
@@ -333,6 +348,10 @@ class Preloader extends Phaser.Scene {
   // PRELOAD
   // =====================================================
 
+  /**
+   * Mantém o preload automático vazio; a fila é iniciada explicitamente pelo fluxo de criação
+   * da cena.
+   */
   preload() {
     // Carregamento iniciado após clicar em JOGAR.
   }
@@ -341,6 +360,10 @@ class Preloader extends Phaser.Scene {
   // FINALIZAR CARREGAMENTO
   // =====================================================
 
+  /**
+   * Mostra a confirmação de carregamento e entra em Level1 com personagem e modo de rede
+   * selecionados.
+   */
   finalizarCarregamento() {
     this.barra.width = 392;
     this.porcentagem.setText("100%");
@@ -358,6 +381,10 @@ class Preloader extends Phaser.Scene {
   // CARREGAR ASSETS
   // =====================================================
 
+  /**
+   * Enfileira imagens, folhas de sprites, mapas e sons usando os caminhos e chaves
+   * compartilhados pelos módulos.
+   */
   carregarAssets() {
     this.load.setPath("./assets/");
 
@@ -967,6 +994,9 @@ class Preloader extends Phaser.Scene {
   // CREATE
   // =====================================================
 
+  /**
+   * Recupera personagem e multiplayer enviados pelo menu e inicia o carregamento da partida.
+   */
   create() {
     this.cameras.main.setBackgroundColor("#000000");
 

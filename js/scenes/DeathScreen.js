@@ -1,3 +1,11 @@
+/**
+ * @file Sequência visual de morte: bloqueia o jogo, mostra falhas de sistema e recarrega a
+ * página ao concluir.
+ */
+
+/**
+ * Inicia a morte uma única vez, para sons e física e monta o overlay com a sequência de falha.
+ */
 function mostrarTelaMorte(scene) {
   if (scene.morteEmAndamento) {
     return;
@@ -17,6 +25,9 @@ function mostrarTelaMorte(scene) {
 
   const camada = scene.add.container(0, 0).setDepth(1000000).setScrollFactor(0);
 
+  /**
+   * Compensa posição e escala do overlay para mantê-lo fixo mesmo durante mudanças de zoom.
+   */
   const atualizarTelaFixa = () => {
     if (!camada.scene) return;
 
@@ -96,6 +107,9 @@ function mostrarTelaMorte(scene) {
   // ANIMAÇÃO DOS ERROS
   // =====================================================
 
+  /**
+   * Cria uma mensagem aleatória de falha com símbolos, deslocamento e desaparecimento gradual.
+   */
   const criarFalha = () => {
     const mensagem = mensagens[Phaser.Math.Between(0, mensagens.length - 1)];
 

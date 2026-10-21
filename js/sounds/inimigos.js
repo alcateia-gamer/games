@@ -1,3 +1,8 @@
+/**
+ * @file Áudio dos robôs e dos impactos do boss. Centraliza carregamento, passos com volume por
+ * distância e limpeza dos sons temporários.
+ */
+
 // =====================================================
 // VOLUMES DOS SONS DOS INIMIGOS
 // =====================================================
@@ -72,6 +77,9 @@ const DURACAO_FADE_SOCO = 110;
 // CARREGAMENTO DOS SONS
 // =====================================================
 
+/**
+ * Enfileira os sons de tiro, passos, explosão e os efeitos de raio e soco do boss.
+ */
 function carregarSonsInimigos(loader) {
   loader.audio("tiro-laser", "sounds.mp3/tiro_laser.mp3");
 
@@ -121,6 +129,9 @@ function carregarSonsInimigos(loader) {
 // Também funciona caso o ataque seja interrompido.
 // =====================================================
 
+/**
+ * Cancela o fade agendado e a animação de volume e destrói o áudio de soco em andamento.
+ */
 function pararSomSocoBoss(boss) {
   if (!boss) return;
 
@@ -157,6 +168,10 @@ function pararSomSocoBoss(boss) {
 // Os listeners são registrados somente uma vez.
 // =====================================================
 
+/**
+ * Conecta a limpeza do soco à derrota, destruição do boss e encerramento da cena uma única
+ * vez.
+ */
 function registrarLimpezaSomSocoBoss(boss) {
   if (!boss?.scene || boss.somSocoLimpezaRegistrada) {
     return;
@@ -166,6 +181,9 @@ function registrarLimpezaSomSocoBoss(boss) {
 
   boss.somSocoLimpezaRegistrada = true;
 
+  /**
+   * Para o impacto de soco quando o evento de derrota pertence ao boss correspondente.
+   */
   const aoDerrotarBoss = (evento) => {
     if (evento?.boss === boss) {
       pararSomSocoBoss(boss);
@@ -174,6 +192,9 @@ function registrarLimpezaSomSocoBoss(boss) {
 
   scene.events.on("boss:derrotado", aoDerrotarBoss);
 
+  /**
+   * Remove o listener de derrota e interrompe o som restante ao liberar o boss ou a cena.
+   */
   const limparListeners = () => {
     scene.events.off("boss:derrotado", aoDerrotarBoss);
 
@@ -197,6 +218,9 @@ function registrarLimpezaSomSocoBoss(boss) {
 // É chamada diretamente por BossAnimacoes.js.
 // =====================================================
 
+/**
+ * Toca o impacto do soco válido dentro da arena e coordena seu encerramento e fade de volume.
+ */
 function tocarSomSocoBoss(boss) {
   if (!boss?.active || boss.morto) {
     return;
@@ -320,6 +344,10 @@ function tocarSomSocoBoss(boss) {
 // SOM DOS PASSOS DOS ROBÔS - ORIGINAL
 // =====================================================
 
+/**
+ * Atualiza passos conforme movimento e distância ao jogador, com volume reduzido para o
+ * robô-serra.
+ */
 function atualizarSomPassoRobo(
   scene,
   inimigo,
@@ -374,6 +402,10 @@ function atualizarSomPassoRobo(
 // CONFIGURAR PASSOS DOS ROBÔS - ORIGINAL
 // =====================================================
 
+/**
+ * Cria o loop de passos adequado ao tipo de robô e agenda a destruição da instância na saída
+ * da cena.
+ */
 function configurarSomPassoRobo(scene, inimigo) {
   const chaveSomPasso =
     inimigo?.tipoRobo === "serra" ? "walk-robo-serra" : "robot-walk";
@@ -395,6 +427,9 @@ function configurarSomPassoRobo(scene, inimigo) {
 // SOM DO LASER DOS ROBÔS - ORIGINAL
 // =====================================================
 
+/**
+ * Reproduz o som de disparo dos robôs se a morte do jogador não está em andamento.
+ */
 function tocarSomTiroLaser(scene) {
   if (scene.morteEmAndamento) {
     return;
@@ -409,6 +444,9 @@ function tocarSomTiroLaser(scene) {
 // SOM DE MORTE DOS ROBÔS - ORIGINAL
 // =====================================================
 
+/**
+ * Toca a explosão de um robô apenas uma vez, evitando repetições durante sua destruição.
+ */
 function tocarSomMorteRobo(scene, inimigo) {
   if (
     !scene?.sound ||

@@ -1,3 +1,8 @@
+/**
+ * @file Adaptação do shader de chuva e neve para o jogo. Os parâmetros GLSL controlam
+ * densidade, profundidade aparente e velocidade; os créditos originais estão preservados.
+ */
+
 /*
  * Adapted from "Rain and Snow shader" by Brian Smith
  * https://steampunkdemon.itch.io/rain-and-snow-shader-with-parallax-effect-for-godot
@@ -47,7 +52,13 @@ const DEFAULTS = {
   snow: { amount: 110, nearLength: 0.025, farLength: 0.012, nearWidth: 0.8, farWidth: 0.5, nearAlpha: 0.95, farAlpha: 0.5, color: [1, 1, 1], baseSpeed: 0.07, extraSpeed: 0.12, slant: -0.08, snow: 1 }
 };
 
+/**
+ * Converte as opções de clima em uniforms com os tipos esperados pelo shader do Phaser.
+ */
 function uniforms(p, width, height) {
+  /**
+   * Empacota um valor numérico como uniform float de um componente.
+   */
   const f = value => ({ type: '1f', value });
   return {
     uResolution: { type: '2f', value: { x: width, y: height } },
@@ -62,6 +73,9 @@ function uniforms(p, width, height) {
 }
 
 export default class WeatherShader {
+  /**
+   * Valida o renderizador, cria o shader e conecta o redimensionamento e a limpeza da cena.
+   */
   constructor(scene, mode = 'rain', options = {}) {
     if (!scene.game.renderer || scene.game.renderer.type !== Phaser.WEBGL) {
       throw new Error('WeatherShader requer o renderizador WebGL do Phaser 3.');
@@ -106,12 +120,18 @@ export default class WeatherShader {
     scene.events.once(Phaser.Scenes.Events.SHUTDOWN, this.onShutdown);
   }
 
+  /**
+   * Acumula delta em segundos e atualiza o relógio que anima a precipitação no shader.
+   */
   update(time, delta) {
     if (!this.shader || !this.shader.active) return;
     this.elapsed += delta / 1000;
     this.shader.setUniform('uTime.value', this.elapsed);
   }
 
+  /**
+   * Ajusta posição, dimensões e resolução do shader ao tamanho atual da tela.
+   */
   resize(gameSize) {
     if (!this.shader || !this.shader.active) return;
     const width = gameSize.width;
@@ -122,6 +142,9 @@ export default class WeatherShader {
     this.shader.setUniform('uResolution.value.y', height);
   }
 
+  /**
+   * Aplica o conjunto de parâmetros de chuva ou neve e rejeita modos desconhecidos.
+   */
   setMode(mode) {
     const settings = DEFAULTS[mode];
     if (!settings) throw new Error('Modo inválido: use rain ou snow.');
@@ -141,10 +164,16 @@ export default class WeatherShader {
     this.shader.setUniform('uColor.value.z', settings.color[2]);
   }
 
+  /**
+   * Atualiza a densidade de precipitação, mantendo pelo menos uma coluna no efeito.
+   */
   setIntensity(amount) {
     this.shader.setUniform('uAmount.value', Math.max(1, amount));
   }
 
+  /**
+   * Desconecta eventos e destrói o shader, permitindo chamadas repetidas de limpeza.
+   */
   destroy() {
     if (!this.scene) return;
     this.scene.scale.off('resize', this.onResize);

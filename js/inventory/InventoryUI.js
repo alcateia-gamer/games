@@ -1,9 +1,18 @@
+/**
+ * @file Interface dos slots do inventário. Prepara ícones sem margens transparentes e mantém
+ * posição e tamanho durante o zoom.
+ */
+
 const SLOT_SIZE = 36;
 const SLOT_GAP = 5;
 const SLOT_STRIDE = SLOT_SIZE + SLOT_GAP;
 const UI_DEPTH = 220;
 const ICON_SIZE = SLOT_SIZE - 2;
 
+/**
+ * Encontra os pixels visíveis do frame, preserva sua proporção e armazena um ícone no tamanho
+ * final para reutilização.
+ */
 function prepareInventoryIcon(scene, definition) {
   const iconKey = `inventory-ui-icon:${definition.id}`;
   if (scene.textures.exists(iconKey)) return iconKey;
@@ -61,6 +70,10 @@ function prepareInventoryIcon(scene, definition) {
 }
 
 class InventoryUI {
+  /**
+   * Cria o container da interface e assina mudanças do inventário, reposicionamento e
+   * encerramento da cena.
+   */
   constructor(scene, inventory) {
     this.scene = scene;
     this.inventory = inventory;
@@ -81,6 +94,10 @@ class InventoryUI {
     this.render();
   }
 
+  /**
+   * Reconstrói os slots ocupados, seus ícones e os contadores habilitados na definição de cada
+   * item.
+   */
   render() {
     this.container.removeAll(true);
     const slots = this.inventory.getSlots();
@@ -134,11 +151,18 @@ class InventoryUI {
     this.updateCameraLayout();
   }
 
+  /**
+   * Calcula quantos slots cabem por linha na largura disponível da câmera.
+   */
   getColumnCount() {
     const availableWidth = Math.max(1, this.scene.cameras.main.width - 24);
     return Math.max(1, Math.floor((availableWidth + SLOT_GAP) / SLOT_STRIDE));
   }
 
+  /**
+   * Centraliza as linhas na parte inferior e compensa o zoom para manter o tamanho dos slots
+   * na tela.
+   */
   updateCameraLayout() {
     const camera = this.scene.cameras.main;
     if (!camera || !this.container.scene) return;
@@ -181,6 +205,9 @@ class InventoryUI {
     }
   }
 
+  /**
+   * Cancela a assinatura do inventário, remove listeners e destrói o container uma única vez.
+   */
   destroy() {
     if (this.destroyed) return;
     this.destroyed = true;

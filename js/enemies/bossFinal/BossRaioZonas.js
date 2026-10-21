@@ -1,3 +1,8 @@
+/**
+ * @file Ataque elétrico por zonas da arena. Mantém separados os retângulos de dano, a imagem
+ * principal, a base, as máscaras e as janelas de frames ofensivos.
+ */
+
 import { bossDepth, danoAtaqueChao, duracaoFrame } from "./BossConfig.js";
 import { causarDanoJogador } from "./BossCombate.js";
 
@@ -106,6 +111,9 @@ const COR_ZONA_ATIVA = 0x00d8ff;
 
 const COR_BASE = 0xb266ff;
 
+/**
+ * Verifica se as áreas de raio podem ser mostradas na depuração.
+ */
 function debugHitboxesAtivado(scene) {
   return Boolean(scene?.game?.config?.physics?.arcade?.debug);
 }
@@ -114,6 +122,9 @@ function debugHitboxesAtivado(scene) {
 // 8. CALCULAR HITBOX DAS ZONAS
 // =====================================================
 
+/**
+ * Calcula o retângulo de dano da zona selecionada a partir da largura e da origem da arena.
+ */
 function obterAreaZona(indice) {
   const x = ARENA_X_MIN + indice * LARGURA_ZONA;
 
@@ -129,6 +140,10 @@ function obterAreaZona(indice) {
 // ÁREA VISUAL DO RAIO PRINCIPAL
 // =====================================================
 
+/**
+ * Calcula a área de desenho do raio, aplicando ajustes visuais específicos sem alterar sua
+ * hitbox.
+ */
 function obterAreaVisualZona(indice) {
   const area = obterAreaZona(indice);
 
@@ -157,6 +172,9 @@ function obterAreaVisualZona(indice) {
 // HITBOX ADICIONAL DA BASE DO BOSS
 // =====================================================
 
+/**
+ * Retorna o retângulo configurado para o dano elétrico na base do boss.
+ */
 function obterAreaBase() {
   return new Phaser.Geom.Rectangle(
     BASE_CENTRO_X - LARGURA_HITBOX_BASE / 2,
@@ -170,6 +188,9 @@ function obterAreaBase() {
 // 9. IDENTIFICAR FRAMES DE UMA TEXTURA
 // =====================================================
 
+/**
+ * Obtém e ordena numericamente os frames disponíveis na textura de um efeito.
+ */
 function obterFramesTextura(scene, chave) {
   if (!scene.textures.exists(chave)) {
     return [];
@@ -186,6 +207,10 @@ function obterFramesTextura(scene, chave) {
 // 10. CARREGAR FRAMES DE 311x623 DA BASE
 // =====================================================
 
+/**
+ * Cria ou recupera a textura de base com recortes de 311 × 623 pixels e sua sequência de
+ * frames.
+ */
 function obterTexturaBaseCorreta(scene) {
   if (!scene.textures.exists(TEXTURA_RAIO_BASE)) {
     console.warn("Boss: textura boss-raio-base não carregada.");
@@ -261,6 +286,9 @@ function obterTexturaBaseCorreta(scene) {
 
 const PROFUNDIDADE_RAIOS = 5.4;
 
+/**
+ * Mantém os sprites principal e de base na profundidade visual configurada para os raios.
+ */
 function atualizarProfundidadeRaio(boss) {
   const sprites = [boss.raioZonaSprite, boss.raioBaseSprite];
 
@@ -277,6 +305,9 @@ function atualizarProfundidadeRaio(boss) {
 // 12. DESENHAR DEBUG DAS HITBOXES
 // =====================================================
 
+/**
+ * Desenha zonas, base e áreas de dano atuais somente durante a depuração.
+ */
 function desenharDebugZonas(boss) {
   const graphics = boss.raioZonaDebugGraphics;
 
@@ -326,6 +357,9 @@ function desenharDebugZonas(boss) {
 // 13. INICIALIZAR DEBUG PERMANENTE
 // =====================================================
 
+/**
+ * Cria os gráficos de diagnóstico e conecta sua atualização sem registrar listeners repetidos.
+ */
 export function inicializarDebugZonasRaio(boss) {
   if (!boss?.scene || !boss.active) return;
 
@@ -340,6 +374,9 @@ export function inicializarDebugZonasRaio(boss) {
   desenharDebugZonas(boss);
 
   if (!boss.raioZonaDebugUpdate) {
+    /**
+     * Redesenha as zonas de diagnóstico durante a atualização da cena.
+     */
     boss.raioZonaDebugUpdate = () => {
       if (boss?.active && boss.scene) {
         desenharDebugZonas(boss);
@@ -354,6 +391,9 @@ export function inicializarDebugZonasRaio(boss) {
 // 14. DESTRUIR DEBUG
 // =====================================================
 
+/**
+ * Remove o listener e destrói os gráficos usados para diagnosticar as zonas elétricas.
+ */
 export function destruirDebugZonasRaio(boss) {
   if (!boss) return;
 
@@ -376,6 +416,9 @@ export function destruirDebugZonasRaio(boss) {
 // 15. ESCOLHER UMA DAS TRÊS ZONAS
 // =====================================================
 
+/**
+ * Escolhe uma zona, priorizando em parte dos sorteios a região em que o jogador está.
+ */
 function escolherZona(boss) {
   const jogador = boss.scene.player;
 
@@ -394,6 +437,9 @@ function escolherZona(boss) {
 // 16. FRAME ATUAL DO BOSS
 // =====================================================
 
+/**
+ * Lê o frame atual da animação do boss com índice iniciado em zero.
+ */
 function obterFrameAtualBoss(boss) {
   const atual = boss.sprite?.anims?.currentFrame;
 
@@ -404,6 +450,9 @@ function obterFrameAtualBoss(boss) {
   return boss.iaCombate?.frame ?? 0;
 }
 
+/**
+ * Retorna a quantidade de frames da animação atual, com mínimo de um.
+ */
 function obterTotalFramesBoss(boss) {
   return Math.max(1, boss.sprite?.anims?.currentAnim?.frames?.length ?? 1);
 }
@@ -412,6 +461,9 @@ function obterTotalFramesBoss(boss) {
 // 17. DURAÇÃO ORIGINAL DO ATAQUE
 // =====================================================
 
+/**
+ * Estima em milissegundos o tempo que falta na animação a partir do frame indicado.
+ */
 function obterDuracaoRestanteBoss(boss, frameInicio) {
   const animacao = boss.sprite?.anims?.currentAnim;
 
@@ -430,6 +482,9 @@ function obterDuracaoRestanteBoss(boss, frameInicio) {
 // 18. JANELA DE DANO
 // =====================================================
 
+/**
+ * Calcula quantos frames da sequência serão reservados ao aviso de preparação antes do dano.
+ */
 function obterFramesPreparacao(totalFrames) {
   return Math.min(
     totalFrames,
@@ -440,6 +495,9 @@ function obterFramesPreparacao(totalFrames) {
   );
 }
 
+/**
+ * Verifica se um frame já passou da preparação e ainda não entrou no trecho final sem dano.
+ */
 function frameDentroDaJanelaDano(frame, totalFrames) {
   if (totalFrames <= 0) return false;
 
@@ -460,6 +518,9 @@ function frameDentroDaJanelaDano(frame, totalFrames) {
 // Não altera o dano.
 // =====================================================
 
+/**
+ * Desenha a forma retangular usada para limitar visualmente o raio da base.
+ */
 function criarMascaraBase(scene, area) {
   const graphics = scene.make.graphics({
     x: 0,
@@ -492,6 +553,9 @@ function criarMascaraBase(scene, area) {
 // APLICAR MÁSCARA COMPATÍVEL
 // =====================================================
 
+/**
+ * Aplica uma máscara ao sprite da base usando a API disponível no renderizador atual.
+ */
 function aplicarMascaraBase(scene, sprite, area) {
   const graphics = criarMascaraBase(scene, area);
 
@@ -519,6 +583,9 @@ function aplicarMascaraBase(scene, sprite, area) {
 // 20. CRIAR O RAIO DA BASE
 // =====================================================
 
+/**
+ * Cria o efeito de base nas zonas que o utilizam, com textura, tamanho e máscara próprios.
+ */
 function criarRaioBase(boss, indiceZona) {
   // Zona 2 não recebe o raio adicional.
   if (indiceZona === 1) return;
@@ -582,6 +649,9 @@ function criarRaioBase(boss, indiceZona) {
 // 21. ENCERRAR O EFEITO DOS RAIOS
 // =====================================================
 
+/**
+ * Oculta os efeitos e desativa suas áreas de dano ao encerrar a parte visual do raio.
+ */
 function encerrarEfeitoRaio(boss) {
   const ia = boss?.iaCombate;
 
@@ -608,6 +678,9 @@ function encerrarEfeitoRaio(boss) {
 // 22. LIMPAR O ATAQUE
 // =====================================================
 
+/**
+ * Remove sprites, máscaras e listeners do raio e reinicializa seus controles temporários.
+ */
 export function limparRaioZona(boss) {
   if (!boss) return;
 
@@ -698,6 +771,9 @@ export function limparRaioZona(boss) {
 // 23. INICIAR O ATAQUE
 // =====================================================
 
+/**
+ * Escolhe a zona, prepara os efeitos e conecta a atualização e a limpeza ao evento de derrota.
+ */
 export function iniciarRaioZona(boss) {
   if (!boss?.active || boss.morto) return;
 
@@ -782,6 +858,9 @@ export function iniciarRaioZona(boss) {
   // ATUALIZAÇÃO DOS RAIOS
   // ================================================
 
+  /**
+   * Encaminha cada atualização da cena ao controle de frames e dano da zona de raio.
+   */
   boss.raioZonaUpdate = () => {
     atualizarRaioZona(boss);
   };
@@ -792,6 +871,9 @@ export function iniciarRaioZona(boss) {
   // LIMPEZA AO DERROTAR O BOSS
   // ================================================
 
+  /**
+   * Limpa o ataque elétrico quando o evento de derrota corresponde a este boss.
+   */
   boss.raioZonaAoDerrotar = (evento) => {
     if (evento?.boss === boss) {
       limparRaioZona(boss);
@@ -805,6 +887,9 @@ export function iniciarRaioZona(boss) {
 // 24. VERIFICAR DANO DO RAIO PRINCIPAL
 // =====================================================
 
+/**
+ * Indica se o raio principal está visível e dentro de uma janela ofensiva válida.
+ */
 export function raioPodeDarDano(boss) {
   const ia = boss?.iaCombate;
   const sprite = boss?.raioZonaSprite;
@@ -837,6 +922,9 @@ export function raioPodeDarDano(boss) {
 // 25. VERIFICAR DANO DO RAIO DA BASE
 // =====================================================
 
+/**
+ * Exige uma janela válida do raio principal e da base para permitir o dano adicional da base.
+ */
 function raioBasePodeDarDano(boss) {
   const ia = boss?.iaCombate;
   const sprite = boss?.raioBaseSprite;
@@ -854,6 +942,9 @@ function raioBasePodeDarDano(boss) {
 // 26. ATUALIZAR AS DUAS ANIMAÇÕES
 // =====================================================
 
+/**
+ * Sincroniza os frames dos efeitos e aplica dano ao jogador apenas nas áreas e janelas ativas.
+ */
 export function atualizarRaioZona(boss) {
   if (!boss?.active || boss.morto) {
     limparRaioZona(boss);

@@ -1,3 +1,8 @@
+/**
+ * @file Cena da cidade. Coordena mapa, jogador, companheiro, inimigos, clima, inventário,
+ * minimapa e transição para a fábrica.
+ */
+
 import criarLevel1Map from "../map/MapaCidade.js";
 
 import criarTransicaoParaParte2 from "../core/MapTransition.js";
@@ -60,6 +65,9 @@ const DEBUG_TELEPORTES = false;
 // =====================================================
 
 class Level1 extends Phaser.Scene {
+  /**
+   * Registra Level1 e define os parâmetros iniciais de movimento, combate e respawn.
+   */
   constructor() {
     super("Level1");
 
@@ -91,6 +99,10 @@ class Level1 extends Phaser.Scene {
     this.respawnY = 475;
   }
 
+  /**
+   * Recebe os dados de entrada e reinicializa estado de rede, inimigos e condições da passagem
+   * entre mapas.
+   */
   init(data) {
     this.respawnX = data.spawnX ?? -1405;
     this.respawnY = data.spawnY ?? 475;
@@ -119,6 +131,10 @@ class Level1 extends Phaser.Scene {
   // CREATE
   // =====================================================
 
+  /**
+   * Monta os sistemas da cidade, seus controles, colisões, teletransportes e recursos de
+   * interface.
+   */
   create() {
     this.physics.resume();
     this.physics.world.resume();
@@ -186,6 +202,10 @@ class Level1 extends Phaser.Scene {
         .strokeRect(771, -866, 60, 12);
     }
 
+    /**
+     * Transporta jogador e companheiro após escurecer a tela e usa um intervalo para impedir
+     * repetição imediata.
+     */
     const teleportarComFadeNovo = (x, y) => {
       if (!this.canTeleport) return;
 
@@ -321,6 +341,10 @@ class Level1 extends Phaser.Scene {
   // UPDATE
   // =====================================================
 
+  /**
+   * Atualiza os sistemas da fase e a sincronização de rede, respeitando morte e pausa breve de
+   * impacto no solo.
+   */
   update(time, delta) {
     this.minimap?.update(time);
     this.weather?.update(time, delta);
@@ -458,9 +482,17 @@ class Level1 extends Phaser.Scene {
     }
   }
 
+  /**
+   * Conecta os eventos multiplayer e prepara a remoção de listeners e sprites remotos ao sair
+   * da cena.
+   */
   iniciarMultiplayer() {
     const manager = this.multiplayerManager;
     if (!manager) return;
+    /**
+     * Permite ao host aplicar o dano recebido pela rede e direciona o inimigo para quem o
+     * atacou.
+     */
     this.onEnemyDamage = ({ enemyId, playerId, damage }) => {
       if (!this.isMultiplayerHost) return;
       const enemy = this.inimigos.find(
@@ -471,7 +503,14 @@ class Level1 extends Phaser.Scene {
         causarDanoInimigo(this, enemy, damage);
       }
     };
+    /**
+     * Aplica ao jogador local o dano comunicado pelo gerenciador multiplayer.
+     */
     this.onPlayerDamage = (damage) => tomarDano(this, damage);
+    /**
+     * Atualiza a condição de host e sincroniza jogadores e inimigos quando o estado da sala
+     * muda.
+     */
     this.onMultiplayerRoomUpdated = (room) => {
       this.isMultiplayerHost = room.hostId === manager.playerId;
       this.atualizarJogadoresRemotos(room);
@@ -493,6 +532,10 @@ class Level1 extends Phaser.Scene {
     });
   }
 
+  /**
+   * Cria ou atualiza representações de inimigos no cliente e remove as que não estão mais no
+   * estado recebido.
+   */
   atualizarInimigosRemotos(room) {
     if (!this.multiplayer || this.isMultiplayerHost || !room) return;
     const activeIds = new Set();
@@ -539,6 +582,9 @@ class Level1 extends Phaser.Scene {
     this.inimigoTeste = this.inimigos[0] || null;
   }
 
+  /**
+   * Sincroniza sprites, animações e projéteis dos outros jogadores a partir dos dados da sala.
+   */
   atualizarJogadoresRemotos(room) {
     if (!room?.players) return;
     const activeIds = new Set();
@@ -685,6 +731,9 @@ class Level1 extends Phaser.Scene {
     });
   }
 
+  /**
+   * Aproxima suavemente sprites remotos de seus destinos usando um fator calculado pelo delta.
+   */
   atualizarInterpolacaoRemota(delta = 0) {
     const alpha = 1 - Math.exp((-12 * Math.max(0, delta)) / 1000);
     this.remotePlayers.forEach((sprite) => {
@@ -719,6 +768,10 @@ class Level1 extends Phaser.Scene {
       });
   }
 
+  /**
+   * Cria o efeito de laser remoto com movimento e tempo de vida próprios para representação do
+   * ataque.
+   */
   criarLaserInimigoRemoto(enemy, data) {
     const laser = this.add
       .circle(enemy.x, enemy.y, 4, 0xff0000, 1)
@@ -742,6 +795,9 @@ class Level1 extends Phaser.Scene {
   //   y <= -225 -> fica na frente do personagem
   //   entre esses valores -> continua atrás
   // =====================================================
+  /**
+   * Altera a ordem das cercas conforme os limites de passagem do personagem na cidade.
+   */
   atualizarProfundidadeCerca() {
     if (!this.player?.body) {
       return;
@@ -776,6 +832,9 @@ class Level1 extends Phaser.Scene {
     }
   }
 
+  /**
+   * Atualiza a sobreposição dos postes em relação à posição do personagem.
+   */
   atualizarProfundidadePostes() {
     if (!this.player?.active) {
       return;

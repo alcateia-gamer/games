@@ -1,3 +1,8 @@
+/**
+ * @file Sprite e combate do jogador. Mantém separadas as colisões com o chão, a área que
+ * recebe dano e a área ofensiva da katana.
+ */
+
 import { gastarEstamina } from "./PlayerStatus.js";
 import { dispararProjetil } from "./PlayerProjectiles.js";
 
@@ -10,22 +15,37 @@ import {
   obterConfiguracaoHitboxWalk,
 } from "./colisoes/index.mjs";
 
+/**
+ * Consulta a configuração de depuração para decidir se as hitboxes devem ser desenhadas.
+ */
 function debugHitboxesAtivado(scene) {
   return !!scene?.game?.config?.physics?.arcade?.debug;
 }
 
+/**
+ * Identifica se o personagem selecionado é Magnus.
+ */
 function personagem2Ativa(scene) {
   return scene.personagemSelecionada === "magnus-force";
 }
 
+/**
+ * Identifica se o personagem selecionado é Aria.
+ */
 function personagem3Ativa(scene) {
   return scene.personagemSelecionada === "aria-kade";
 }
 
+/**
+ * Identifica se o personagem selecionado é Nyx.
+ */
 function personagem4Ativa(scene) {
   return scene.personagemSelecionada === "nyx";
 }
 
+/**
+ * Considera Kai como personagem quando nenhum dos outros três está selecionado.
+ */
 function personagemKaiAtiva(scene) {
   return (
     !personagem2Ativa(scene) &&
@@ -45,6 +65,9 @@ const framesCarregadosAria = {
 const KAI_ATTACK_ORIGIN_Y = 0.43;
 const NYX_ATTACK_ORIGIN_Y = 0.45;
 
+/**
+ * Retorna a chave da textura de caminhada do personagem selecionado.
+ */
 function texturaWalk(scene, direcao = scene.direcaoAtual) {
   if (personagem4Ativa(scene)) {
     return "personagem4-walk";
@@ -55,11 +78,17 @@ function texturaWalk(scene, direcao = scene.direcaoAtual) {
   return personagem2Ativa(scene) ? "personagem2-walk" : "walk";
 }
 
+/**
+ * Aplica filtragem de vizinho mais próximo à textura de caminhada do Magnus.
+ */
 function configurarFiltroPersonagem2(scene) {
   const texture = scene.textures.get("personagem2-walk");
   texture?.setFilter(Phaser.Textures.FilterMode.NEAREST);
 }
 
+/**
+ * Configura a origem visual de caminhada e ajusta o ponto de ancoragem específico da Aria.
+ */
 function configurarVisualWalk(scene) {
   scene.player.setOrigin(0.5, 0.5);
   if (personagem3Ativa(scene)) {
@@ -67,6 +96,9 @@ function configurarVisualWalk(scene) {
   }
 }
 
+/**
+ * Escolhe o frame parado do personagem conforme a direção informada.
+ */
 function frameParado(scene, direcao = scene.direcaoAtual) {
   // Quadro inicial usado ao criar/retomar o personagem, por direção.
   // Atualize junto com idleFrames em PlayerAnimations.js para manter as poses consistentes.
@@ -80,6 +112,9 @@ function frameParado(scene, direcao = scene.direcaoAtual) {
   return frames[direcao] ?? frames.down;
 }
 
+/**
+ * Obtém o Y dos pés pela hitbox física ou, sem corpo, pelos limites visuais.
+ */
 function calcularFootYPlayer(scene) {
   if (!scene?.player?.body) {
     return scene?.player?.getBounds().bottom ?? 0;
@@ -88,6 +123,9 @@ function calcularFootYPlayer(scene) {
   return scene.player.body.bottom;
 }
 
+/**
+ * Atualiza a ordem de desenho do jogador usando a posição dos pés no mundo.
+ */
 function atualizarDepthPlayer(scene) {
   if (!scene?.player?.active) {
     return;
@@ -109,6 +147,9 @@ function atualizarDepthPlayer(scene) {
 // CRIA PLAYER
 // =====================================================
 
+/**
+ * Cria sprite, colisões e área de dano e restaura caminhada e estados ao terminar ataques.
+ */
 function criarPlayer(scene) {
   // =====================================================
   // PERSONAGEM
@@ -231,6 +272,10 @@ function criarPlayer(scene) {
 // SPRITE: 128x128
 // =====================================================
 
+/**
+ * Aplica a largura, altura e deslocamentos da hitbox de caminhada configurada para o
+ * personagem.
+ */
 function configurarHitboxWalk(scene) {
   if (!scene.player || !scene.player.body) {
     return;
@@ -253,6 +298,9 @@ function configurarHitboxWalk(scene) {
 // Os offsets variam conforme o tamanho da folha de cada personagem.
 // =====================================================
 
+/**
+ * Aplica a configuração de colisão usada quando a textura de ataque está ativa.
+ */
 function configurarHitboxAtaque(scene) {
   if (!scene.player || !scene.player.body) {
     return;
@@ -265,6 +313,9 @@ function configurarHitboxAtaque(scene) {
   scene.player.body.setOffset(configuracao.offsetX, configuracao.offsetY);
 }
 
+/**
+ * Permite mudar a direção da Aria durante a carga sem reiniciar o carregamento do ataque.
+ */
 function atualizarDirecaoAtaqueAria(scene, direcao) {
   if (
     !personagem3Ativa(scene) ||
@@ -286,6 +337,9 @@ function atualizarDirecaoAtaqueAria(scene, direcao) {
 // ATUALIZA HITBOX DE DANO
 // =====================================================
 
+/**
+ * Reposiciona a área que recebe dano e atualiza sua visualização de depuração.
+ */
 function atualizarHitboxDanoPlayer(scene) {
   if (!scene.player || !scene.player.active || !scene.hitboxDanoPlayer) {
     return;
@@ -347,6 +401,9 @@ function atualizarHitboxDanoPlayer(scene) {
 // CRIA HITBOX DA KATANA
 // =====================================================
 
+/**
+ * Cria a área geométrica da katana, o controle de acerto e a atualização vinculada ao ataque.
+ */
 function criarHitboxKatana(scene) {
   // =====================================================
   // RETÂNGULO GEOMÉTRICO
@@ -377,6 +434,10 @@ function criarHitboxKatana(scene) {
   // ATUALIZA HITBOX
   // =====================================================
 
+  /**
+   * Posiciona a katana pela direção e processa acertos nos quadros válidos, evitando dano
+   * repetido pelo mesmo golpe.
+   */
   const atualizarHitboxKatana = () => {
     if (!scene.player || !scene.player.active) {
       return;
@@ -576,6 +637,10 @@ function criarHitboxKatana(scene) {
 // ATAQUE
 // =====================================================
 
+/**
+ * Consome estamina e inicia o ataque do personagem; no solo, guarda um comando recente se já
+ * houver ataque em andamento.
+ */
 function atacar(scene) {
   // =====================================================
   // JÁ ESTÁ ATACANDO
@@ -685,6 +750,9 @@ function atacar(scene) {
   configurarHitboxAtaque(scene);
 }
 
+/**
+ * Encerra a carga da Aria, cria a flecha e executa a animação de soltura na direção escolhida.
+ */
 function soltarAtaque(scene) {
   if (
     !personagem3Ativa(scene) ||
@@ -705,6 +773,10 @@ function soltarAtaque(scene) {
 // RESPAWN
 // =====================================================
 
+/**
+ * Reposiciona o jogador no respawn e restaura textura, colisão, direção, vida, estamina e
+ * estados de ataque.
+ */
 function respawnPlayer(scene) {
   // =====================================================
   // PARA MOVIMENTO

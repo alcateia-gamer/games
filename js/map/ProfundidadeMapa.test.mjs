@@ -1,8 +1,17 @@
+/**
+ * @file Testes da sobreposição dos computadores PcAdm com o personagem e do tratamento de
+ * jogador ausente.
+ */
+
 import assert from "node:assert/strict";
 import test from "node:test";
 
 import { atualizarDepthComputadoresPcAdm } from "./ProfundidadeMapa.js";
 
+/**
+ * Cria um visual simulado com camada e centro configuráveis para testar a regra de
+ * profundidade.
+ */
 function criarVisual(layerName, centerY) {
   return {
     active: true,

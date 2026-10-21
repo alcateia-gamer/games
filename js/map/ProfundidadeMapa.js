@@ -1,3 +1,9 @@
+/**
+ * @file Regras de sobreposição visual da cidade e fábrica. Ajusta depth pelo Y ou pela posição
+ * relativa ao personagem.
+ */
+
+// Depth ordena o desenho; não muda posição nem colisões. Valores maiores ficam à frente.
 const DEPTHS = {
   worldBase: 12.5,
   worldScale: 0.0003,
@@ -5,10 +11,17 @@ const DEPTHS = {
   overlayAboveWorld: 20,
 };
 
+/**
+ * Converte a coordenada Y do mundo em uma profundidade crescente para ordenar objetos da
+ * cidade.
+ */
 function depthFromWorldY(y) {
   return DEPTHS.worldBase + Number(y) * DEPTHS.worldScale;
 }
 
+/**
+ * Acrescenta um pequeno ajuste por Y à profundidade base de uma camada de objetos.
+ */
 function calcularDepthObjeto(profundidadeCamada, y) {
   return profundidadeCamada - Number(y || 0) / 100000;
 }
@@ -25,6 +38,10 @@ const PROFUNDIDADES_OBJETOS_PARTE2 = {
   EstátuaRobos: 15,
 };
 
+/**
+ * Reaplica a profundidade dos objetos de produção e armazém a partir da camada e do Y
+ * armazenados.
+ */
 function atualizarDepthObjetosProducaoEArmazem(scene) {
   if (!Array.isArray(scene.objetosMapaParte2)) {
     return;
@@ -49,6 +66,10 @@ function atualizarDepthObjetosProducaoEArmazem(scene) {
   });
 }
 
+/**
+ * Coloca cada garra acima ou abaixo do jogador conforme a posição de seus pés em relação ao
+ * objeto.
+ */
 function atualizarDepthGarras(scene) {
   const player = scene.player;
   if (!player?.active || !Array.isArray(scene.objetosMapaParte2)) {
@@ -69,6 +90,10 @@ function atualizarDepthGarras(scene) {
   });
 }
 
+/**
+ * Compara os centros visuais do jogador e dos computadores PcAdm para inverter a sobreposição
+ * durante a passagem.
+ */
 function atualizarDepthComputadoresPcAdm(scene) {
   const player = scene.player;
   if (!player?.active || !Array.isArray(scene.objetosMapaParte2)) {

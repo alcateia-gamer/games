@@ -1,5 +1,14 @@
+/**
+ * @file Catálogo dos itens. Centraliza IDs, nomes, imagens, empilhamento e regras de exibição;
+ * o preloader usa este registro.
+ */
+
+// Fonte única das definições: o inventário guarda apenas IDs e quantidades.
 const ITEMS = new Map();
 
+/**
+ * Valida e normaliza uma definição de item antes de congelar seus dados de configuração.
+ */
 function normalizeItemDefinition(definition) {
   if (!definition || typeof definition !== "object") {
     throw new TypeError("A definição do item deve ser um objeto.");
@@ -45,6 +54,9 @@ function normalizeItemDefinition(definition) {
   });
 }
 
+/**
+ * Adiciona uma definição ao catálogo e rejeita IDs já registrados.
+ */
 function registerInventoryItem(definition) {
   const item = normalizeItemDefinition(definition);
 
@@ -56,14 +68,24 @@ function registerInventoryItem(definition) {
   return item;
 }
 
+/**
+ * Consulta a definição de um item pelo ID; retorna null quando ele não existe.
+ */
 function getInventoryItem(itemId) {
   return ITEMS.get(itemId) ?? null;
 }
 
+/**
+ * Retorna uma lista com todas as definições registradas no catálogo.
+ */
 function listInventoryItems() {
   return [...ITEMS.values()];
 }
 
+/**
+ * Enfileira as imagens dos itens que ainda não existem no cache, evitando carregar a mesma
+ * chave duas vezes.
+ */
 function preloadInventoryItemImages(scene) {
   const queuedKeys = new Set();
 
@@ -79,6 +101,9 @@ function preloadInventoryItemImages(scene) {
   }
 }
 
+/**
+ * Desenha o ícone de sucata em uma textura de canvas compartilhada entre as cenas.
+ */
 function createBuiltinInventoryTextures(scene) {
   const textureKey = "inventory-scrap-icon";
 
@@ -106,6 +131,7 @@ function createBuiltinInventoryTextures(scene) {
   texture.refresh();
 }
 
+// Itens disponíveis no jogo; novas definições também entram no preload automático.
 registerInventoryItem({
   id: "sucata",
   name: "Sucata",

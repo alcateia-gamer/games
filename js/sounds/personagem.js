@@ -1,6 +1,14 @@
+/**
+ * @file Carregamento dos sons do jogador e loop de passos. Inicia e interrompe o áudio
+ * conforme movimento e estado de morte.
+ */
+
 // Volume máximo do som de corrida do personagem.
 const VOLUME_CORRIDA = 1;
 
+/**
+ * Enfileira os sons de corrida, tensão e disparo da Aria e dano dos personagens.
+ */
 function carregarSonsPersonagem(loader) {
   // =====================================================
   // SOM DE CORRIDA
@@ -34,6 +42,9 @@ function carregarSonsPersonagem(loader) {
   loader.audio("dano-soft", "sounds.mp3/dano_soft.mp3");
 }
 
+/**
+ * Cria a instância de passos em loop e conecta a entrada de teclado e a limpeza da cena.
+ */
 function configurarSomCorrida(scene) {
   scene.somCorrida = scene.sound.add("running", {
     loop: true,
@@ -42,6 +53,10 @@ function configurarSomCorrida(scene) {
     volume: VOLUME_CORRIDA,
   });
 
+  /**
+   * Inicia o áudio ao pressionar uma tecla direcional válida, desde que a morte não esteja em
+   * andamento.
+   */
   const iniciarSomCorrida = (event) => {
     if (scene.morteEmAndamento) {
       return;
@@ -69,6 +84,9 @@ function configurarSomCorrida(scene) {
   });
 }
 
+/**
+ * Mantém o áudio alinhado ao estado real de movimento e o interrompe ao parar ou morrer.
+ */
 function atualizarSomCorrida(scene, estaSeMovendo) {
   if (!scene.somCorrida) {
     return;

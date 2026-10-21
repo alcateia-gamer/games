@@ -1,3 +1,8 @@
+/**
+ * @file Som elétrico do boss sincronizado com o raio visível. O volume acompanha o progresso
+ * do efeito e a limpeza atende interrupção, derrota e saída da cena.
+ */
+
 // =====================================================
 // SOM DO RAIO NO CHÃO DO BOSS FINAL
 // =====================================================
@@ -43,6 +48,9 @@ const VOLUME_FINAL_RAIO = 0;
 // SUAVIZAÇÃO DO VOLUME
 // =====================================================
 
+/**
+ * Limita o progresso entre zero e um e aplica uma curva suave de crescimento e redução.
+ */
 function suavizarProgresso(valor) {
   const t = Phaser.Math.Clamp(valor, 0, 1);
 
@@ -53,6 +61,9 @@ function suavizarProgresso(valor) {
 // CALCULAR VOLUME CONFORME A ANIMAÇÃO
 // =====================================================
 
+/**
+ * Calcula o volume que aumenta até o ponto de pico configurado e cai até o fim do raio.
+ */
 function calcularVolumeRaio(progresso) {
   const p = Phaser.Math.Clamp(progresso, 0, 1);
 
@@ -80,6 +91,9 @@ function calcularVolumeRaio(progresso) {
 // DESTRUIR INSTÂNCIA DO ÁUDIO
 // =====================================================
 
+/**
+ * Interrompe e destrói apenas a instância de áudio elétrico atual.
+ */
 function destruirAudioRaio(boss) {
   if (!boss?.somRaioBoss) {
     return;
@@ -95,6 +109,9 @@ function destruirAudioRaio(boss) {
 // PARAR COMPLETAMENTE O SOM
 // =====================================================
 
+/**
+ * Desconecta todos os monitores e eventos relacionados ao som e destrói a instância de áudio.
+ */
 export function pararSomRaioBoss(boss) {
   if (!boss) {
     return;
@@ -129,6 +146,10 @@ export function pararSomRaioBoss(boss) {
 // ATUALIZAR O VOLUME DO RAIO
 // =====================================================
 
+/**
+ * Inicia o áudio quando o raio realmente aparece e atualiza seu volume até o fim ou uma
+ * interrupção do ataque.
+ */
 export function atualizarSomRaioBoss(boss) {
   if (!boss) {
     return;
@@ -214,6 +235,10 @@ export function atualizarSomRaioBoss(boss) {
 // ATIVAR MONITORAMENTO DO SOM
 // =====================================================
 
+/**
+ * Conecta uma única vez os eventos de atualização, derrota e encerramento que controlam o som
+ * do raio.
+ */
 export function ativarMonitorSomRaioBoss(boss) {
   if (!boss?.active || !boss.scene || boss.somRaioAtualizacao) {
     return;
@@ -222,6 +247,9 @@ export function ativarMonitorSomRaioBoss(boss) {
   const scene = boss.scene;
 
   // Atualizar o volume continuamente.
+  /**
+   * Encaminha a atualização da cena para a sincronização de tempo e volume do raio.
+   */
   boss.somRaioAtualizacao = () => {
     atualizarSomRaioBoss(boss);
   };
@@ -229,6 +257,9 @@ export function ativarMonitorSomRaioBoss(boss) {
   scene.events.on(Phaser.Scenes.Events.UPDATE, boss.somRaioAtualizacao);
 
   // Parar o som se o boss for derrotado.
+  /**
+   * Interrompe o som quando o evento de derrota pertence ao boss monitorado.
+   */
   boss.somRaioAoDerrotar = (evento) => {
     if (evento?.boss === boss) {
       pararSomRaioBoss(boss);
@@ -238,6 +269,9 @@ export function ativarMonitorSomRaioBoss(boss) {
   scene.events.on("boss:derrotado", boss.somRaioAoDerrotar);
 
   // Parar o áudio ao sair da cena.
+  /**
+   * Interrompe e limpa o áudio ao encerrar a cena.
+   */
   boss.somRaioAoEncerrar = () => {
     pararSomRaioBoss(boss);
   };

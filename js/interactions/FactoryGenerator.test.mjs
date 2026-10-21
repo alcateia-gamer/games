@@ -1,3 +1,8 @@
+/**
+ * @file Testes da busca de interações no mapa atual e em mapas simulados, alcance retangular,
+ * detecção de botões e requisitos do gerador.
+ */
+
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";

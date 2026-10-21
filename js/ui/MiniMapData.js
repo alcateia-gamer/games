@@ -1,3 +1,8 @@
+/**
+ * @file Geometria e exploração do minimapa, sem dependência do renderizador. Preserva
+ * coordenadas negativas, testa oclusão e compacta as células descobertas.
+ */
+
 // Dados independentes do renderizador. O Phaser já decodificou os chunks do Tiled;
 // LayerData.x/y preservam a origem negativa e Tile.pixelX/Y são locais à camada.
 export const MINI_MAP_PROFILES = {
@@ -27,6 +32,10 @@ export const MAP_COLORS = {
 const MAX_CELLS = 262144;
 const INDEX_SIZE = 128;
 
+/**
+ * Extrai a geometria das camadas selecionadas pelo perfil e calcula limites, assinatura e uma
+ * grade com memória limitada.
+ */
 export function buildMiniMapGeometry(map, profile, warn = console.warn) {
   const rects = [];
   const shapes = [];
@@ -34,12 +43,21 @@ export function buildMiniMapGeometry(map, profile, warn = console.warn) {
   const objects = map?.objects ?? [];
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   let hash = 2166136261;
+  /**
+   * Acrescenta um número à assinatura usada para invalidar saves quando a geometria muda.
+   */
   const hashValue = (value) => { hash = Math.imul(hash ^ Math.round(value * 10), 16777619) >>> 0; };
+  /**
+   * Expande os limites do mapa e inclui as dimensões na assinatura da geometria.
+   */
   const extend = (x, y, width, height) => {
     minX = Math.min(minX, x); minY = Math.min(minY, y);
     maxX = Math.max(maxX, x + width); maxY = Math.max(maxY, y + height);
     [x, y, width, height].forEach(hashValue);
   };
+  /**
+   * Registra um retângulo válido e atualiza os limites do minimapa.
+   */
   const addRect = (x, y, width, height, kind) => {
     if (![x, y, width, height].every(Number.isFinite) || width <= 0 || height <= 0) return;
     rects.push({ x, y, width, height, kind });
@@ -96,6 +114,10 @@ export function buildMiniMapGeometry(map, profile, warn = console.warn) {
   return { bounds, rects, shapes, cellSize, columns, rows, signature };
 }
 
+/**
+ * Converte um objeto Tiled em retângulo ou polígono de colisão em coordenadas de mundo,
+ * considerando rotação.
+ */
 export function collisionShape(object) {
   const angle = (object.rotation || 0) * Math.PI / 180;
   let points = object.polygon;
@@ -116,6 +138,9 @@ export function collisionShape(object) {
   return null;
 }
 
+/**
+ * Testa se um ponto está dentro dos limites e, quando necessário, do polígono de uma forma.
+ */
 function contains(shape, x, y) {
   if (x < shape.x || y < shape.y || x > shape.x + shape.width || y > shape.y + shape.height) return false;
   if (!shape.points) return true;
@@ -128,6 +153,10 @@ function contains(shape, x, y) {
   return inside;
 }
 
+/**
+ * Verifica se dois segmentos se cruzam, desconsiderando encontros muito próximos às
+ * extremidades da linha de visão.
+ */
 function segmentIntersects(ax, ay, bx, by, cx, cy, dx, dy) {
   const denominator = (bx - ax) * (dy - cy) - (by - ay) * (dx - cx);
   if (Math.abs(denominator) < 1e-8) return false;
@@ -136,6 +165,10 @@ function segmentIntersects(ax, ay, bx, by, cx, cy, dx, dy) {
   return t > 0.001 && t < 0.999 && u >= 0 && u <= 1;
 }
 
+/**
+ * Verifica se uma forma bloqueia a linha de visão sem ocultar a própria parede nas
+ * extremidades.
+ */
 function obstructs(shape, ax, ay, bx, by) {
   // Permite revelar a própria parede e evita prender a visão em um collider
   // que se sobreponha ao centro visual do personagem.
@@ -158,6 +191,10 @@ function obstructs(shape, ax, ay, bx, by) {
 }
 
 export class ExplorationGrid {
+  /**
+   * Cria a grade, indexa os obstáculos por região e recupera células de um save com assinatura
+   * compatível.
+   */
   constructor(geometry, saved) {
     this.geometry = geometry;
     this.cells = new Uint8Array(geometry.columns * geometry.rows);
@@ -192,6 +229,10 @@ export class ExplorationGrid {
     }
   }
 
+  /**
+   * Consulta o índice espacial e os obstáculos dinâmicos para decidir se há visão entre dois
+   * pontos.
+   */
   visible(ax, ay, bx, by, dynamic = []) {
     this.ray++;
     if (this.ray >= 0xffffffff) { this.seen.fill(0); this.ray = 1; }
@@ -208,6 +249,10 @@ export class ExplorationGrid {
       !dynamic.some((shape) => obstructs(shape, ax, ay, bx, by));
   }
 
+  /**
+   * Revela células próximas com linha de visão, retornando apenas as que foram descobertas
+   * nesta atualização.
+   */
   reveal(x, y, radius = 170, dynamic = []) {
     const { bounds, cellSize, columns, rows } = this.geometry;
     this.current.length = 0;
@@ -234,6 +279,9 @@ export class ExplorationGrid {
     return discovered;
   }
 
+  /**
+   * Compacta a descoberta em bits codificados em Base64 e inclui a assinatura da geometria.
+   */
   serialize() {
     const bytes = new Uint8Array(Math.ceil(this.cells.length / 8));
     for (let i = 0; i < this.cells.length; i++) if (this.cells[i]) bytes[i >> 3] |= 1 << (i & 7);
@@ -243,9 +291,16 @@ export class ExplorationGrid {
   }
 }
 
+/**
+ * Calcula uma transformação de escala uniforme para a janela local, centralizando mapas
+ * menores que a janela.
+ */
 export function createMapTransform(bounds, width, height, x, y) {
   // Janela local sem distorção. Mapas pequenos são centralizados e cabem inteiros.
   const localScale = Math.min(0.08, width / 800, height / 600);
+  /**
+   * Calcula o deslocamento de um eixo e limita a janela aos limites do mapa.
+   */
   const offset = (start, size, viewport, focus) => size * localScale <= viewport
     ? (viewport - size * localScale) / 2 - start * localScale
     : -Math.max(start, Math.min(focus - viewport / localScale / 2, start + size - viewport / localScale)) * localScale;
@@ -254,10 +309,17 @@ export function createMapTransform(bounds, width, height, x, y) {
     y: offset(bounds.y, bounds.height, height, y) };
 }
 
+/**
+ * Aplica a transformação para converter coordenadas do mundo em coordenadas da janela do
+ * minimapa.
+ */
 export function worldToMiniMap(transform, x, y) {
   return { x: x * transform.scale + transform.x, y: y * transform.scale + transform.y };
 }
 
+/**
+ * Calcula posição, escala e visibilidade do minimapa sem sobrepor os botões de ação.
+ */
 export function miniMapLayout(camera, dev, attack, pickup) {
   const zoomX = camera.zoomX || camera.zoom || 1, zoomY = camera.zoomY || camera.zoom || 1;
   const ox = camera.width * camera.originX, oy = camera.height * camera.originY;

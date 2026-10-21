@@ -1,9 +1,21 @@
+/**
+ * @file Tela de criação e entrada em salas. Usa teclado físico ou campo DOM mobile para
+ * receber o código.
+ */
+
 class MultiplayerMenu extends Phaser.Scene {
+  /**
+   * Registra a cena do menu multiplayer e inicializa o código de sala digitado.
+   */
   constructor() {
     super("MultiplayerMenu");
     this.code = "";
   }
 
+  /**
+   * Monta a interface e conecta os eventos de busca, criação, atualização e erro do
+   * gerenciador de salas.
+   */
   create() {
     this.manager = this.registry.get("multiplayer");
     this.cameras.main.setBackgroundColor("#020805");
@@ -47,7 +59,13 @@ class MultiplayerMenu extends Phaser.Scene {
     this.createButton(400, 375, "VOLTAR", 130).on("buttondown", () =>
       this.scene.start("Start", { abrirMenu: true }),
     );
+    /**
+     * Mostra o status de busca enquanto o gerenciador aguarda uma resposta da sala.
+     */
     this.onRoomSearching = () => this.setStatus("PROCURANDO SALA...");
+    /**
+     * Abre o lobby quando chega a atualização da sala correspondente ao código digitado.
+     */
     this.onRoomUpdated = (room) => {
       if (
         room.roomCode === this.code &&
@@ -55,6 +73,9 @@ class MultiplayerMenu extends Phaser.Scene {
       )
         this.openLobby(room);
     };
+    /**
+     * Exibe a mensagem de erro recebida do gerenciador de salas.
+     */
     this.onManagerError = (error) =>
       this.setStatus(error.message || "ERRO DE CONEXÃO");
     this.manager.on("roomCreated", this.openLobby, this);
@@ -64,6 +85,9 @@ class MultiplayerMenu extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.shutdown, this);
   }
 
+  /**
+   * Processa caracteres e Backspace no teclado físico, atualizando a apresentação do código.
+   */
   handleKey(event) {
     if (event.key === "Backspace") this.code = this.code.slice(0, -1);
     else if (/^[a-z0-9]$/i.test(event.key) && this.code.length < 6)
@@ -71,6 +95,9 @@ class MultiplayerMenu extends Phaser.Scene {
     this.codeText.setText(this.code.padEnd(4, "-"));
   }
 
+  /**
+   * Cria um campo DOM em dispositivos com toque ou conecta a entrada ao teclado do Phaser.
+   */
   criarCampoCodigoMobile() {
     const touchDevice =
       typeof window !== "undefined" &&
@@ -90,6 +117,10 @@ class MultiplayerMenu extends Phaser.Scene {
       .setOrigin(0.5);
     this.codeInputNode = this.codeInput.node;
     this.codeInputNode.value = this.code;
+    /**
+     * Limpa caracteres inválidos, limita o código a seis posições e mantém a entrada em
+     * maiúsculas.
+     */
     this.handleCodeInput = (event) => {
       this.code = event.target.value
         .replace(/[^a-z0-9]/gi, "")
@@ -100,16 +131,25 @@ class MultiplayerMenu extends Phaser.Scene {
     this.codeInputNode.addEventListener("input", this.handleCodeInput);
   }
 
+  /**
+   * Atualiza o texto de retorno da operação de sala.
+   */
   setStatus(message) {
     this.status.setText(message);
   }
 
+  /**
+   * Guarda o código recebido como texto ou objeto de sala e entra na cena do lobby.
+   */
   openLobby(roomCode) {
     const code = typeof roomCode === "string" ? roomCode : roomCode?.roomCode;
     if (code) this.code = code;
     this.scene.start("MultiplayerLobby");
   }
 
+  /**
+   * Cria um botão de fundo e texto que emite buttondown ao ser acionado.
+   */
   createButton(x, y, label, width) {
     const background = this.add
       .rectangle(0, 0, width, 42, 0x062b16, 0.95)
@@ -130,6 +170,9 @@ class MultiplayerMenu extends Phaser.Scene {
     return button;
   }
 
+  /**
+   * Desconecta teclado, campo DOM e eventos do gerenciador ao sair do menu.
+   */
   shutdown() {
     this.input.keyboard.off("keydown", this.handleKey, this);
     this.codeInputNode?.removeEventListener("input", this.handleCodeInput);

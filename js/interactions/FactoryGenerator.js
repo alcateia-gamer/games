@@ -1,3 +1,8 @@
+/**
+ * @file Interação com o gerador da fábrica: localiza a área do mapa, mostra o menu, consome
+ * recursos e restaura a iluminação.
+ */
+
 const INTERACTION_LAYER_NAMES = ["interacoes", "coletaveis"];
 const GENERATOR_OBJECT_NAME = "gerador01";
 const GENERATOR_INTERACTION_RANGE = 48;
@@ -15,6 +20,10 @@ const GENERATOR_REQUIREMENTS = Object.freeze([
   }),
 ]);
 
+/**
+ * Procura uma área retangular pelo nome em Interacoes ou Coletaveis, aceitando dados Tiled e
+ * camadas do Phaser.
+ */
 function findFactoryInteraction(map, objectName) {
   const objectLayers = Array.isArray(map?.objects)
     ? map.objects
@@ -49,16 +58,27 @@ function findFactoryInteraction(map, objectName) {
   return { status: "ok", object };
 }
 
+/**
+ * Localiza a área gerador01 usando as mesmas regras de busca das outras interações da fábrica.
+ */
 function findGeneratorInteraction(map) {
   return findFactoryInteraction(map, GENERATOR_OBJECT_NAME);
 }
 
+/**
+ * Calcula a distância do ponto até a borda mais próxima do retângulo; pontos internos têm
+ * distância zero.
+ */
 function distanceToInteractionArea(x, y, area) {
   const nearestX = Math.max(area.x, Math.min(x, area.x + area.width));
   const nearestY = Math.max(area.y, Math.min(y, area.y + area.height));
   return Math.hypot(x - nearestX, y - nearestY);
 }
 
+/**
+ * Verifica se o ponteiro está dentro de um botão cujas coordenadas são relativas ao centro da
+ * tela.
+ */
 function pointerDentroDoBotao(pointer, viewportWidth, viewportHeight, area) {
   return (
     pointer.x >= viewportWidth / 2 + area.x - area.width / 2 &&
@@ -68,12 +88,19 @@ function pointerDentroDoBotao(pointer, viewportWidth, viewportHeight, area) {
   );
 }
 
+/**
+ * Lista os requisitos do gerador que o inventário ainda não atende.
+ */
 function listarRecursosFaltantes(inventory) {
   return GENERATOR_REQUIREMENTS.filter(
     ({ id, quantity }) => inventory.getQuantity(id) < quantity,
   );
 }
 
+/**
+ * Configura proximidade, menu, ativação e limpeza do gerador a partir da área definida no
+ * mapa.
+ */
 function criarInteracaoGeradorFabrica(scene) {
   const result = findGeneratorInteraction(scene.map);
 
@@ -161,6 +188,9 @@ function criarInteracaoGeradorFabrica(scene) {
       wordWrap: { width: 430 },
     })
     .setOrigin(0.5);
+  /**
+   * Monta um botão do modal com fundo interativo e texto centralizado.
+   */
   const createButton = (x, y, width, label, fill, stroke) => {
     const button = scene.add
       .rectangle(x, y, width, 44, fill, 0.96)
@@ -214,6 +244,9 @@ function criarInteracaoGeradorFabrica(scene) {
     Phaser.Input.Keyboard.KeyCodes.ESC,
   );
 
+  /**
+   * Atualiza as quantidades disponíveis, as cores e o estado visual do botão de ativação.
+   */
   const atualizarModal = () => {
     const missing = listarRecursosFaltantes(inventory);
     const fuelQuantity = inventory.getQuantity("gasolina");
@@ -230,6 +263,9 @@ function criarInteracaoGeradorFabrica(scene) {
     return missing;
   };
 
+  /**
+   * Mantém o modal centralizado e com tamanho fixo mesmo durante mudanças de zoom.
+   */
   const posicionarElementosFixos = () => {
     if (!modal.scene) return;
 
@@ -248,6 +284,9 @@ function criarInteracaoGeradorFabrica(scene) {
     backdrop.setSize(camera.width, camera.height);
   };
 
+  /**
+   * Fecha o modal, libera o movimento e limpa a mensagem de retorno.
+   */
   const fecharModal = () => {
     if (!dialogOpen) return;
     dialogOpen = false;
@@ -258,6 +297,9 @@ function criarInteracaoGeradorFabrica(scene) {
     scene.player?.setVelocity(0, 0);
   };
 
+  /**
+   * Abre o menu do gerador e bloqueia o movimento enquanto o jogador escolhe uma ação.
+   */
   const abrirModal = () => {
     if (dialogOpen || scene.luzFabricaAcesa) return;
     dialogOpen = true;
@@ -274,12 +316,19 @@ function criarInteracaoGeradorFabrica(scene) {
     modal.setVisible(true);
   };
 
+  /**
+   * Abre o modal somente quando há proximidade válida e informa se a interação foi atendida.
+   */
   scene.interagirGerador = () => {
     if (!scene.geradorInteracaoDisponivel) return false;
     abrirModal();
     return dialogOpen;
   };
 
+  /**
+   * Valida e consome gasolina e bateria, acende a fábrica e agenda o fechamento após a
+   * confirmação visual.
+   */
   const ativarGerador = () => {
     if (isActivating || scene.luzFabricaAcesa) return;
 
@@ -320,6 +369,9 @@ function criarInteracaoGeradorFabrica(scene) {
     });
   };
 
+  /**
+   * Encaminha toques no modal para ativar ou cancelar, ignorando comandos durante a ativação.
+   */
   const handleMenuPointerDown = (pointer) => {
     if (!dialogOpen || isActivating) return;
 
@@ -347,6 +399,9 @@ function criarInteracaoGeradorFabrica(scene) {
   scene.input.on("pointerdown", handleMenuPointerDown);
   scene.events.on(Phaser.Scenes.Events.PRE_RENDER, posicionarElementosFixos);
 
+  /**
+   * Atualiza a proximidade pela hitbox do jogador e permite fechar o menu com Esc.
+   */
   scene.atualizarInteracaoGeradorFabrica = () => {
     if (dialogOpen) {
       atualizarModal();
@@ -376,6 +431,9 @@ function criarInteracaoGeradorFabrica(scene) {
   posicionarElementosFixos();
   atualizarModal();
 
+  /**
+   * Remove modal, temporizadores, teclas e listeners; libera os bloqueios ao encerrar a cena.
+   */
   const cleanup = () => {
     scene.events.off(
       Phaser.Scenes.Events.PRE_RENDER,

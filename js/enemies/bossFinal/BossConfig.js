@@ -1,3 +1,8 @@
+/**
+ * @file Constantes e geometria do boss: posição base, vida, tempos, ataques, poses das mãos e
+ * áreas de colisão e vulnerabilidade. Distâncias usam pixels; tempos usam milissegundos.
+ */
+
 export const bossBaseX = -1093;
 export const bossBaseY = -5905;
 export const bossDepth = 21.5;
@@ -226,10 +231,16 @@ export const posesMaos = Object.freeze({
 // FUNCOES AUXILIARES
 // =====================================================
 
+/**
+ * Calcula a distância entre dois pares de coordenadas do mundo.
+ */
 export function distanciaEntre(x1, y1, x2, y2) {
   return Math.hypot(x2 - x1, y2 - y1);
 }
 
+/**
+ * Emite um evento na cena incluindo a referência do boss e os dados específicos da ocorrência.
+ */
 export function emitirEventoBoss(boss, evento, dados = {}) {
   boss.scene?.events.emit(evento, {
     boss,
@@ -237,6 +248,10 @@ export function emitirEventoBoss(boss, evento, dados = {}) {
   });
 }
 
+/**
+ * Extrai o índice numérico do frame entre os formatos usados pelo Phaser, convertendo o índice
+ * da animação para base zero quando necessário.
+ */
 export function obterNumeroFrameAnimacao(frame) {
   const valores = [
     frame?.textureFrame?.name,
@@ -263,6 +278,9 @@ export function obterNumeroFrameAnimacao(frame) {
 // BARRA DE VIDA
 // =====================================================
 
+/**
+ * Atualiza a largura da barra de vida conforme a proporção entre vida atual e máxima.
+ */
 export function atualizarBarraVidaBoss(boss) {
   if (boss?.barraVida) {
     boss.barraVida.width =
@@ -274,6 +292,10 @@ export function atualizarBarraVidaBoss(boss) {
 // LOCALIZACAO DAS PECAS NO MAPA
 // =====================================================
 
+/**
+ * Localiza as peças visuais do boss na camada ObjetosBoss próximas da posição base
+ * configurada.
+ */
 export function localizarPecasBoss(scene) {
   return (scene.objetosMapaParte2 || []).filter((objeto) => {
     if (

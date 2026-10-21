@@ -1,3 +1,8 @@
+/**
+ * @file Disparos dos robôs e dano ao jogador. Trata recarga, impactos contra cenário,
+ * invulnerabilidade temporária e tela de morte.
+ */
+
 import mostrarTelaMorte from "../scenes/DeathScreen.js";
 import { tomarDano } from "../player/PlayerStatus.js";
 import { tocarSomTiroLaser } from "../sounds/inimigos.js";
@@ -10,6 +15,9 @@ import { obterFilhosGrupoSeguro } from "./EnemyPathfinding.js";
 // Vermelho mais forte, mantendo os detalhes do personagem.
 const COR_DANO_PLAYER = 0xff4040;
 
+/**
+ * Verifica o intervalo mínimo de disparo e cria um laser quando o inimigo está pronto.
+ */
 function tentarDispararLaser(scene, time, inimigo = scene.inimigoTeste) {
   if (!inimigo || !inimigo.active) {
     return;
@@ -27,6 +35,10 @@ function tentarDispararLaser(scene, time, inimigo = scene.inimigoTeste) {
 // DISPARA LASER
 // =====================================================
 
+/**
+ * Cria um laser na direção do alvo com som, velocidade e duração limitada, notificando dano
+ * remoto pelo host.
+ */
 function dispararLaser(scene, inimigo = scene.inimigoTeste) {
   const alvo = inimigo?.alvoAtual || scene.player;
   if (!inimigo || !inimigo.active || !alvo || alvo.active === false) {
@@ -88,6 +100,9 @@ function dispararLaser(scene, inimigo = scene.inimigoTeste) {
 // VERIFICA LASERS NA HITBOX DE DANO
 // =====================================================
 
+/**
+ * Destrói os lasers cujos limites visuais cruzam os corpos de colisão do mapa.
+ */
 function verificarLasersNoMapa(scene) {
   if (
     !scene?.collisionGroup?.getChildren ||
@@ -130,6 +145,9 @@ function verificarLasersNoMapa(scene) {
   }
 }
 
+/**
+ * Testa os lasers ativos contra a área de dano do jogador.
+ */
 function verificarLasersNoPlayer(scene) {
   if (!scene.hitboxDanoPlayer || !scene.lasersInimigo) {
     return;
@@ -158,6 +176,9 @@ function verificarLasersNoPlayer(scene) {
 // LASER ACERTA PLAYER
 // =====================================================
 
+/**
+ * Remove o laser que atingiu o jogador e encaminha o valor de dano ao tratamento de impacto.
+ */
 function acertarPlayerComLaser(scene, laser) {
   if (!laser || !laser.active) {
     return;
@@ -172,6 +193,10 @@ function acertarPlayerComLaser(scene, laser) {
   causarDanoPlayer(scene, danoLaser);
 }
 
+/**
+ * Aplica dano uma vez por janela de invulnerabilidade, mostra o efeito vermelho e abre a tela
+ * de morte se a vida zerou.
+ */
 function causarDanoPlayer(scene, dano) {
   if (
     scene.morteEmAndamento ||
@@ -204,6 +229,9 @@ function causarDanoPlayer(scene, dano) {
 // RESPAWN DO PLAYER
 // =====================================================
 
+/**
+ * Restaura posição, área de dano, vida e estamina do jogador no ponto de respawn.
+ */
 function respawnPlayerPorLaser(scene) {
   scene.player.setVelocity(0, 0);
   scene.player.setPosition(scene.respawnX, scene.respawnY);

@@ -1,9 +1,12 @@
 <!doctype html>
 
+<!-- Página de entrada: prepara o espaço do jogo e carrega as dependências antes do módulo principal. -->
 <html lang="pt_BR">
   <head>
+    <!-- Define UTF-8 para os textos com acentos na página. -->
     <meta charset="UTF-8" />
 
+    <!-- Adapta a página ao dispositivo e evita gestos de zoom sobre os controles por toque. -->
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
@@ -16,6 +19,7 @@
   </head>
 
   <body>
+    <!-- O Phaser cria seu canvas neste elemento, conforme parent em js/core/config.js. -->
     <div id="game-container"></div>
 
     <!-- PHASER -->
@@ -27,7 +31,7 @@
     <!-- MQTT sobre WebSocket -->
     <script src="https://unpkg.com/mqtt@5.10.4/dist/mqtt.min.js"></script>
 
-    <!-- JOGO -->
+    <!-- Este módulo registra as cenas, compartilha a conexão de rede e inicia a abertura. -->
     <script type="module" src="./js/core/game.js"></script>
   </body>
 </html>

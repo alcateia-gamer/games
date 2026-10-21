@@ -1,5 +1,13 @@
+/**
+ * @file Adaptador MQTT do jogo. Conecta ao broker por WebSocket e converte tópicos e mensagens
+ * em eventos internos.
+ */
+
 const CLIENT_ID_LETTERS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
+/**
+ * Gera o identificador aleatório de oito caracteres usado por este cliente MQTT.
+ */
 function generateClientId() {
   let id = "";
   for (let index = 0; index < 8; index += 1) {
@@ -9,6 +17,9 @@ function generateClientId() {
 }
 
 class MqttClient extends Phaser.Events.EventEmitter {
+  /**
+   * Guarda conexão, prefixo dos tópicos, intervalo de reconexão e assinaturas desejadas.
+   */
   constructor({ brokerUrl, topicPrefix = "nullborns", reconnectPeriod = 2000 } = {}) {
     super();
     this.brokerUrl = brokerUrl;
@@ -20,6 +31,10 @@ class MqttClient extends Phaser.Events.EventEmitter {
     this.subscriptions = new Set();
   }
 
+  /**
+   * Abre a conexão e conecta os eventos do MQTT aos eventos do jogo, restaurando assinaturas
+   * após reconexões.
+   */
   connect() {
     if (this.client || typeof mqtt === "undefined") {
       if (typeof mqtt === "undefined") this.emit("error", new Error("MQTT não carregado"));
@@ -50,6 +65,9 @@ class MqttClient extends Phaser.Events.EventEmitter {
     });
   }
 
+  /**
+   * Registra uma assinatura e a envia ao broker quando a conexão está disponível.
+   */
   subscribe(topic) {
     this.subscriptions.add(topic);
     if (!this.client || !this.connected) return;
@@ -58,11 +76,18 @@ class MqttClient extends Phaser.Events.EventEmitter {
     });
   }
 
+  /**
+   * Remove uma assinatura local e cancela sua inscrição no broker se estiver conectado.
+   */
   unsubscribe(topic) {
     this.subscriptions.delete(topic);
     if (this.client && this.connected) this.client.unsubscribe(`${this.topicPrefix}/${topic}`);
   }
 
+  /**
+   * Serializa a mensagem com o ID do remetente e publica com QoS e retenção configuráveis;
+   * retorna false sem conexão.
+   */
   publish(topic, data, options = {}) {
     if (!this.client || !this.connected) return false;
     const envelope = typeof data === "object" && data !== null ? { ...data, clientId: this.clientId } : { data, clientId: this.clientId };
@@ -70,6 +95,9 @@ class MqttClient extends Phaser.Events.EventEmitter {
     return true;
   }
 
+  /**
+   * Encerra a conexão e limpa o estado e as assinaturas deste cliente.
+   */
   disconnect() {
     if (!this.client) return;
     this.client.end(true);

@@ -1,3 +1,8 @@
+/**
+ * @file Cena da fábrica. Integra iluminação, gerador, porta interativa, boss, inventário e
+ * mudança de sobreposição por região.
+ */
+
 import criarLevel1Parte2Map from "../map/MapaFabrica.js";
 import MiniMapManager from "../ui/MiniMapManager.js";
 
@@ -70,6 +75,9 @@ const CAMADAS_PISO_TROCA = new Set([
 ]);
 
 class Level1Parte2 extends Phaser.Scene {
+  /**
+   * Registra a segunda parte da fase e define movimento e profundidade inicial do personagem.
+   */
   constructor() {
     super("Level1Parte2");
 
@@ -84,6 +92,10 @@ class Level1Parte2 extends Phaser.Scene {
     this.atacando = false;
   }
 
+  /**
+   * Recupera energia persistida e dados de entrada e reinicializa rede, inimigos e controles
+   * de transição.
+   */
   init(data) {
     this.luzFabricaAcesa =
       this.game.registry.get(FACTORY_GENERATOR_STATE_KEY) === true;
@@ -126,6 +138,9 @@ class Level1Parte2 extends Phaser.Scene {
   // COORDENADAS FIXAS DURANTE O ZOOM
   // =====================================================
 
+  /**
+   * Conecta o reposicionamento do texto de coordenadas para que permaneça fixo durante o zoom.
+   */
   configurarCoordenadasFixas() {
     const texto = this.textoCoordenadas;
 
@@ -134,6 +149,10 @@ class Level1Parte2 extends Phaser.Scene {
     const posicaoX = 10;
     const posicaoY = 78;
 
+    /**
+     * Compensa a transformação da câmera para manter o texto na mesma posição e com a mesma
+     * escala visual.
+     */
     const atualizarPosicao = () => {
       if (!texto.scene) return;
 
@@ -171,6 +190,10 @@ class Level1Parte2 extends Phaser.Scene {
   // CRIAÇÃO DA CENA
   // =====================================================
 
+  /**
+   * Monta mapa, jogador, controles, inventário, interações, retorno à cidade e integração do
+   * boss.
+   */
   create() {
     this.physics.resume();
     this.physics.world.resume();
@@ -265,6 +288,10 @@ class Level1Parte2 extends Phaser.Scene {
     this.inimigoTeste = null;
   }
 
+  /**
+   * Liga a iluminação uma única vez e persiste o estado do gerador no registry entre visitas
+   * ao mapa.
+   */
   acenderLuzFabrica() {
     if (this.luzFabricaAcesa) return;
 
@@ -273,6 +300,10 @@ class Level1Parte2 extends Phaser.Scene {
     this.definirIluminacaoFabrica(true);
   }
 
+  /**
+   * Localiza a área trocadecamada01 e guarda a ordem original das camadas para restaurá-la ao
+   * sair.
+   */
   inicializarTrocaCamada() {
     const objetos = this.map.getObjectLayer("trocadecamada")?.objects;
     const regiao = objetos?.find(
@@ -305,6 +336,9 @@ class Level1Parte2 extends Phaser.Scene {
     });
   }
 
+  /**
+   * Detecta a entrada ou saída da hitbox do jogador na região que altera a ordem das camadas.
+   */
   atualizarTrocaCamada() {
     const regiao = this.regiaoTrocaCamada;
     const player = this.player;
@@ -327,6 +361,10 @@ class Level1Parte2 extends Phaser.Scene {
     this.aplicarOrdemCamadasTroca(dentro);
   }
 
+  /**
+   * Coloca pisos abaixo do jogador e outras camadas acima dele ou restaura as profundidades
+   * originais.
+   */
   aplicarOrdemCamadasTroca(ativar) {
     if (ativar === this.trocadecamadaAtiva) return;
 
@@ -360,6 +398,10 @@ class Level1Parte2 extends Phaser.Scene {
   // ATUALIZAÇÃO
   // =====================================================
 
+  /**
+   * Atualiza interações antes da entrada por E, depois movimento, inventário, status,
+   * profundidade, inimigos e rede.
+   */
   update(time, delta) {
     this.minimap?.update(time);
     if (this.morteEmAndamento) {
@@ -473,11 +515,19 @@ class Level1Parte2 extends Phaser.Scene {
   // MULTIPLAYER
   // =====================================================
 
+  /**
+   * Conecta os eventos multiplayer e prepara a limpeza dos objetos e listeners remotos da
+   * fábrica.
+   */
   iniciarMultiplayer() {
     const manager = this.multiplayerManager;
 
     if (!manager) return;
 
+    /**
+     * Aplica no host o dano solicitado por outro jogador e registra esse participante como
+     * alvo do inimigo.
+     */
     this.onEnemyDamage = ({ enemyId, playerId, damage }) => {
       if (!this.isMultiplayerHost) return;
 
@@ -492,8 +542,14 @@ class Level1Parte2 extends Phaser.Scene {
       }
     };
 
+    /**
+     * Encaminha o dano recebido da rede para os status do jogador local.
+     */
     this.onPlayerDamage = (damage) => tomarDano(this, damage);
 
+    /**
+     * Reavalia quem é host e sincroniza os objetos remotos após uma atualização de sala.
+     */
     this.onMultiplayerRoomUpdated = (room) => {
       this.isMultiplayerHost = room.hostId === manager.playerId;
 
@@ -531,6 +587,10 @@ class Level1Parte2 extends Phaser.Scene {
   // JOGADORES REMOTOS
   // =====================================================
 
+  /**
+   * Mantém sprites, ataques e projéteis dos demais jogadores de acordo com o estado
+   * compartilhado.
+   */
   atualizarJogadoresRemotos(room) {
     if (!room?.players) return;
 
@@ -722,6 +782,10 @@ class Level1Parte2 extends Phaser.Scene {
   // INIMIGOS REMOTOS
   // =====================================================
 
+  /**
+   * Atualiza as representações de inimigos nos clientes e remove robôs ausentes da lista
+   * recebida.
+   */
   atualizarInimigosRemotos(room) {
     if (!this.multiplayer || this.isMultiplayerHost || !room) {
       return;
@@ -793,6 +857,10 @@ class Level1Parte2 extends Phaser.Scene {
   // INTERPOLAÇÃO REMOTA
   // =====================================================
 
+  /**
+   * Suaviza o deslocamento das representações remotas em direção às últimas posições
+   * recebidas.
+   */
   atualizarInterpolacaoRemota(delta = 0) {
     const alpha = 1 - Math.exp((-12 * Math.max(0, delta)) / 1000);
 
@@ -837,6 +905,9 @@ class Level1Parte2 extends Phaser.Scene {
   // LASER REMOTO
   // =====================================================
 
+  /**
+   * Representa um disparo inimigo comunicado pela rede com um efeito visual de laser.
+   */
   criarLaserInimigoRemoto(enemy, data) {
     const laser = this.add
       .circle(enemy.x, enemy.y, 4, 0xff0000, 1)
@@ -857,6 +928,9 @@ class Level1Parte2 extends Phaser.Scene {
   // PROFUNDIDADE DO PERSONAGEM
   // =====================================================
 
+  /**
+   * Valida e aplica a profundidade configurada para o personagem nesta cena.
+   */
   definirProfundidadePersonagem(profundidade) {
     const valor = Number(profundidade);
 
@@ -873,6 +947,10 @@ class Level1Parte2 extends Phaser.Scene {
   // TELEPORTE DE RETORNO
   // =====================================================
 
+  /**
+   * Cria a área de saída e retorna à cidade com fade, preservando personagem, modo de jogo e
+   * porta de entrada aberta.
+   */
   criarTeleporteRetornoParte1() {
     const x = 95;
     const y = -916;

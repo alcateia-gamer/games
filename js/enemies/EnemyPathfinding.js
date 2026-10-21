@@ -1,3 +1,8 @@
+/**
+ * @file Navegação dos robôs: índice espacial das colisões e A* com orçamento limitado. O cache
+ * é compartilhado por cena.
+ */
+
 const CONFIG = Object.freeze({
   tamanhoCelula: 32,
   tamanhoIndice: 128,
@@ -26,6 +31,10 @@ const direcoes = [
 // LEITURA SEGURA DOS GRUPOS
 // =====================================================
 
+/**
+ * Obtém os filhos de um grupo com segurança, inclusive durante sua destruição ou troca de
+ * cena.
+ */
 function obterFilhosGrupoSeguro(grupo) {
   if (!grupo?.getChildren) return [];
 
@@ -37,6 +46,9 @@ function obterFilhosGrupoSeguro(grupo) {
   }
 }
 
+/**
+ * Gera a chave textual de uma célula do índice ou da grade de navegação.
+ */
 function chave(x, y) {
   return `${x},${y}`;
 }
@@ -45,6 +57,10 @@ function chave(x, y) {
 // ÍNDICE ESPACIAL COMPARTILHADO
 // =====================================================
 
+/**
+ * Cria ou reutiliza o índice espacial de corpos estáticos; obstáculos grandes ficam em uma
+ * lista separada.
+ */
 function criarIndice(scene) {
   const grupo = scene?.collisionGroup;
   const filhos = obterFilhosGrupoSeguro(grupo);
@@ -129,6 +145,10 @@ function criarIndice(scene) {
 // estáticas mudarem de tamanho ou posição
 // sem alterar a quantidade de objetos.
 
+/**
+ * Descarta o índice quando uma colisão muda de posição ou tamanho sem mudar a quantidade de
+ * corpos.
+ */
 function invalidarCacheNavegacao(scene) {
   if (scene) {
     caches.delete(scene);
@@ -139,6 +159,9 @@ function invalidarCacheNavegacao(scene) {
 // BUSCA DE OBSTÁCULOS PRÓXIMOS
 // =====================================================
 
+/**
+ * Consulta as células que cruzam um retângulo e reúne obstáculos candidatos sem duplicação.
+ */
 function candidatos(cache, rect) {
   const resultado = [];
   const vistos = new Set();
@@ -171,6 +194,9 @@ function candidatos(cache, rect) {
 // VERIFICAR SE UMA ÁREA ESTÁ LIVRE
 // =====================================================
 
+/**
+ * Verifica se um retângulo está livre de colisões estáticas habilitadas.
+ */
 function retanguloLivreDoMapa(scene, rect) {
   if (!scene || !rect) return false;
 
@@ -193,6 +219,9 @@ function retanguloLivreDoMapa(scene, rect) {
 // VERIFICAR LINHA DE VISÃO / CAMINHO
 // =====================================================
 
+/**
+ * Testa se algum obstáculo intercepta o segmento entre inimigo e alvo.
+ */
 function caminhoDiretoBloqueado(scene, inimigo, alvo) {
   if (!scene || !inimigo || !alvo) {
     return false;
@@ -240,6 +269,9 @@ function caminhoDiretoBloqueado(scene, inimigo, alvo) {
 // VERIFICAR ESPAÇO PARA O CORPO DO ROBÔ
 // =====================================================
 
+/**
+ * Posiciona hipoteticamente a hitbox do robô e verifica se cabe sem sobrepor o cenário.
+ */
 function livreParaInimigo(scene, inimigo, x, y, cache) {
   const largura = Math.max(14, Number(inimigo.body?.width) || 24);
 
@@ -275,6 +307,10 @@ function livreParaInimigo(scene, inimigo, x, y, cache) {
 // A* OTIMIZADO
 // =====================================================
 
+/**
+ * Busca uma sequência de pontos livres com A*, limitando distância, região de busca e número
+ * de expansões.
+ */
 function calcularRotaAStar(scene, inimigo, alvo) {
   const cache = criarIndice(scene);
 
@@ -311,6 +347,10 @@ function calcularRotaAStar(scene, inimigo, alvo) {
 
   const livres = new Map();
 
+  /**
+   * Consulta e memoriza se uma célula da busca está dentro da região permitida e livre para o
+   * robô.
+   */
   function podePassar(x, y) {
     if (x < minX || x > maxX || y < minY || y > maxY) {
       return false;
@@ -369,6 +409,9 @@ function calcularRotaAStar(scene, inimigo, alvo) {
     fim = novoFim;
   }
 
+  /**
+   * Estima a distância restante até a célula de destino para priorizar a busca A*.
+   */
   function heuristica(x, y) {
     return Math.hypot(fim.x - x, fim.y - y);
   }
@@ -394,6 +437,9 @@ function calcularRotaAStar(scene, inimigo, alvo) {
   // FILA DE PRIORIDADE: MIN-HEAP
   // ============================================
 
+  /**
+   * Insere um nó na fila mínima, subindo-o até respeitar a ordem de prioridade f.
+   */
   function push(no) {
     aberto.push(no);
 
@@ -412,6 +458,9 @@ function calcularRotaAStar(scene, inimigo, alvo) {
     }
   }
 
+  /**
+   * Remove o nó de menor custo estimado e reorganiza a fila mínima de busca.
+   */
   function pop() {
     if (!aberto.length) return null;
 
@@ -545,6 +594,10 @@ function calcularRotaAStar(scene, inimigo, alvo) {
 // ATUALIZAÇÃO DA ROTA DE UM INIMIGO
 // =====================================================
 
+/**
+ * Recalcula a rota apenas quando necessário e quando o orçamento compartilhado de buscas
+ * permite.
+ */
 function atualizarRotaSeguindoInimigo(scene, inimigo, alvo, time = 0) {
   if (!scene || !inimigo?.active || !alvo) {
     return false;
@@ -634,6 +687,9 @@ function atualizarRotaSeguindoInimigo(scene, inimigo, alvo, time = 0) {
 // SEGUIR ROTA ATUAL
 // =====================================================
 
+/**
+ * Avança pelos pontos da rota, atualiza a direção e detecta falta de progresso do robô.
+ */
 function seguirRotaAtual(scene, inimigo, alvo, time, atualizarDirecao) {
   if (!Array.isArray(inimigo?.rotaAtual) || !inimigo.rotaAtual.length) {
     return false;
@@ -725,6 +781,9 @@ function seguirRotaAtual(scene, inimigo, alvo, time, atualizarDirecao) {
 // VISUALIZAÇÃO DE DEBUG DA ROTA
 // =====================================================
 
+/**
+ * Desenha a rota e os pontos para diagnóstico quando a depuração está habilitada.
+ */
 function desenharDebugRotaInimigo(scene, inimigo) {
   if (!scene?.debugRotaRobos || !inimigo) {
     return;

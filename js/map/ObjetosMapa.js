@@ -1,15 +1,27 @@
+/**
+ * @file Transforma objetos de tile do Tiled em imagens ou sprites, preservando recortes,
+ * posição, rotação e profundidade.
+ */
+
 import {
   calcularDepthObjeto,
   PROFUNDIDADES_OBJETOS_PARTE2,
   depthFromWorldY,
 } from "./ProfundidadeMapa.js";
 
+/**
+ * Encontra o tileset que contém um identificador global de tile, usando a ordem de firstgid.
+ */
 function obterTilesetDoGid(map, gid) {
   return [...map.tilesets]
     .reverse()
     .find((tileset) => Number(gid) >= Number(tileset.firstgid));
 }
 
+/**
+ * Cria o visual de um objeto de tile a partir do recorte correto da textura e das
+ * transformações do Tiled.
+ */
 function criarBaseVisual(scene, map, object, textureKeyByTilesetName) {
   const rawGid = Number(object.gid ?? 0) >>> 0;
   const gid = rawGid & 0x1fffffff;
@@ -128,6 +140,10 @@ function criarBaseVisual(scene, map, object, textureKeyByTilesetName) {
   return base;
 }
 
+/**
+ * Cria os visuais dos postes e guarda suas referências para ordenar a sobreposição com o
+ * jogador.
+ */
 function criarBasesPostes(scene, map, textureKeyByTilesetName) {
   const objectLayer = map.getObjectLayer("PostesObjetos");
 
@@ -149,6 +165,9 @@ function criarBasesPostes(scene, map, textureKeyByTilesetName) {
     .filter(Boolean);
 }
 
+/**
+ * Cria as bases de postes e os objetos neon definidos no mapa da cidade.
+ */
 function criarObjetosCidade(scene, map, textureKeyByTilesetName) {
   const camadaNeon = map.getObjectLayer("Neon");
   scene.neonObjects = camadaNeon
@@ -162,6 +181,10 @@ function criarObjetosCidade(scene, map, textureKeyByTilesetName) {
   criarBasesPostes(scene, map, textureKeyByTilesetName);
 }
 
+/**
+ * Cria os objetos da fábrica e registra camada e profundidade base para atualizações de
+ * sobreposição.
+ */
 function criarObjetosFabrica(scene, map, textureKeyByTilesetName) {
   scene.objetosMapaParte2 = [];
   const ordemCamadasTiled = map.data?.layers || map.layers;

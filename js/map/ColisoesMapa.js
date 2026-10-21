@@ -1,3 +1,10 @@
+/**
+ * @file Converte as áreas de colisão do Tiled em corpos estáticos invisíveis da física Arcade.
+ */
+
+/**
+ * Cria os corpos retangulares definidos na camada Collision da cidade.
+ */
 function criarColisoesCidade(scene, map) {
   const collisionLayer = map.getObjectLayer("Collision");
 
@@ -15,6 +22,9 @@ function criarColisoesCidade(scene, map) {
   }
 }
 
+/**
+ * Usa cruzamento de raios para decidir se um ponto está dentro de um polígono.
+ */
 function pontoDentroPoligono(x, y, pontos) {
   let dentro = false;
 
@@ -40,6 +50,9 @@ function pontoDentroPoligono(x, y, pontos) {
   return dentro;
 }
 
+/**
+ * Aproxima a área do polígono com pequenos corpos retangulares de oito pixels.
+ */
 function adicionarCorposPoligono(grupo, objeto) {
   const pontos = objeto.polygon.map((ponto) => ({
     x: Number(objeto.x) + Number(ponto.x),
@@ -70,6 +83,10 @@ function adicionarCorposPoligono(grupo, objeto) {
   }
 }
 
+/**
+ * Cria os obstáculos da fábrica, tratando separadamente polígonos e retângulos da camada
+ * collision.
+ */
 function criarColisoesFabrica(scene, map) {
   const collisionLayer = map.getObjectLayer("collision");
 

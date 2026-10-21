@@ -1,3 +1,8 @@
+/**
+ * @file Flechas da Aria: criação, movimento por delta, alcance, colisão com o mapa e dano a
+ * inimigos ou boss.
+ */
+
 import { causarDanoInimigo } from "../enemies/EnemyTest.js";
 import { causarDanoBoss } from "../enemies/BossFinal.js";
 
@@ -13,6 +18,10 @@ const VELOCIDADE_PROJETIL = 420;
 const ALCANCE_MAXIMO_PROJETIL = 1800;
 const DANO_PROJETIL_ARIA = 25;
 
+/**
+ * Converte um vetor em direção unitária preservando o frame; retorna null para um vetor sem
+ * comprimento.
+ */
 function normalizarDirecao(direcao) {
   const magnitude = Math.hypot(direcao.x, direcao.y);
 
@@ -27,6 +36,9 @@ function normalizarDirecao(direcao) {
   };
 }
 
+/**
+ * Marca o projétil como resolvido e o destrói somente se ainda estiver ativo.
+ */
 function destruirProjetil(projetil) {
   if (!projetil?.active) {
     return;
@@ -36,6 +48,9 @@ function destruirProjetil(projetil) {
   projetil.destroy();
 }
 
+/**
+ * Cria o grupo físico de projéteis quando não há um grupo válido na cena.
+ */
 function criarSistemaProjeteis(scene) {
   if (
     !scene.projeteisPlayer?.active ||
@@ -45,6 +60,9 @@ function criarSistemaProjeteis(scene) {
   }
 }
 
+/**
+ * Identifica qual dos dois objetos recebidos em uma colisão é o projétil do jogador.
+ */
 function encontrarProjetil(primeiro, segundo) {
   if (primeiro?.projetilPlayer) {
     return primeiro;
@@ -55,6 +73,10 @@ function encontrarProjetil(primeiro, segundo) {
   return null;
 }
 
+/**
+ * Cria a flecha com hitbox orientada, ID de rede, colisão com obstáculos e limite de duração
+ * por alcance.
+ */
 function dispararProjetil(scene) {
   const direcaoBase =
     DIRECOES_PROJETIL[scene.direcaoAtaque ?? scene.direcaoAtual];
@@ -117,6 +139,10 @@ function dispararProjetil(scene) {
   );
 }
 
+/**
+ * Avança as flechas com delta em milissegundos e aplica dano ao primeiro boss ou inimigo
+ * atingido.
+ */
 function atualizarProjeteis(scene, delta = 0) {
   const grupoProjeteis = scene.projeteisPlayer;
   if (!grupoProjeteis?.active || !grupoProjeteis.children?.entries) {

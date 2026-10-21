@@ -1,3 +1,8 @@
+/**
+ * @file Áudio do arco da Aria. A tensão começa após o atraso configurado e é interrompida ao
+ * soltar; a flecha usa um som próprio.
+ */
+
 /*
  * SONS DA ARIA KADE
  *
@@ -50,6 +55,9 @@ const VOLUME_DISPARO = 0.8;
 // PARAR SOM DE TENSÃO
 // =====================================================
 
+/**
+ * Cancela o início agendado e interrompe o áudio de tensão se ele estiver tocando.
+ */
 function pararSomTensaoAria(scene) {
   // Cancela o início agendado do som caso o jogador
   // solte o botão antes dos 250 ms.
@@ -68,6 +76,9 @@ function pararSomTensaoAria(scene) {
 // CRIAR SOM DE TENSÃO
 // =====================================================
 
+/**
+ * Cria ou reutiliza a instância com marcador do trecho de tensão e conecta sua limpeza à cena.
+ */
 function obterSomTensaoAria(scene) {
   // Reutiliza a instância para não criar vários sons.
   if (scene.somTensaoAria) {
@@ -109,6 +120,10 @@ function obterSomTensaoAria(scene) {
 // INICIAR SOM DE TENSÃO
 // =====================================================
 
+/**
+ * Agenda a tensão do arco e só toca se a Aria continuar ativa e carregando o ataque ao vencer
+ * o atraso.
+ */
 function iniciarSomTensaoAria(scene) {
   // O som pertence somente à Aria.
   if (
@@ -158,6 +173,9 @@ function iniciarSomTensaoAria(scene) {
 // SOM DE SOLTAR FLECHA
 // =====================================================
 
+/**
+ * Toca um novo som de soltura para a flecha quando o arquivo necessário está no cache.
+ */
 function tocarSomSoltarFlechaAria(scene) {
   if (!scene.cache.audio.exists(CHAVE_SOLTAR_FLECHA)) {
     return;

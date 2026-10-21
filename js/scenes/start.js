@@ -1,7 +1,16 @@
+/**
+ * @file Cena de abertura e menus de NULLBORNS. Fluxo: botão JOGAR → chuva digital → menu →
+ * seleção de personagem ou multiplayer.
+ */
+
 class Start extends Phaser.Scene {
+  /**
+   * Registra a cena Start e define os símbolos, mensagens e modo inicial da abertura.
+   */
   constructor() {
     super("Start");
 
+    // Alfabeto sorteado para os símbolos da chuva digital.
     this.characters = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ#$%&*@?!<>[]{}";
 
     this.messages = [
@@ -20,6 +29,9 @@ class Start extends Phaser.Scene {
   // PRELOAD
   // =====================================================
 
+  /**
+   * Coloca na fila a música do menu e as folhas de sprites usadas na seleção de personagens.
+   */
   preload() {
     // Música dos menus, carregamento e multiplayer.
     this.load.audio(
@@ -69,6 +81,10 @@ class Start extends Phaser.Scene {
   // CREATE
   // =====================================================
 
+  /**
+   * Inicializa o estado visual; abre diretamente o menu quando o retorno de outra cena
+   * solicita abrirMenu.
+   */
   create() {
     this.cameras.main.setBackgroundColor("#000000");
 
@@ -92,6 +108,10 @@ class Start extends Phaser.Scene {
   // MÚSICA DOS MENUS
   // =====================================================
 
+  /**
+   * Inicia o trecho de 12 segundos em loop, respeita o mute e encerra a música ao começar
+   * Level1.
+   */
   iniciarMusicaMenu() {
     // Evita reproduzir duas músicas simultaneamente.
     if (this.game.musicaMenu?.isPlaying) {
@@ -113,6 +133,7 @@ class Start extends Phaser.Scene {
       this.game.musicaMenu = null;
     }
 
+    // Guarda a margem do loop para restaurá-la quando a música de menu for liberada.
     const loopEndOffsetOriginal = this.sound.loopEndOffset;
     const ajustarMargemLoop = Number.isFinite(loopEndOffsetOriginal);
     const loopEndOffsetMenu = Math.max(loopEndOffsetOriginal || 0, 0.12);
@@ -165,6 +186,9 @@ class Start extends Phaser.Scene {
   // BOTÃO JOGAR
   // =====================================================
 
+  /**
+   * Cria o botão JOGAR e impede que vários cliques iniciem a abertura mais de uma vez.
+   */
   createStartButton() {
     const button = this.createButton(this.width / 2, this.height / 2, "J0GAR");
 
@@ -179,6 +203,10 @@ class Start extends Phaser.Scene {
   // CRIAR BOTÕES
   // =====================================================
 
+  /**
+   * Monta um botão reutilizável com fundo e texto; expõe eventos próprios para clique e
+   * passagem do ponteiro.
+   */
   createButton(x, y, label, width = 180, height = 42) {
     const background = this.add
       .rectangle(0, 0, width, height, 0x062b16, 0.88)
@@ -228,11 +256,11 @@ class Start extends Phaser.Scene {
   // INICIAR SEQUÊNCIA
   // =====================================================
 
+  /**
+   * Marca a abertura como iniciada, remove o botão com fade e agenda a chuva digital.
+   */
   startSequence(button) {
     this.sequenceStarted = true;
-
-    // A música começa no clique do botão JOGAR.
-    this.iniciarMusicaMenu();
 
     this.tweens.add({
       targets: button,
@@ -251,6 +279,10 @@ class Start extends Phaser.Scene {
   // CHUVA DIGITAL
   // =====================================================
 
+  /**
+   * Zera os marcadores de tempo da sequência e cria as linhas de varredura e colunas de
+   * símbolos.
+   */
   beginRain() {
     this.rainStartedAt = this.time.now;
     this.nextMessageAt = 1200;
@@ -261,6 +293,9 @@ class Start extends Phaser.Scene {
     this.createColumns();
   }
 
+  /**
+   * Distribui colunas pela tela com velocidade, comprimento e brilho aleatórios.
+   */
   createColumns() {
     const columnCount = Math.ceil(this.width / 26);
 
@@ -300,6 +335,9 @@ class Start extends Phaser.Scene {
     }
   }
 
+  /**
+   * Desenha linhas horizontais discretas para produzir o efeito visual de monitor antigo.
+   */
   createScanlines() {
     this.scanlines = this.add.graphics().setDepth(10);
     this.scanlines.lineStyle(1, 0x65ff9a, 0.035);
@@ -313,6 +351,10 @@ class Start extends Phaser.Scene {
   // MENSAGENS DO SISTEMA
   // =====================================================
 
+  /**
+   * Mostra uma mensagem temporária em posição aleatória e destrói o texto ao terminar a
+   * animação.
+   */
   showSystemMessage(message) {
     const text = this.add
       .text(
@@ -346,6 +388,9 @@ class Start extends Phaser.Scene {
     });
   }
 
+  /**
+   * Pisca os textos ERROR e SYSTEM FAILURE durante a falha simulada da abertura.
+   */
   showFailure() {
     const error = this.add
       .text(this.width / 2, this.height * 0.43, "ERROR", {
@@ -398,6 +443,9 @@ class Start extends Phaser.Scene {
   // FINALIZAR SEQUÊNCIA
   // =====================================================
 
+  /**
+   * Troca para o modo de menu e mantém uma versão mais lenta e escura da chuva no fundo.
+   */
   finishSequence() {
     this.mode = "menu";
     this.rainStartedAt = this.time.now;
@@ -428,6 +476,9 @@ class Start extends Phaser.Scene {
   // MENU PRINCIPAL
   // =====================================================
 
+  /**
+   * Monta título, opções e status do menu; inicia a música quando o fade de entrada começa.
+   */
   showMainMenu() {
     this.menuLayer = this.add.container(0, 0).setDepth(20).setAlpha(0);
 
@@ -441,7 +492,7 @@ class Start extends Phaser.Scene {
     );
 
     const title = this.add
-      .text(this.width / 2, 64, "N E X U S", {
+      .text(this.width / 2, 64, "N U L L B O R N S", {
         color: "#c9ffda",
         fontFamily: "monospace",
         fontSize: "30px",
@@ -497,9 +548,15 @@ class Start extends Phaser.Scene {
       alpha: 1,
       duration: 420,
       ease: "Cubic.easeOut",
+      // O áudio começa com a entrada do título NULLBORNS, depois da introdução.
+      onStart: () => this.iniciarMusicaMenu(),
     });
   }
 
+  /**
+   * Encaminha a opção escolhida para seleção solo, multiplayer, opções ou tentativa de fechar
+   * a janela.
+   */
   selectMenuOption(option) {
     if (option === "SOLO") {
       this.showSoloSelection();
@@ -539,6 +596,9 @@ class Start extends Phaser.Scene {
     });
   }
 
+  /**
+   * Abre o painel de opções e permite alternar o mute da música e retornar ao menu.
+   */
   showOptions() {
     this.menuLayer.setVisible(false);
     this.optionsLayer = this.add.container(0, 0).setDepth(21).setAlpha(0);
@@ -569,6 +629,9 @@ class Start extends Phaser.Scene {
       54,
     );
     const icon = this.add.graphics();
+    /**
+     * Redesenha o símbolo de áudio e o texto do botão conforme a preferência de mute.
+     */
     const atualizarEstado = () => {
       const mutada = Boolean(this.game.musicaMenuMutada);
       const cor = mutada ? 0x54d879 : 0x9dffb9;
@@ -641,6 +704,10 @@ class Start extends Phaser.Scene {
   // SELEÇÃO DE PERSONAGEM
   // =====================================================
 
+  /**
+   * Cria os quatro cartões de personagem, o destaque da seleção e os botões de iniciar e
+   * voltar.
+   */
   showSoloSelection() {
     this.menuLayer.setVisible(false);
 
@@ -754,6 +821,9 @@ class Start extends Phaser.Scene {
       back,
     ]);
 
+    /**
+     * Guarda o ID do personagem escolhido e atualiza os destaques e o status da seleção.
+     */
     const selectCharacter = (character) => {
       this.selectedCharacter = character.id;
 
@@ -794,6 +864,9 @@ class Start extends Phaser.Scene {
   // INICIAR PARTIDA SOLO
   // =====================================================
 
+  /**
+   * Entra no preloader passando o ID do personagem selecionado para a partida solo.
+   */
   startSoloGame() {
     this.scene.start("preloader", {
       personagem: this.selectedCharacter,
@@ -804,6 +877,10 @@ class Start extends Phaser.Scene {
   // ATUALIZAÇÃO DA ANIMAÇÃO
   // =====================================================
 
+  /**
+   * Atualiza a chuva usando delta em milissegundos e aciona mensagens, falha e menu pelos
+   * tempos da sequência.
+   */
   update(time, delta) {
     if (
       !this.rainStartedAt ||
@@ -812,8 +889,10 @@ class Start extends Phaser.Scene {
       return;
     }
 
+    // time é o relógio da cena; delta mede a duração do quadro, ambos em milissegundos.
     const elapsed = time - this.rainStartedAt;
 
+    // A intensidade cresce gradualmente; não depende da quantidade de quadros renderizados.
     const intensity = Phaser.Math.Clamp((elapsed - 800) / 2200, 0, 1);
 
     const speedMultiplier = 0.75 + intensity * 1.7;
@@ -861,6 +940,7 @@ class Start extends Phaser.Scene {
       this.nextMessageAt = time + Phaser.Math.Between(180, 450);
     }
 
+    // Aos 3,7 segundos dispara uma única falha visual; o menu entra após 4,45 segundos.
     if (this.mode === "intro" && elapsed > 3700 && !this.glitchStarted) {
       this.glitchStarted = true;
       this.showFailure();

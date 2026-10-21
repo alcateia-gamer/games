@@ -1,3 +1,8 @@
+/**
+ * @file Áreas físicas e geométricas do boss. A base e as mãos bloqueiam movimento; zonas
+ * verdes recebem dano e zonas ofensivas dependem dos frames.
+ */
+
 import {
   bossBaseX,
   bossBaseY,
@@ -33,6 +38,9 @@ const TAMANHO_FRAME = 256;
 // Não depende mais de mostrarHitboxes = true
 // no BossConfig.js.
 
+/**
+ * Consulta se a depuração de colisões está habilitada na configuração do jogo.
+ */
 function debugHitboxesAtivado(scene) {
   return Boolean(scene?.game?.config?.physics?.arcade?.debug);
 }
@@ -41,6 +49,9 @@ function debugHitboxesAtivado(scene) {
 // CRIAR HITBOX FÍSICA
 // =====================================================
 
+/**
+ * Cria uma área física imóvel do boss e configura sua visualização de depuração.
+ */
 export function criarHitboxColisao(
   scene,
   nome,
@@ -82,6 +93,9 @@ export function criarHitboxColisao(
 // ATUALIZAR RETÂNGULO E CORPO FÍSICO
 // =====================================================
 
+/**
+ * Atualiza posição e tamanho de uma colisão e sincroniza o corpo físico com o objeto visual.
+ */
 function posicionarColisao(hitbox, x, y, largura, altura) {
   if (!hitbox?.body?.enable) return;
 
@@ -102,6 +116,10 @@ function posicionarColisao(hitbox, x, y, largura, altura) {
 // CONVERTER PIXEL PARA COORDENADAS DO MAPA
 // =====================================================
 
+/**
+ * Converte um pixel do frame original em posição do mundo considerando origem, escala e
+ * posição do sprite.
+ */
 function converterPixelParaMundo(boss, x, y) {
   const sprite = boss.sprite;
 
@@ -120,6 +138,10 @@ function converterPixelParaMundo(boss, x, y) {
 // CONVERTER REGIÃO DO SPRITE
 // =====================================================
 
+/**
+ * Transforma uma região retangular do frame em um retângulo de mundo usado pelos testes
+ * geométricos.
+ */
 function converterRetanguloSprite(boss, regiao) {
   const centro = converterPixelParaMundo(
     boss,
@@ -143,6 +165,10 @@ function converterRetanguloSprite(boss, regiao) {
 // REGIÕES DEFINIDAS NA ESCALA ORIGINAL
 // =====================================================
 
+/**
+ * Converte uma região calibrada na escala original do boss para suas dimensões e posição
+ * atuais.
+ */
 function converterRegiaoOriginal(boss, regiao) {
   const sprite = boss.sprite;
 
@@ -172,6 +198,9 @@ function converterRegiaoOriginal(boss, regiao) {
 // POSIÇÃO DAS MÃOS NO FRAME ATUAL
 // =====================================================
 
+/**
+ * Calcula a posição da mão esquerda ou direita na pose do frame atual.
+ */
 function obterMaoNoFrame(boss, lado) {
   const estado =
     boss.bossEstadoAtual === "idle" ? "ataqueChao" : boss.bossEstadoAtual;
@@ -200,6 +229,9 @@ function obterMaoNoFrame(boss, lado) {
 // FRAME ATIVO DO SOCO
 // =====================================================
 
+/**
+ * Indica se o ataque de soco está em um dos frames capazes de aplicar dano.
+ */
 export function socoComDanoAtivo(boss) {
   if (
     !boss?.active ||
@@ -221,6 +253,9 @@ export function socoComDanoAtivo(boss) {
 // DESENHAR DEBUG DO BOSS
 // =====================================================
 
+/**
+ * Desenha áreas físicas, vulneráveis e ofensivas apenas quando o debug do jogo permite.
+ */
 function desenharHitboxesBoss(boss) {
   const desenho = boss.debugDano;
 
@@ -278,6 +313,9 @@ function desenharHitboxesBoss(boss) {
 // ATUALIZAR TODAS AS HITBOXES
 // =====================================================
 
+/**
+ * Atualiza base, mãos, regiões vulneráveis e área de impacto para a pose atual do boss.
+ */
 export function atualizarHitboxesBoss(boss) {
   if (!boss?.active || boss.morto) return;
 
@@ -354,6 +392,9 @@ export function atualizarHitboxesBoss(boss) {
 // VERIFICAR RECEBIMENTO DE DANO
 // =====================================================
 
+/**
+ * Verifica se um retângulo de ataque cruza alguma região em que o boss pode receber dano.
+ */
 export function ataqueAcertaZonaVerde(boss, retanguloAtaque) {
   if (!boss?.active || boss.morto || !retanguloAtaque) {
     return false;
@@ -368,6 +409,9 @@ export function ataqueAcertaZonaVerde(boss, retanguloAtaque) {
 // REMOVER COLISÕES
 // =====================================================
 
+/**
+ * Remove colliders e desabilita as áreas físicas do boss após derrota ou limpeza.
+ */
 export function removerColisaoBoss(boss) {
   for (const collider of boss.collidersColisao || []) {
     collider?.destroy();
@@ -392,6 +436,10 @@ export function removerColisaoBoss(boss) {
 // CRIAR TODAS AS HITBOXES
 // =====================================================
 
+/**
+ * Cria colisões da base e das mãos, áreas de dano e os vínculos de colisão necessários com a
+ * cena.
+ */
 export function criarHitboxesBoss(scene, boss) {
   boss.hitboxColisao = criarHitboxColisao(
     scene,

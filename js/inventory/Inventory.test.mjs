@@ -1,3 +1,8 @@
+/**
+ * @file Testes do modelo de inventário: pilhas, capacidade, consumo atômico, persistência de
+ * coleta, isolamento por jogador e definições de itens.
+ */
+
 import test from "node:test";
 import assert from "node:assert/strict";
 
@@ -10,6 +15,9 @@ import {
   registerInventoryItem,
 } from "./InventoryItems.js";
 
+/**
+ * Registra um item exclusivo do teste com uma capacidade de pilha controlada.
+ */
 function registerTestItem(id, maxStack = 5) {
   return registerInventoryItem({
     id,

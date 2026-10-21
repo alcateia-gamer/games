@@ -1,3 +1,8 @@
+/**
+ * @file Núcleo do boss. Monta sprite, IA, vida, estamina, câmera de arena e HUD e coordena
+ * atualização e liberação dos sistemas.
+ */
+
 import {
   bossBaseY,
   bossDepth,
@@ -135,6 +140,10 @@ const OPACIDADE_CONTORNO = 0.55;
 // NOVO: INTERROMPER COMBATE FORA DA ARENA
 // =====================================================
 
+/**
+ * Cancela o combate ao sair da arena, limpa raios e observações antigas e prepara a próxima
+ * entrada.
+ */
 function interromperCombateForaArena(boss) {
   if (!boss?.active) {
     return;
@@ -254,6 +263,10 @@ function interromperCombateForaArena(boss) {
 // CONTROLE DO ZOOM
 // =====================================================
 
+/**
+ * Conecta o zoom de aproximação da arena e guarda a câmera e o zoom anteriores para
+ * restauração.
+ */
 function configurarCameraArena(scene, boss) {
   let dentroArena = false;
   let controlandoZoom = false;
@@ -266,6 +279,10 @@ function configurarCameraArena(scene, boss) {
 
   boss.dentroArena = false;
 
+  /**
+   * Detecta a entrada e saída da arena e interpola o zoom conforme o delta, interrompendo
+   * combate fora da área.
+   */
   const atualizarCamera = (_tempo, delta = 16.67) => {
     const camera = scene.cameras.main;
     const player = scene.player;
@@ -370,6 +387,9 @@ function configurarCameraArena(scene, boss) {
 
   scene.events.on(Phaser.Scenes.Events.POST_UPDATE, atualizarCamera);
 
+  /**
+   * Remove a atualização de câmera e restaura o zoom e o estado de visibilidade da arena.
+   */
   boss.limparCameraArena = () => {
     scene.events.off(Phaser.Scenes.Events.POST_UPDATE, atualizarCamera);
 
@@ -391,6 +411,10 @@ function configurarCameraArena(scene, boss) {
 // RECUPERAÇÃO DE ESTAMINA
 // =====================================================
 
+/**
+ * Interrompe o ataque ao esgotar estamina e coloca o boss em recuperação sem capacidade
+ * ofensiva.
+ */
 function iniciarRecuperacaoEstamina(boss) {
   if (boss.morto || boss.recuperandoEstamina) return;
 
@@ -419,6 +443,10 @@ function iniciarRecuperacaoEstamina(boss) {
   ia.estado = "RECUPERANDO_ESTAMINA";
 }
 
+/**
+ * Avança a recuperação pelo tempo decorrido e libera novas decisões quando a estamina foi
+ * restaurada.
+ */
 function atualizarRecuperacaoEstamina(boss, delta) {
   if (!boss.recuperandoEstamina) return;
 
@@ -466,6 +494,9 @@ function atualizarRecuperacaoEstamina(boss, delta) {
 // DESENHO DAS BARRAS
 // =====================================================
 
+/**
+ * Desenha o fundo e o contorno arredondados de uma barra da HUD do boss.
+ */
 function desenharFundoArredondado(grafico, largura, altura, centroY) {
   grafico.clear();
 
@@ -483,6 +514,9 @@ function desenharFundoArredondado(grafico, largura, altura, centroY) {
   grafico.strokeRoundedRect(x, y, largura, altura, raio);
 }
 
+/**
+ * Desenha o preenchimento arredondado limitado à porcentagem e à largura disponíveis.
+ */
 function desenharPreenchimentoArredondado(
   grafico,
   larguraMaxima,
@@ -514,6 +548,9 @@ function desenharPreenchimentoArredondado(
 // HUD DO BOSS
 // =====================================================
 
+/**
+ * Cria as barras de vida e estamina e conecta seu posicionamento fixo na tela.
+ */
 function criarHudBoss(scene, boss) {
   boss.hudVida = scene.add.container(0, 0).setScrollFactor(0).setDepth(100000);
 
@@ -531,6 +568,10 @@ function criarHudBoss(scene, boss) {
 
   boss.hudVida.setVisible(false);
 
+  /**
+   * Redesenha e posiciona as barras com compensação de zoom, exibindo-as somente com o boss
+   * ativo dentro da arena.
+   */
   const atualizarHud = () => {
     if (!boss.hudVida?.scene) return;
 
@@ -598,6 +639,9 @@ function criarHudBoss(scene, boss) {
 
   scene.events.on(Phaser.Scenes.Events.PRE_RENDER, atualizarHud);
 
+  /**
+   * Remove a atualização da HUD e destrói seu container ao liberar o boss.
+   */
   boss.limparHudVida = () => {
     scene.events.off(Phaser.Scenes.Events.PRE_RENDER, atualizarHud);
 
@@ -611,6 +655,10 @@ function criarHudBoss(scene, boss) {
 // CRIAÇÃO DO BOSS
 // =====================================================
 
+/**
+ * Monta o boss a partir das peças do mapa e inicializa sprite, combate, estamina, câmera e
+ * interface.
+ */
 function criarBoss(scene) {
   const pecas = localizarPecasBoss(scene);
 
@@ -749,6 +797,10 @@ function criarBoss(scene) {
   // CUSTO DE ESTAMINA POR ATAQUE
   // ===================================================
 
+  /**
+   * Desconta o custo de estamina ao terminar um ataque e inicia a recuperação se o saldo
+   * acabou.
+   */
   const aoFinalizarAtaque = (evento) => {
     if (evento?.boss !== boss || boss.morto || boss.recuperandoEstamina) {
       return;
@@ -771,6 +823,9 @@ function criarBoss(scene) {
 
   scene.events.on("boss:ataque-finalizado", aoFinalizarAtaque);
 
+  /**
+   * Cancela a assinatura que desconta estamina na conclusão dos ataques.
+   */
   boss.limparEstamina = () => {
     scene.events.off("boss:ataque-finalizado", aoFinalizarAtaque);
   };
@@ -791,6 +846,9 @@ function criarBoss(scene) {
 // VINCULAR BOSS
 // =====================================================
 
+/**
+ * Cria ou reutiliza o boss e conecta animações, hitboxes e rotinas de encerramento da cena.
+ */
 export function vincularIABoss(scene) {
   if (scene.bossFinal?.active) {
     return scene.bossFinal;
@@ -813,6 +871,9 @@ export function vincularIABoss(scene) {
 
   let limpo = false;
 
+  /**
+   * Executa a limpeza e destrói o container do boss ao encerrar a cena.
+   */
   const aoEncerrarCena = () => {
     limparBoss();
 
@@ -821,6 +882,10 @@ export function vincularIABoss(scene) {
     }
   };
 
+  /**
+   * Libera listeners, câmera, HUD, sons, raios e colisões uma única vez e limpa a referência
+   * na cena.
+   */
   const limparBoss = () => {
     if (limpo) return;
 
@@ -877,6 +942,10 @@ export function vincularIABoss(scene) {
 // PEDIDO DE ATAQUE
 // =====================================================
 
+/**
+ * Encaminha um pedido de ataque somente com o boss ativo, fora de recuperação e dentro da
+ * arena.
+ */
 function solicitarAtaqueBoss(scene, ataque) {
   const boss = scene.bossFinal;
 
@@ -900,6 +969,10 @@ function solicitarAtaqueBoss(scene, ataque) {
 // ATUALIZAÇÃO
 // =====================================================
 
+/**
+ * Coordena a atualização de recuperação ou IA, os efeitos ofensivos, as hitboxes e os acertos
+ * do jogador.
+ */
 function atualizarBoss(scene, delta = 16.67) {
   const boss = scene.bossFinal;
 

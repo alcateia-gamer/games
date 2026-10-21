@@ -1,3 +1,12 @@
+/**
+ * @file Animações e aparência dos robôs. Distingue normal, alerta, ataque da serra e morte por
+ * direção.
+ */
+
+/**
+ * Registra as sequências dos robôs comuns, do robô-serra e das mortes direcionais sem duplicar
+ * animações existentes.
+ */
 function criarAnimacoesInimigo(scene) {
   // As duas texturas de inimigo usam a mesma grade de quadros por direção.
   const estados = [
@@ -110,6 +119,10 @@ function criarAnimacoesInimigo(scene) {
   }
 }
 
+/**
+ * Alterna a textura do robô comum entre normal e alerta preservando a referência do frame
+ * atual.
+ */
 function atualizarEstadoVisualRobo(inimigo) {
   if (!inimigo) {
     return;
@@ -136,6 +149,10 @@ function atualizarEstadoVisualRobo(inimigo) {
   inimigo.setTexture(texturaAlvo, frameAtual);
 }
 
+/**
+ * Executa a caminhada direcional do robô comum ou o frame direcional da serra, preservando seu
+ * ataque ativo.
+ */
 function tocarAnimacaoInimigo(inimigo) {
   if (inimigo.tipoRobo === "serra") {
     if (inimigo.estado === "atacando" && inimigo.anims.isPlaying) {
@@ -166,6 +183,10 @@ function tocarAnimacaoInimigo(inimigo) {
 // PARA ANIMAÇÃO
 // =====================================================
 
+/**
+ * Interrompe a caminhada e mostra o frame parado da direção atual sem cancelar o ataque da
+ * serra.
+ */
 function pararAnimacaoInimigo(inimigo) {
   if (inimigo.tipoRobo === "serra") {
     if (inimigo.estado === "atacando" && inimigo.anims.isPlaying) {
@@ -195,11 +216,17 @@ function pararAnimacaoInimigo(inimigo) {
   }
 }
 
+/**
+ * Retorna o frame direcional de repouso do robô-serra, usando baixo como padrão.
+ */
 function frameParadoRoboSerra(direcao) {
   const frames = { up: 0, down: 5, left: 10, right: 15 };
   return frames[direcao] ?? frames.down;
 }
 
+/**
+ * Marca e reproduz a animação de ataque direcional do robô-serra.
+ */
 function tocarAnimacaoAtaqueInimigo(inimigo) {
   if (!inimigo || inimigo.tipoRobo !== "serra") {
     return;

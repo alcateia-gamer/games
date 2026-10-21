@@ -1,3 +1,8 @@
+/**
+ * @file Geração de inimigos por zonas de proximidade. Planeja posições livres, garante os
+ * tipos obrigatórios e controla limite e remoção por distância.
+ */
+
 import { criarInimigoTeste } from "./EnemyTest.js";
 
 // =====================================================
@@ -73,6 +78,9 @@ const PERFIS = {
 // DISTANCIA
 // =====================================================
 
+/**
+ * Calcula a distância ao quadrado para comparar alcances sem calcular raiz quadrada.
+ */
 function distancia2(ax, ay, bx, by) {
   const dx = ax - bx;
   const dy = ay - by;
@@ -84,6 +92,10 @@ function distancia2(ax, ay, bx, by) {
 // LIMITES DO MAPA
 // =====================================================
 
+/**
+ * Obtém os limites do mapa pelos chunks ou usa os limites de referência quando eles não estão
+ * disponíveis.
+ */
 function limitesMapa(map) {
   const layers = map?.data?.layers || map?.layers || [];
 
@@ -124,6 +136,9 @@ function limitesMapa(map) {
 // HITBOX UTILIZADA NO SPAWN
 // =====================================================
 
+/**
+ * Calcula a área ocupada pelos pés do tipo de robô, incluindo uma margem de segurança.
+ */
 function footprint(x, y, tipo, margem) {
   const p = PERFIS[tipo] || PERFIS.padrao;
 
@@ -146,6 +161,9 @@ function footprint(x, y, tipo, margem) {
 // LIMPEZA DE ELEMENTOS
 // =====================================================
 
+/**
+ * Remove elementos auxiliares e som de passos antes de descartar um inimigo.
+ */
 function destruirElementos(enemy) {
   for (const nome of [
     "debugHitboxDano",
@@ -168,6 +186,9 @@ function destruirElementos(enemy) {
 // =====================================================
 
 class EnemySpawnManager {
+  /**
+   * Inicializa zonas, limites, configuração e estruturas compartilhadas de colisão e limpeza.
+   */
   constructor(scene, map, config = {}) {
     this.scene = scene;
     this.map = map;
@@ -214,6 +235,9 @@ class EnemySpawnManager {
   // COLISOES COMPARTILHADAS
   // ===================================================
 
+  /**
+   * Cria um grupo físico comum e conecta as colisões entre inimigos e contra o cenário.
+   */
   prepararColisoes() {
     if (this.enemyGroup || !this.scene.physics) {
       return;
@@ -241,6 +265,9 @@ class EnemySpawnManager {
   // QUANTIDADE DE INIMIGOS ATIVOS
   // ===================================================
 
+  /**
+   * Conta os inimigos locais ativos, excluindo mortos e representações remotas.
+   */
   inimigosAtivos() {
     return (this.scene.inimigos || []).filter(
       (r) => r?.active && !r.morto && !r.remoteOnly,
@@ -251,6 +278,10 @@ class EnemySpawnManager {
   // ATUALIZACAO
   // ===================================================
 
+  /**
+   * Executa periodicamente remoção por distância e ativação de zonas, somente no solo ou no
+   * host.
+   */
   update(time) {
     if (this.destroyed || time - this.lastCheckAt < this.config.checkInterval) {
       return;
@@ -273,6 +304,10 @@ class EnemySpawnManager {
   // REMOVER ROBOS MUITO DISTANTES
   // ===================================================
 
+  /**
+   * Acompanha o tempo de afastamento e remove inimigos que ficaram longe além do período de
+   * tolerância.
+   */
   limparDistantes(time) {
     const player = this.scene.player;
 
@@ -311,6 +346,9 @@ class EnemySpawnManager {
   // REMOCAO SEGURA
   // ===================================================
 
+  /**
+   * Desativa e remove com segurança um inimigo distante e suas referências na cena.
+   */
   removerInimigoDistante(enemy) {
     if (!enemy?.active || enemy.morto) {
       return;
@@ -344,6 +382,10 @@ class EnemySpawnManager {
   // VERIFICAR ZONAS DE SPAWN
   // ===================================================
 
+  /**
+   * Ativa zonas próximas com vagas disponíveis; uma zona só é concluída quando contém atirador
+   * e serra.
+   */
   checkSpawnZones(time = this.scene.time?.now ?? 0) {
     const player = this.scene.player;
 
@@ -424,6 +466,10 @@ class EnemySpawnManager {
   // GERAR ROBOS DE UMA REGIAO
   // ===================================================
 
+  /**
+   * Planeja o grupo antes de criá-lo, garantindo posições para tipos obrigatórios e
+   * respeitando o limite de vagas.
+   */
   spawnRegion(region, vagas = Infinity) {
     region.enemies = region.enemies.filter((r) => r?.active && !r.morto);
 
@@ -547,6 +593,10 @@ class EnemySpawnManager {
   // PROCURAR POSICAO DE SPAWN
   // ===================================================
 
+  /**
+   * Sorteia e valida posições na região até encontrar uma opção ou esgotar o número de
+   * tentativas.
+   */
   findPosition(region, tipoRobo, positions) {
     const rejeitados = [];
 
@@ -583,6 +633,10 @@ class EnemySpawnManager {
   // VERIFICAR POSICAO LIVRE
   // ===================================================
 
+  /**
+   * Valida limites, distância mínima, obstáculos e separação de outros robôs para uma posição
+   * candidata.
+   */
   isValidPosition(candidate, tipoRobo, positions) {
     const rect = footprint(
       candidate.x,
@@ -656,6 +710,10 @@ class EnemySpawnManager {
   // COMPATIBILIDADE COM CHAMADAS ANTERIORES
   // ===================================================
 
+  /**
+   * Adiciona inimigos recém-criados ao grupo de colisões compartilhado, preservando chamadas
+   * anteriores da API.
+   */
   addCollidersForNewEnemies(enemies) {
     if (!enemies?.length) return;
 
@@ -672,6 +730,10 @@ class EnemySpawnManager {
   // DEBUG DAS ZONAS
   // ===================================================
 
+  /**
+   * Desenha áreas de geração e ativação e as posições aceitas ou rejeitadas quando o debug
+   * está ligado.
+   */
   drawDebugRegions() {
     const g = this.debugGraphics;
 
@@ -714,6 +776,9 @@ class EnemySpawnManager {
   // DESTRUIR GERENCIADOR
   // ===================================================
 
+  /**
+   * Destrói colliders, grupo e gráficos e limpa os registros das regiões uma única vez.
+   */
   destroy() {
     if (this.destroyed) return;
 

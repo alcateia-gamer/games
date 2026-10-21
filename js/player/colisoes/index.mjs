@@ -1,3 +1,8 @@
+/**
+ * @file Consulta central das hitboxes por personagem. Dimensões e offsets são definidos nos
+ * arquivos individuais e o padrão é Kai.
+ */
+
 import {
   CONFIGURACAO_HITBOX_ATAQUE as kaiMercerAttack,
   CONFIGURACAO_HITBOX_WALK as kaiMercerWalk,
@@ -34,10 +39,17 @@ const CONFIGURACOES = Object.freeze({
   },
 });
 
+/**
+ * Retorna a configuração física de caminhada para o personagem ou a configuração padrão do
+ * Kai.
+ */
 function obterConfiguracaoHitboxWalk(personagem) {
   return CONFIGURACOES[personagem]?.walk ?? CONFIGURACOES["kai-mercer"].walk;
 }
 
+/**
+ * Retorna a configuração física de ataque para o personagem ou a configuração padrão do Kai.
+ */
 function obterConfiguracaoHitboxAtaque(personagem) {
   return (
     CONFIGURACOES[personagem]?.attack ?? CONFIGURACOES["kai-mercer"].attack

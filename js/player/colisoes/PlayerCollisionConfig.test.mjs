@@ -1,3 +1,8 @@
+/**
+ * @file Testes que conferem dimensões e deslocamentos das hitboxes de caminhada e ataque de
+ * cada personagem.
+ */
+
 import test from "node:test";
 import assert from "node:assert/strict";
 

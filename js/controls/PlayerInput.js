@@ -1,7 +1,16 @@
+/**
+ * @file Cria WASD, controles de desenvolvedor, joystick e tela cheia; mantém os elementos
+ * fixos durante o zoom.
+ */
+
 // =====================================================
 // FIXAR DEV E ANALÓGICO NA TELA
 // =====================================================
 
+/**
+ * Registra o reposicionamento dos controles fixos e remove listeners anteriores para evitar
+ * duplicação.
+ */
 function configurarControlesFixos(scene) {
   scene.limparControlesInputFixos?.();
 
@@ -11,6 +20,9 @@ function configurarControlesFixos(scene) {
   const textoLuzFabrica = scene.textoBotaoLuzFabrica;
   const joystick = scene.joystick;
 
+  /**
+   * Compensa o zoom para preservar posição e tamanho dos controles na tela.
+   */
   const atualizarPosicao = () => {
     const camera = scene.cameras.main;
 
@@ -94,6 +106,10 @@ function configurarControlesFixos(scene) {
     joystick.forceUpdateThumb();
   };
 
+  /**
+   * Remove os listeners de reposicionamento quando a cena é encerrada ou os controles são
+   * recriados.
+   */
   const limpar = () => {
     scene.events.off(Phaser.Scenes.Events.PRE_RENDER, atualizarPosicao);
 
@@ -117,6 +133,10 @@ function configurarControlesFixos(scene) {
 // CRIAÇÃO DOS CONTROLES
 // =====================================================
 
+/**
+ * Registra teclas, joystick e botões de desenvolvedor, incluindo o comando que acende a
+ * fábrica.
+ */
 function criarControlesInput(scene) {
   // TECLAS WASD
   scene.teclasWASD = scene.input.keyboard.addKeys({
@@ -174,6 +194,9 @@ function criarControlesInput(scene) {
     .setDepth(201)
     .setVisible(false);
 
+  /**
+   * Atualiza cores, rótulos e visibilidade dos botões conforme o modo desenvolvedor.
+   */
   const atualizarEstadoBotaoDesenvolvedor = () => {
     const ligado = !!scene.developerMode;
 
@@ -228,6 +251,9 @@ function criarControlesInput(scene) {
   configurarControlesFixos(scene);
 }
 
+/**
+ * Cria o botão de tela cheia para dispositivos com toque e detecta suporte do navegador.
+ */
 function criarControleFullscreen(scene) {
   const eTouch =
     typeof window !== "undefined" &&
@@ -237,14 +263,26 @@ function criarControleFullscreen(scene) {
     return;
   }
 
+  /**
+   * Retorna o elemento da página que será apresentado em tela cheia.
+   */
   const elementoFullscreen = () => document.documentElement;
+  /**
+   * Consulta o elemento atualmente em tela cheia, incluindo a variante WebKit.
+   */
   const obterElementoFullscreen = () =>
     document.fullscreenElement || document.webkitFullscreenElement;
+  /**
+   * Verifica se o navegador oferece uma das APIs de entrada em tela cheia.
+   */
   const podeEntrarFullscreen = () => {
     const elemento = elementoFullscreen();
     return !!(elemento.requestFullscreen || elemento.webkitRequestFullscreen);
   };
 
+  /**
+   * Solicita tela cheia e trata a rejeição da API do navegador.
+   */
   const entrarFullscreen = async () => {
     const elemento = elementoFullscreen();
 
@@ -259,6 +297,9 @@ function criarControleFullscreen(scene) {
     }
   };
 
+  /**
+   * Encerra a tela cheia usando a API disponível no navegador.
+   */
   const sairFullscreen = async () => {
     try {
       if (document.exitFullscreen) {
@@ -271,6 +312,9 @@ function criarControleFullscreen(scene) {
     }
   };
 
+  /**
+   * Alterna entre entrar e sair de tela cheia conforme o estado atual.
+   */
   const alternarFullscreen = async () => {
     if (obterElementoFullscreen()) {
       await sairFullscreen();

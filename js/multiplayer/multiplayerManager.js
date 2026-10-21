@@ -1,9 +1,17 @@
+/**
+ * @file Protocolo de salas sobre MQTT. O host publica o estado compartilhado; clientes enviam
+ * ações, presença e atualizações de movimento.
+ */
+
 const ROOM_CODE = /^[A-Z0-9]{4,6}$/;
 const CHARACTER_IDS = ["kai-mercer", "magnus-force", "aria-kade", "nyx"];
 const MAX_PLAYERS = 4;
 const HEARTBEAT_MS = 3000;
 const PLAYER_TIMEOUT_MS = 10000;
 
+/**
+ * Gera um código de sala de quatro caracteres sem símbolos visualmente ambíguos.
+ */
 function makeRoomCode() {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   return Array.from(
@@ -12,6 +20,9 @@ function makeRoomCode() {
   ).join("");
 }
 
+/**
+ * Remove espaços e converte o código digitado para maiúsculas.
+ */
 function cleanCode(code) {
   return String(code || "")
     .replace(/\s/g, "")
@@ -19,6 +30,9 @@ function cleanCode(code) {
 }
 
 class MultiplayerManager extends Phaser.Events.EventEmitter {
+  /**
+   * Assina os eventos do cliente MQTT e inicializa os dados de sala e presença.
+   */
   constructor(mqtt) {
     super();
     this.mqtt = mqtt;
@@ -26,6 +40,10 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
     this.room = null;
     this.roomTopic = null;
     this.heartbeatTimer = null;
+    /**
+     * Encaminha mensagens MQTT para o roteador do gerenciador, preservando a referência para
+     * remoção do listener.
+     */
     this.boundMessage = (topic, data) => this.receive(topic, data);
     mqtt.on("message", this.boundMessage);
     mqtt.on("connect", () => this.emit("connectionChanged", true));
@@ -34,6 +52,10 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
     mqtt.connect();
   }
 
+  /**
+   * Normaliza dados recebidos de um jogador e preenche valores ausentes de posição, ataque e
+   * presença.
+   */
   normalizePlayer(player) {
     return {
       id: String(player.id),
@@ -57,12 +79,18 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
     };
   }
 
+  /**
+   * Gera um código, entra como host e retorna o código da nova sala.
+   */
   createRoom() {
     const code = makeRoomCode();
     this.enterRoom(code, true);
     return code;
   }
 
+  /**
+   * Valida o código digitado e solicita a entrada na sala como participante.
+   */
   joinRoom(rawCode) {
     const code = cleanCode(rawCode);
     if (!ROOM_CODE.test(code)) {
@@ -73,6 +101,10 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
     return true;
   }
 
+  /**
+   * Sai da sala anterior, assina os tópicos da nova sala e inicia presença e solicitação de
+   * entrada.
+   */
   enterRoom(code, host) {
     this.leaveRoom(false);
     this.lastSentPlayerState = null;
@@ -99,6 +131,9 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
     this.emit(host ? "roomCreated" : "roomSearching", code);
   }
 
+  /**
+   * Filtra mensagens por sala e remetente e as encaminha para estado, ações ou presença.
+   */
   receive(topic, data) {
     if (!this.roomTopic || !topic.startsWith(`${this.roomTopic}/`) || !data)
       return;
@@ -109,6 +144,10 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
     if (kind === "presence") this.receivePresence(data);
   }
 
+  /**
+   * Aceita revisões mais recentes do estado da sala e anuncia atualizações ou início da
+   * partida.
+   */
   receiveState(data) {
     if (
       data.roomCode !== this.roomTopic.split("/")[1] ||
@@ -125,6 +164,10 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
     }
   }
 
+  /**
+   * Processa entrada, escolhas, prontidão, movimento e dano; as decisões de sala são tratadas
+   * pelo host.
+   */
   receiveAction(action) {
     if (!action || !action.type) return;
     if (
@@ -184,6 +227,7 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
       this.emit("playerDamage", Number(action.damage) || 0);
       return;
     }
+    // As ações de escolha e prontidão abaixo só alteram a sala no cliente que é host.
     if (this.room?.hostId !== this.playerId) return;
     const player = this.room.players.find(
       (item) => item.id === action.playerId,
@@ -241,6 +285,9 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
     }
   }
 
+  /**
+   * Trata saída, rejeição de entrada e atualização de presença dos participantes.
+   */
   receivePresence(data) {
     if (data.type === "leave_room") this.removePlayer(data.playerId);
     if (data.type === "room_rejected" && data.playerId === this.playerId) {
@@ -258,12 +305,20 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
     }
   }
 
+  /**
+   * Publica uma ação no tópico da sala atual com as opções de entrega recebidas.
+   */
   publishAction(action, options = {}) {
     this.mqtt.publish(`${this.roomTopic}/action`, action, options);
   }
 
+  /**
+   * Incrementa a revisão do estado e publica jogadores, inimigos e referência de tempo para a
+   * sala.
+   */
   publishState(options = {}) {
     if (!this.room) return;
+    // A revisão permite ignorar mensagens antigas que chegam depois de uma atualização.
     this.room.revision = (this.room.revision || 0) + 1;
     this.room.updatedAt = Date.now();
     this.room.serverTime = this.room.updatedAt;
@@ -278,6 +333,9 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
     this.emit("roomUpdated", this.room);
   }
 
+  /**
+   * Envia a escolha de um personagem reconhecido pelo jogo.
+   */
   selectCharacter(character) {
     if (CHARACTER_IDS.includes(character))
       this.publishAction({
@@ -286,6 +344,9 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
         character,
       });
   }
+  /**
+   * Envia o estado de prontidão do jogador local para o host.
+   */
   setReady(ready) {
     this.publishAction({
       type: "player_ready",
@@ -293,17 +354,26 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
       ready,
     });
   }
+  /**
+   * Verifica se há jogadores e se todos escolheram personagem e marcaram prontidão.
+   */
   canStart() {
     return (
       Boolean(this.room?.players.length) &&
       this.room.players.every((player) => player.character && player.ready)
     );
   }
+  /**
+   * Solicita o início da partida somente quando o jogador local é host e todos estão prontos.
+   */
   startGame() {
     if (this.room?.hostId === this.playerId && this.canStart())
       this.publishAction({ type: "start_game", playerId: this.playerId });
   }
 
+  /**
+   * Remove um jogador e escolhe outro host por ID quando o host anterior saiu.
+   */
   removePlayer(playerId) {
     if (!this.room) return;
     const wasHost = this.room.hostId === playerId;
@@ -327,6 +397,10 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
     this.emit("playerLeft", playerId);
   }
 
+  /**
+   * Inicia mensagens periódicas de presença e detecta participantes ou host que excederam o
+   * tempo limite.
+   */
   startHeartbeat() {
     this.stopHeartbeat();
     this.heartbeatTimer = setInterval(() => {
@@ -364,11 +438,17 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
     }, HEARTBEAT_MS);
   }
 
+  /**
+   * Cancela o temporizador de presença e limpa sua referência.
+   */
   stopHeartbeat() {
     if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
     this.heartbeatTimer = null;
   }
 
+  /**
+   * Publica a saída quando solicitado, encerra a presença e cancela os tópicos da sala.
+   */
   leaveRoom(publish = true) {
     if (publish && this.roomTopic) {
       this.publishAction({ type: "leave_room", playerId: this.playerId });
@@ -386,6 +466,10 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
     this.room = null;
   }
 
+  /**
+   * Envia posição, direção, ataque e projéteis somente quando o estado local mudou em relação
+   * ao último envio.
+   */
   sendPlayerState(
     x,
     y,
@@ -410,6 +494,7 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
     };
     const projectilesKey = JSON.stringify(projectiles);
     const previousState = this.lastSentPlayerState;
+    // Evita tráfego repetido quando movimento, ataque e projéteis não mudaram.
     if (
       previousState &&
       previousState.x === nextState.x &&
@@ -438,6 +523,10 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
     return true;
   }
 
+  /**
+   * Publica os inimigos ativos e seus alvos; somente o host pode atualizar esse estado
+   * compartilhado.
+   */
   publishEnemyState(enemies) {
     if (this.room?.hostId !== this.playerId) return;
     this.room.enemies = enemies
@@ -464,6 +553,9 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
     this.publishState({ retain: false, qos: 0 });
   }
 
+  /**
+   * Envia ao host uma solicitação de dano contra um inimigo identificado pela rede.
+   */
   requestEnemyDamage(enemyId, damage) {
     this.publishAction({
       type: "enemy_damage",
@@ -473,6 +565,9 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
     });
   }
 
+  /**
+   * Permite que o host comunique dano a outro jogador, sem enviá-lo de volta ao próprio host.
+   */
   publishPlayerDamage(targetId, damage) {
     if (
       this.room?.hostId === this.playerId &&
@@ -483,6 +578,9 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
     }
   }
 
+  /**
+   * Sai da sala e remove a assinatura de mensagens e os listeners do gerenciador.
+   */
   destroy() {
     this.leaveRoom();
     this.mqtt.off("message", this.boundMessage);

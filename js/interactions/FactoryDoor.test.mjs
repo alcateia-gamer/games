@@ -1,3 +1,8 @@
+/**
+ * @file Testes integrados de porta, gerador e coleta usando o mapa real com substitutos leves
+ * do Phaser. Os métodos simulados abaixo não desenham nem executam física real.
+ */
+
 import test from "node:test";
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
@@ -19,36 +24,110 @@ globalThis.Phaser = {
   Math: {
     Distance: { Between: (x, y, a, b) => Math.hypot(x - a, y - b) },
     Vector2: class {
+      /**
+       * Inicializa o vetor simulado usado para consultar a posição do jogador nos testes.
+       */
       constructor(x = 0, y = 0) { this.x = x; this.y = y; }
+      /**
+       * Copia as coordenadas para o vetor simulado sem depender da implementação real do
+       * Phaser.
+       */
       copy(other) { this.x = other.x; this.y = other.y; return this; }
     },
   },
 };
 
 class DisplayObject extends EventEmitter {
+  /**
+   * Inicializa o objeto visual simulado e seu emissor de eventos.
+   */
   constructor(x, y) { super(); this.x = x; this.y = y; this.visible = true; }
+  /**
+   * Mantém a interface encadeável de origem; o teste não calcula transformações de desenho.
+   */
   setOrigin() { return this; }
+  /**
+   * Simula a chamada de fixação da interface sem executar uma câmera real.
+   */
   setScrollFactor() { return this; }
+  /**
+   * Mantém o encadeamento de escala sem alterar o tamanho físico simulado.
+   */
   setScale() { return this; }
+  /**
+   * Simula a configuração de transparência usada pelos componentes visuais.
+   */
   setAlpha() { return this; }
+  /**
+   * Simula o contorno de elementos sem desenhá-los.
+   */
   setStrokeStyle() { return this; }
+  /**
+   * Aceita atualizações de texto do modal sem renderização de fontes.
+   */
   setText() { return this; }
+  /**
+   * Aceita mudanças de cor do texto no substituto usado pelo teste.
+   */
   setColor() { return this; }
+  /**
+   * Mantém a interface de redimensionamento necessária aos elementos do modal.
+   */
   setSize() { return this; }
+  /**
+   * Simula a remoção dos filhos de um container sem criar objetos de renderização.
+   */
   removeAll() { return this; }
+  /**
+   * Aceita a inclusão de elementos no container simulado.
+   */
   add() { return this; }
+  /**
+   * Simula a ativação da entrada; os testes disparam os eventos diretamente.
+   */
   setInteractive() { return this; }
+  /**
+   * Simula a desativação da área interativa sem usar o sistema de entrada real.
+   */
   disableInteractive() { return this; }
+  /**
+   * Recria as dimensões do corpo simulado após mudar o tamanho da colisão.
+   */
   refreshBody() { this.body = { width: this.width, height: this.height }; return this; }
+  /**
+   * Guarda largura e altura para verificar as dimensões da porta sem física real.
+   */
   setDisplaySize(w, h) { this.width = w; this.height = h; return this; }
+  /**
+   * Guarda a visibilidade para que o teste confira quando avisos e sprites aparecem.
+   */
   setVisible(value) { this.visible = value; return this; }
+  /**
+   * Guarda a profundidade atribuída para permitir verificações de sobreposição.
+   */
   setDepth(value) { this.depth = value; return this; }
+  /**
+   * Atualiza o Y simulado durante a animação de abertura da porta.
+   */
   setY(value) { this.y = value; return this; }
+  /**
+   * Guarda as coordenadas usadas no posicionamento dos objetos simulados.
+   */
   setPosition(x, y) { this.x = x; this.y = y; return this; }
+  /**
+   * Guarda o recorte aplicado para verificar que a folha da porta sobe sem mover a moldura.
+   */
   setCrop(...rect) { this.crop = rect; return this; }
+  /**
+   * Marca o objeto simulado como destruído e emite o evento usado pela limpeza do grupo.
+   */
   destroy() { this.destroyed = true; this.emit("destroy"); }
 }
 
+/**
+ * Monta uma cena simulada com tiles reais da porta e inicializa inventário, gerador e
+ * interação da porta.
+ */
 function createScene(registry = new Map()) {
   const raw = JSON.parse(readFileSync(new URL("../../assets/map/parte2-fase1.json", import.meta.url)));
   const doorLayer = raw.layers.find((layer) => layer.name === "Portas");
@@ -176,6 +255,10 @@ test("nearby collectibles keep priority and opened doors stay open after returni
   returned.scene.events.emit("shutdown");
 });
 
+/**
+ * Posiciona o jogador ao alcance do gerador real do mapa e atualiza a disponibilidade das
+ * interações.
+ */
 function approachGenerator(scene) {
   const { object: area } = findGeneratorInteraction(scene.map);
   scene.player.x = area.x + area.width / 2;
@@ -192,6 +275,9 @@ test("E opens the generator menu in the current map and activation consumes its 
   assert.equal(scene.generatorMenuOpen, true);
   assert.equal(scene.movimentoBloqueado, true);
 
+  /**
+   * Simula um toque no botão de ativação do gerador dentro do modal.
+   */
   const activate = () => scene.input.emit("pointerdown", { x: 305, y: 344 });
   activate();
   assert.notEqual(scene.luzFabricaAcesa, true);

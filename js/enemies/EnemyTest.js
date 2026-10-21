@@ -1,3 +1,8 @@
+/**
+ * @file Construção e atualização dos robôs comuns e de serra. Integra IA, vida, som, hitboxes,
+ * profundidade e lasers.
+ */
+
 import { configurarSomPassoRobo } from "../sounds/inimigos.js";
 import {
   criarAnimacoesInimigo,
@@ -9,6 +14,10 @@ import {
   verificarLasersNoPlayer,
 } from "./EnemyLaser.js";
 
+/**
+ * Cria um robô do tipo solicitado com parâmetros de combate, identificação de rede, hitboxes e
+ * barra de vida.
+ */
 function criarInimigoTeste(scene, config = {}) {
   criarAnimacoesInimigo(scene);
 
@@ -125,6 +134,9 @@ function criarInimigoTeste(scene, config = {}) {
   return inimigo;
 }
 
+/**
+ * Cria um robô-serra próximo do jogador ou retorna um exemplar ativo já existente.
+ */
 function criarRoboSerra(scene) {
   if (!scene?.player?.active) {
     return null;
@@ -161,6 +173,9 @@ function criarRoboSerra(scene) {
   return robo;
 }
 
+/**
+ * Destrói robôs, lasers, sons e elementos auxiliares antes de sair da cena ou limpar o grupo.
+ */
 function limparGrupoRobos(scene) {
   if (!scene) {
     return;
@@ -230,6 +245,10 @@ function limparGrupoRobos(scene) {
   scene.grupoRobosAtivado = false;
 }
 
+/**
+ * Cria a quantidade solicitada de robôs em torno de um centro e configura suas referências e
+ * colisões.
+ */
 function criarRobos(
   scene,
   quantidade = 1,
@@ -302,6 +321,9 @@ function criarRobos(
   return scene.inimigos;
 }
 
+/**
+ * Ajusta a colisão com o chão para a região dos pés conforme o tipo de robô.
+ */
 function configurarHitboxPeInimigo(inimigo) {
   if (!inimigo || !inimigo.body) {
     return;
@@ -319,6 +341,10 @@ function configurarHitboxPeInimigo(inimigo) {
   inimigo.body.setOffset(65, 270);
 }
 
+/**
+ * Atualiza a área que recebe dano e seus gráficos de depuração sem alterar a colisão com o
+ * cenário.
+ */
 function atualizarHitboxDanoInimigo(inimigo) {
   if (!inimigo || !inimigo.body) {
     return;
@@ -356,6 +382,9 @@ function atualizarHitboxDanoInimigo(inimigo) {
   }
 }
 
+/**
+ * Ordena o inimigo pela posição de seus pés usando a regra de profundidade da cena.
+ */
 function atualizarDepthInimigo(inimigo, scene) {
   if (!inimigo || !scene || !scene.player || !scene.player.active) {
     return;
@@ -369,6 +398,10 @@ function atualizarDepthInimigo(inimigo, scene) {
   inimigo.setDepth(calcularDepth(inimigoFootY));
 }
 
+/**
+ * Atualiza IA local, hitboxes, profundidade, barras de vida e impactos dos lasers de todos os
+ * robôs ativos.
+ */
 function atualizarInimigoTeste(scene, time) {
   if (!Array.isArray(scene.inimigos) || scene.inimigos.length === 0) {
     return;

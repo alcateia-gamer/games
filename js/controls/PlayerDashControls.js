@@ -1,3 +1,8 @@
+/**
+ * @file Impulso de dash com custo de estamina, recarga e rastro temporal. O movimento normal
+ * consulta este módulo antes de aplicar sua velocidade.
+ */
+
 import { gastarEstamina } from "../player/PlayerStatus.js";
 
 // =====================================================
@@ -75,6 +80,9 @@ const CORES_SANDEVISTAN = {
 // IDENTIFICAR A PALETA DO PERSONAGEM
 // =====================================================
 
+/**
+ * Seleciona a paleta de rastro e flash do personagem, usando Kai como configuração padrão.
+ */
 function obterCoresSandevistan(scene) {
   const personagem = scene.personagemSelecionada ?? "kai-mercer";
 
@@ -85,6 +93,10 @@ function obterCoresSandevistan(scene) {
 // IDENTIFICAR DIREÇÃO DO DASH
 // =====================================================
 
+/**
+ * Escolhe a direção normalizada pelo teclado, joystick ou última direção de movimento
+ * conhecida.
+ */
 function obterDirecaoDash(scene) {
   let x = 0;
   let y = 0;
@@ -116,6 +128,10 @@ function obterDirecaoDash(scene) {
 // CRIAR RASTRO TEMPORAL
 // =====================================================
 
+/**
+ * Cria uma cópia visual temporária do personagem, respeitando intervalo, distância mínima e
+ * limite de rastros.
+ */
 function criarRastroTemporal(scene) {
   const player = scene.player;
   const estado = scene.estadoDash;
@@ -256,6 +272,9 @@ function criarRastroTemporal(scene) {
 // FLASH DE ATIVAÇÃO DO DASH
 // =====================================================
 
+/**
+ * Desenha o flash de ativação na cor do personagem e remove o efeito ao terminar a expansão.
+ */
 function criarFlashDash(scene) {
   const player = scene.player;
   const estado = scene.estadoDash;
@@ -300,6 +319,10 @@ function criarFlashDash(scene) {
 // ATIVAR DASH
 // =====================================================
 
+/**
+ * Valida movimento, recarga e estamina antes de aplicar o impulso e iniciar os efeitos do
+ * dash.
+ */
 function iniciarDash(scene) {
   const estado = scene.estadoDash;
   const player = scene.player;
@@ -398,6 +421,10 @@ function iniciarDash(scene) {
 // ATUALIZAR DASH E EFEITOS
 // =====================================================
 
+/**
+ * Atualiza recarga, impulso e rastros; retorna se o dash ainda controla a velocidade do
+ * jogador.
+ */
 function atualizarDash(scene) {
   const estado = scene.estadoDash;
   const player = scene.player;
@@ -477,6 +504,9 @@ function atualizarDash(scene) {
 // CRIAR CONTROLES
 // =====================================================
 
+/**
+ * Cria o estado do dash, o botão e os atalhos Q e F, além da limpeza ao trocar de cena.
+ */
 function criarControlesDash(scene) {
   scene.limparControlesDash?.();
 
@@ -564,6 +594,9 @@ function criarControlesDash(scene) {
   const teclaQ = scene.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.Q);
   const teclaF = scene.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.F);
 
+  /**
+   * Encaminha os atalhos de teclado para a mesma ação usada pelo botão de dash.
+   */
   const pressionarDash = () => iniciarDash(scene);
 
   teclaQ?.on("down", pressionarDash);
@@ -573,6 +606,10 @@ function criarControlesDash(scene) {
   // LIMPEZA AO TROCAR DE CENA
   // ===================================================
 
+  /**
+   * Remove teclas, rastros, flashes, animações e referências do dash ao encerrar ou recriar os
+   * controles.
+   */
   const limpar = () => {
     teclaQ?.off("down", pressionarDash);
     teclaF?.off("down", pressionarDash);

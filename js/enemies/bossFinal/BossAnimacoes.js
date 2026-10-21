@@ -1,3 +1,8 @@
+/**
+ * @file Sincronização de animações e combate do boss. Eventos de frame controlam mira,
+ * impacto, cura e efeitos; a conclusão devolve a IA ao repouso.
+ */
+
 import {
   ataquePorEstado,
   duracaoFrame,
@@ -38,6 +43,9 @@ import { tocarSomSocoBoss, pararSomSocoBoss } from "../../sounds/inimigos.js";
 // IDENTIFICAR FRAMES DA ANIMAÇÃO DO BOSS
 // =====================================================
 
+/**
+ * Conta os frames numéricos de uma textura carregada, desconsiderando nomes auxiliares.
+ */
 function obterTotalFramesTextura(scene, chave) {
   if (!scene.textures.exists(chave)) {
     return 0;
@@ -53,6 +61,10 @@ function obterTotalFramesTextura(scene, chave) {
 // CRIAR ANIMAÇÕES
 // =====================================================
 
+/**
+ * Registra as animações por estado e ajusta o fim da sequência do raio ao número de quadros
+ * disponível.
+ */
 export function criarAnimacoesBoss(scene) {
   for (const [estado, dados] of Object.entries(estadosAnimacao)) {
     if (estado === "idle") continue;
@@ -99,6 +111,10 @@ export function criarAnimacoesBoss(scene) {
 // EXIBIR ESTADO DO BOSS
 // =====================================================
 
+/**
+ * Troca textura, posição e animação do estado, atualizando hitboxes e o controle de sons de
+ * soco e raio.
+ */
 export function exibirEstadoBoss(boss, estado) {
   const dados = estadosAnimacao[estado];
 
@@ -178,6 +194,10 @@ export function exibirEstadoBoss(boss, estado) {
 // O impacto produz som mesmo quando o soco erra.
 // =====================================================
 
+/**
+ * Dispara o som nos frames de impacto do soco, sem depender de acertar o jogador e sem
+ * duplicar o mesmo frame.
+ */
 function atualizarSomImpactoChao(boss) {
   if (!boss?.active || boss.morto) {
     return;
@@ -222,6 +242,10 @@ function atualizarSomImpactoChao(boss) {
 // MIRA DO LASER ORIGINAL
 // =====================================================
 
+/**
+ * Atualiza a previsão de mira na preparação do laser antes de travar sua direção para o
+ * disparo.
+ */
 function atualizarMiraDurantePreparacao(boss, player, frame, callbacks) {
   const ia = boss.iaCombate;
 
@@ -272,6 +296,10 @@ function atualizarMiraDurantePreparacao(boss, player, frame, callbacks) {
 // FINALIZAR ANIMAÇÃO DO BOSS
 // =====================================================
 
+/**
+ * Encerra o ataque correspondente, limpa sons e áreas temporárias e agenda a próxima decisão
+ * da IA.
+ */
 export function finalizarAnimacaoBoss(boss, animacao, callbacks) {
   if (boss.morto) return;
 
@@ -340,6 +368,10 @@ export function finalizarAnimacaoBoss(boss, animacao, callbacks) {
 // ATUALIZAÇÃO DA ANIMAÇÃO DO BOSS
 // =====================================================
 
+/**
+ * Processa o frame de ataque e sincroniza dano, cura, mira e eventos consumidos pelos efeitos
+ * auxiliares.
+ */
 export function tratarAnimationUpdate(boss, animacao, frame, callbacks) {
   if (boss.morto) return;
 
@@ -434,14 +466,23 @@ export function tratarAnimationUpdate(boss, animacao, frame, callbacks) {
 // REGISTRAR LISTENERS DAS ANIMAÇÕES
 // =====================================================
 
+/**
+ * Registra uma única vez os listeners de avanço e conclusão das animações do boss.
+ */
 export function registrarListenersBoss(boss, callbacks) {
   if (boss.listenersRegistrados) {
     return;
   }
 
+  /**
+   * Encaminha o avanço da animação ao processamento de frames de combate.
+   */
   boss.onAnimationUpdate = (animacao, frame) =>
     tratarAnimationUpdate(boss, animacao, frame, callbacks);
 
+  /**
+   * Encaminha a conclusão da animação para a restauração do estado de repouso.
+   */
   boss.onAnimationComplete = (animacao) =>
     finalizarAnimacaoBoss(boss, animacao, callbacks);
 

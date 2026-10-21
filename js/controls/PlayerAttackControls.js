@@ -1,3 +1,8 @@
+/**
+ * @file Entrada do ataque por mouse e toque. Coordena o botão de espada e a carga e soltura do
+ * arco da Aria.
+ */
+
 import { atacar, soltarAtaque } from "../player/Player.js";
 
 import {
@@ -6,6 +11,10 @@ import {
   tocarSomSoltarFlechaAria,
 } from "../sounds/SOUNDS_PERSONAGENS.js/sounds_Aria.js";
 
+/**
+ * Cria os controles de ataque e seus listeners, removendo registros anteriores quando a
+ * interface é recriada.
+ */
 function criarControlesAtaque(scene) {
   scene.limparControlesAtaqueFixos?.();
 
@@ -91,6 +100,9 @@ function criarControlesAtaque(scene) {
   // IDENTIFICAR TOQUE
   // =====================================================
 
+  /**
+   * Identifica ponteiros de toque para distinguir o dedo do ataque dos demais toques na tela.
+   */
   const ponteiroEhToque = (pointer) => {
     if (!pointer) {
       return false;
@@ -109,6 +121,9 @@ function criarControlesAtaque(scene) {
   // ANIMAÇÃO VISUAL DO BOTÃO
   // =====================================================
 
+  /**
+   * Aplica a escala de botão pressionado ao círculo e ao ícone de espada.
+   */
   const atualizarPosicaoAtaque = () => {
     const escala = botaoPressionado ? 0.92 : 1;
 
@@ -120,6 +135,9 @@ function criarControlesAtaque(scene) {
   // INICIAR ATAQUE E SOM DE TENSÃO
   // =====================================================
 
+  /**
+   * Solicita o ataque e inicia o som de tensão apenas quando a Aria começa uma nova carga.
+   */
   const iniciarAtaqueComSom = () => {
     const jaEstavaAtacando = scene.atacando;
 
@@ -141,6 +159,9 @@ function criarControlesAtaque(scene) {
   // APERTAR BOTÃO
   // =====================================================
 
+  /**
+   * Guarda o ponteiro responsável pelo ataque e aplica a resposta visual de pressionamento.
+   */
   const apertarBotao = (pointer) => {
     scene.pointerAtaque = pointer?.id ?? null;
 
@@ -155,6 +176,9 @@ function criarControlesAtaque(scene) {
   // SOLTAR BOTÃO VISUAL
   // =====================================================
 
+  /**
+   * Restaura a aparência normal do botão ao encerrar o pressionamento.
+   */
   const soltarBotao = () => {
     botaoPressionado = false;
 
@@ -165,6 +189,10 @@ function criarControlesAtaque(scene) {
   // SOLTAR ATAQUE
   // =====================================================
 
+  /**
+   * Libera o ataque do ponteiro correto e coordena a parada da tensão e o som de soltura da
+   * Aria.
+   */
   const soltarAtaqueAtual = (pointer) => {
     // Não libera a flecha com o toque de outro dedo.
     if (

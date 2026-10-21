@@ -1,3 +1,4 @@
+/* A página ocupa a janela inteira para que o canvas e os controles não criem rolagem. */
 html,
 body {
   margin: 0;
@@ -11,6 +12,7 @@ body {
   touch-action: none;
 }
 
+/* Área fixa do Phaser. 100dvh acompanha a altura visível nos navegadores mobile. */
 #game-container {
   position: fixed;
   inset: 0;
@@ -25,11 +27,13 @@ body {
   user-select: none;
 }
 
+/* Remove o espaço de linha do canvas e entrega os gestos de toque ao jogo. */
 #game-container canvas {
   display: block;
   touch-action: none;
 }
 
+/* Campo HTML usado no mobile para abrir o teclado virtual e digitar o código da sala. */
 .multiplayer-code-input {
   box-sizing: border-box;
   width: 220px;
@@ -47,6 +51,7 @@ body {
   user-select: text;
 }
 
+/* Destaca o campo quando ele está recebendo entrada do teclado. */
 .multiplayer-code-input:focus {
   border-color: #9dffb9;
   box-shadow: 0 0 0 2px rgba(66, 255, 132, 0.25);

@@ -1,3 +1,8 @@
+/**
+ * @file Lobby de até quatro jogadores. Exibe participantes, escolha de personagem e prontidão
+ * antes da partida.
+ */
+
 const CHARACTER_NAMES = {
   "kai-mercer": "KAI MERCER",
   "magnus-force": "MAGNUS FORCE",
@@ -6,8 +11,15 @@ const CHARACTER_NAMES = {
 };
 
 class MultiplayerLobby extends Phaser.Scene {
+  /**
+   * Registra a cena de lobby no gerenciador de cenas do Phaser.
+   */
   constructor() { super("MultiplayerLobby"); }
 
+  /**
+   * Monta a lista de jogadores e os botões e conecta eventos de sala, início de jogo e
+   * conexão.
+   */
   create() {
     this.manager = this.registry.get("multiplayer");
     this.cameras.main.setBackgroundColor("#020805");
@@ -38,7 +50,13 @@ class MultiplayerLobby extends Phaser.Scene {
     this.status = this.add.text(400, 440, "AGUARDANDO OPERADORES...", { color: "#75ff9a", fontFamily: "monospace", fontSize: "11px" }).setOrigin(0.5);
     this.manager.on("roomUpdated", this.renderRoom, this);
     this.manager.on("gameStarted", this.startGame, this);
+    /**
+     * Mostra se a conexão foi restaurada ou está sendo restabelecida.
+     */
     this.onConnectionChanged = (connected) => this.status.setText(connected ? "CONEXÃO RESTAURADA" : "RECONECTANDO...");
+    /**
+     * Apresenta a mensagem de erro recebida do gerenciador multiplayer.
+     */
     this.onManagerError = (error) => this.status.setText(error.message || "ERRO");
     this.manager.on("connectionChanged", this.onConnectionChanged, this);
     this.manager.on("error", this.onManagerError, this);
@@ -46,6 +64,9 @@ class MultiplayerLobby extends Phaser.Scene {
     this.renderRoom(this.manager.room);
   }
 
+  /**
+   * Atualiza vagas, personagens e prontidão e mostra o botão de início apenas ao host.
+   */
   renderRoom(room) {
     if (!room) return;
     this.roomText.setText(`SALA: ${room.roomCode}`);
@@ -60,6 +81,9 @@ class MultiplayerLobby extends Phaser.Scene {
     this.status.setText(room.players.every((player) => player.character && player.ready) ? "TODOS PRONTOS" : "ESCOLHA UM OPERADOR E FIQUE PRONTO");
   }
 
+  /**
+   * Inicia o preloader uma única vez com o personagem local e o modo multiplayer.
+   */
   startGame(room) {
     if (this.started) return;
     this.started = true;
@@ -67,6 +91,9 @@ class MultiplayerLobby extends Phaser.Scene {
     this.scene.start("preloader", { personagem: local?.character || "kai-mercer", multiplayer: true });
   }
 
+  /**
+   * Monta um botão do lobby com texto e retorno visual ao passar o ponteiro.
+   */
   createButton(x, y, label, width, height) {
     const background = this.add.rectangle(0, 0, width, height, 0x062b16, 0.95).setStrokeStyle(2, 0x42ff84).setInteractive({ useHandCursor: true });
     const text = this.add.text(0, 0, label, { color: "#9dffb9", fontFamily: "monospace", fontSize: "11px", fontStyle: "bold" }).setOrigin(0.5);
@@ -77,6 +104,9 @@ class MultiplayerLobby extends Phaser.Scene {
     return button;
   }
 
+  /**
+   * Remove os listeners do gerenciador ao encerrar a cena de lobby.
+   */
   shutdown() {
     this.manager?.off("roomUpdated", this.renderRoom, this);
     this.manager?.off("gameStarted", this.startGame, this);

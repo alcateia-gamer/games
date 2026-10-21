@@ -1,9 +1,18 @@
+/**
+ * @file Porta da fábrica aberta por interação. Substitui os tiles por um visual animado e
+ * remove a colisão ao concluir a abertura.
+ */
+
 import { distanceToInteractionArea, findFactoryInteraction } from "./FactoryGenerator.js";
 
 const FACTORY_DOOR_STATE_KEY = "factoryDoorOpen";
 const INTERACTION_RANGE = 64;
 const OPEN_DURATION = 850;
 
+/**
+ * Localiza porta01, prepara o recorte visual e a colisão, e restaura o estado persistido de
+ * porta aberta.
+ */
 function criarInteracaoPortaFabrica(scene) {
   const result = findFactoryInteraction(scene.map, "porta01");
   if (result.status !== "ok") return;
@@ -53,18 +62,28 @@ function criarInteracaoPortaFabrica(scene) {
   scene.portaFabrica = porta;
   let tween;
 
+  /**
+   * Move e recorta a folha conforme o progresso da abertura, mantendo a moldura no lugar.
+   */
   const atualizarVisual = () => {
     const offset = Math.round(area.height * porta.progresso);
     visual.setY(area.y - offset);
     visual.setCrop(0, offset, area.width, area.height - offset);
     visual.setVisible(offset < area.height);
   };
+  /**
+   * Verifica alcance, estado da porta e bloqueios de morte ou menu antes de permitir a
+   * interação.
+   */
   const podeInteragir = () =>
     porta.estado === "fechada" && scene.player?.active &&
     !scene.morteEmAndamento && !scene.generatorMenuOpen &&
     distanceToInteractionArea(scene.player.x, scene.player.y, area) <=
       INTERACTION_RANGE;
 
+  /**
+   * Inicia a animação; ao concluir, remove a colisão e registra que a porta está aberta.
+   */
   const abrir = () => {
     if (!podeInteragir()) return false;
     porta.estado = "abrindo";
@@ -87,6 +106,10 @@ function criarInteracaoPortaFabrica(scene) {
     return true;
   };
 
+  /**
+   * Ajusta a profundidade e o aviso de proximidade e publica a interação para o botão
+   * compartilhado.
+   */
   const atualizar = () => {
     // O personagem fica por cima enquanto a porta está fechada ou abrindo.
     // Após a abertura, a moldura fica acima dele durante a passagem.

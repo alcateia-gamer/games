@@ -1,3 +1,8 @@
+/**
+ * @file Efeitos de impacto do combate: partículas, flash, recuo, deformação, pausa breve e
+ * tremor. Os efeitos coordenados são aplicados no modo solo.
+ */
+
 const COMBAT_FEEL = {
   inputBufferMs: 100,
   hitFlashDuration: 55,
@@ -21,16 +26,25 @@ const COMBAT_FEEL = {
 
 const COMBAT_FEEL_DEBUG = false;
 
+/**
+ * Indica se a cena executa uma partida solo, condição usada pelos efeitos de combate.
+ */
 function isSoloMode(scene) {
   return scene?.multiplayer !== true;
 }
 
+/**
+ * Escreve diagnósticos de combate apenas quando a configuração de depuração está ativa.
+ */
 function debugCombat(message, data) {
   if (COMBAT_FEEL_DEBUG) {
     console.debug(`[COMBAT] ${message}`, data ?? "");
   }
 }
 
+/**
+ * Aplica um flash branco temporário e restaura a cor se o inimigo ainda existir.
+ */
 function playHitFlash(enemy, duration = COMBAT_FEEL.hitFlashDuration) {
   if (!enemy?.active || !enemy.scene) {
     return;
@@ -44,6 +58,9 @@ function playHitFlash(enemy, duration = COMBAT_FEEL.hitFlashDuration) {
   });
 }
 
+/**
+ * Cria pequenos fragmentos que se afastam do impacto e são destruídos ao terminar a animação.
+ */
 function spawnHitParticles(scene, enemy, quantity = COMBAT_FEEL.particles.quantity) {
   if (!scene?.add || !enemy?.active) {
     return;
@@ -76,6 +93,9 @@ function spawnHitParticles(scene, enemy, quantity = COMBAT_FEEL.particles.quanti
   debugCombat("PARTICLES", quantity);
 }
 
+/**
+ * Prolonga a pausa breve de combate sem somar pausas menores; não altera o multiplayer.
+ */
 function applyHitStop(scene, duration = COMBAT_FEEL.hitStopDuration) {
   if (!isSoloMode(scene)) {
     return;
@@ -88,6 +108,9 @@ function applyHitStop(scene, duration = COMBAT_FEEL.hitStopDuration) {
   debugCombat("HIT STOP", `${duration}ms`);
 }
 
+/**
+ * Aplica um tremor curto na câmera, limitando sua intensidade conforme o dano recebido.
+ */
 function applyCombatShake(
   scene,
   damage,
@@ -106,6 +129,10 @@ function applyCombatShake(
   debugCombat("SHAKE", { duration, intensity });
 }
 
+/**
+ * Empurra o inimigo para longe do atacante e marca o intervalo em que a IA deve preservar esse
+ * impulso.
+ */
 function applyKnockback(
   scene,
   attacker,
@@ -127,6 +154,9 @@ function applyKnockback(
   debugCombat("KNOCKBACK", force);
 }
 
+/**
+ * Deforma temporariamente a escala do inimigo e anima o retorno à proporção original.
+ */
 function applySquash(enemy) {
   if (!enemy?.active || !enemy.scene) {
     return;
@@ -150,6 +180,9 @@ function applySquash(enemy) {
   });
 }
 
+/**
+ * Toca o som de impacto disponível no cache durante o modo solo.
+ */
 function playHitSound(scene) {
   if (!isSoloMode(scene) || !scene.sound?.play) {
     return;
@@ -160,6 +193,9 @@ function playHitSound(scene) {
   }
 }
 
+/**
+ * Emite partículas extras e tremor de câmera para destacar a derrota de um inimigo.
+ */
 function playDeathEffect(scene, enemy) {
   if (!isSoloMode(scene) || !enemy?.active) {
     return;
@@ -169,6 +205,9 @@ function playDeathEffect(scene, enemy) {
   applyCombatShake(scene, 25, 70);
 }
 
+/**
+ * Coordena os efeitos de um acerto e, se a vida chegou a zero, acrescenta o efeito de derrota.
+ */
 function playHitEffects(scene, attacker, enemy, damage, options = {}) {
   if (!isSoloMode(scene) || !enemy?.active) {
     return;

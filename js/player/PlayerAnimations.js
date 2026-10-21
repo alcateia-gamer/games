@@ -1,6 +1,19 @@
+/**
+ * @file Registra animações de caminhada, repouso e ataque para o jogador local e para os
+ * personagens remotos.
+ */
+
+/**
+ * Cria as animações do personagem local a partir das folhas e sequências específicas de cada
+ * personagem.
+ */
 function criarAnimacoesPlayer(scene) {
   // Para usar uma sequência manual, informe os índices dos quadros na ordem desejada.
   // A numeração começa em 0 e corresponde à folha carregada no preloader.
+  /**
+   * Converte uma lista de índices de frames em referências de textura aceitas pelo gerenciador
+   * de animações.
+   */
   const criarFramesIntercalados = (texture, indices) =>
     indices.map((frame) => ({ key: texture, frame }));
 
@@ -230,6 +243,10 @@ function criarAnimacoesPlayer(scene) {
 // ANIMAÇÕES DOS PERSONAGENS REMOTOS
 // =====================================================
 
+/**
+ * Registra animações com chaves próprias por personagem para reproduzir o movimento e ataque
+ * dos jogadores remotos.
+ */
 function criarAnimacoesPersonagensRemotos(scene) {
   const personagens = {
     "kai-mercer": {

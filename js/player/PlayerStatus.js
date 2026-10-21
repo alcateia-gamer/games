@@ -1,3 +1,8 @@
+/**
+ * @file Vida, estamina e HUD do personagem. Prepara os recortes da imagem original em cache e
+ * desenha a interface em canvas DOM na resolução da tela.
+ */
+
 // =====================================================
 // NULLBORNS — HUD NÍTIDA COM CARREGAMENTO ANTECIPADO
 // =====================================================
@@ -45,6 +50,9 @@ const HUD_CACHE = new Map();
 const HUD_IMAGEM_ANTECIPADA = typeof Image !== "undefined" ? new Image() : null;
 
 // Verifica se a imagem antecipada já está disponível.
+/**
+ * Indica se o PNG antecipado da HUD terminou de carregar com dimensões válidas.
+ */
 function imagemHUDDisponivel() {
   return Boolean(
     HUD_IMAGEM_ANTECIPADA?.complete && HUD_IMAGEM_ANTECIPADA.naturalWidth > 0,
@@ -52,6 +60,9 @@ function imagemHUDDisponivel() {
 }
 
 // Prepara os quatro retratos antecipadamente.
+/**
+ * Prepara e armazena os quatro retratos quando a imagem original fica disponível.
+ */
 function prepararCacheAntecipado() {
   if (!imagemHUDDisponivel()) return;
 
@@ -92,6 +103,9 @@ if (HUD_IMAGEM_ANTECIPADA) {
 const SOM_DANO_PLAYER = "dano-soft";
 const VOLUME_SOM_DANO = 0.35;
 
+/**
+ * Toca o som de dano somente se o jogador e o áudio necessário estiverem disponíveis.
+ */
 function tocarSomDanoPlayer(scene) {
   if (!scene.player?.active) return;
   if (!scene.cache?.audio?.exists(SOM_DANO_PLAYER)) return;
@@ -106,6 +120,9 @@ function tocarSomDanoPlayer(scene) {
 // CRIAR CANVAS
 // =====================================================
 
+/**
+ * Cria um canvas com dimensões inteiras e nunca menores que um pixel.
+ */
 function criarCanvasHUD(largura, altura) {
   const canvas = document.createElement("canvas");
 
@@ -120,6 +137,9 @@ function criarCanvasHUD(largura, altura) {
 // LOCALIZAR ÁREA VISÍVEL
 // =====================================================
 
+/**
+ * Localiza o retângulo de pixels visíveis do frame e rejeita um frame totalmente vazio.
+ */
 function encontrarAreaVisivel(pixels, largura, altura) {
   let esquerda = largura;
   let direita = -1;
@@ -155,6 +175,9 @@ function encontrarAreaVisivel(pixels, largura, altura) {
 // IDENTIFICAR CORES DAS BARRAS
 // =====================================================
 
+/**
+ * Classifica um pixel pela cor e opacidade para separar vida vermelha de estamina ciano.
+ */
 function pixelEhBarra(pixels, i, tipo) {
   const r = pixels[i];
   const g = pixels[i + 1];
@@ -174,6 +197,9 @@ function pixelEhBarra(pixels, i, tipo) {
 // LOCALIZAR VIDA E ESTAMINA
 // =====================================================
 
+/**
+ * Encontra os limites da faixa de vida ou estamina dentro da área visível da HUD.
+ */
 function encontrarBarra(pixels, largura, area, tipo) {
   let esquerda = largura;
   let direita = -1;
@@ -227,6 +253,10 @@ function encontrarBarra(pixels, largura, area, tipo) {
 // PREPARAR HUD ORIGINAL
 // =====================================================
 
+/**
+ * Recorta a HUD do personagem e separa moldura e preenchimentos, reutilizando o resultado em
+ * cache.
+ */
 function prepararHUDOriginal(scene, frameIndex) {
   // NOVO:
   // Se este personagem já está preparado,
@@ -334,6 +364,10 @@ function prepararHUDOriginal(scene, frameIndex) {
   // SEPARAR PREENCHIMENTO DAS BARRAS
   // ===================================================
 
+  /**
+   * Extrai os pixels coloridos da barra para uma camada e escurece a mesma região na base
+   * vazia.
+   */
   function extrairPreenchimento(barra, tipo) {
     const camada = criarCanvasHUD(area.width, area.height);
 
@@ -399,6 +433,10 @@ function prepararHUDOriginal(scene, frameIndex) {
 // CONVERTER PARA A RESOLUÇÃO REAL DA TELA
 // =====================================================
 
+/**
+ * Redimensiona uma camada original para a resolução física de exibição com suavização de alta
+ * qualidade.
+ */
 function criarImagemDeTela(origem, larguraPx, alturaPx) {
   const saida = criarCanvasHUD(larguraPx, alturaPx);
 
@@ -416,6 +454,9 @@ function criarImagemDeTela(origem, larguraPx, alturaPx) {
 // POSICIONAR A HUD NA TELA
 // =====================================================
 
+/**
+ * Alinha a HUD ao canvas do jogo usando tamanho CSS e densidade de pixels do dispositivo.
+ */
 function atualizarPosicaoHUD(scene) {
   const overlay = scene.hudStatus?.elemento;
   const dados = scene.hudStatusDados;
@@ -479,6 +520,9 @@ function atualizarPosicaoHUD(scene) {
 // ATUALIZAR BARRAS
 // =====================================================
 
+/**
+ * Redesenha moldura, vida e estamina e só recria as versões de tela quando a resolução muda.
+ */
 function atualizarBarrasHUD(scene) {
   const hud = scene.hudStatus;
   const dados = scene.hudStatusDados;
@@ -525,6 +569,10 @@ function atualizarBarrasHUD(scene) {
   // PREENCHIMENTO PROPORCIONAL
   // ===================================================
 
+  /**
+   * Limita o preenchimento ao percentual informado, preservando o desenho original da barra
+   * por recorte.
+   */
   function desenharPreenchimento(camada, barra, porcentagem) {
     const valor = Phaser.Math.Clamp(porcentagem, 0, 1);
 
@@ -571,6 +619,9 @@ function atualizarBarrasHUD(scene) {
 // MONTAR HUD DO PERSONAGEM
 // =====================================================
 
+/**
+ * Monta o canvas da HUD do personagem como overlay DOM sem capturar cliques ou toques.
+ */
 function montarHUD(scene) {
   const frameIndex = HUD_FRAME_PERSONAGEM[scene.personagemSelecionada] ?? 0;
 
@@ -614,6 +665,10 @@ function montarHUD(scene) {
 // CARREGAMENTO RÁPIDO DA HUD
 // =====================================================
 
+/**
+ * Coordena imagem antecipada, carregamento alternativo, atualização por quadro e limpeza da
+ * HUD.
+ */
 function iniciarHUD(scene) {
   scene.limparPainelStatusFixo?.();
 
@@ -624,6 +679,10 @@ function iniciarHUD(scene) {
   const evento = `filecomplete-image-${HUD_CONFIG.chave}`;
 
   // Verifica se existe uma imagem utilizável.
+  /**
+   * Verifica se há uma fonte utilizável no cache preparado, na imagem antecipada ou nas
+   * texturas do Phaser.
+   */
   function imagemDisponivel() {
     return (
       HUD_CACHE.size > 0 ||
@@ -633,6 +692,10 @@ function iniciarHUD(scene) {
   }
 
   // Monta imediatamente quando houver imagem.
+  /**
+   * Tenta montar a HUD quando houver imagem e impede novas tentativas após erro ou
+   * encerramento.
+   */
   function montarComSeguranca() {
     if (encerrado || falhou) return;
     if (!imagemDisponivel()) return;
@@ -646,6 +709,9 @@ function iniciarHUD(scene) {
     }
   }
 
+  /**
+   * Registra falha somente quando o arquivo que apresentou erro é a imagem da HUD.
+   */
   function aoFalhar(arquivo) {
     if (arquivo?.key !== HUD_CONFIG.chave) {
       return;
@@ -658,6 +724,10 @@ function iniciarHUD(scene) {
 
   // Carregamento pelo Phaser como alternativa.
   // Só é usado se a imagem antecipada falhar.
+  /**
+   * Inicia o carregamento alternativo pelo Phaser uma única vez quando a imagem antecipada não
+   * está disponível.
+   */
   function carregarPeloPhaser() {
     if (encerrado || falhou || carregamentoPhaserIniciado) {
       return;
@@ -682,6 +752,9 @@ function iniciarHUD(scene) {
   }
 
   // Quando a imagem antecipada terminar de carregar.
+  /**
+   * Monta a HUD quando o carregamento antecipado conclui e a cena ainda está ativa.
+   */
   function aoCarregarAntecipadamente() {
     if (encerrado) return;
 
@@ -690,6 +763,9 @@ function iniciarHUD(scene) {
 
   // Se o navegador não conseguir carregar antecipadamente,
   // o Phaser faz a tentativa normal.
+  /**
+   * Aciona a tentativa de carregamento pelo Phaser após falha da imagem antecipada.
+   */
   function aoErroAntecipado() {
     if (encerrado) return;
 
@@ -700,6 +776,10 @@ function iniciarHUD(scene) {
   // ATUALIZAÇÃO POR QUADRO
   // ===================================================
 
+  /**
+   * Garante a HUD do personagem atual e atualiza posição e preenchimento enquanto o sistema
+   * está ativo.
+   */
   function aCadaQuadro() {
     if (encerrado || falhou) return;
     if (!imagemDisponivel()) return;
@@ -718,6 +798,9 @@ function iniciarHUD(scene) {
   // LIMPEZA
   // ===================================================
 
+  /**
+   * Desconecta eventos de imagem, loader e cena e remove o overlay da HUD uma única vez.
+   */
   function limpar() {
     if (encerrado) return;
 
@@ -810,6 +893,9 @@ function iniciarHUD(scene) {
 // CRIAÇÃO DOS STATUS
 // =====================================================
 
+/**
+ * Inicializa vida, estamina, custos e taxas de regeneração e prepara a HUD.
+ */
 function criarStatusPlayer(scene) {
   // VIDA — VALORES ORIGINAIS.
   scene.vidaMaxima = 100;
@@ -833,6 +919,10 @@ function criarStatusPlayer(scene) {
 // ATUALIZAR VIDA E ESTAMINA
 // =====================================================
 
+/**
+ * Regenera estamina fora do ataque e vida após o intervalo sem dano, convertendo delta de
+ * milissegundos para segundos.
+ */
 function atualizarStatusPlayer(scene, delta) {
   // REGENERAÇÃO DA ESTAMINA.
   if (!scene.atacando && scene.estamina < scene.estaminaMaxima) {
@@ -857,6 +947,10 @@ function atualizarStatusPlayer(scene, delta) {
 // GASTAR ESTAMINA
 // =====================================================
 
+/**
+ * Consome estamina se houver saldo suficiente e atualiza a HUD; informa se o gasto foi
+ * possível.
+ */
 function gastarEstamina(scene, quantidade) {
   if (scene.estamina < quantidade) {
     return false;
@@ -873,6 +967,10 @@ function gastarEstamina(scene, quantidade) {
 // RECEBER DANO
 // =====================================================
 
+/**
+ * Reinicia o tempo sem dano e reduz a vida fora do modo desenvolvedor, com retorno sonoro e
+ * atualização da HUD.
+ */
 function tomarDano(scene, quantidade) {
   const vidaAntes = scene.vida;
 
@@ -899,6 +997,9 @@ function tomarDano(scene, quantidade) {
 // RECUPERAR VIDA
 // =====================================================
 
+/**
+ * Recupera vida sem ultrapassar os limites e redesenha o preenchimento da HUD.
+ */
 function recuperarVida(scene, quantidade) {
   scene.vida = Phaser.Math.Clamp(scene.vida + quantidade, 0, scene.vidaMaxima);
 

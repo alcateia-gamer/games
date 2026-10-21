@@ -1,3 +1,8 @@
+/**
+ * @file Iluminação dos postes da cidade. Os comentários locais detalham as texturas de brilho,
+ * feixe e mancha no chão.
+ */
+
 // Nome da textura usada para o brilho radial da luz do poste.
 // Essa textura é usada tanto no topo da lâmpada quanto na luz do chão.
 const TEXTURA_LUZ_POSTE = "luz-poste-radial";

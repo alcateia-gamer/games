@@ -1,3 +1,8 @@
+/**
+ * @file Escolha de ataques do boss por observação de distância, pressão e movimento do
+ * jogador. Usa previsão de mira e memória de esquiva.
+ */
+
 import {
   ataquePorEstado,
   cooldownRecVida,
@@ -11,6 +16,10 @@ import {
 import { exibirEstadoBoss } from "./BossAnimacoes.js";
 import { iniciarRaioZona } from "./BossRaioZonas.js";
 
+/**
+ * Mede movimento e distância do jogador e atualiza os indicadores usados na pontuação dos
+ * ataques.
+ */
 function observarJogador(boss, player, delta) {
   const ia = boss.iaCombate;
   const distancia = Math.hypot(player.x - boss.x, player.y - boss.y);
@@ -72,6 +81,9 @@ function observarJogador(boss, player, delta) {
   ia.aprendizadoEsquiva *= Math.pow(0.84, delta / 1000);
 }
 
+/**
+ * Prevê a posição futura com limites de deslocamento e correção baseada na esquiva observada.
+ */
 function preverPosicaoJogador(ia, player, horizonte) {
   const correcao =
     ia.ataqueAtual === "tiroLaser" ? ia.aprendizadoEsquiva * 24 : 0;
@@ -95,6 +107,9 @@ function preverPosicaoJogador(ia, player, horizonte) {
   };
 }
 
+/**
+ * Analisa o deslocamento lateral após um disparo para ajustar a memória de esquiva do laser.
+ */
 function observarEsquivaLaser(boss, player) {
   const ia = boss.iaCombate;
   const inicio = ia.posicaoNoDisparo;
@@ -125,6 +140,10 @@ function observarEsquivaLaser(boss, player) {
   ia.posicaoNoDisparo = null;
 }
 
+/**
+ * Atribui uma pontuação ao ataque conforme comportamento do jogador, estado do boss e ataques
+ * recentes.
+ */
 function pontuarAtaque(boss, ataque) {
   const ia = boss.iaCombate;
   let pontos = 0;
@@ -229,6 +248,9 @@ function pontuarAtaque(boss, ataque) {
   return pontos;
 }
 
+/**
+ * Ordena os ataques candidatos e escolhe um estado adequado às condições atuais.
+ */
 function escolherAtaque(boss) {
   const ia = boss.iaCombate;
 
@@ -262,6 +284,10 @@ function escolherAtaque(boss) {
   return ia.distancia > distanciaLonge || !ia.parado ? "tiroLaser" : "raioChao";
 }
 
+/**
+ * Inicializa os controles do ataque escolhido e muda a animação, impedindo ataques
+ * simultâneos.
+ */
 function iniciarAtaque(boss, estado) {
   const ia = boss.iaCombate;
 
@@ -309,6 +335,10 @@ function iniciarAtaque(boss, estado) {
   return true;
 }
 
+/**
+ * Atualiza observação e recargas e inicia uma solicitação ou uma escolha automática quando a
+ * IA pode decidir.
+ */
 function atualizarIABoss(scene, delta = 16.67) {
   const boss = scene.bossFinal;
   const player = scene.player;
@@ -343,6 +373,10 @@ function atualizarIABoss(scene, delta = 16.67) {
   iniciarAtaque(boss, estado);
 }
 
+/**
+ * Valida o nome do ataque e o agenda para a próxima decisão disponível, sem sobrepor um ataque
+ * ativo.
+ */
 function solicitarAtaqueBoss(scene, ataque) {
   const estado = Object.hasOwn(ataquePorEstado, ataque)
     ? ataque

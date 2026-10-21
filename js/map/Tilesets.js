@@ -1,3 +1,8 @@
+/**
+ * @file Relaciona os nomes de tilesets do Tiled às texturas carregadas e prepara recortes
+ * válidos de imagens irregulares.
+ */
+
 // =====================================================
 // CORRIGIR DIMENSÕES DOS TILESETS
 // =====================================================
@@ -15,6 +20,10 @@ const TILESETS_PARA_CORRIGIR = new Set([
 
 const TAMANHO_TILE_CORRECAO = 48;
 
+/**
+ * Cria e reutiliza uma textura com dimensões múltiplas de 48 para os tilesets que precisam
+ * desse ajuste.
+ */
 function obterTexturaTilesetCorrigida(scene, nomeTileset, chaveImagem) {
   if (!TILESETS_PARA_CORRIGIR.has(nomeTileset)) {
     return chaveImagem;
@@ -92,6 +101,10 @@ function obterTexturaTilesetCorrigida(scene, nomeTileset, chaveImagem) {
 // TILESETS DA CIDADE
 // =====================================================
 
+/**
+ * Associa os tilesets da cidade às chaves de imagem e retorna listas e índices para camadas e
+ * objetos.
+ */
 function criarTilesetsCidade(map) {
   const cityShopping = map.addTilesetImage(
     "Tileset_SciFi_CityShopping_Rasak",
@@ -287,6 +300,9 @@ function criarTilesetsCidade(map) {
 // TILESETS DA FÁBRICA - PARTE 2
 // =====================================================
 
+/**
+ * Registra os tilesets da fábrica, usando versões corrigidas das texturas quando necessário.
+ */
 function criarTilesetsFabrica(map, scene) {
   const registrosTilesets = [
     ["A1_Modern_Inside_Factory_Rasak", "factoryInsideA1"],
