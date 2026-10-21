@@ -501,13 +501,14 @@ function atualizarPosicaoHUD(scene) {
 
   overlay.style.top = `${Math.round(posY * dpr) / dpr}px`;
 
-  overlay.style.width = `${larguraCss}px`;
-
-  overlay.style.height = `${alturaCss}px`;
-
   const larguraPx = Math.max(1, Math.round(larguraCss * dpr));
 
   const alturaPx = Math.max(1, Math.round(alturaCss * dpr));
+
+  // Exibe cada pixel do canvas em um pixel físico, evitando uma segunda interpolação CSS.
+  overlay.style.width = `${larguraPx / dpr}px`;
+
+  overlay.style.height = `${alturaPx / dpr}px`;
 
   // Só recria texturas se a resolução mudar.
   if (overlay.width !== larguraPx || overlay.height !== alturaPx) {
@@ -1016,6 +1017,7 @@ function recuperarVida(scene, quantidade) {
 export {
   criarStatusPlayer,
   atualizarStatusPlayer,
+  atualizarPosicaoHUD,
   gastarEstamina,
   tomarDano,
   recuperarVida,

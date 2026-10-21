@@ -36,9 +36,10 @@ O minimapa não altera os tiles, as colisões ou a câmera do jogo.
 
 O atlas fica em cache por recurso de mapa, com no máximo 1024 pixels no maior
 eixo. A janela quadrada mede 86 × 86 pixels, com textura de 172 × 172 pixels
-enviada à GPU e moldura de 1 pixel. A janela é atualizada
-a cada 100 ms quando o personagem se desloca pelo menos 16 pixels; o marcador é
-atualizado a cada frame. Robôs comuns e de serra dentro da janela aparecem como
+enviada à GPU e moldura de 1 pixel. A janela acompanha o personagem a cada frame,
+inclusive em movimentos curtos e no dash. A textura só é reenviada quando a janela
+se desloca; parada ou limitada pelas bordas, apenas os marcadores são atualizados.
+Robôs comuns e de serra dentro da janela aparecem como
 pontos vermelhos com uma seta na direção em que olham. Os marcadores acompanham
 movimento e mudanças de direção mesmo com o jogador parado, e somem ao morrer
 ou sair da janela. Também usam os estados dos robôs remotos no multiplayer.

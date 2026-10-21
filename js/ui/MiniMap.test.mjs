@@ -613,11 +613,41 @@ function enemyRadarFixture(enemies) {
     scene: { player: { active: true, x: 0, y: 0 }, inimigos: enemies },
     geometry: { bounds: { x: -1000, y: -1000, width: 2000, height: 2000 } },
     transform: { scale: 0.12, x: 43, y: 43 },
-    lastX: 0, lastY: 0, nextUpdate: 0, enemyMarkers: graphics, itemMarkers: itemGraphics, marker,
+    lastX: 0, lastY: 0, enemyMarkers: graphics, itemMarkers: itemGraphics, marker,
     drawView() { assert.fail("movimentar os robôs não deve redesenhar o cenário"); },
   });
   return { radar, commands, itemCommands };
 }
+
+test("radar follows small steps and dashes every frame without bouncing the player marker", () => {
+  const { radar } = enemyRadarFixture([]);
+  radar.transform = null;
+  let redraws = 0;
+  radar.drawView = () => { redraws++; };
+  radar.update(0);
+  const center = worldToMiniMap(radar.transform, 0, 0);
+  // Cada passo ocorre antes dos antigos 100 ms; passos curtos também devem mover o mapa.
+  for (const [step, distance] of [2, 2, 2, 650 / 30, -2, -650 / 30].entries()) {
+    const previous = { ...radar.transform };
+    radar.scene.player.x += distance;
+    radar.scene.player.y -= distance;
+    radar.update((step + 1) * 1000 / 30);
+    assert.equal(redraws, step + 2);
+    assert.ok(Math.abs(radar.transform.x - previous.x + distance * previous.scale) < 1e-9);
+    assert.ok(Math.abs(radar.transform.y - previous.y - distance * previous.scale) < 1e-9);
+    const position = worldToMiniMap(radar.transform, radar.scene.player.x, radar.scene.player.y);
+    assert.ok(Math.abs(position.x - center.x) < 1e-9);
+    assert.ok(Math.abs(position.y - center.y) < 1e-9);
+  }
+  radar.update(1000);
+  assert.equal(redraws, 7, "parado não deve reenviar a textura");
+  radar.scene.player.x = radar.scene.player.y = -990;
+  radar.update(1033);
+  assert.equal(redraws, 8, "teleporte deve reposicionar a janela imediatamente");
+  radar.scene.player.x = radar.scene.player.y = -988;
+  radar.update(1066);
+  assert.equal(redraws, 8, "movimento junto à borda não deve reenviar a mesma janela");
+});
 
 test("robot markers show positions and all four look directions", () => {
   const { radar, commands } = enemyRadarFixture([

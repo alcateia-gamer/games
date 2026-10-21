@@ -12,7 +12,6 @@ import { findGeneratorInteraction } from "../interactions/FactoryGenerator.js";
 
 const WIDTH = MINI_MAP_SIZE, HEIGHT = MINI_MAP_SIZE;
 const VIEW_X = 2, VIEW_Y = 2, VIEW_WIDTH = WIDTH - 4, VIEW_HEIGHT = HEIGHT - 4;
-const UPDATE_INTERVAL = 100;
 const ENEMY_MARKER_MARGIN = 7;
 const SEARCH_POINT_RANGE = 32;
 const LOOK_DIRECTIONS = {
@@ -84,14 +83,13 @@ export default class MiniMapManager {
     this.root.add([frame, this.image, this.enemyMarkers, this.itemMarkers, title, this.marker]);
     // Nenhum elemento é interativo: os toques continuam chegando aos controles.
     this.lastX = NaN; this.lastY = NaN;
-    this.nextUpdate = 0;
     /**
      * Destrói os recursos locais do minimapa ao encerrar a cena.
      */
     this.onShutdown = () => this.destroy();
     scene.events.once(Phaser.Scenes.Events.SHUTDOWN, this.onShutdown);
     this.layout(scene.cameras.main);
-    this.update(0);
+    this.update();
   }
 
   /**
@@ -107,9 +105,9 @@ export default class MiniMapManager {
   }
 
   /**
-   * Acompanha o personagem e atualiza a janela do mapa em intervalos controlados.
+   * Acompanha o personagem a cada quadro e redesenha apenas quando a janela se desloca.
    */
-  update(time = 0) {
+  update() {
     if (this.destroyed || !this.geometry) return;
     const player = this.scene.player;
     if (!player?.active) {
@@ -126,12 +124,16 @@ export default class MiniMapManager {
       return;
     }
     const { bounds } = this.geometry;
-    const moved = !this.transform || Math.hypot(x - this.lastX, y - this.lastY) >= 16;
-    if (moved && time >= this.nextUpdate) {
-      this.nextUpdate = time + UPDATE_INTERVAL;
+    const moved = !this.transform || x !== this.lastX || y !== this.lastY;
+    if (moved) {
       this.lastX = x; this.lastY = y;
-      this.transform = createMapTransform(bounds, VIEW_WIDTH, VIEW_HEIGHT, x, y);
-      this.drawView();
+      const transform = createMapTransform(bounds, VIEW_WIDTH, VIEW_HEIGHT, x, y);
+      // Nas bordas ou em mapas pequenos, só os marcadores precisam se mover.
+      if (!this.transform || transform.x !== this.transform.x ||
+          transform.y !== this.transform.y || transform.scale !== this.transform.scale) {
+        this.transform = transform;
+        this.drawView();
+      }
     }
     if (!this.transform) return;
     this.updateEnemyMarkers();

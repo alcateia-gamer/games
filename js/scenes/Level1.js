@@ -291,7 +291,8 @@ class Level1 extends Phaser.Scene {
     // CÂMERA
     // =====================================================
 
-    this.cameras.main.startFollow(this.player, true);
+    // O arredondamento causa saltos de 1 px no HUD fixo durante o movimento.
+    this.cameras.main.startFollow(this.player, false);
 
     this.cameras.main.setZoom(1);
 

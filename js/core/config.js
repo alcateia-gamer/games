@@ -7,8 +7,8 @@ var config = {
   // WebGL permite os shaders de clima e os efeitos gráficos usados pelo jogo.
   type: Phaser.WEBGL,
   // Resolução lógica: o modo FIT adapta esse espaço ao tamanho real da janela.
-  width: 800,
-  height: 450,
+  width: 850,
+  height: 405,
   // Meta de quadros por segundo e escolha do agendador de atualização.
   fps: {
     target: 30,

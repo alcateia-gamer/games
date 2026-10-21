@@ -70,6 +70,11 @@ function criarCamadasCidade(map, tilesets, depths) {
 
   camadaCercaSpawn?.setDepth(14);
 
+  // Alinha os tiles nativos aos pixels sem arredondar o HUD junto com a câmera.
+  for (const layer of map.layers) {
+    layer.tilemapLayer?.setVertexRoundMode("safe");
+  }
+
   return {
     camadaCercas,
     camadaCercaSpawn,
@@ -149,6 +154,10 @@ function criarCamadasFabrica(map, tilesets, scene, registrosTilesets) {
     camadaBordaAlta,
     camadaBordaCurvas,
   ].filter(Boolean);
+
+  for (const layer of camadasTiles) {
+    layer.setVertexRoundMode("safe");
+  }
 
   if (scene.DEBUG_MAP) {
     console.log(

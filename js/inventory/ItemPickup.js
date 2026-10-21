@@ -52,6 +52,34 @@ function getItemPosition(object) {
 }
 
 /**
+ * Pré-filtra texturas muito reduzidas para evitar cintilação durante o movimento da câmera.
+ * Preserva o frame inteiro, inclusive margens transparentes, e não modifica a imagem original.
+ */
+function preparePickupTexture(scene, item, displaySize) {
+  const original = { key: item.image.key, frame: item.image.frame };
+  const frame = scene.textures.getFrame(original.key, original.frame);
+  // Duas amostras por pixel exibido preservam detalhes sem a redução extrema na GPU.
+  const size = Math.ceil(displaySize * 2);
+  if (frame.cutWidth <= size && frame.cutHeight <= size) return original;
+
+  const key = `pickup-filtered:${original.key}:${frame.name}:${size}`;
+  if (!scene.textures.exists(key)) {
+    const texture = scene.textures.createCanvas(key, size, size);
+    const context = texture.getContext();
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = "high";
+    context.drawImage(
+      frame.source.image,
+      frame.cutX, frame.cutY, frame.cutWidth, frame.cutHeight,
+      0, 0, size, size,
+    );
+    texture.refresh();
+    texture.setFilter(Phaser.Textures.FilterMode.LINEAR);
+  }
+  return { key, frame: undefined };
+}
+
+/**
  * Cria o botão de mão fixo na tela, inicialmente oculto.
  */
 function createPickupButton(scene) {
@@ -169,8 +197,9 @@ function criarSistemaInventario(scene) {
 
     const position = getItemPosition(object);
     const displaySize = itemId === "gasolina" ? 36.4 : 28;
+    const texture = preparePickupTexture(scene, item, displaySize);
     const image = scene.add
-      .image(position.x, position.y, item.image.key, item.image.frame)
+      .image(position.x, position.y, texture.key, texture.frame)
       .setDisplaySize(displaySize, displaySize)
       .setDepth(
         itemId === "card"
@@ -336,4 +365,4 @@ function atualizarSistemaInventario(scene) {
   scene.atualizarColetaItens?.();
 }
 
-export { atualizarSistemaInventario, criarSistemaInventario };
+export { atualizarSistemaInventario, criarSistemaInventario, preparePickupTexture };

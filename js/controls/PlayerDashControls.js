@@ -12,7 +12,7 @@ import { gastarEstamina } from "../player/PlayerStatus.js";
 const CONFIG_DASH = {
   velocidade: 650,
   duracao: 180,
-  recarga: 1500,
+  recarga: 750,
   custoEstamina: 25,
 
   // BOTÃO

@@ -279,7 +279,8 @@ class Level1Parte2 extends Phaser.Scene {
     // Compensa o zoom sem modificar o visual.
     this.configurarCoordenadasFixas();
 
-    this.cameras.main.startFollow(this.player, true);
+    // O arredondamento causa saltos de 1 px no HUD fixo durante o movimento.
+    this.cameras.main.startFollow(this.player, false);
 
     this.cameras.main.setZoom(1);
 
