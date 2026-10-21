@@ -184,20 +184,29 @@ function acertarPlayerComLaser(scene, laser) {
     return;
   }
 
+  // Preserva a direção de chegada antes de destruir o corpo do projétil.
+  const velocidade = laser.body?.velocity;
+  const atacante =
+    velocidade && (velocidade.x !== 0 || velocidade.y !== 0)
+      ? {
+          x: scene.player.x - velocidade.x,
+          y: scene.player.y - velocidade.y,
+        }
+      : { x: laser.x, y: laser.y };
   laser.destroy();
 
   const danoLaser =
     Array.isArray(scene.inimigos) && scene.inimigos.length > 0
       ? scene.inimigos[0].danoLaser
       : (scene.inimigoTeste?.danoLaser ?? 5);
-  causarDanoPlayer(scene, danoLaser);
+  causarDanoPlayer(scene, danoLaser, atacante);
 }
 
 /**
  * Aplica dano uma vez por janela de invulnerabilidade, mostra o efeito vermelho e abre a tela
  * de morte se a vida zerou.
  */
-function causarDanoPlayer(scene, dano) {
+function causarDanoPlayer(scene, dano, atacante = null) {
   if (
     scene.morteEmAndamento ||
     !scene.player?.active ||
@@ -207,7 +216,7 @@ function causarDanoPlayer(scene, dano) {
   }
 
   scene.player.invulneravel = true;
-  tomarDano(scene, dano);
+  tomarDano(scene, dano, atacante);
 
   // Efeito vermelho mais intenso sem esconder a textura.
   scene.player.setTint(COR_DANO_PLAYER);

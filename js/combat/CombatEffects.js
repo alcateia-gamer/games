@@ -130,8 +130,8 @@ function applyCombatShake(
 }
 
 /**
- * Empurra o inimigo para longe do atacante e marca o intervalo em que a IA deve preservar esse
- * impulso.
+ * Empurra o alvo para longe do atacante e marca o intervalo em que o movimento deve
+ * preservar esse impulso.
  */
 function applyKnockback(
   scene,
@@ -152,6 +152,23 @@ function applyKnockback(
   enemy.body.setVelocity(Math.cos(angle) * force, Math.sin(angle) * force);
   enemy.combatKnockbackUntil = scene.time.now + COMBAT_FEEL.knockbackDuration;
   debugCombat("KNOCKBACK", force);
+}
+
+/**
+ * Aplica ao jogador o mesmo tremor, pausa breve e recuo dos impactos nos inimigos.
+ */
+function playPlayerHitEffects(scene, attacker, damage) {
+  const player = scene.player;
+  if (!isSoloMode(scene) || !player?.active) {
+    return;
+  }
+
+  applyKnockback(scene, attacker, player);
+  if (player.combatKnockbackUntil > scene.time.now && scene.estadoDash) {
+    scene.estadoDash.ativo = false;
+  }
+  applyHitStop(scene);
+  applyCombatShake(scene, damage);
 }
 
 /**
@@ -234,6 +251,7 @@ export {
   COMBAT_FEEL,
   isSoloMode,
   playHitEffects,
+  playPlayerHitEffects,
   playHitFlash,
   spawnHitParticles,
   applyHitStop,

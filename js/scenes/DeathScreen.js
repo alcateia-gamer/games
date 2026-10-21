@@ -1,7 +1,60 @@
 /**
- * @file Sequência visual de morte: bloqueia o jogo, mostra falhas de sistema e recarrega a
- * página ao concluir.
+ * @file Sequência visual de morte: bloqueia o jogo, mostra falhas de sistema e oferece
+ * um botão para jogar novamente após a animação.
  */
+
+/**
+ * Substitui os erros animados pela tela de derrota e aguarda o clique para voltar ao menu.
+ */
+function mostrarOpcaoJogarNovamente(scene, camada) {
+  for (const objeto of camada.list) {
+    scene.tweens.killTweensOf(objeto);
+  }
+  camada.removeAll(true);
+
+  const { width, height } = scene.cameras.main;
+  const centroX = width / 2;
+  const centroY = height / 2;
+
+  const fundo = scene.add.rectangle(centroX, centroY, width, height, 0x000000, 1)
+    .setScrollFactor(0)
+    .setInteractive();
+  const titulo = scene.add.text(centroX, centroY - 70, "VOCÊ MORREU", {
+    fontFamily: "monospace",
+    fontSize: "38px",
+    fontStyle: "bold",
+    color: "#dc143c",
+    shadow: { blur: 18, color: "#8b0000", fill: true },
+  }).setOrigin(0.5);
+  const mensagem = scene.add.text(centroX, centroY - 10, "Tente novamente.", {
+    fontFamily: "monospace",
+    fontSize: "18px",
+    color: "#b5b5b5",
+  }).setOrigin(0.5);
+  const botao = scene.add.rectangle(centroX, centroY + 65, 280, 58, 0x350812, 1)
+    // O hit test usa o scroll do próprio botão, mesmo dentro de um container fixo.
+    .setScrollFactor(0)
+    .setStrokeStyle(2, 0xdc143c)
+    .setInteractive({ useHandCursor: true });
+  const textoBotao = scene.add.text(centroX, centroY + 65, "Jogar novamente", {
+    fontFamily: "monospace",
+    fontSize: "22px",
+    fontStyle: "bold",
+    color: "#ffffff",
+  }).setOrigin(0.5);
+
+  camada.add([fundo, titulo, mensagem, botao, textoBotao]);
+
+  botao.on("pointerover", () => botao.setFillStyle(0x73132a));
+  botao.on("pointerout", () => botao.setFillStyle(0x350812));
+  botao.once("pointerdown", () => {
+    botao.disableInteractive();
+    if (scene.multiplayer) {
+      scene.multiplayerManager?.leaveRoom();
+    }
+    scene.scene.start("Start", { abrirMenu: true });
+  });
+}
 
 /**
  * Inicia a morte uma única vez, para sons e física e monta o overlay com a sequência de falha.
@@ -12,7 +65,9 @@ function mostrarTelaMorte(scene) {
   }
 
   scene.morteEmAndamento = true;
+  scene.movimentoBloqueado = true;
   scene.sound?.stopAll();
+  scene.limparPainelStatusFixo?.();
   scene.player.invulneravel = true;
   scene.player.setVelocity(0, 0);
   scene.physics.pause();
@@ -65,7 +120,7 @@ function mostrarTelaMorte(scene) {
     camera.height,
     0x000000,
     1,
-  );
+  ).setScrollFactor(0).setInteractive();
 
   camada.add(telaPreta);
 
@@ -183,9 +238,7 @@ function mostrarTelaMorte(scene) {
     scene.time.delayedCall(6200, () => {
       poluicao.remove();
 
-      scene.events.off(Phaser.Scenes.Events.PRE_RENDER, atualizarTelaFixa);
-
-      window.location.reload();
+      mostrarOpcaoJogarNovamente(scene, camada);
     });
   });
 }

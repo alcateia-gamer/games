@@ -49,6 +49,12 @@ function atualizarMovimento(scene) {
     return;
   }
 
+  // Preserva o impulso de dano antes de consultar o dash ou a entrada normal.
+  if (!scene.multiplayer && scene.player.combatKnockbackUntil > scene.time.now) {
+    atualizarSomCorrida(scene, false);
+    return;
+  }
+
   // O dash controla a velocidade durante seu impulso.
   // Evita que o movimento normal cancele o dash.
   if (atualizarDash(scene)) {

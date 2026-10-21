@@ -70,7 +70,7 @@ export function causarDanoJogador(boss, quantidade) {
 
   player.invulneravel = true;
 
-  tomarDano(scene, quantidade);
+  tomarDano(scene, quantidade, boss);
 
   // Vermelho mais intenso, sem esconder os detalhes.
   player.setTint(COR_DANO);

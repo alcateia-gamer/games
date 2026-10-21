@@ -595,7 +595,7 @@ function atacarSerra(scene, robo, alvo, agora, d) {
     tocarAnimacaoAtaqueInimigo(robo);
 
     if (!scene.multiplayer || alvo === scene.player) {
-      causarDanoPlayer(scene, robo.danoContato);
+      causarDanoPlayer(scene, robo.danoContato, robo);
     } else if (alvo.id && scene.isMultiplayerHost) {
       scene.multiplayerManager?.publishPlayerDamage(alvo.id, robo.danoContato);
     }

@@ -151,6 +151,16 @@ function atualizarDepthPlayer(scene) {
  * Cria sprite, colisões e área de dano e restaura caminhada e estados ao terminar ataques.
  */
 function criarPlayer(scene) {
+  // As cenas são reutilizadas ao jogar novamente pelo menu.
+  scene.movimentoBloqueado = false;
+  scene.atacando = false;
+  scene.ariaAtaqueCarregando = false;
+  scene.attackPhase = "normal";
+  scene.attackBufferedUntil = 0;
+  scene.combatHitStopRemaining = 0;
+  scene.direcaoAtual = "down";
+  scene.direcaoAtaque = null;
+
   // =====================================================
   // PERSONAGEM
   // =====================================================
@@ -778,6 +788,8 @@ function soltarAtaque(scene) {
  * estados de ataque.
  */
 function respawnPlayer(scene) {
+  scene.player.combatKnockbackUntil = 0;
+
   // =====================================================
   // PARA MOVIMENTO
   // =====================================================

@@ -333,6 +333,11 @@ function iniciarDash(scene) {
 
   const agora = scene.time.now;
 
+  // PRESERVA O RECUO DE DANO
+  if (!scene.multiplayer && player.combatKnockbackUntil > agora) {
+    return false;
+  }
+
   // IMPEDE DASH DUPLO
   if (estado.ativo) {
     return false;

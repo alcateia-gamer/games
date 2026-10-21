@@ -3,6 +3,8 @@
  * desenha a interface em canvas DOM na resolução da tela.
  */
 
+import { playPlayerHitEffects } from "../combat/CombatEffects.js";
+
 // =====================================================
 // NULLBORNS — HUD NÍTIDA COM CARREGAMENTO ANTECIPADO
 // =====================================================
@@ -968,10 +970,10 @@ function gastarEstamina(scene, quantidade) {
 // =====================================================
 
 /**
- * Reinicia o tempo sem dano e reduz a vida fora do modo desenvolvedor, com retorno sonoro e
- * atualização da HUD.
+ * Reinicia o tempo sem dano e reduz a vida fora do modo desenvolvedor, com som, impacto
+ * orientado pelo atacante e atualização da HUD.
  */
-function tomarDano(scene, quantidade) {
+function tomarDano(scene, quantidade, atacante = null) {
   const vidaAntes = scene.vida;
 
   scene.tempoSemDano = 0;
@@ -988,6 +990,7 @@ function tomarDano(scene, quantidade) {
 
   if ((scene.developerMode && quantidade > 0) || scene.vida < vidaAntes) {
     tocarSomDanoPlayer(scene);
+    playPlayerHitEffects(scene, atacante, quantidade);
   }
 
   atualizarBarrasHUD(scene);
