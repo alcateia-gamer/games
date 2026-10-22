@@ -68,12 +68,33 @@ function distancia(a, b) {
  * Resolve o jogador remoto selecionado como alvo ou usa o jogador local quando não há alvo
  * remoto.
  */
+
 function obterAlvo(scene, robo) {
   const remoto = scene.multiplayerManager?.room?.players?.find(
     (p) => p.id === robo.alvoPlayerId,
   );
 
-  return remoto ? { ...remoto, active: true } : scene.player;
+  // Manter seleção original no multiplayer.
+  if (remoto) {
+    return { ...remoto, active: true };
+  }
+
+  // HOLOGRAMA DA ARIA
+  const holograma = scene.especialHolograma;
+
+  if (!scene.multiplayer && holograma?.active && robo?.active) {
+    const distanciaHolograma = Math.hypot(
+      holograma.x - robo.x,
+      holograma.y - robo.y,
+    );
+
+    // Precisa estar próximo e visível.
+    if (distanciaHolograma <= 420 && linhaLivre(scene, robo, holograma)) {
+      return holograma;
+    }
+  }
+
+  return scene.player;
 }
 
 /**
@@ -646,13 +667,26 @@ function atacarSerra(scene, robo, alvo, agora, d) {
   if (agora >= robo.ultimoAtaque + robo.tempoEntreAtaques) {
     robo.ultimoAtaque = agora;
 
-    tocarAnimacaoAtaqueInimigo(robo);
+    
+tocarAnimacaoAtaqueInimigo(robo);
 
-    if (!scene.multiplayer || alvo === scene.player) {
-      causarDanoPlayer(scene, robo.danoContato, robo);
-    } else if (alvo.id && scene.isMultiplayerHost) {
-      scene.multiplayerManager?.publishPlayerDamage(alvo.id, robo.danoContato);
-    }
+// ARIA - O holograma recebe o golpe.
+if (alvo.especialHolograma) {
+  scene.acertarHologramaEspecial?.(robo);
+  return true;
+}
+
+// KAI - Parry de ataques físicos.
+if (alvo === scene.player && scene.tentarParryFisicoEspecial?.(robo)) {
+  return true;
+}
+
+// COMPORTAMENTO ORIGINAL
+if (!scene.multiplayer || alvo === scene.player) {
+  causarDanoPlayer(scene, robo.danoContato, robo);
+} else if (alvo.id && scene.isMultiplayerHost) {
+  scene.multiplayerManager?.publishPlayerDamage(alvo.id, robo.danoContato);
+}
   }
 
   return true;
@@ -844,6 +878,21 @@ function atualizarIAInimigo(scene, time, robo = scene.inimigoTeste) {
     return;
   }
 
+  // =====================================================
+  // ATORDOAMENTO E EMPURRÃO DOS ESPECIAIS
+  // =====================================================
+
+  if (time < (robo.especialAtordoadoAte || 0)) {
+    // Preservar o impulso inicial da onda de choque.
+    if (time >= (robo.especialEmpurraoAte || 0)) {
+      robo.setVelocity(0, 0);
+    }
+
+    // Não patrulhar, perseguir ou atacar enquanto
+    // estiver atordoado.
+    return;
+  }
+
   const alvo = obterAlvo(scene, robo);
 
   if (
@@ -875,7 +924,12 @@ function atualizarIAInimigo(scene, time, robo = scene.inimigoTeste) {
   // ECONOMIA DE PROCESSAMENTO
   // ============================================
 
-  if (d > IA.distanciaSono && robo.iaEstado === "patrulha" && !robo.foiFerido && !robo.alerta) {
+  if (
+    d > IA.distanciaSono &&
+    robo.iaEstado === "patrulha" &&
+    !robo.foiFerido &&
+    !robo.alerta
+  ) {
     if (time < (robo.iaAcordarEm || 0)) {
       return;
     }
@@ -983,7 +1037,8 @@ function atualizarIAInimigo(scene, time, robo = scene.inimigoTeste) {
     if (chegou && robo.iaBuscaDesde == null) robo.iaBuscaDesde = time;
 
     if (
-      (robo.iaBuscaDesde != null && time - robo.iaBuscaDesde >= IA.investigarMs) ||
+      (robo.iaBuscaDesde != null &&
+        time - robo.iaBuscaDesde >= IA.investigarMs) ||
       time - robo.iaDesde >= IA.investigarDeslocamentoMaxMs + IA.investigarMs
     ) {
       mudarEstado(robo, "retorno", time);
@@ -999,15 +1054,7 @@ function atualizarIAInimigo(scene, time, robo = scene.inimigoTeste) {
       varrerArea(robo, time);
       parar(scene, robo, false, d);
     } else {
-      irAte(
-        scene,
-        robo,
-        pista,
-        time,
-        robo.velocidade * 0.65,
-        false,
-        d,
-      );
+      irAte(scene, robo, pista, time, robo.velocidade * 0.65, false, d);
     }
 
     return;

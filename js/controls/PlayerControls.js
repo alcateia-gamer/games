@@ -1,6 +1,6 @@
 /**
- * @file Integra os controles de entrada,
- * movimento, ataque, dash e especial.
+ * Controles do jogador:
+ * movimento, ataque, dash e habilidades especiais.
  */
 
 import { criarControlesInput } from "./PlayerInput.js";
@@ -13,8 +13,13 @@ import { criarControlesDash } from "./PlayerDashControls.js";
 
 import { criarControlesEspecial } from "./PlayerSpecialControls.js";
 
+import {
+  criarSistemaEspeciais,
+  atualizarSistemaEspeciais,
+} from "../combat/PlayerSpecialAbilities.js";
+
 // =====================================================
-// CRIAR TODOS OS CONTROLES
+// CRIAR CONTROLES
 // =====================================================
 
 function criarControles(scene) {
@@ -24,23 +29,26 @@ function criarControles(scene) {
 
   criarControlesAtaque(scene);
 
-  // Sandevistan original
+  // Sandevistan original.
   criarControlesDash(scene);
 
-  // Novo botão de ataque especial
+  // Botão especial original.
   criarControlesEspecial(scene);
+
+  // Mecânicas exclusivas.
+  criarSistemaEspeciais(scene);
 }
 
 // =====================================================
-// ATUALIZAR CONTROLES
+// UPDATE
 // =====================================================
 
 function atualizarControles(scene) {
   atualizarMovimento(scene);
-}
 
-// =====================================================
-// EXPORTAÇÕES
-// =====================================================
+  // Atualizar habilidades, projéteis refletidos
+  // e efeitos especiais ativos.
+  atualizarSistemaEspeciais(scene);
+}
 
 export { criarControles, atualizarControles };

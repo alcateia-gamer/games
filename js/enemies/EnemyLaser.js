@@ -63,9 +63,17 @@ function dispararLaser(scene, inimigo = scene.inimigoTeste) {
   const laserX = inimigo.x + Math.cos(angulo) * distanciaSaida + offsetX * 0.5;
   const laserY = inimigo.y + Math.sin(angulo) * distanciaSaida + offsetY;
 
-  const laser = scene.add.circle(laserX, laserY, 4, 0xff0000, 1);
-  laser.setDepth(55);
-  laser.setStrokeStyle(2, 0xff8888, 1);
+  
+const laser = scene.add.circle(laserX, laserY, 4, 0xff0000, 1);
+
+laser.setDepth(55);
+laser.setStrokeStyle(2, 0xff8888, 1);
+
+// Identificar o projétil e seu robô de origem.
+laser.especialLaserInimigo = true;
+laser.especialAtirador = inimigo;
+laser.especialRefletido = false;
+laser.danoEspecial = 0;
 
   scene.physics.add.existing(laser);
   laser.body.setAllowGravity(false);
@@ -118,31 +126,50 @@ function verificarLasersNoMapa(scene) {
     return;
   }
 
-  for (const laser of lasers) {
-    if (!laser || !laser.active) {
+  
+for (const laser of lasers) {
+  if (!laser || !laser.active) {
+    continue;
+  }
+
+  // Laser refletido não causa dano ao jogador.
+  // O sistema especial verifica colisão com robôs.
+  if (laser.especialRefletido) {
+    continue;
+  }
+
+  // Kai pode bloquear ou refletir o laser.
+  // Nyx pode destruir o projétil.
+  if (scene.tentarInterceptarLaserEspecial?.(laser)) {
+    continue;
+  }
+
+  // Holograma da Aria pode receber o disparo.
+  if (scene.acertarHologramaEspecial?.(laser)) {
+    continue;
+  }
+
+  // Verificação original de dano ao jogador.
+  const boundsLaser = laser.getBounds();
+
+  for (const bloco of blocos) {
+    if (!bloco || !bloco.body) {
       continue;
     }
 
-    const boundsLaser = laser.getBounds();
+    const rectBloco = new Phaser.Geom.Rectangle(
+      bloco.body.x,
+      bloco.body.y,
+      bloco.body.width,
+      bloco.body.height,
+    );
 
-    for (const bloco of blocos) {
-      if (!bloco || !bloco.body) {
-        continue;
-      }
-
-      const rectBloco = new Phaser.Geom.Rectangle(
-        bloco.body.x,
-        bloco.body.y,
-        bloco.body.width,
-        bloco.body.height,
-      );
-
-      if (Phaser.Geom.Intersects.RectangleToRectangle(rectBloco, boundsLaser)) {
-        laser.destroy();
-        break;
-      }
+    if (Phaser.Geom.Intersects.RectangleToRectangle(rectBloco, boundsLaser)) {
+      laser.destroy();
+      break;
     }
   }
+}
 }
 
 /**

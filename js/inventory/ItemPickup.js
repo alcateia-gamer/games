@@ -17,7 +17,7 @@ const DEFAULT_PICKUP_RANGE = 64;
 const PICKUP_BUTTON_DEPTH = 230;
 const CONFIG_BOTAO_COLETA = {
   tamanho: 60,
-  distanciaXBotao: 0,
+  distanciaXBotao: -10,
   distanciaYBotao: 90,
 };
 
