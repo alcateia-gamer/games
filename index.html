@@ -20,7 +20,9 @@
 
   <body>
     <!-- O Phaser cria seu canvas neste elemento, conforme parent em js/core/config.js. -->
-    <div id="game-container"></div>
+    <div id="game-container">
+      <button id="start-game" type="button">JOGAR</button>
+    </div>
 
     <!-- PHASER -->
     <script src="./js/libs/phaser.min.js"></script>
@@ -29,6 +31,6 @@
     <script src="https://unpkg.com/mqtt@5.10.4/dist/mqtt.min.js"></script>
 
     <!-- Este módulo registra as cenas, compartilha a conexão de rede e inicia a abertura. -->
-    <script type="module" src="./js/core/game.js"></script>
+    <script type="module" src="./js/core/game.js?v=gesture-boot-1"></script>
   </body>
 </html>

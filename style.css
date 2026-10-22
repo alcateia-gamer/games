@@ -27,6 +27,33 @@ body {
   user-select: none;
 }
 
+/* O primeiro clique libera o áudio e inicia o Phaser. */
+#start-game {
+  /* Mesma proporção do Phaser FIT para a resolução lógica de 850×405. */
+  --pixel-jogo: min(calc(100vw / 850), calc(100vh / 405));
+  --pixel-jogo: min(calc(100vw / 850), calc(100dvh / 405));
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  box-sizing: border-box;
+  width: calc(180 * var(--pixel-jogo));
+  height: calc(42 * var(--pixel-jogo));
+  padding: 0;
+  border: calc(2 * var(--pixel-jogo)) solid #42ff84;
+  background: #062b16;
+  color: #9dffb9;
+  font: bold calc(17 * var(--pixel-jogo)) monospace;
+  text-shadow: 0 0 calc(8 * var(--pixel-jogo)) #00ff66;
+  cursor: pointer;
+}
+
+#start-game:hover,
+#start-game:focus-visible {
+  background: #0b5429;
+  color: #e4ffeb;
+}
+
 /* Remove o espaço de linha do canvas e entrega os gestos de toque ao jogo. */
 #game-container canvas {
   display: block;

@@ -55,8 +55,13 @@ class Game extends Phaser.Game {
   /**
    * Cria o jogo, prepara o desbloqueio de áudio, registra as cenas e abre a tela inicial.
    */
-  constructor() {
-    super(config);
+  constructor(jogoRapido = false) {
+    // O boot interno do Phaser pode ser adiado; cria o contexto ainda durante o clique.
+    const ContextoAudio = window.AudioContext || window.webkitAudioContext;
+    const contextoAudio = ContextoAudio ? new ContextoAudio() : null;
+    super(contextoAudio
+      ? { ...config, audio: { ...config.audio, context: contextoAudio } }
+      : config);
 
     /**
      * Tenta liberar o áudio após a primeira interação do usuário com a página.
@@ -109,14 +114,29 @@ class Game extends Phaser.Game {
     this.scene.add("MultiplayerMenu", MultiplayerMenu);
     this.scene.add("MultiplayerLobby", MultiplayerLobby);
 
-    this.scene.start("Start");
+    this.scene.start("Start", { iniciarAbertura: true, jogoRapido });
   }
 }
 
 /**
- * Instancia o jogo quando a página termina de carregar e conecta os ajustes de viewport.
+ * Cria o contexto de áudio dentro de um gesto do usuário, respeitando o bloqueio de autoplay.
  */
-window.onload = () => {
-  const game = new Game();
+const botaoJogar = document.getElementById("start-game");
+let jogoIniciado = false;
+
+function iniciarJogo(jogoRapido = false) {
+  if (jogoIniciado) return;
+  jogoIniciado = true;
+  const game = new Game(jogoRapido);
+  botaoJogar.remove();
+  window.removeEventListener("keydown", iniciarComAtalho);
   registrarAtualizacaoDeViewport(game);
-};
+}
+
+function iniciarComAtalho(event) {
+  if (event.repeat || event.ctrlKey || event.altKey || event.metaKey) return;
+  if (event.key.toLowerCase() === "k") iniciarJogo(true);
+}
+
+botaoJogar.addEventListener("click", () => iniciarJogo(), { once: true });
+window.addEventListener("keydown", iniciarComAtalho);

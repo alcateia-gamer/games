@@ -117,6 +117,17 @@ class Start extends Phaser.Scene {
       return;
     }
 
+    if (this.scene.settings.data?.jogoRapido) {
+      this.startSoloGame();
+      return;
+    }
+
+    if (this.scene.settings.data?.iniciarAbertura) {
+      this.sequenceStarted = true;
+      this.beginRain();
+      return;
+    }
+
     this.createStartButton();
   }
 
