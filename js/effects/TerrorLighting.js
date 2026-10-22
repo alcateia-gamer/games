@@ -3,8 +3,9 @@
  * branca no chão. A sombra residual limita a exposição mesmo entre fontes sobrepostas.
  */
 
-import FactoryLighting, { ESCURIDAO_AMBIENTE_FABRICA, MULTIPLICADOR_ALCANCE_FABRICA } from "./FactoryLighting.js";
-export { intensidadeLuzPartida } from "./FactoryLighting.js";
+import FactoryLighting, { ESCURIDAO_AMBIENTE_FABRICA, MULTIPLICADOR_ALCANCE_FABRICA, QUEDAS_LUZ_FABRICA } from "./FactoryLighting.js";
+import { criarSomLuzFabrica } from "../sounds/luzFabrica.js";
+export { intensidadeLuzPartida, QUEDAS_LUZ_FABRICA } from "./FactoryLighting.js";
 
 const TEXTURA_ESCURIDAO_PARTE2 = "level1-parte2-escuridao";
 const DEPTH_ESCURIDAO = 50;
@@ -98,6 +99,7 @@ function criarIluminacaoTerror(scene) {
   let encerrada = false;
   const iluminacao = new FactoryLighting(scene.map);
   scene.iluminacaoFabrica = iluminacao;
+  const somPartida = criarSomLuzFabrica(scene, QUEDAS_LUZ_FABRICA);
 
   if (scene.textures.exists(TEXTURA_ESCURIDAO_PARTE2)) {
     scene.textures.remove(TEXTURA_ESCURIDAO_PARTE2);
@@ -121,6 +123,7 @@ function criarIluminacaoTerror(scene) {
     .setOrigin(0).setScrollFactor(0).setDepth(DEPTH_ESCURIDAO);
 
   const definirIluminacaoFabrica = (ligada, obterProgresso = null) => {
+    somPartida.stop();
     iluminacao.definirEnergia(ligada, obterProgresso, scene.time.now);
     invalidada = true;
   };
@@ -154,6 +157,9 @@ function criarIluminacaoTerror(scene) {
     }
     posicionarOverlay();
     const fontes = iluminacao.atualizar(scene.time.now, camera);
+    // Usa a mesma leitura do relógio do gerador que move as luzes, inclusive no último quadro.
+    // Piscadas aleatórias, após a estabilização, não acionam este som.
+    if (iluminacao.progressoPartida !== null) somPartida.update(iluminacao.progressoPartida);
     const m = camera.matrix;
     // Compara valores em memória reutilizada, sem criar arrays ou strings a cada frame.
     if (!invalidada && ultimoQuadro.width === width && ultimoQuadro.height === height &&
@@ -214,6 +220,7 @@ function criarIluminacaoTerror(scene) {
     renderer.off(Phaser.Renderer.Events.RENDER, atualizarIluminacao);
     if (scene.definirIluminacaoFabrica === definirIluminacaoFabrica) scene.definirIluminacaoFabrica = null;
     if (scene.iluminacaoFabrica === iluminacao) scene.iluminacaoFabrica = null;
+    somPartida.destroy();
     iluminacao.destroy();
     overlay.destroy();
     if (scene.textures.exists(TEXTURA_ESCURIDAO_PARTE2)) scene.textures.remove(TEXTURA_ESCURIDAO_PARTE2);

@@ -180,7 +180,7 @@ class ContextoAmostrado {
   }
 }
 
-function cenaComMascara(t, objects = [ponto()], powered = false) {
+function cenaComMascara(t, objects = [ponto()], powered = false, audio = {}) {
   const oldPhaser = globalThis.Phaser;
   const oldDocument = globalThis.document;
   const Vector2 = load(26099);
@@ -198,6 +198,7 @@ function cenaComMascara(t, objects = [ponto()], powered = false) {
   const textures = new Map();
   const images = [];
   const scene = {
+    ...audio,
     map: mapa(...objects), time: { now: 0 }, direcaoAtual: "right", luzFabricaAcesa: powered,
     cameras: { main: criarCamera() }, events: new EventEmitter(),
     game: { renderer: new EventEmitter() },
@@ -617,4 +618,53 @@ test("culling uses the configured world radius and current camera matrix at nega
   assert.equal(lights.partida, null);
   assert.equal(lights.fontesVisiveis.length, 0);
   assert.equal(lights.lampadas.length, 0);
+});
+
+
+test("som acompanha apenas a partida do gerador, sem tocar nas falhas aleatórias ou na revisita", t => {
+  const reproducoes = [];
+  const som = {
+    totalDuration: 0.78, isPlaying: false, destruido: false,
+    addMarker() {}, setVolume() {},
+    play(nome, config) { reproducoes.push({ nome, config }); this.isPlaying = true; return true; },
+    stop() { this.isPlaying = false; },
+    destroy() { this.destruido = true; },
+  };
+  const { scene, render } = cenaComMascara(t, [ponto({ Piscando: true })], false, {
+    cache: { audio: { exists: () => true } },
+    sound: { add: () => som },
+  });
+  scene.iluminacaoFabrica.aleatorio = () => 0;
+  render();
+  assert.equal(reproducoes.length, 0, "antes de ligar não há estalos");
+  let progresso = 0;
+  let leituras = 0;
+  scene.definirIluminacaoFabrica(true, () => { leituras++; return progresso; });
+  for (const p of [0, 0.164, 0.17, 0.3, 0.49, 0.6, 0.82, 1]) {
+    progresso = p;
+    scene.time.now = p * 5000;
+    const antes = leituras;
+    render();
+    assert.equal(leituras, antes + 1, "luz e áudio compartilham uma única leitura do progresso");
+  }
+  assert.equal(reproducoes.length, 3);
+  assert.equal(som.isPlaying, false, "o último quadro da partida encerra o som");
+  scene.time.now = 7000;
+  render();
+  scene.time.now = 7450;
+  render();
+  assert.ok(scene.iluminacaoFabrica.estados[0].falha, "uma luz está piscando durante o jogo");
+  assert.equal(reproducoes.length, 3, "essa piscada não produz som");
+  scene.definirIluminacaoFabrica(true);
+  scene.time.now = 9000;
+  render();
+  assert.equal(reproducoes.length, 3, "restaurar energia já ligada não repete os estalos");
+
+  scene.definirIluminacaoFabrica(true, () => 0.164);
+  render();
+  assert.equal(som.isPlaying, true);
+  scene.definirIluminacaoFabrica(false);
+  assert.equal(som.isPlaying, false, "interromper a partida silencia o som");
+  scene.events.emit("shutdown");
+  assert.equal(som.destruido, true);
 });

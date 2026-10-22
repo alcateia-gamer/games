@@ -17,6 +17,18 @@ const PARTIDA_GERADOR = [
   [0.62, 0.56], [0.66, 0.28], [0.78, 0.78], [0.83, 0.69],
   [0.92, 0.94], [1, 1],
 ];
+// Quedas da partida usadas pelo som; as falhas aleatórias não participam desta sequência.
+const QUEDAS_LUZ_FABRICA = PARTIDA_GERADOR.flatMap(([inicio, luz], indice) => {
+  const proximo = PARTIDA_GERADOR[indice + 1];
+  return proximo && luz > proximo[1]
+    ? [{
+      inicio,
+      inicioOscilacao: PARTIDA_GERADOR[indice - 1]?.[0] ?? inicio,
+      fim: proximo[0],
+      intensidade: luz - proximo[1],
+    }]
+    : [];
+});
 const limitar = valor => Math.max(0, Math.min(1, valor));
 
 function suavizar(valor) {
@@ -106,6 +118,7 @@ class FactoryLighting {
     this.aleatorio = aleatorio;
     this.energia = false;
     this.partida = null;
+    this.progressoPartida = null;
     this.fontesVisiveis = [];
     this.revisao = 0;
     // Estados separados dos dados do mapa: nada é escrito nos objetos do Tiled.
@@ -116,6 +129,7 @@ class FactoryLighting {
 
   definirEnergia(ligada, obterProgresso = null, agora = 0) {
     this.energia = ligada === true;
+    this.progressoPartida = null;
     this.partida = this.energia && typeof obterProgresso === "function"
       ? { obterProgresso, inicio: agora } : null;
     for (const estado of this.estados) {
@@ -148,11 +162,13 @@ class FactoryLighting {
 
   atualizar(agora, camera) {
     let progresso = 1;
+    this.progressoPartida = null;
     if (this.partida) {
       const medido = this.partida.obterProgresso();
       progresso = typeof medido === "number" && Number.isFinite(medido)
         ? limitar(medido)
         : limitar((agora - this.partida.inicio) / (GENERATOR_LOOP_START_SECONDS * 1000));
+      this.progressoPartida = progresso;
       if (progresso >= 1) this.partida = null;
     }
     const energia = this.energia ? intensidadeLuzPartida(progresso) : 0;
@@ -180,6 +196,7 @@ class FactoryLighting {
 
   destroy() {
     this.partida = null;
+    this.progressoPartida = null;
     this.energia = false;
     this.fontesVisiveis.length = 0;
     this.estados.length = 0;
@@ -189,6 +206,6 @@ class FactoryLighting {
 
 export {
   ESCURIDAO_AMBIENTE_FABRICA, MULTIPLICADOR_ALCANCE_FABRICA, PADROES_LUZ_FABRICA, lerCorTiled,
-  lerLuzesFabrica, luzAfetaCamera, intensidadeLuzPartida,
+  lerLuzesFabrica, luzAfetaCamera, intensidadeLuzPartida, QUEDAS_LUZ_FABRICA,
 };
 export default FactoryLighting;
