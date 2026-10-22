@@ -136,7 +136,7 @@ class Start extends Phaser.Scene {
   // =====================================================
 
   /**
-   * Inicia o trecho de 12 segundos em loop, respeita o mute e encerra a música ao começar
+   * Toca a abertura uma vez, repete o trecho de continuidade e encerra a música ao começar
    * Level1.
    */
   iniciarMusicaMenu() {
@@ -160,25 +160,19 @@ class Start extends Phaser.Scene {
       this.game.musicaMenu = null;
     }
 
-    // Guarda a margem do loop para restaurá-la quando a música de menu for liberada.
-    const loopEndOffsetOriginal = this.sound.loopEndOffset;
-    const ajustarMargemLoop = Number.isFinite(loopEndOffsetOriginal);
-    const loopEndOffsetMenu = Math.max(loopEndOffsetOriginal || 0, 0.12);
-
-    if (ajustarMargemLoop) {
-      this.sound.loopEndOffset = loopEndOffsetMenu;
-    }
-
+    const volumeMenu = 0.03;
+    const inicioLoop = 4;
+    const fimLoop = Math.min(12, this.cache.audio.get("musica-menu")?.duration || 12);
     const musica = this.sound.add("musica-menu", {
-      volume: 0.1,
+      volume: 0,
       mute: Boolean(this.game.musicaMenuMutada),
     });
     musica.addMarker({
       name: "loop-menu",
-      start: 0,
-      duration: 12,
+      start: inicioLoop,
+      duration: fimLoop - inicioLoop,
       config: {
-        volume: 0.1,
+        volume: 0,
         loop: true,
         mute: Boolean(this.game.musicaMenuMutada),
       },
@@ -187,7 +181,16 @@ class Start extends Phaser.Scene {
     // Mantém a música ativa entre as cenas.
     this.game.musicaMenu = musica;
 
-    musica.play("loop-menu");
+    // O seek é relativo ao marcador: -4 toca a introdução só na primeira passagem.
+    // O Phaser agenda as próximas passagens de 4 a 12 s no relógio do áudio.
+    musica.play("loop-menu", { seek: -inicioLoop });
+    const entradaVolume = this.tweens.add({
+      targets: musica,
+      volume: volumeMenu,
+      duration: 2500,
+      ease: "Sine.easeInOut",
+    });
+    musica.once("destroy", () => entradaVolume.remove());
 
     // Para quando o jogo realmente começar.
     // Funciona tanto no solo quanto no multiplayer.
@@ -199,12 +202,6 @@ class Start extends Phaser.Scene {
         musica.destroy();
         this.game.musicaMenu = null;
 
-        if (
-          ajustarMargemLoop &&
-          this.sound.loopEndOffset === loopEndOffsetMenu
-        ) {
-          this.sound.loopEndOffset = loopEndOffsetOriginal;
-        }
       }
     });
   }
@@ -287,6 +284,7 @@ class Start extends Phaser.Scene {
    */
   startSequence(button) {
     this.sequenceStarted = true;
+    this.iniciarMusicaMenu();
 
     this.tweens.add({
       targets: button,
@@ -310,6 +308,7 @@ class Start extends Phaser.Scene {
    * símbolos.
    */
   beginRain() {
+    this.iniciarMusicaMenu();
     this.rainStartedAt = this.time.now;
     this.nextMessageAt = 1200;
     this.nextMessageIndex = 0;
@@ -587,7 +586,7 @@ class Start extends Phaser.Scene {
       alpha: 1,
       duration: 420,
       ease: "Cubic.easeOut",
-      // O áudio começa com a entrada do título NULLBORNS, depois da introdução.
+      // Também inicia com fade ao retornar diretamente ao menu.
       onStart: () => this.iniciarMusicaMenu(),
     });
   }
