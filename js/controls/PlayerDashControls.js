@@ -17,7 +17,7 @@ const CONFIG_DASH = {
 
   // BOTÃO
   distanciaXBotao: 90,
-  distanciaYBotao: -30,
+  distanciaYBotao: -20,
   tamanhoBotao: 86,
 
   opacidadeNormal: 0.75,
