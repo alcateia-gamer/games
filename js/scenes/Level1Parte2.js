@@ -199,7 +199,6 @@ class Level1Parte2 extends Phaser.Scene {
     this.physics.resume();
     this.physics.world.resume();
 
-    this.removerLanternaParte2 = criarIluminacaoTerror(this);
     this.cameras.main.fadeIn(250, 0, 0, 0);
 
     this.input.keyboard.enabled = true;
@@ -229,6 +228,8 @@ class Level1Parte2 extends Phaser.Scene {
     criarPlayer(this);
 
     this.definirProfundidadePersonagem(this.profundidadePersonagemParte2);
+    // Os pontos de LuzesFabrica só ficam disponíveis depois da criação do mapa.
+    this.removerLanternaParte2 = criarIluminacaoTerror(this);
 
     if (!this.multiplayer) {
       criarCompanionPet(this, 25.5);
