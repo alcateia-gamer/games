@@ -3,6 +3,8 @@
  * receber o código.
  */
 
+import { criarTextoMenu } from "../ui/MenuText.js";
+
 class MultiplayerMenu extends Phaser.Scene {
   /**
    * Registra a cena do menu multiplayer e inicializa o código de sala digitado.
@@ -19,35 +21,31 @@ class MultiplayerMenu extends Phaser.Scene {
   create() {
     this.manager = this.registry.get("multiplayer");
     this.cameras.main.setBackgroundColor("#020805");
-    this.add
-      .text(400, 62, "MULTIJOGADOR", {
-        color: "#c9ffda",
-        fontFamily: "monospace",
-        fontSize: "25px",
-        fontStyle: "bold",
-      })
+    criarTextoMenu(this, 400, 62, "MULTIJOGADOR", {
+      color: "#c9ffda",
+      fontFamily: "monospace",
+      fontSize: "25px",
+      fontStyle: "bold",
+    })
       .setOrigin(0.5);
-    this.add
-      .text(400, 96, "SALA DE INCURSÃO // ATÉ 4 OPERADORES", {
-        color: "#54d879",
-        fontFamily: "monospace",
-        fontSize: "11px",
-      })
+    criarTextoMenu(this, 400, 96, "SALA DE INCURSÃO // ATÉ 4 OPERADORES", {
+      color: "#54d879",
+      fontFamily: "monospace",
+      fontSize: "11px",
+    })
       .setOrigin(0.5);
-    this.codeText = this.add
-      .text(400, 170, "----", {
-        color: "#e4ffeb",
-        fontFamily: "monospace",
-        fontSize: "30px",
-        fontStyle: "bold",
-      })
+    this.codeText = criarTextoMenu(this, 400, 170, "----", {
+      color: "#e4ffeb",
+      fontFamily: "monospace",
+      fontSize: "30px",
+      fontStyle: "bold",
+    })
       .setOrigin(0.5);
-    this.status = this.add
-      .text(400, 220, "DIGITE O CÓDIGO PARA ENTRAR", {
-        color: "#75ff9a",
-        fontFamily: "monospace",
-        fontSize: "12px",
-      })
+    this.status = criarTextoMenu(this, 400, 220, "DIGITE O CÓDIGO PARA ENTRAR", {
+      color: "#75ff9a",
+      fontFamily: "monospace",
+      fontSize: "12px",
+    })
       .setOrigin(0.5);
     this.criarCampoCodigoMobile();
     this.createButton(310, 300, "CRIAR SALA", 190).on("buttondown", () =>
@@ -155,13 +153,12 @@ class MultiplayerMenu extends Phaser.Scene {
       .rectangle(0, 0, width, 42, 0x062b16, 0.95)
       .setStrokeStyle(2, 0x42ff84)
       .setInteractive({ useHandCursor: true });
-    const text = this.add
-      .text(0, 0, label, {
-        color: "#9dffb9",
-        fontFamily: "monospace",
-        fontSize: "14px",
-        fontStyle: "bold",
-      })
+    const text = criarTextoMenu(this, 0, 0, label, {
+      color: "#9dffb9",
+      fontFamily: "monospace",
+      fontSize: "14px",
+      fontStyle: "bold",
+    })
       .setOrigin(0.5);
     const button = this.add.container(x, y, [background, text]);
     background.on("pointerover", () => background.setFillStyle(0x0b5429));

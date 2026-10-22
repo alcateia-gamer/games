@@ -35,6 +35,13 @@ body {
   image-rendering: pixelated;
 }
 
+/* O navegador desenha os rótulos na densidade real da tela, separados da pixel art. */
+.menu-text {
+  pointer-events: none;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
 /* Campo HTML usado no mobile para abrir o teclado virtual e digitar o código da sala. */
 .multiplayer-code-input {
   box-sizing: border-box;

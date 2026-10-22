@@ -3,6 +3,8 @@
  * seleção de personagem ou multiplayer.
  */
 
+import { criarTextoMenu } from "../ui/MenuText.js";
+
 class Start extends Phaser.Scene {
   /**
    * Registra a cena Start e define os símbolos, mensagens e modo inicial da abertura.
@@ -92,6 +94,8 @@ class Start extends Phaser.Scene {
     this.height = this.scale.height;
 
     this.columns = [];
+    this.rainStartedAt = null;
+    this.mode = "intro";
     this.sequenceStarted = false;
     this.selectedCharacter = "kai-mercer";
     this.startingGame = false;
@@ -202,7 +206,7 @@ class Start extends Phaser.Scene {
    * Cria o botão JOGAR e impede que vários cliques iniciem a abertura mais de uma vez.
    */
   createStartButton() {
-    const button = this.createButton(this.width / 2, this.height / 2, "J0GAR");
+    const button = this.createButton(this.width / 2, this.height / 2, "JOGAR");
 
     button.on("buttondown", () => {
       if (!this.sequenceStarted) {
@@ -225,18 +229,17 @@ class Start extends Phaser.Scene {
       .setStrokeStyle(2, 0x42ff84, 0.95)
       .setInteractive({ useHandCursor: true });
 
-    const text = this.add
-      .text(0, 0, label, {
-        color: "#9dffb9",
-        fontFamily: "monospace",
-        fontSize: "17px",
-        fontStyle: "bold",
-        shadow: {
-          blur: 8,
-          color: "#00ff66",
-          fill: true,
-        },
-      })
+    const text = criarTextoMenu(this, 0, 0, label, {
+      color: "#9dffb9",
+      fontFamily: "monospace",
+      fontSize: "17px",
+      fontStyle: "bold",
+      shadow: {
+        blur: 8,
+        color: "#00ff66",
+        fill: true,
+      },
+    })
       .setOrigin(0.5);
 
     const button = this.add.container(x, y, [background, text]);
@@ -309,11 +312,35 @@ class Start extends Phaser.Scene {
    * Distribui colunas pela tela com velocidade, comprimento e brilho aleatórios.
    */
   createColumns() {
-    const columnCount = Math.ceil(this.width / 26);
+    // Um atlas compartilhado evita rasterizar e reenviar centenas de textos
+    // para a GPU sempre que os símbolos mudam.
+    const key = "menu-digital-rain";
+    const cellWidth = 48;
+    const cellHeight = 64;
+    if (!this.textures.exists(key)) {
+      const texture = this.textures.createCanvas(key, cellWidth * 12,
+        cellHeight * Math.ceil(this.characters.length / 12));
+      const context = texture.getContext();
+      context.font = "30px monospace";
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      context.fillStyle = "#55ff88";
+      context.shadowColor = "#00ff55";
+      context.shadowBlur = 8;
+      for (let i = 0; i < this.characters.length; i += 1) {
+        const x = (i % 12) * cellWidth;
+        const y = Math.floor(i / 12) * cellHeight;
+        context.fillText(this.characters[i], x + cellWidth / 2, y + cellHeight / 2);
+        texture.add(i, 0, x, y, cellWidth, cellHeight);
+      }
+      texture.refresh();
+    }
+    const mobile = this.sys.game.device.input.touch;
+    const columnCount = Math.ceil(this.width / (mobile ? 38 : 26));
 
     for (let index = 0; index < columnCount; index += 1) {
       const glyphs = [];
-      const length = Phaser.Math.Between(5, 15);
+      const length = Phaser.Math.Between(5, mobile ? 10 : 15);
 
       const column = {
         x: index * (this.width / columnCount) + Phaser.Math.Between(-5, 5),
@@ -329,16 +356,8 @@ class Start extends Phaser.Scene {
       for (let glyphIndex = 0; glyphIndex < length; glyphIndex += 1) {
         glyphs.push(
           this.add
-            .text(column.x, column.y - glyphIndex * 18, "0", {
-              color: "#55ff88",
-              fontFamily: "monospace",
-              fontSize: "15px",
-              shadow: {
-                blur: 8,
-                color: "#00ff55",
-                fill: true,
-              },
-            })
+            .image(column.x, column.y - glyphIndex * 18, key, 0)
+            .setDisplaySize(cellWidth / 2, cellHeight / 2)
             .setOrigin(0.5),
         );
       }
@@ -503,26 +522,24 @@ class Start extends Phaser.Scene {
       0.52,
     );
 
-    const title = this.add
-      .text(this.width / 2, 64, "N U L L B O R N S", {
-        color: "#c9ffda",
-        fontFamily: "monospace",
-        fontSize: "30px",
-        fontStyle: "bold",
-        shadow: {
-          blur: 16,
-          color: "#00ff66",
-          fill: true,
-        },
-      })
+    const title = criarTextoMenu(this, this.width / 2, 64, "N U L L B O R N S", {
+      color: "#c9ffda",
+      fontFamily: "monospace",
+      fontSize: "30px",
+      fontStyle: "bold",
+      shadow: {
+        blur: 16,
+        color: "#00ff66",
+        fill: true,
+      },
+    })
       .setOrigin(0.5);
 
-    const subtitle = this.add
-      .text(this.width / 2, 96, "SYSTEM INTERFACE", {
-        color: "#54d879",
-        fontFamily: "monospace",
-        fontSize: "11px",
-      })
+    const subtitle = criarTextoMenu(this, this.width / 2, 96, "SYSTEM INTERFACE", {
+      color: "#54d879",
+      fontFamily: "monospace",
+      fontSize: "11px",
+    })
       .setOrigin(0.5);
 
     this.menuLayer.add([shade, title, subtitle]);
@@ -545,12 +562,11 @@ class Start extends Phaser.Scene {
       });
     });
 
-    this.menuStatus = this.add
-      .text(this.width / 2, 392, "AGUARDANDO COMANDO...", {
-        color: "#5be884",
-        fontFamily: "monospace",
-        fontSize: "11px",
-      })
+    this.menuStatus = criarTextoMenu(this, this.width / 2, 392, "AGUARDANDO COMANDO...", {
+      color: "#5be884",
+      fontFamily: "monospace",
+      fontSize: "11px",
+    })
       .setOrigin(0.5);
 
     this.menuLayer.add(this.menuStatus);
@@ -624,13 +640,12 @@ class Start extends Phaser.Scene {
       0.72,
     );
 
-    const title = this.add
-      .text(this.width / 2, this.height / 2 - 82, "OPÇÕES", {
-        color: "#c9ffda",
-        fontFamily: "monospace",
-        fontSize: "22px",
-        fontStyle: "bold",
-      })
+    const title = criarTextoMenu(this, this.width / 2, this.height / 2 - 82, "OPÇÕES", {
+      color: "#c9ffda",
+      fontFamily: "monospace",
+      fontSize: "22px",
+      fontStyle: "bold",
+    })
       .setOrigin(0.5);
 
     const toggle = this.createButton(
@@ -734,13 +749,12 @@ class Start extends Phaser.Scene {
       0.72,
     );
 
-    const title = this.add
-      .text(this.width / 2, 62, "SELECIONE SEU OPERADOR", {
-        color: "#c9ffda",
-        fontFamily: "monospace",
-        fontSize: "20px",
-        fontStyle: "bold",
-      })
+    const title = criarTextoMenu(this, this.width / 2, 62, "SELECIONE SEU OPERADOR", {
+      color: "#c9ffda",
+      fontFamily: "monospace",
+      fontSize: "20px",
+      fontStyle: "bold",
+    })
       .setOrigin(0.5);
 
     const characters = [
@@ -793,16 +807,16 @@ class Start extends Phaser.Scene {
           useHandCursor: true,
         });
 
-      const name = this.add
-        .text(character.x, 285, character.name, {
-          color: "#9dffb9",
-          fontFamily: "monospace",
-          fontSize: "11px",
-        })
+      const name = criarTextoMenu(this, character.x, 285, character.name, {
+        color: "#9dffb9",
+        fontFamily: "monospace",
+        fontSize: "11px",
+      })
         .setOrigin(0.5);
 
       return {
         ...character,
+        displayName: character.name,
         frame,
         portrait,
         name,
@@ -811,13 +825,13 @@ class Start extends Phaser.Scene {
 
     const choose = this.createButton(
       this.width / 2,
-      350,
+      338,
       "INICIAR SOLO",
       210,
       40,
     );
 
-    const back = this.createButton(this.width / 2, 405, "VOLTAR", 130, 30);
+    const back = this.createButton(this.width / 2, 385, "VOLTAR", 130, 30);
 
     back.label.setFontSize("12px");
 
@@ -847,7 +861,7 @@ class Start extends Phaser.Scene {
         ),
       );
 
-      this.menuStatus.setText(`${character.name} // SELECIONADA`);
+      this.menuStatus.setText(`${character.displayName} // SELECIONADO`);
     };
 
     characterViews.forEach((character) => {
@@ -921,9 +935,7 @@ class Start extends Phaser.Scene {
         column.nextChange = time + Phaser.Math.Between(80, 260);
 
         column.glyphs.forEach((glyph, glyphIndex) => {
-          glyph.setText(
-            this.characters[Phaser.Math.Between(0, this.characters.length - 1)],
-          );
+          glyph.setFrame(Phaser.Math.Between(0, this.characters.length - 1));
 
           glyph.setAlpha(
             Math.max(

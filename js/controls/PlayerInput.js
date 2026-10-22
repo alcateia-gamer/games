@@ -4,6 +4,8 @@
  */
 
 import { aplicarEstaminaInfinitaDev } from "../player/PlayerStatus.js";
+import { criarJoystick } from "./PlayerJoystick.js";
+import { criarBotaoHUDNitido } from "../ui/HudCanvas.js";
 
 // =====================================================
 // FIXAR DEV E ANALÓGICO NA TELA
@@ -83,29 +85,7 @@ function configurarControlesFixos(scene) {
     // ANALÓGICO
     // =================================================
 
-    // Preserva a posição original na tela de 800 x 450:
-    // X = 100 e Y = 350.
-    const analogicoTelaX = 100;
-    const analogicoTelaY = camera.height - 100;
-
-    const analogicoX = origemX + (analogicoTelaX - origemX) / zoomX;
-
-    const analogicoY = origemY + (analogicoTelaY - origemY) / zoomY;
-
-    // Mantém o tamanho visual da base e do botão central.
-    joystick.base.setScale(1 / zoomX, 1 / zoomY);
-    joystick.thumb.setScale(1 / zoomX, 1 / zoomY);
-
-    // O zoom da arena é uniforme.
-    // Compensa também o limite de deslocamento do analógico.
-    joystick.setRadius(50 / zoomX);
-
-    // Atualiza o centro usado pelo próprio plugin.
-    joystick.setPosition(analogicoX, analogicoY);
-
-    // Atualiza o deslocamento do botão central mesmo
-    // quando o dedo está parado e a câmera muda de zoom.
-    joystick.forceUpdateThumb();
+    joystick.layout(camera);
   };
 
   /**
@@ -228,30 +208,13 @@ function criarControlesInput(scene) {
   atualizarEstadoBotaoDesenvolvedor();
 
   // ANALÓGICO
-  scene.joystick = scene.plugins.get("rexvirtualjoystickplugin").add(scene, {
-    x: 100,
-    y: 350,
-    radius: 50,
-    base: scene.add.circle(0, 0, 50, 0xcccccc, 0.7),
-    thumb: scene.add.circle(0, 0, 25, 0x666666, 0.9),
-  });
-
-  scene.joystick.base.setScrollFactor(0).setDepth(100);
-
-  scene.joystick.thumb.setScrollFactor(0).setDepth(101);
-
-  scene.joystickPointerId = null;
-  scene.joystick.on("pointerdown", (pointer) => {
-    scene.joystickPointerId = pointer.id;
-  });
-  scene.input.on("pointerup", (pointer) => {
-    if (pointer.id === scene.joystickPointerId) {
-      scene.joystickPointerId = null;
-    }
-  });
+  criarJoystick(scene);
 
   criarControleFullscreen(scene);
   configurarControlesFixos(scene);
+  criarBotaoHUDNitido(scene, scene.botaoDesenvolvedor, scene.textoBotaoDesenvolvedor);
+  criarBotaoHUDNitido(scene, scene.botaoLuzFabrica, scene.textoBotaoLuzFabrica);
+  criarBotaoHUDNitido(scene, scene.botaoFullscreen, scene.textoBotaoFullscreen);
 }
 
 /**

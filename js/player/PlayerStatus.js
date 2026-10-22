@@ -540,6 +540,7 @@ function atualizarBarrasHUD(scene) {
 
   // Reutiliza as imagens se a resolução não mudou.
   if (hud.texturasDeTela?.chave !== chaveDimensoes) {
+    hud.ultimoDesenho = null;
     hud.texturasDeTela = {
       chave: chaveDimensoes,
 
@@ -558,6 +559,13 @@ function atualizarBarrasHUD(scene) {
       ),
     };
   }
+
+  const vida = Phaser.Math.Clamp(scene.vidaMaxima > 0 ? scene.vida / scene.vidaMaxima : 0, 0, 1);
+  const estamina = Phaser.Math.Clamp(scene.estaminaMaxima > 0 ? scene.estamina / scene.estaminaMaxima : 0, 0, 1);
+  const vidaPx = Math.round(vida * dados.vida.width * canvas.width / dados.largura);
+  const estaminaPx = Math.round(estamina * dados.estamina.width * canvas.width / dados.largura);
+  if (hud.ultimoDesenho?.vidaPx === vidaPx && hud.ultimoDesenho?.estaminaPx === estaminaPx) return;
+  hud.ultimoDesenho = { vidaPx, estaminaPx };
 
   const ctx = canvas.getContext("2d");
 
@@ -607,14 +615,14 @@ function atualizarBarrasHUD(scene) {
   desenharPreenchimento(
     hud.texturasDeTela.vida,
     dados.vida,
-    scene.vidaMaxima > 0 ? scene.vida / scene.vidaMaxima : 0,
+    vida,
   );
 
   // ESTAMINA — CIANO.
   desenharPreenchimento(
     hud.texturasDeTela.estamina,
     dados.estamina,
-    scene.estaminaMaxima > 0 ? scene.estamina / scene.estaminaMaxima : 0,
+    estamina,
   );
 }
 
@@ -678,6 +686,10 @@ function iniciarHUD(scene) {
   let encerrado = false;
   let falhou = false;
   let carregamentoPhaserIniciado = false;
+  let layoutPendente = true;
+  let ultimoDpr = null;
+  const marcarLayoutPendente = () => { layoutPendente = true; };
+  scene.scale?.on("resize", marcarLayoutPendente);
 
   const evento = `filecomplete-image-${HUD_CONFIG.chave}`;
 
@@ -793,7 +805,12 @@ function iniciarHUD(scene) {
       montarComSeguranca();
     }
 
-    atualizarPosicaoHUD(scene);
+    const dpr = window.devicePixelRatio || 1;
+    if (layoutPendente || ultimoDpr !== dpr) {
+      atualizarPosicaoHUD(scene);
+      layoutPendente = false;
+      ultimoDpr = dpr;
+    }
     atualizarBarrasHUD(scene);
   }
 
@@ -821,6 +838,7 @@ function iniciarHUD(scene) {
     scene.load.off("loaderror", aoFalhar);
 
     scene.events.off(Phaser.Scenes.Events.POST_UPDATE, aCadaQuadro);
+    scene.scale?.off("resize", marcarLayoutPendente);
 
     scene.events.off(Phaser.Scenes.Events.SHUTDOWN, limpar);
 

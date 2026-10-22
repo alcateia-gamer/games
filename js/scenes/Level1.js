@@ -77,8 +77,6 @@ class Level1 extends Phaser.Scene {
     // MOVIMENTO
     // =====================================================
 
-    this.threshold = 0.1;
-
     this.speed = 200;
     this.speedTurbo = 400;
     this.velocidadeProjetil = 420;

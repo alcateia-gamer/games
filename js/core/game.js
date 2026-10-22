@@ -25,11 +25,16 @@ function atualizarEscalaComViewport(game) {
  * Registra os eventos de tamanho, orientação e tela cheia que exigem recalcular a escala.
  */
 function registrarAtualizacaoDeViewport(game) {
+  let quadroPendente = null;
   /**
    * Adia o ajuste da escala para o próximo quadro do navegador.
    */
   const atualizar = () => {
-    window.requestAnimationFrame(() => atualizarEscalaComViewport(game));
+    if (quadroPendente !== null) return;
+    quadroPendente = window.requestAnimationFrame(() => {
+      quadroPendente = null;
+      atualizarEscalaComViewport(game);
+    });
   };
 
   window.addEventListener("resize", atualizar, { passive: true });
@@ -115,4 +120,3 @@ window.onload = () => {
   const game = new Game();
   registrarAtualizacaoDeViewport(game);
 };
-git

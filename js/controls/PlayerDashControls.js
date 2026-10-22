@@ -4,6 +4,7 @@
  */
 
 import { gastarEstamina } from "../player/PlayerStatus.js";
+import { obterDirecaoMovimento } from "./PlayerMovementInput.js";
 
 // =====================================================
 // DASH SANDEVISTAN - CORES POR PERSONAGEM
@@ -44,6 +45,13 @@ const CONFIG_DASH = {
 
   // FLASH
   duracaoFlash: 160,
+};
+
+// Menos cópias simultâneas no toque; mantém as cores, o flash e as duas camadas.
+const PERFIL_DASH_MOBILE = {
+  maximoRastros: 12,
+  intervaloRastro: 40,
+  intervaloRastroPosDash: 70,
 };
 
 // =====================================================
@@ -98,30 +106,13 @@ function obterCoresSandevistan(scene) {
  * conhecida.
  */
 function obterDirecaoDash(scene) {
-  let x = 0;
-  let y = 0;
-
-  const teclas = scene.teclasWASD;
-
-  if (teclas?.esquerda?.isDown) x--;
-  if (teclas?.direita?.isDown) x++;
-  if (teclas?.cima?.isDown) y--;
-  if (teclas?.baixo?.isDown) y++;
-
-  if (x === 0 && y === 0 && scene.joystick) {
-    if (scene.joystick.force > (scene.threshold ?? 0.1)) {
-      const angulo = Phaser.Math.DegToRad(scene.joystick.angle);
-
-      x = Math.cos(angulo);
-      y = Math.sin(angulo);
-    }
-  }
+  const { x, y } = obterDirecaoMovimento(scene);
 
   if (x === 0 && y === 0) {
     return scene.ultimaDirecaoDash?.clone() ?? new Phaser.Math.Vector2(0, 1);
   }
 
-  return new Phaser.Math.Vector2(x, y).normalize();
+  return new Phaser.Math.Vector2(x, y);
 }
 
 // =====================================================
@@ -146,7 +137,7 @@ function criarRastroTemporal(scene) {
     return;
   }
 
-  if (estado.rastros.size >= CONFIG_DASH.maximoRastros) {
+  if (estado.rastros.size >= (estado.perfilVisual ?? CONFIG_DASH).maximoRastros) {
     return;
   }
 
@@ -409,7 +400,7 @@ function iniciarDash(scene) {
   criarFlashDash(scene);
   criarRastroTemporal(scene);
 
-  estado.proximoRastro = agora + CONFIG_DASH.intervaloRastro;
+  estado.proximoRastro = agora + (estado.perfilVisual ?? CONFIG_DASH).intervaloRastro;
 
   // ===================================================
   // BOTÃO EM RECARGA
@@ -478,9 +469,10 @@ function atualizarDash(scene) {
   if (efeitoVisualAtivo && agora >= estado.proximoRastro) {
     criarRastroTemporal(scene);
 
+    const perfil = estado.perfilVisual ?? CONFIG_DASH;
     const intervalo = estado.ativo
-      ? CONFIG_DASH.intervaloRastro
-      : CONFIG_DASH.intervaloRastroPosDash;
+      ? perfil.intervaloRastro
+      : perfil.intervaloRastroPosDash;
 
     estado.proximoRastro = agora + intervalo;
   }
@@ -517,6 +509,7 @@ function criarControlesDash(scene) {
 
   scene.estadoDash = {
     ativo: false,
+    perfilVisual: scene.sys?.game?.device?.input?.touch ? PERFIL_DASH_MOBILE : CONFIG_DASH,
 
     direcao: new Phaser.Math.Vector2(0, 1),
 

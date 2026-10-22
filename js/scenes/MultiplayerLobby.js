@@ -3,6 +3,8 @@
  * antes da partida.
  */
 
+import { criarTextoMenu } from "../ui/MenuText.js";
+
 const CHARACTER_NAMES = {
   "kai-mercer": "KAI MERCER",
   "magnus-force": "MAGNUS FORCE",
@@ -21,33 +23,34 @@ class MultiplayerLobby extends Phaser.Scene {
    * conexão.
    */
   create() {
+    this.started = false;
     this.manager = this.registry.get("multiplayer");
     this.cameras.main.setBackgroundColor("#020805");
-    this.add.text(400, 38, "LOBBY // SALA", { color: "#c9ffda", fontFamily: "monospace", fontSize: "22px", fontStyle: "bold" }).setOrigin(0.5);
-    this.roomText = this.add.text(400, 70, "SALA: ----", { color: "#54d879", fontFamily: "monospace", fontSize: "13px" }).setOrigin(0.5);
+    criarTextoMenu(this, 400, 38, "LOBBY // SALA", { color: "#c9ffda", fontFamily: "monospace", fontSize: "22px", fontStyle: "bold" }).setOrigin(0.5);
+    this.roomText = criarTextoMenu(this, 400, 70, "SALA: ----", { color: "#54d879", fontFamily: "monospace", fontSize: "13px" }).setOrigin(0.5);
     this.rows = [];
     for (let index = 0; index < 4; index += 1) {
-      const row = this.add.text(110, 125 + index * 46, "", { color: "#9dffb9", fontFamily: "monospace", fontSize: "14px" });
+      const row = criarTextoMenu(this, 110, 115 + index * 42, "", { color: "#9dffb9", fontFamily: "monospace", fontSize: "14px" });
       this.rows.push(row);
     }
     this.characterButtons = ["kai-mercer", "magnus-force", "aria-kade", "nyx"].map((id, index) => {
-      const button = this.createButton(180 + index * 145, 340, CHARACTER_NAMES[id], 132, 34);
+      const button = this.createButton(180 + index * 145, 295, CHARACTER_NAMES[id], 132, 34);
       button.on("buttondown", () => this.manager.selectCharacter(id));
       return button;
     });
-    this.readyButton = this.createButton(400, 400, "PRONTO", 150, 34);
+    this.readyButton = this.createButton(400, 350, "PRONTO", 150, 34);
     this.readyButton.on("buttondown", () => {
       const local = this.manager.room?.players.find((player) => player.id === this.manager.playerId);
       this.manager.setReady(!local?.ready);
     });
-    this.startButton = this.createButton(635, 400, "INICIAR PARTIDA", 190, 34);
+    this.startButton = this.createButton(635, 350, "INICIAR PARTIDA", 190, 34);
     this.startButton.on("buttondown", () => this.manager.startGame());
-    this.leaveButton = this.createButton(80, 400, "SAIR", 90, 34);
+    this.leaveButton = this.createButton(80, 350, "SAIR", 90, 34);
     this.leaveButton.on("buttondown", () => {
       this.manager.leaveRoom();
       this.scene.start("Start", { abrirMenu: true });
     });
-    this.status = this.add.text(400, 440, "AGUARDANDO OPERADORES...", { color: "#75ff9a", fontFamily: "monospace", fontSize: "11px" }).setOrigin(0.5);
+    this.status = criarTextoMenu(this, 400, 390, "AGUARDANDO OPERADORES...", { color: "#75ff9a", fontFamily: "monospace", fontSize: "11px" }).setOrigin(0.5);
     this.manager.on("roomUpdated", this.renderRoom, this);
     this.manager.on("gameStarted", this.startGame, this);
     /**
@@ -96,7 +99,7 @@ class MultiplayerLobby extends Phaser.Scene {
    */
   createButton(x, y, label, width, height) {
     const background = this.add.rectangle(0, 0, width, height, 0x062b16, 0.95).setStrokeStyle(2, 0x42ff84).setInteractive({ useHandCursor: true });
-    const text = this.add.text(0, 0, label, { color: "#9dffb9", fontFamily: "monospace", fontSize: "11px", fontStyle: "bold" }).setOrigin(0.5);
+    const text = criarTextoMenu(this, 0, 0, label, { color: "#9dffb9", fontFamily: "monospace", fontSize: "11px", fontStyle: "bold" }).setOrigin(0.5);
     const button = this.add.container(x, y, [background, text]);
     background.on("pointerover", () => background.setFillStyle(0x0b5429));
     background.on("pointerout", () => background.setFillStyle(0x062b16));

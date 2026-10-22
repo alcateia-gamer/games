@@ -15,6 +15,7 @@ import {
 } from "./PlayerAnimations.js";
 
 import { atualizarDash } from "./PlayerDashControls.js";
+import { obterDirecaoMovimento } from "./PlayerMovementInput.js";
 
 /**
  * Prepara o som de caminhada ou corrida usado pelo sistema de movimento.
@@ -62,37 +63,7 @@ function atualizarMovimento(scene) {
     return;
   }
 
-  let movimentoX = 0;
-  let movimentoY = 0;
-  let usandoTeclado = false;
-
-  // WASD
-  if (scene.teclasWASD.esquerda.isDown) {
-    movimentoX -= 1;
-    usandoTeclado = true;
-  }
-
-  if (scene.teclasWASD.direita.isDown) {
-    movimentoX += 1;
-    usandoTeclado = true;
-  }
-
-  if (scene.teclasWASD.cima.isDown) {
-    movimentoY -= 1;
-    usandoTeclado = true;
-  }
-
-  if (scene.teclasWASD.baixo.isDown) {
-    movimentoY += 1;
-    usandoTeclado = true;
-  }
-
-  // JOYSTICK
-  if (!usandoTeclado && scene.joystick.force > scene.threshold) {
-    const angle = Phaser.Math.DegToRad(scene.joystick.angle);
-    movimentoX = Math.cos(angle);
-    movimentoY = Math.sin(angle);
-  }
+  const direcao = obterDirecaoMovimento(scene);
 
   const velocidadeBase = scene.speed ?? 200;
   const velocidadeTurbo = scene.speedTurbo ?? 400;
@@ -108,9 +79,7 @@ function atualizarMovimento(scene) {
       : velocidadeAtualBase;
 
   // MOVIMENTO E CAMINHADA
-  if (movimentoX !== 0 || movimentoY !== 0) {
-    const direcao = new Phaser.Math.Vector2(movimentoX, movimentoY).normalize();
-
+  if (direcao.x !== 0 || direcao.y !== 0) {
     // Armazena a direção para o próximo dash.
     scene.ultimaDirecaoDash?.copy(direcao);
 

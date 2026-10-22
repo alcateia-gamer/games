@@ -59,6 +59,7 @@ function criarSprite(x, y, textura, frame, personagem) {
     get displayOriginY() { return this.originY * this.height; },
     setFrame(name) { this.frame = { name }; return this; },
     setDepth(depth) { this.depth = depth; return this; },
+    setVertexRoundMode() { return this; },
     setAlpha() { return this; }, clearTint() { return this; }, setBlendMode() { return this; },
     setVelocity(x, y) { this.body.setVelocity(x, y); return this; },
     on(evento, callback) {

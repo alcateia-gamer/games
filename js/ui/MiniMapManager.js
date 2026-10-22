@@ -9,6 +9,7 @@ import {
 import { drawMiniMapAtlas, RADAR_COLORS } from "./MiniMapAtlas.js";
 import { drawCollectibleMarker, COLLECTIBLE_MARKER_COLOR } from "./CollectibleMarker.js";
 import { findGeneratorInteraction } from "../interactions/FactoryGenerator.js";
+import { criarCanvasHUDNitido, GraficosCanvasHUD } from "./HudCanvas.js";
 
 const WIDTH = MINI_MAP_SIZE, HEIGHT = MINI_MAP_SIZE;
 const VIEW_X = 2, VIEW_Y = 2, VIEW_WIDTH = WIDTH - 4, VIEW_HEIGHT = HEIGHT - 4;
@@ -81,6 +82,11 @@ export default class MiniMapManager {
     heading.beginPath().moveTo(-3, 2).lineTo(0, -4).lineTo(3, 2).strokePath();
     this.marker.add([glow, heading]);
     this.root.add([frame, this.image, this.enemyMarkers, this.itemMarkers, title, this.marker]);
+    this.nativeView = criarCanvasHUDNitido(scene, WIDTH, HEIGHT + 14, 100100);
+    if (this.nativeView) {
+      this.nativeBackground = document.createElement("canvas");
+      this.nativeGraphics = new GraficosCanvasHUD(this.nativeView.context);
+    }
     // Nenhum elemento é interativo: os toques continuam chegando aos controles.
     this.lastX = NaN; this.lastY = NaN;
     /**
@@ -100,8 +106,11 @@ export default class MiniMapManager {
     const result = miniMapLayout(camera, this.scene.botaoDesenvolvedor,
       this.scene.botaoAtaque, this.scene.botaoColetarItem);
     this.devScreenY = result.devScreenY;
+    const visible = result.visible && !this.scene.generatorMenuOpen;
     this.root.setPosition(result.x, result.y).setScale(result.scaleX, result.scaleY)
-      .setVisible(result.visible && !this.scene.generatorMenuOpen);
+      .setVisible(visible && !this.nativeView);
+    this.nativeView?.object.setPosition(result.x, result.y)
+      .setScale(result.scaleX, result.scaleY).setVisible(visible);
   }
 
   /**
@@ -111,6 +120,7 @@ export default class MiniMapManager {
     if (this.destroyed || !this.geometry) return;
     const player = this.scene.player;
     if (!player?.active) {
+      this.nativeView?.limpar();
       this.marker.setVisible(false);
       this.enemyMarkers.clear();
       this.itemMarkers.clear();
@@ -118,6 +128,7 @@ export default class MiniMapManager {
     }
     const x = player.x, y = player.y;
     if (!Number.isFinite(x) || !Number.isFinite(y)) {
+      this.nativeView?.limpar();
       this.marker.setVisible(false);
       this.enemyMarkers.clear();
       this.itemMarkers.clear();
@@ -136,6 +147,10 @@ export default class MiniMapManager {
       }
     }
     if (!this.transform) return;
+    if (this.nativeView) {
+      this.drawNativeView(x, y);
+      return;
+    }
     this.updateEnemyMarkers();
     this.updateItemMarkers();
     this.updateGeneratorMarker();
@@ -275,6 +290,10 @@ export default class MiniMapManager {
    * Desenha o cenário completo na janela local, sem recortes por exploração ou linha de visão.
    */
   drawView() {
+    if (this.nativeView) {
+      this.nativeBackgroundDirty = true;
+      return;
+    }
     const context = this.texture.getContext();
     const { bounds } = this.geometry;
     const transform = this.transform;
@@ -285,11 +304,75 @@ export default class MiniMapManager {
     const top = bounds.y * transform.scale + transform.y;
     const width = this.atlas.image.width * transform.scale / this.atlas.scale;
     const height = this.atlas.image.height * transform.scale / this.atlas.scale;
-    context.imageSmoothingEnabled = true;
+    context.imageSmoothingEnabled = false;
     context.globalAlpha = 1;
     context.drawImage(this.atlas.image, left, top, width, height);
     context.restore();
     this.texture.refresh();
+  }
+
+  /** Contornos, rótulo e marcadores desenhados diretamente nos pixels físicos da HUD. */
+  drawNativeView(x, y) {
+    const view = this.nativeView;
+    if (!view.object.visible) return;
+    const resized = view.atualizarResolucao();
+    if (resized || this.nativeBackgroundDirty) {
+      this.nativeBackgroundDirty = false;
+      const backdrop = this.nativeBackground;
+      backdrop.width = view.canvas.width;
+      backdrop.height = view.canvas.height;
+      const ctx = backdrop.getContext("2d");
+      ctx.scale(backdrop.width / view.width, backdrop.height / view.height);
+      ctx.fillStyle = RADAR_COLORS.background;
+      ctx.fillRect(0, 0, WIDTH, HEIGHT);
+      ctx.save();
+      ctx.beginPath(); ctx.rect(VIEW_X, VIEW_Y, VIEW_WIDTH, VIEW_HEIGHT); ctx.clip();
+      const { bounds } = this.geometry, transform = this.transform;
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(this.atlas.image,
+        VIEW_X + bounds.x * transform.scale + transform.x,
+        VIEW_Y + bounds.y * transform.scale + transform.y,
+        this.atlas.image.width * transform.scale / this.atlas.scale,
+        this.atlas.image.height * transform.scale / this.atlas.scale);
+      ctx.restore();
+      ctx.strokeStyle = "#42e2ed";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(0.5, 0.5, WIDTH - 1, HEIGHT - 1);
+      ctx.fillStyle = "#42e2ed";
+      ctx.fillRect(0, HEIGHT + 1, WIDTH, 13);
+      ctx.font = "bold 9px monospace";
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillStyle = RADAR_COLORS.label;
+      ctx.fillText(this.profile.label, WIDTH / 2, HEIGHT + 7.5);
+    }
+    view.limpar();
+    const ctx = view.context;
+    ctx.drawImage(this.nativeBackground, 0, 0, view.width, view.height);
+    // Reutiliza as mesmas regras e símbolos da versão Phaser.
+    const enemyMarkers = this.enemyMarkers, itemMarkers = this.itemMarkers;
+    this.enemyMarkers = this.nativeGraphics;
+    this.itemMarkers = this.nativeGraphics;
+    try {
+      this.updateEnemyMarkers();
+      this.updateItemMarkers();
+      this.updateGeneratorMarker();
+      this.updateWeaponShopMarker();
+      this.updateSearchMarker();
+    } finally {
+      this.enemyMarkers = enemyMarkers;
+      this.itemMarkers = itemMarkers;
+    }
+    const position = worldToMiniMap(this.transform, x, y), { bounds } = this.geometry;
+    if (x < bounds.x || y < bounds.y || x > bounds.x + bounds.width || y > bounds.y + bounds.height ||
+        position.x < 7 || position.y < 7 || position.x > VIEW_WIDTH - 7 || position.y > VIEW_HEIGHT - 7) return;
+    ctx.save();
+    ctx.translate(VIEW_X + position.x, VIEW_Y + position.y);
+    ctx.rotate({ up: 0, right: Math.PI / 2, down: Math.PI, left: -Math.PI / 2 }[this.scene.direcaoAtual] ?? 0);
+    this.nativeGraphics.fillStyle(0x071d18, 0.7).fillCircle(0, 0, 5.5);
+    this.nativeGraphics.lineStyle(1.5, RADAR_COLORS.player);
+    this.nativeGraphics.path([{ x: -3, y: 2 }, { x: 0, y: -4 }, { x: 3, y: 2 }], false);
+    ctx.stroke();
+    ctx.restore();
   }
 
   /**
@@ -300,6 +383,11 @@ export default class MiniMapManager {
     this.destroyed = true;
     if (this.onShutdown) this.scene.events.off(Phaser.Scenes.Events.SHUTDOWN, this.onShutdown);
     this.root?.destroy();
+    this.nativeView?.destroy();
+    if (this.nativeBackground) {
+      this.nativeBackground.width = 0;
+      this.nativeBackground.height = 0;
+    }
     if (this.textureKey) this.scene.textures.remove(this.textureKey);
     this.texture = null; this.atlas = null;
     this.geometry = null; this.root = null; this.marker = null; this.image = null;

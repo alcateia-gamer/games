@@ -111,6 +111,7 @@ function criarControlesAtaque(scene) {
     return (
       pointer.pointerType === "touch" ||
       pointer.event?.pointerType === "touch" ||
+      pointer.wasTouch ||
       pointer.isTouch
     );
   };

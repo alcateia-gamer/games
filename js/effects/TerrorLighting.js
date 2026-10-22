@@ -153,6 +153,9 @@ function criarIluminacaoTerror(scene) {
   const camera = scene.cameras.main;
   const width = Math.ceil(camera.width);
   const height = Math.ceil(camera.height);
+  // A máscara contém apenas gradientes. Metade da resolução usa 1/4 dos
+  // pixels no mobile, preservando a definição do cenário e dos personagens.
+  const escalaMascara = scene.sys.game.device.input.touch ? 0.5 : 1;
 
   if (scene.textures.exists(TEXTURA_ESCURIDAO_PARTE2)) {
     scene.textures.remove(TEXTURA_ESCURIDAO_PARTE2);
@@ -160,10 +163,12 @@ function criarIluminacaoTerror(scene) {
 
   const texture = scene.textures.createCanvas(
     TEXTURA_ESCURIDAO_PARTE2,
-    width,
-    height,
+    Math.ceil(width * escalaMascara),
+    Math.ceil(height * escalaMascara),
   );
+  texture.setFilter(Phaser.Textures.FilterMode.LINEAR);
   const context = texture.getContext();
+  context.scale(escalaMascara, escalaMascara);
   const coneCanvas = criarMascaraCone();
   const playerCenter = new Phaser.Math.Vector2();
   const direcaoInicial = DIRECOES_INICIAIS[scene.direcaoAtual] || [0, 1];
@@ -252,8 +257,10 @@ function criarIluminacaoTerror(scene) {
         centerX - centerX / zoomX,
         centerY - centerY / zoomY,
       )
-      .setScale(1 / zoomX, 1 / zoomY);
+      .setDisplaySize(width / zoomX, height / zoomY);
   };
+
+  let ultimoDesenho = "";
 
   /**
    * Atualiza direção e origem da lanterna e transforma suas coordenadas de mundo para a tela.
@@ -268,6 +275,7 @@ function criarIluminacaoTerror(scene) {
       aplicarIntensidade(intensidadeLuzPartida(progresso));
       if (progresso >= 1) partida = null;
     }
+    if (!overlay.visible) return;
 
     const player = scene.player;
     const zoomX = camera.zoomX || camera.zoom || 1;
@@ -293,6 +301,12 @@ function criarIluminacaoTerror(scene) {
     const worldView = camera.worldView;
     const centerX = (origemX - worldView.x) * zoomX;
     const centerY = (origemY - worldView.y) * zoomY;
+
+    const chaveDesenho = [Math.round(centerX * escalaMascara),
+      Math.round(centerY * escalaMascara), zoomX, zoomY,
+      direcaoLanterna.x, direcaoLanterna.y].join(":");
+    if (chaveDesenho === ultimoDesenho) return;
+    ultimoDesenho = chaveDesenho;
 
     desenharEscuridao(
       centerX,

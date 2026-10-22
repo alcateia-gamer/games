@@ -84,7 +84,6 @@ class Level1Parte2 extends Phaser.Scene {
 
     this.DEBUG_MAP = true;
     this.profundidadePersonagemParte2 = 16.5;
-    this.threshold = 0.1;
     this.speed = 200;
     this.speedTurbo = 400;
     this.velocidadeProjetil = 420;
