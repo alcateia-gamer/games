@@ -6,7 +6,7 @@
  * As habilidades serão implementadas posteriormente.
  */
 
-const CHAVE_ATLAS_ORIGINAL = "botoes-ulti";
+const CHAVE_ATLAS_ORIGINAL = "botoes-ulti";75
 const CHAVE_FRAMES = "botoes-ulti-quadros";
 
 const CONFIG_BOTAO_ESPECIAL = Object.freeze({
@@ -19,7 +19,7 @@ const CONFIG_BOTAO_ESPECIAL = Object.freeze({
   telaY: 290,
 
   profundidade: 220,
-  opacidade: 0.93,
+  opacidade: 0.75,
   escalaPressionado: 0.9,
 });
 
