@@ -921,6 +921,11 @@ class Preloader extends Phaser.Scene {
       "botao-dash",
       "../Tilesets/extras/botao-dash.png"
     );
+ 
+    this.load.image(
+      "botoes-ulti",
+      "../Tilesets/extras/botoes-ulti.png"
+    );
 
     this.load.image(
       "supercomputer",

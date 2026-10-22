@@ -1,29 +1,46 @@
 /**
- * @file Integra os controles de entrada, movimento, ataque e dash usados pelas cenas de jogo.
+ * @file Integra os controles de entrada,
+ * movimento, ataque, dash e especial.
  */
 
 import { criarControlesInput } from "./PlayerInput.js";
+
 import { criarControlesAtaque } from "./PlayerAttackControls.js";
+
 import { criarMovimento, atualizarMovimento } from "./PlayerMovement.js";
+
 import { criarControlesDash } from "./PlayerDashControls.js";
 
-/**
- * Inicializa entrada, movimento e ataque antes do dash, que usa a posição do botão de ataque.
- */
+import { criarControlesEspecial } from "./PlayerSpecialControls.js";
+
+// =====================================================
+// CRIAR TODOS OS CONTROLES
+// =====================================================
+
 function criarControles(scene) {
   criarControlesInput(scene);
+
   criarMovimento(scene);
+
   criarControlesAtaque(scene);
 
-  // DASH - criado após o ataque para usar sua posição.
+  // Sandevistan original
   criarControlesDash(scene);
+
+  // Novo botão de ataque especial
+  criarControlesEspecial(scene);
 }
 
-/**
- * Executa a atualização de movimento do jogador a cada quadro da cena.
- */
+// =====================================================
+// ATUALIZAR CONTROLES
+// =====================================================
+
 function atualizarControles(scene) {
   atualizarMovimento(scene);
 }
+
+// =====================================================
+// EXPORTAÇÕES
+// =====================================================
 
 export { criarControles, atualizarControles };
