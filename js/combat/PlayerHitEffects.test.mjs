@@ -41,15 +41,15 @@ test("dano preserva recuo durante os controles, cancela dash e libera movimento 
   const scene = criarCena();
   causarDanoPlayer(scene, 10, { x: -50, y: 0 });
   assert.equal(scene.vida, 90);
-  assert.equal(scene.player.body.velocity.x, COMBAT_FEEL.knockback);
+  assert.equal(scene.player.body.velocity.x, COMBAT_FEEL.playerKnockback);
   assert.equal(scene.estadoDash.ativo, false);
   assert.equal(scene.combatHitStopRemaining, COMBAT_FEEL.hitStopDuration);
   assert.deepEqual(scene.cameras.main.lastShake, [COMBAT_FEEL.shakeDuration, 0.001]);
 
-  scene.time.now += COMBAT_FEEL.knockbackDuration - 1;
+  scene.time.now += COMBAT_FEEL.playerKnockbackDuration - 1;
   scene.teclasWASD.esquerda.isDown = true;
   atualizarMovimento(scene);
-  assert.equal(scene.player.body.velocity.x, COMBAT_FEEL.knockback);
+  assert.equal(scene.player.body.velocity.x, COMBAT_FEEL.playerKnockback);
   assert.equal(iniciarDash(scene), false);
 
   scene.time.now += 1;
@@ -64,8 +64,8 @@ test("invulnerabilidade impede novo dano e novo impulso na direção contrária"
   scene.time.now += 10;
   causarDanoPlayer(scene, 10, { x: 50, y: 0 });
   assert.equal(scene.vida, 90);
-  assert.equal(scene.player.body.velocity.x, COMBAT_FEEL.knockback);
-  assert.equal(scene.player.combatKnockbackUntil, 100 + COMBAT_FEEL.knockbackDuration);
+  assert.equal(scene.player.body.velocity.x, COMBAT_FEEL.playerKnockback);
+  assert.equal(scene.player.combatKnockbackUntil, 100 + COMBAT_FEEL.playerKnockbackDuration);
 });
 
 test("laser usa a trajetória mesmo quando o projétil já passou do centro do jogador", () => {
@@ -80,14 +80,14 @@ test("laser usa a trajetória mesmo quando o projétil já passou do centro do j
   verificarLasersNoPlayer(scene);
   assert.equal(laser.active, false);
   assert.equal(scene.vida, 95);
-  assert.equal(scene.player.body.velocity.x, COMBAT_FEEL.knockback);
+  assert.equal(scene.player.body.velocity.x, COMBAT_FEEL.playerKnockback);
 });
 
 test("golpe do chefe empurra o jogador para longe dele", () => {
   const scene = criarCena();
   assert.equal(causarDanoJogador({ scene, x: 0, y: 50 }, 16), true);
   assert.equal(scene.vida, 84);
-  assert.equal(scene.player.body.velocity.y, -COMBAT_FEEL.knockback);
+  assert.equal(scene.player.body.velocity.y, -COMBAT_FEEL.playerKnockback);
   assert.ok(scene.cameras.main.lastShake);
 });
 
@@ -96,7 +96,7 @@ test("modo desenvolvedor mantém a vida e permite conferir o impacto", () => {
   scene.developerMode = true;
   causarDanoPlayer(scene, 10, { x: -50, y: 0 });
   assert.equal(scene.vida, 100);
-  assert.equal(scene.player.body.velocity.x, COMBAT_FEEL.knockback);
+  assert.equal(scene.player.body.velocity.x, COMBAT_FEEL.playerKnockback);
 });
 
 test("multiplayer preserva o comportamento anterior sem recuo ou tremor adicionais", () => {

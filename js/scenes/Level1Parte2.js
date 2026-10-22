@@ -55,7 +55,7 @@ import {
   atualizarProjeteis,
 } from "../player/PlayerProjectiles.js";
 
-import { vincularIABoss, atualizarIABoss } from "../enemies/BossFinal.js";
+import { prepararIABoss, atualizarIABoss } from "../enemies/BossFinal.js";
 import criarIluminacaoTerror from "../effects/TerrorLighting.js";
 import {
   atualizarSistemaInventario,
@@ -260,7 +260,7 @@ class Level1Parte2 extends Phaser.Scene {
       this.iniciarMultiplayer();
     }
 
-    vincularIABoss(this);
+    prepararIABoss(this);
 
     // =====================================================
     // TEXTO DE COORDENADAS

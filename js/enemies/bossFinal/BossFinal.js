@@ -33,6 +33,8 @@ import {
 // NOVO: SISTEMA DE CHÃO QUEBRADO
 // =====================================================
 
+import { prepararEntradaBoss } from "./BossEntrada.js";
+
 import { configurarChaoQuebradoBoss } from "./BossChaoQuebrado.js";
 
 // =====================================================
@@ -70,4 +72,8 @@ function vincularIABoss(scene) {
 // EXPORTAÇÕES ORIGINAIS
 // =====================================================
 
-export { causarDanoBoss, solicitarAtaqueBoss, atualizarIABoss, vincularIABoss };
+function prepararIABoss(scene) {
+  prepararEntradaBoss(scene, vincularIABoss);
+}
+
+export { causarDanoBoss, solicitarAtaqueBoss, atualizarIABoss, vincularIABoss, prepararIABoss };

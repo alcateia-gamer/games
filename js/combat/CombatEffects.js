@@ -11,6 +11,8 @@ const COMBAT_FEEL = {
   shakeIntensity: 0.002,
   knockback: 110,
   knockbackDuration: 90,
+  playerKnockback: 35,
+  playerKnockbackDuration: 30,
   particles: {
     quantity: 6,
     lifespan: 190,
@@ -138,6 +140,7 @@ function applyKnockback(
   attacker,
   enemy,
   force = COMBAT_FEEL.knockback,
+  duration = COMBAT_FEEL.knockbackDuration,
 ) {
   if (!isSoloMode(scene) || !enemy?.active || !enemy.body || !attacker) {
     return;
@@ -150,12 +153,12 @@ function applyKnockback(
     enemy.y,
   );
   enemy.body.setVelocity(Math.cos(angle) * force, Math.sin(angle) * force);
-  enemy.combatKnockbackUntil = scene.time.now + COMBAT_FEEL.knockbackDuration;
+  enemy.combatKnockbackUntil = scene.time.now + duration;
   debugCombat("KNOCKBACK", force);
 }
 
 /**
- * Aplica ao jogador o mesmo tremor, pausa breve e recuo dos impactos nos inimigos.
+ * Aplica tremor e pausa de impacto ao jogador, com recuo mais leve e breve.
  */
 function playPlayerHitEffects(scene, attacker, damage) {
   const player = scene.player;
@@ -163,7 +166,13 @@ function playPlayerHitEffects(scene, attacker, damage) {
     return;
   }
 
-  applyKnockback(scene, attacker, player);
+  applyKnockback(
+    scene,
+    attacker,
+    player,
+    COMBAT_FEEL.playerKnockback,
+    COMBAT_FEEL.playerKnockbackDuration,
+  );
   if (player.combatKnockbackUntil > scene.time.now && scene.estadoDash) {
     scene.estadoDash.ativo = false;
   }

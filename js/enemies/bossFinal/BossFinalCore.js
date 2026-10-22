@@ -48,6 +48,12 @@ import {
 // =====================================================
 
 import { pararSomRaioBoss } from "../../sounds/bossRaio.js";
+import {
+  ARENA_X_MIN,
+  ARENA_X_MAX,
+  ENTRADA_ARENA_Y,
+  jogadorNaEntradaArena,
+} from "./BossEntrada.js";
 
 // =====================================================
 // POSIÇÃO E TAMANHO DO BOSS
@@ -59,13 +65,6 @@ const ESCALA_BOSS = 1.4;
 // =====================================================
 // ÁREA DE ZOOM DA ARENA
 // =====================================================
-
-// Área principal da arena.
-const ARENA_X_MIN = -1606;
-const ARENA_X_MAX = -550;
-
-// Entrando nesta coordenada e seguindo para cima.
-const ENTRADA_ARENA_Y = -5470;
 
 // Margens para não sair da arena só por encostar
 // nas paredes laterais ou oscilar perto da entrada.
@@ -306,18 +305,13 @@ function configurarCameraArena(scene, boss) {
     const podeEntrar = boss.active && !boss.morto && player?.active;
 
     if (podeEntrar) {
-      // Área normal para entrar.
-      const dentroDaLarguraEntrada =
-        player.x >= ARENA_X_MIN && player.x <= ARENA_X_MAX;
-
       // Área com folga para permanecer.
       const dentroDaLarguraPermanencia =
         player.x >= ARENA_X_MIN - MARGEM_SAIDA_X &&
         player.x <= ARENA_X_MAX + MARGEM_SAIDA_X;
 
       if (!dentroArena) {
-        const entrouNaArena =
-          dentroDaLarguraEntrada && player.y <= ENTRADA_ARENA_Y;
+        const entrouNaArena = jogadorNaEntradaArena(player);
 
         if (entrouNaArena) {
           dentroArena = true;

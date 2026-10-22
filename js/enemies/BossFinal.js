@@ -8,4 +8,5 @@ export {
   solicitarAtaqueBoss,
   atualizarIABoss,
   vincularIABoss,
+  prepararIABoss,
 } from "./bossFinal/BossFinal.js";
