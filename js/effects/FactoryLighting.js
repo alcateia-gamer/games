@@ -69,7 +69,10 @@ function lerLuzesFabrica(map, avisar = console.warn) {
     const intensidade = lerPropriedade(objeto, "Intensidade");
     const piscando = lerPropriedade(objeto, "Piscando");
     const ligada = lerPropriedade(objeto, "Ligada");
-    const orientacao = lerPropriedade(objeto, "Orientacao");
+    const orientacaoConfigurada = lerPropriedade(objeto, "Orientacao");
+    const orientacao = typeof orientacaoConfigurada === "string"
+      ? orientacaoConfigurada.toLowerCase()
+      : null;
     return [{
       id: objeto.id, x: objeto.x, y: objeto.y,
       raio: Number.isInteger(raio) && raio > 0 ? raio : PADROES_LUZ_FABRICA.raio,
@@ -121,15 +124,15 @@ class FactoryLighting {
     }
   }
 
-  /** Uma queda suave de 12–28%, seguida de recuperação, a intervalos de 3–9 segundos. */
+  /** Piscadas breves e visíveis, com recuperação suave e intervalos irregulares. */
   calcularFalha(estado, agora) {
     if (estado.proximaFalha === null) {
-      estado.proximaFalha = agora + 3000 + this.aleatorio() * 6000;
+      estado.proximaFalha = agora + 2000 + this.aleatorio() * 3000;
     }
     if (!estado.falha && agora >= estado.proximaFalha) {
       estado.falha = {
-        inicio: agora, duracao: 650 + this.aleatorio() * 650,
-        queda: 0.12 + this.aleatorio() * 0.16,
+        inicio: agora, duracao: 900 + this.aleatorio() * 300,
+        queda: 0.45 + this.aleatorio() * 0.35,
       };
     }
     const falha = estado.falha;
@@ -137,7 +140,7 @@ class FactoryLighting {
     const p = (agora - falha.inicio) / falha.duracao;
     if (p >= 1) {
       estado.falha = null;
-      estado.proximaFalha = agora + 3000 + this.aleatorio() * 6000;
+      estado.proximaFalha = agora + 2000 + this.aleatorio() * 3000;
       return 1;
     }
     return 1 - falha.queda * Math.sin(Math.PI * p) ** 2;

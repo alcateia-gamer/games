@@ -496,14 +496,14 @@ test("validates types, uses defaults, and preserves explicit false and zero", ()
 });
 
 test("Orientacao accepts horizontal or vertical in raw and Phaser properties and defaults safely", () => {
-  for (const value of [undefined, null, 1, false, "diagonal", "VERTICAL", ""]) {
+  for (const value of [undefined, null, 1, false, "diagonal", ""]) {
     const [light] = lerLuzesFabrica(mapa(ponto({ Orientacao: value })));
     assert.equal(light.orientacao, "horizontal");
   }
-  for (const value of ["horizontal", "vertical"]) {
+  for (const value of ["horizontal", "vertical", "Horizontal", "Vertical", "VERTICAL"]) {
     for (const properties of [{ Orientacao: value }, [{ name: "Orientacao", type: "string", value }]]) {
       const [light] = lerLuzesFabrica(mapa(ponto(properties)));
-      assert.equal(light.orientacao, value);
+      assert.equal(light.orientacao, value.toLowerCase());
     }
   }
 });
@@ -574,7 +574,7 @@ test("startup follows audio progress even when paused and falls back to the exis
   assert.equal(intensidadeLuzPartida(1), 1);
 });
 
-test("defective lamps dip gently at irregular intervals while healthy lamps remain stable", () => {
+test("blinking lamps dim visibly at irregular intervals while healthy lamps remain stable", () => {
   let seed = 12;
   const lights = new FactoryLighting(mapa(ponto({ Piscando: true }), ponto()), {
     aleatorio: () => ((seed = seed * 16807 % 2147483647) - 1) / 2147483646,
@@ -592,9 +592,9 @@ test("defective lamps dip gently at irregular intervals while healthy lamps rema
     if (failing && !wasFailing) starts.push(now);
     wasFailing = failing;
   }
-  assert.ok(Math.min(...values) < 0.9);
-  assert.ok(Math.min(...values) >= 0.72);
-  for (let i = 1; i < values.length; i++) assert.ok(Math.abs(values[i] - values[i - 1]) < 0.06);
+  assert.ok(Math.min(...values) < 0.6);
+  assert.ok(Math.min(...values) >= 0.2);
+  for (let i = 1; i < values.length; i++) assert.ok(Math.abs(values[i] - values[i - 1]) < 0.1);
   assert.ok(starts.length >= 3);
   assert.ok(new Set(starts.slice(1).map((time, index) => time - starts[index])).size > 1);
 });
