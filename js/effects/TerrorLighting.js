@@ -1,42 +1,10 @@
 /**
- * @file Escuridão da fábrica e cone de lanterna. Desenha uma máscara em canvas e a acompanha
- * com o jogador e o zoom.
+ * @file Máscara de escuridão da fábrica: cápsulas difusas revelam o cenário sem pintar luz
+ * branca no chão. A sombra residual limita a exposição mesmo entre fontes sobrepostas.
  */
 
-import { GENERATOR_LOOP_START_SECONDS } from "../sounds/gerador.js";
-import { criarSomLuzFabrica } from "../sounds/luzFabrica.js";
-
-// Tentativas de partida, quedas breves de tensão e recuperação final, sem flashes brancos.
-const PARTIDA_GERADOR = [
-  [0, 0], [0.06, 0.025], [0.13, 0.09], [0.18, 0.03],
-  [0.28, 0.22], [0.34, 0.08], [0.46, 0.4], [0.5, 0.14],
-  [0.62, 0.56], [0.66, 0.28], [0.78, 0.78], [0.83, 0.69],
-  [0.92, 0.94], [1, 1],
-];
-
-// O áudio observa as quedas existentes, sem alterar a curva de iluminação.
-const QUEDAS_LUZ_FABRICA = PARTIDA_GERADOR.flatMap(([inicio, luz], indice) => {
-  const proximo = PARTIDA_GERADOR[indice + 1];
-  return proximo && luz > proximo[1]
-    ? [{
-      inicio,
-      inicioOscilacao: PARTIDA_GERADOR[indice - 1]?.[0] ?? inicio,
-      fim: proximo[0],
-      intensidade: luz - proximo[1],
-    }]
-    : [];
-});
-
-function intensidadeLuzPartida(progresso) {
-  const p = Math.max(0, Math.min(1, progresso));
-  for (let i = 1; i < PARTIDA_GERADOR.length; i += 1) {
-    const [fim, luzFim] = PARTIDA_GERADOR[i];
-    if (p > fim) continue;
-    const [inicio, luzInicio] = PARTIDA_GERADOR[i - 1];
-    return luzInicio + (luzFim - luzInicio) * smoothstep(inicio, fim, p);
-  }
-  return 1;
-}
+import FactoryLighting, { ESCURIDAO_AMBIENTE_FABRICA, MULTIPLICADOR_ALCANCE_FABRICA } from "./FactoryLighting.js";
+export { intensidadeLuzPartida } from "./FactoryLighting.js";
 
 const TEXTURA_ESCURIDAO_PARTE2 = "level1-parte2-escuridao";
 const DEPTH_ESCURIDAO = 50;
@@ -122,31 +90,54 @@ function desenharLuminaria(context, canvas, luz) {
 /** Uma única máscara mantém a sombra ambiente e recebe apenas as luzes do teto. */
 function criarIluminacaoTerror(scene) {
   const camera = scene.cameras.main;
-  const width = Math.ceil(camera.width);
-  const height = Math.ceil(camera.height);
-  // A máscara contém apenas gradientes. Metade da resolução usa 1/4 dos
-  // pixels no mobile, preservando a definição do cenário e dos personagens.
-  const escalaMascara = scene.sys.game.device.input.touch ? 0.5 : 1;
+  const renderer = scene.game.renderer;
+  let width = Math.ceil(camera.width);
+  let height = Math.ceil(camera.height);
+  let invalidada = true;
+  const ultimoQuadro = { width: 0, height: 0, a: 0, b: 0, c: 0, d: 0, e: 0, f: 0, revisao: -1 };
+  let encerrada = false;
+  const iluminacao = new FactoryLighting(scene.map);
+  scene.iluminacaoFabrica = iluminacao;
 
   if (scene.textures.exists(TEXTURA_ESCURIDAO_PARTE2)) {
     scene.textures.remove(TEXTURA_ESCURIDAO_PARTE2);
   }
-
-  const texture = scene.textures.createCanvas(
-    TEXTURA_ESCURIDAO_PARTE2,
-    Math.ceil(width * escalaMascara),
-    Math.ceil(height * escalaMascara),
-  );
+  const texture = scene.textures.createCanvas(TEXTURA_ESCURIDAO_PARTE2, width, height);
+  // A máscara é um gradiente; esse filtro não altera o pixel art dos tiles e personagens.
   texture.setFilter(Phaser.Textures.FilterMode.LINEAR);
   const context = texture.getContext();
-  context.scale(escalaMascara, escalaMascara);
-  const coneCanvas = criarMascaraCone();
-  const playerCenter = new Phaser.Math.Vector2();
-  const direcaoInicial = DIRECOES_INICIAIS[scene.direcaoAtual] || [0, 1];
-  const direcaoLanterna = new Phaser.Math.Vector2(
-    direcaoInicial[0],
-    direcaoInicial[1],
-  );
+  const perfil = criarPerfilLuminaria();
+  const luminariaCanvas = criarMascaraLuminaria(perfil);
+  const coresCanvas = new Map();
+  for (const luz of iluminacao.lampadas) {
+    if (!coresCanvas.has(luz.cor.css)) coresCanvas.set(luz.cor.css, criarMascaraLuminaria(perfil, luz.cor.phaser));
+  }
+
+  // Já cobre a cena antes do primeiro render, mesmo sem jogador ou lâmpadas visíveis.
+  context.fillStyle = COR_ESCURIDAO;
+  context.fillRect(0, 0, width, height);
+  texture.refresh();
+  const overlay = scene.add.image(0, 0, TEXTURA_ESCURIDAO_PARTE2)
+    .setOrigin(0).setScrollFactor(0).setDepth(DEPTH_ESCURIDAO);
+
+  const definirIluminacaoFabrica = (ligada, obterProgresso = null) => {
+    iluminacao.definirEnergia(ligada, obterProgresso, scene.time.now);
+    invalidada = true;
+  };
+  scene.definirIluminacaoFabrica = definirIluminacaoFabrica;
+  definirIluminacaoFabrica(scene.luzFabricaAcesa === true);
+
+  /** Compensa a transformação da câmera, incluindo deslocamentos do efeito de tremor. */
+  const posicionarOverlay = () => {
+    const m = camera.matrix;
+    const e = m.e + m.a * camera.scrollX + m.c * camera.scrollY;
+    const f = m.f + m.b * camera.scrollX + m.d * camera.scrollY;
+    const det = m.a * m.d - m.b * m.c;
+    const escalaX = Math.hypot(m.d, m.b) / det;
+    overlay.setPosition((m.c * f - m.d * e) / det, (m.b * e - m.a * f) / det)
+      .setRotation(Math.atan2(-m.b, m.d))
+      .setScale(escalaX, 1 / (det * escalaX));
+  };
 
   /**
    * Renderer.RENDER acontece depois de camera.preRender tanto em Canvas quanto em WebGL.
@@ -216,121 +207,14 @@ function criarIluminacaoTerror(scene) {
     texture.refresh();
   };
 
-  desenharEscuridao(width / 2, height / 2, 1, 1, direcaoLanterna);
-
-  const overlay = scene.add
-    .image(0, 0, TEXTURA_ESCURIDAO_PARTE2)
-    .setOrigin(0)
-    .setScrollFactor(0)
-    .setDepth(DEPTH_ESCURIDAO)
-    .setDisplaySize(width, height);
-
-  let partida = null;
-  const somOscilacoes = criarSomLuzFabrica(scene, QUEDAS_LUZ_FABRICA);
-  const aplicarIntensidade = (intensidade) => {
-    overlay.setAlpha(1 - intensidade).setVisible(intensidade < 1);
-  };
-
-  /**
-   * Usa o relógio do áudio durante a partida; visitas posteriores já começam iluminadas.
-   */
-  const definirIluminacaoFabrica = (ligada, obterProgresso = null) => {
-    somOscilacoes.stop();
-    partida = ligada && obterProgresso
-      ? { obterProgresso, inicio: scene.time.now }
-      : null;
-    aplicarIntensidade(ligada && !partida ? 1 : 0);
-  };
-
-  scene.definirIluminacaoFabrica = definirIluminacaoFabrica;
-  definirIluminacaoFabrica(scene.luzFabricaAcesa === true);
-
-  /**
-   * Compensa o zoom para manter a máscara cobrindo a mesma área da tela.
-   */
-  const ajustarOverlayAoZoom = (zoomX, zoomY) => {
-    const centerX = camera.width * camera.originX;
-    const centerY = camera.height * camera.originY;
-
-    overlay
-      .setPosition(
-        centerX - centerX / zoomX,
-        centerY - centerY / zoomY,
-      )
-      .setDisplaySize(width / zoomX, height / zoomY);
-  };
-
-  let ultimoDesenho = "";
-
-  /**
-   * Atualiza direção e origem da lanterna e transforma suas coordenadas de mundo para a tela.
-   */
-  const atualizarLanterna = () => {
-    if (partida) {
-      // Sem áudio disponível, mantém o efeito visual com a mesma duração de partida.
-      // Se o áudio estiver bloqueado ou pausado, seu progresso também segura a luz.
-      const progresso = partida.obterProgresso() ??
-        (scene.time.now - partida.inicio) / (GENERATOR_LOOP_START_SECONDS * 1000);
-      somOscilacoes.update(progresso);
-      aplicarIntensidade(intensidadeLuzPartida(progresso));
-      if (progresso >= 1) partida = null;
-    }
-    if (!overlay.visible) return;
-
-    const player = scene.player;
-    const zoomX = camera.zoomX || camera.zoom || 1;
-    const zoomY = camera.zoomY || camera.zoom || 1;
-    ajustarOverlayAoZoom(zoomX, zoomY);
-
-    if (!player?.active) return;
-
-    const velocidade = player.body?.velocity;
-    if (velocidade) {
-      const magnitude = Math.hypot(velocidade.x, velocidade.y);
-      if (magnitude > 0.1) {
-        direcaoLanterna.set(
-          velocidade.x / magnitude,
-          velocidade.y / magnitude,
-        );
-      }
-    }
-
-    player.getCenter(playerCenter);
-    const origemX = playerCenter.x + direcaoLanterna.x * 10;
-    const origemY = playerCenter.y + 10 + direcaoLanterna.y * 10;
-    const worldView = camera.worldView;
-    const centerX = (origemX - worldView.x) * zoomX;
-    const centerY = (origemY - worldView.y) * zoomY;
-
-    const chaveDesenho = [Math.round(centerX * escalaMascara),
-      Math.round(centerY * escalaMascara), zoomX, zoomY,
-      direcaoLanterna.x, direcaoLanterna.y].join(":");
-    if (chaveDesenho === ultimoDesenho) return;
-    ultimoDesenho = chaveDesenho;
-
-    desenharEscuridao(
-      centerX,
-      centerY,
-      zoomX,
-      zoomY,
-      direcaoLanterna,
-    );
-  };
-
-  /**
-   * Remove listeners, overlay, textura e referência do controle de iluminação ao encerrar a
-   * cena.
-   */
   const limparIluminacao = () => {
     if (encerrada) return;
     encerrada = true;
     scene.events.off(Phaser.Scenes.Events.SHUTDOWN, limparIluminacao);
-    scene.events.off(Phaser.Scenes.Events.PRE_RENDER, atualizarLanterna);
-    partida = null;
-    somOscilacoes.destroy();
-    if (scene.definirIluminacaoFabrica === definirIluminacaoFabrica) {
-      scene.definirIluminacaoFabrica = null;
-    }
+    renderer.off(Phaser.Renderer.Events.RENDER, atualizarIluminacao);
+    if (scene.definirIluminacaoFabrica === definirIluminacaoFabrica) scene.definirIluminacaoFabrica = null;
+    if (scene.iluminacaoFabrica === iluminacao) scene.iluminacaoFabrica = null;
+    iluminacao.destroy();
     overlay.destroy();
     if (scene.textures.exists(TEXTURA_ESCURIDAO_PARTE2)) scene.textures.remove(TEXTURA_ESCURIDAO_PARTE2);
     for (const canvas of [luminariaCanvas, ...coresCanvas.values()]) {
@@ -343,5 +227,5 @@ function criarIluminacaoTerror(scene) {
   return limparIluminacao;
 }
 
-export { intensidadeLuzPartida, QUEDAS_LUZ_FABRICA };
+export { calcularPerfilLuz, ESCURIDAO_MINIMA_FABRICA };
 export default criarIluminacaoTerror;
