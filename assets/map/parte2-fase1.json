@@ -812,7 +812,7 @@
                 }],
          "opacity":1,
          "type":"objectgroup",
-         "visible":true,
+         "visible":false,
          "x":0,
          "y":0
         }, 
@@ -1136,7 +1136,7 @@
                 }],
          "opacity":1,
          "type":"objectgroup",
-         "visible":true,
+         "visible":false,
          "x":0,
          "y":0
         }, 
@@ -1412,10 +1412,245 @@
                  "width":87.4545,
                  "x":-1329.39391666667,
                  "y":-3065.66666666667
+                }, 
+                {
+                 "height":0,
+                 "id":951,
+                 "name":"",
+                 "opacity":1,
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"Cor",
+                         "type":"color",
+                         "value":"#ffffd27a"
+                        }, 
+                        {
+                         "name":"Intensidade",
+                         "type":"float",
+                         "value":1
+                        }, 
+                        {
+                         "name":"Ligada",
+                         "type":"bool",
+                         "value":true
+                        }, 
+                        {
+                         "name":"Piscando",
+                         "type":"bool",
+                         "value":false
+                        }, 
+                        {
+                         "name":"Raio",
+                         "type":"int",
+                         "value":170
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":600,
+                 "y":-1842.66666666667
+                }, 
+                {
+                 "height":0,
+                 "id":952,
+                 "name":"",
+                 "opacity":1,
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"Cor",
+                         "type":"color",
+                         "value":"#ffffd27a"
+                        }, 
+                        {
+                         "name":"Intensidade",
+                         "type":"float",
+                         "value":1
+                        }, 
+                        {
+                         "name":"Ligada",
+                         "type":"bool",
+                         "value":true
+                        }, 
+                        {
+                         "name":"Piscando",
+                         "type":"bool",
+                         "value":false
+                        }, 
+                        {
+                         "name":"Raio",
+                         "type":"int",
+                         "value":170
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":601.333333333333,
+                 "y":-1650.66666666667
+                }, 
+                {
+                 "height":0,
+                 "id":953,
+                 "name":"",
+                 "opacity":1,
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"Cor",
+                         "type":"color",
+                         "value":"#ffffd27a"
+                        }, 
+                        {
+                         "name":"Intensidade",
+                         "type":"float",
+                         "value":1
+                        }, 
+                        {
+                         "name":"Ligada",
+                         "type":"bool",
+                         "value":true
+                        }, 
+                        {
+                         "name":"Piscando",
+                         "type":"bool",
+                         "value":false
+                        }, 
+                        {
+                         "name":"Raio",
+                         "type":"int",
+                         "value":170
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":894.666666666667,
+                 "y":-1561.33333333333
+                }, 
+                {
+                 "height":0,
+                 "id":954,
+                 "name":"",
+                 "opacity":1,
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"Cor",
+                         "type":"color",
+                         "value":"#ffffd27a"
+                        }, 
+                        {
+                         "name":"Intensidade",
+                         "type":"float",
+                         "value":1
+                        }, 
+                        {
+                         "name":"Ligada",
+                         "type":"bool",
+                         "value":true
+                        }, 
+                        {
+                         "name":"Piscando",
+                         "type":"bool",
+                         "value":false
+                        }, 
+                        {
+                         "name":"Raio",
+                         "type":"int",
+                         "value":170
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":890.666666666667,
+                 "y":-1689.33333333333
+                }, 
+                {
+                 "height":0,
+                 "id":955,
+                 "name":"",
+                 "opacity":1,
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"Cor",
+                         "type":"color",
+                         "value":"#ffffd27a"
+                        }, 
+                        {
+                         "name":"Intensidade",
+                         "type":"float",
+                         "value":1
+                        }, 
+                        {
+                         "name":"Ligada",
+                         "type":"bool",
+                         "value":true
+                        }, 
+                        {
+                         "name":"Piscando",
+                         "type":"bool",
+                         "value":false
+                        }, 
+                        {
+                         "name":"Raio",
+                         "type":"int",
+                         "value":170
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":890.666666666667,
+                 "y":-1788
+                },
+            
+                {
+                 "height":0,
+                 "id":956,
+                 "name":"",
+                 "opacity":1,
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"Cor",
+                         "type":"color",
+                         "value":"#ffffd27a"
+                        }, 
+                        {
+                         "name":"Intensidade",
+                         "type":"float",
+                         "value":1
+                        }, 
+                        {
+                         "name":"Ligada",
+                         "type":"bool",
+                         "value":true
+                        }, 
+                        {
+                         "name":"Piscando",
+                         "type":"bool",
+                         "value":false
+                        }, 
+                        {
+                         "name":"Raio",
+                         "type":"int",
+                         "value":170
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":886.666666666667,
+                 "y":-1886.66666666667
                 }],
          "opacity":1,
          "type":"objectgroup",
-         "visible":true,
+         "visible":false,
          "x":0,
          "y":0
         }, 
@@ -2116,7 +2351,7 @@
                 }],
          "opacity":1,
          "type":"objectgroup",
-         "visible":true,
+         "visible":false,
          "x":0,
          "y":0
         },
@@ -2206,7 +2441,7 @@
                 }],
          "opacity":1,
          "type":"objectgroup",
-         "visible":true,
+         "visible":false,
          "x":0,
          "y":0
         }, 
@@ -2658,6 +2893,426 @@
                  "width":48,
                  "x":1104,
                  "y":-2544
+                }, 
+                {
+                 "gid":3325,
+                 "height":48,
+                 "id":896,
+                 "name":"",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":48,
+                 "x":-912,
+                 "y":-1344
+                }],
+         "opacity":1,
+         "type":"objectgroup",
+         "visible":false,
+         "x":0,
+         "y":0
+        }, 
+        {
+         "draworder":"topdown",
+         "id":50,
+         "name":"LuzesFabrica",
+         "objects":[
+                {
+                 "height":0,
+                 "id":997,
+                 "name":"",
+                 "opacity":1,
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"Cor",
+                         "type":"color",
+                         "value":"#ffffd27a"
+                        }, 
+                        {
+                         "name":"Intensidade",
+                         "type":"float",
+                         "value":1
+                        }, 
+                        {
+                         "name":"Ligada",
+                         "type":"bool",
+                         "value":true
+                        }, 
+                        {
+                         "name":"Orientacao",
+                         "type":"string",
+                         "value":"Horizontal"
+                        }, 
+                        {
+                         "name":"Piscando",
+                         "type":"bool",
+                         "value":false
+                        }, 
+                        {
+                         "name":"Raio",
+                         "type":"int",
+                         "value":170
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":-193.333333333333,
+                 "y":-1310.66666666667
+                }, 
+                {
+                 "height":0,
+                 "id":998,
+                 "name":"",
+                 "opacity":1,
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"Cor",
+                         "type":"color",
+                         "value":"#ffffd27a"
+                        }, 
+                        {
+                         "name":"Intensidade",
+                         "type":"float",
+                         "value":1
+                        }, 
+                        {
+                         "name":"Ligada",
+                         "type":"bool",
+                         "value":true
+                        }, 
+                        {
+                         "name":"Orientacao",
+                         "type":"string",
+                         "value":"Horizontal"
+                        }, 
+                        {
+                         "name":"Piscando",
+                         "type":"bool",
+                         "value":false
+                        }, 
+                        {
+                         "name":"Raio",
+                         "type":"int",
+                         "value":170
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":2.66666666666666,
+                 "y":-1320
+                }, 
+                {
+                 "height":0,
+                 "id":999,
+                 "name":"",
+                 "opacity":1,
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"Cor",
+                         "type":"color",
+                         "value":"#ffffd27a"
+                        }, 
+                        {
+                         "name":"Intensidade",
+                         "type":"float",
+                         "value":1
+                        }, 
+                        {
+                         "name":"Ligada",
+                         "type":"bool",
+                         "value":true
+                        }, 
+                        {
+                         "name":"Orientacao",
+                         "type":"string",
+                         "value":"Horizontal"
+                        }, 
+                        {
+                         "name":"Piscando",
+                         "type":"bool",
+                         "value":false
+                        }, 
+                        {
+                         "name":"Raio",
+                         "type":"int",
+                         "value":170
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":193.333333333333,
+                 "y":-1324
+                }, 
+                {
+                 "height":0,
+                 "id":1000,
+                 "name":"",
+                 "opacity":1,
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"Cor",
+                         "type":"color",
+                         "value":"#ffffd27a"
+                        }, 
+                        {
+                         "name":"Intensidade",
+                         "type":"float",
+                         "value":1
+                        }, 
+                        {
+                         "name":"Ligada",
+                         "type":"bool",
+                         "value":true
+                        }, 
+                        {
+                         "name":"Orientacao",
+                         "type":"string",
+                         "value":"Horizontal"
+                        }, 
+                        {
+                         "name":"Piscando",
+                         "type":"bool",
+                         "value":false
+                        }, 
+                        {
+                         "name":"Raio",
+                         "type":"int",
+                         "value":170
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":194.666666666667,
+                 "y":-1174.66666666667
+                }, 
+                {
+                 "height":0,
+                 "id":1001,
+                 "name":"",
+                 "opacity":1,
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"Cor",
+                         "type":"color",
+                         "value":"#ffffd27a"
+                        }, 
+                        {
+                         "name":"Intensidade",
+                         "type":"float",
+                         "value":1
+                        }, 
+                        {
+                         "name":"Ligada",
+                         "type":"bool",
+                         "value":true
+                        }, 
+                        {
+                         "name":"Orientacao",
+                         "type":"string",
+                         "value":"Horizontal"
+                        }, 
+                        {
+                         "name":"Piscando",
+                         "type":"bool",
+                         "value":false
+                        }, 
+                        {
+                         "name":"Raio",
+                         "type":"int",
+                         "value":170
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":4,
+                 "y":-1176
+                }, 
+                {
+                 "height":0,
+                 "id":1002,
+                 "name":"",
+                 "opacity":1,
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"Cor",
+                         "type":"color",
+                         "value":"#ffffd27a"
+                        }, 
+                        {
+                         "name":"Intensidade",
+                         "type":"float",
+                         "value":1
+                        }, 
+                        {
+                         "name":"Ligada",
+                         "type":"bool",
+                         "value":true
+                        }, 
+                        {
+                         "name":"Orientacao",
+                         "type":"string",
+                         "value":"Horizontal"
+                        }, 
+                        {
+                         "name":"Piscando",
+                         "type":"bool",
+                         "value":false
+                        }, 
+                        {
+                         "name":"Raio",
+                         "type":"int",
+                         "value":170
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":-192,
+                 "y":-1173.33333333333
+                }, 
+                {
+                 "height":0,
+                 "id":1003,
+                 "name":"",
+                 "opacity":1,
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"Cor",
+                         "type":"color",
+                         "value":"#ffffd27a"
+                        }, 
+                        {
+                         "name":"Intensidade",
+                         "type":"float",
+                         "value":1
+                        }, 
+                        {
+                         "name":"Ligada",
+                         "type":"bool",
+                         "value":true
+                        }, 
+                        {
+                         "name":"Orientacao",
+                         "type":"string",
+                         "value":"Horizontal"
+                        }, 
+                        {
+                         "name":"Piscando",
+                         "type":"bool",
+                         "value":false
+                        }, 
+                        {
+                         "name":"Raio",
+                         "type":"int",
+                         "value":170
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":-190.666666666667,
+                 "y":-1032
+                }, 
+                {
+                 "height":0,
+                 "id":1004,
+                 "name":"",
+                 "opacity":1,
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"Cor",
+                         "type":"color",
+                         "value":"#ffffd27a"
+                        }, 
+                        {
+                         "name":"Intensidade",
+                         "type":"float",
+                         "value":1
+                        }, 
+                        {
+                         "name":"Ligada",
+                         "type":"bool",
+                         "value":true
+                        }, 
+                        {
+                         "name":"Orientacao",
+                         "type":"string",
+                         "value":"Horizontal"
+                        }, 
+                        {
+                         "name":"Piscando",
+                         "type":"bool",
+                         "value":false
+                        }, 
+                        {
+                         "name":"Raio",
+                         "type":"int",
+                         "value":170
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":4,
+                 "y":-1034.66666666667
+                }, 
+                {
+                 "height":0,
+                 "id":1005,
+                 "name":"",
+                 "opacity":1,
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"Cor",
+                         "type":"color",
+                         "value":"#ffffd27a"
+                        }, 
+                        {
+                         "name":"Intensidade",
+                         "type":"float",
+                         "value":1
+                        }, 
+                        {
+                         "name":"Ligada",
+                         "type":"bool",
+                         "value":true
+                        }, 
+                        {
+                         "name":"Orientacao",
+                         "type":"string",
+                         "value":"Horizontal"
+                        }, 
+                        {
+                         "name":"Piscando",
+                         "type":"bool",
+                         "value":false
+                        }, 
+                        {
+                         "name":"Raio",
+                         "type":"int",
+                         "value":170
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":193.333333333333,
+                 "y":-1033.33333333333
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -2737,7 +3392,7 @@
                 }],
          "opacity":1,
          "type":"objectgroup",
-         "visible":true,
+         "visible":false,
          "x":0,
          "y":0
         }, 
@@ -2787,7 +3442,7 @@
                 }],
          "opacity":1,
          "type":"objectgroup",
-         "visible":true,
+         "visible":false,
          "x":0,
          "y":0
         }, 
@@ -2876,7 +3531,7 @@
                 }],
          "opacity":1,
          "type":"objectgroup",
-         "visible":true,
+         "visible":false,
          "x":0,
          "y":0
         }, 
@@ -3030,7 +3685,7 @@
                 }],
          "opacity":1,
          "type":"objectgroup",
-         "visible":true,
+         "visible":false,
          "x":0,
          "y":0
         }, 
@@ -3485,7 +4140,7 @@
                 }],
          "opacity":1,
          "type":"objectgroup",
-         "visible":true,
+         "visible":false,
          "x":0,
          "y":0
         }, 
@@ -3535,7 +4190,7 @@
                 }],
          "opacity":1,
          "type":"objectgroup",
-         "visible":true,
+         "visible":false,
          "x":0,
          "y":0
         }, 
@@ -3584,7 +4239,7 @@
                  "y":-80
                 }, 
                 {
-                 "data":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP0MAAD+DAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPw0AAD4NAAA\/DQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGENAABiDQAAYQ0AAGINAABhDQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+                 "data":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD+DAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPw0AAD4NAAA\/DQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGENAABiDQAAYQ0AAGINAABhDQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
                  "height":16,
                  "width":16,
                  "x":-32,
@@ -3613,7 +4268,7 @@
          "startx":-48,
          "starty":-128,
          "type":"tilelayer",
-         "visible":true,
+         "visible":false,
          "width":80,
          "x":0,
          "y":0
@@ -3985,7 +4640,7 @@
                  "y":-80
                 }, 
                 {
-                 "data":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAALQMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD0DAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHECAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHECAABxAgAAcQIAAHECAABxAgAAcQIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHECAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAcQIAAHECAABxAgAAAAAAAAAAAABxAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAcQIAAAAAAAAAAAAAcQIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHECAAAAAAAAAAAAAHECAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABxAgAAAAAAAAAAAABxAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAcQIAAAAAAAAAAAAAcQIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHECAAAAAAAAAAAAAHECAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABxAgAAAAAAAAAAAABxAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAcQIAAAAAAAAAAAAAcQIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHECAAAAAAAAAAAAAHECAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABxAgAAAAAAAAAAAABxAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+                 "data":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAALQMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD0DAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHECAABxAgAAcQIAAHECAABxAgAAcQIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHECAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAcQIAAHECAABxAgAAAAAAAAAAAABxAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAcQIAAAAAAAAAAAAAcQIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHECAAAAAAAAAAAAAHECAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABxAgAAAAAAAAAAAABxAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAcQIAAAAAAAAAAAAAcQIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHECAAAAAAAAAAAAAHECAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABxAgAAAAAAAAAAAABxAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAcQIAAAAAAAAAAAAAcQIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHECAAAAAAAAAAAAAHECAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABxAgAAAAAAAAAAAABxAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
                  "height":16,
                  "width":16,
                  "x":-16,
@@ -4290,7 +4945,7 @@
                  "y":-48
                 }, 
                 {
-                 "data":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAKQLAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAKQLAKCkCwCgpAsAoKQLAKCkCwCgpAsAoKQLAKClCwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAKILAGCiCwBgogsAYKILAGCiCwBgogsAYKILAGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACkCwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAApAsAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAKQLAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACkCwCgpAsAoKQLAKCkCwCgpAsAoKQLAKCkCwCgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAApAsAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAKQLAKCkCwCgpAsAoKQLAKCkCwCgpAsAoKQLAKAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACkCwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAApAsAoKQLAKCkCwCgpAsAoKQLAKCkCwCgpAsAoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAKQLAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACkCwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAApAsAoKQLAKCkCwCgpAsAoKQLAKCkCwCgpQsAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+                 "data":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAKQLAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAKQLAKCkCwCgpAsAoKQLAKCkCwCgpAsAoKQLAKClCwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAKILAGCiCwBgogsAYKILAGCiCwBgogsAYKILAGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACkCwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAApAsAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAKQLAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACkCwCgpAsAoKQLAKCkCwCgpAsAoKQLAKCkCwCgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFxUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAKQLAKCkCwCgpAsAoKQLAKCkCwCgpAsAoKQLAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAXFQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAApAsAoKQLAKCkCwCgpAsAoKQLAKCkCwCgpAsAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABcVAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACkCwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAApAsAoKQLAKCkCwCgpAsAoKQLAKCkCwCgpQsAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
                  "height":16,
                  "width":16,
                  "x":16,
@@ -4468,7 +5123,7 @@
                  "y":-48
                 }, 
                 {
-                 "data":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAL0LAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACkCwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAERUAABIVAAATFQAAFBUAABUVAAAWFQAAFxUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAKQLAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAARFQAAEhUAABMVAAAUFQAAFRUAABYVAAAXFQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAApAsAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABEVAAASFQAAExUAABQVAAAVFQAAFhUAABcVAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+                 "data":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAL0LAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACkCwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAERUAABIVAAATFQAAFBUAABUVAAAWFQAApAsAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAARFQAAEhUAABMVAAAUFQAAFRUAABYVAACkCwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABEVAAASFQAAExUAABQVAAAVFQAAFhUAAKQLAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
                  "height":16,
                  "width":16,
                  "x":16,
@@ -4494,7 +5149,8 @@
          "width":80,
          "x":0,
          "y":0
-        }, 
+        },
+    
         {
          "draworder":"topdown",
          "id":11,
@@ -9300,11 +9956,10 @@
                 }],
          "opacity":1,
          "type":"objectgroup",
-         "visible":true,
+         "visible":false,
          "x":0,
          "y":0
-        },
-    
+        }, 
         {
          "draworder":"topdown",
          "id":46,
@@ -9312,7 +9967,7 @@
          "objects":[],
          "opacity":1,
          "type":"objectgroup",
-         "visible":true,
+         "visible":false,
          "x":0,
          "y":0
         }, 
@@ -9371,12 +10026,12 @@
                 }],
          "opacity":1,
          "type":"objectgroup",
-         "visible":true,
+         "visible":false,
          "x":0,
          "y":0
         }],
- "nextlayerid":50,
- "nextobjectid":896,
+ "nextlayerid":51,
+ "nextobjectid":1006,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.12.2",

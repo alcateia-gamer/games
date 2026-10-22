@@ -39,116 +39,87 @@ function intensidadeLuzPartida(progresso) {
 }
 
 const TEXTURA_ESCURIDAO_PARTE2 = "level1-parte2-escuridao";
-const ALCANCE_LANTERNA = 290;
-const MEIA_LARGURA_MAXIMA = 540;
-const MEIA_LARGURA_INICIAL = 1;
-const INTENSIDADE_NUCLEO = 0.42;
-const INTENSIDADE_HALO = 0.18;
 const DEPTH_ESCURIDAO = 50;
-const DIRECOES_INICIAIS = {
-  right: [1, 0],
-  down: [0, 1],
-  left: [-1, 0],
-  up: [0, -1],
-};
+const TAMANHO_MASCARA = 256;
+const ESCURIDAO_MINIMA_FABRICA = 0.2;
+const GANHO_LUZ_FABRICA = 1.2;
+const GANHO_DISPERSAO_FABRICA = 2;
+const COR_ESCURIDAO = `rgba(0,0,0,${ESCURIDAO_AMBIENTE_FABRICA})`;
+// Após destination-out, q é a sombra restante em [0,1]. A composição final produz
+// alpha = mínima + (ambiente - mínima) * q, sem readback de pixels por frame.
+const OPACIDADE_CAMPO = (ESCURIDAO_AMBIENTE_FABRICA - ESCURIDAO_MINIMA_FABRICA) /
+  (1 - ESCURIDAO_MINIMA_FABRICA);
 
-/**
- * Interpola suavemente entre zero e um dentro do intervalo informado para suavizar bordas de
- * luz.
- */
-function smoothstep(minimo, maximo, valor) {
-  const normalizado = Math.max(0, Math.min(1, (valor - minimo) / (maximo - minimo)));
-  return normalizado * normalizado * (3 - 2 * normalizado);
+function suavizar(valor) {
+  const p = Math.max(0, Math.min(1, valor));
+  return p * p * p * (p * (6 * p - 15) + 10);
 }
 
 /**
- * Desenha um halo elíptico suave ao redor da origem da lanterna.
+ * Distância ao segmento horizontal [-0.1, 0.1], em unidades do Raio do Tiled.
+ * Três quedas contínuas misturam núcleo, dispersão e halo. A variação longitudinal
+ * impede a área uniforme que fazia o núcleo anterior parecer um retângulo com blur.
  */
-function desenharDispersaoLocal(context, centerX, centerY, zoomX, zoomY) {
-  const radius = 72;
-
-  context.save();
-  context.translate(centerX, centerY);
-  context.scale(zoomX * 0.72, zoomY);
-
-  const gradient = context.createRadialGradient(0, 0, 0, 0, 0, radius);
-  gradient.addColorStop(0, "rgba(255, 255, 255, 0.2)");
-  gradient.addColorStop(0.38, "rgba(255, 255, 255, 0.16)");
-  gradient.addColorStop(0.72, "rgba(255, 255, 255, 0.08)");
-  gradient.addColorStop(0.92, "rgba(255, 255, 255, 0.025)");
-  gradient.addColorStop(1, "rgba(255, 255, 255, 0)");
-
-  context.fillStyle = gradient;
-  context.beginPath();
-  context.arc(0, 0, radius, 0, Math.PI * 2);
-  context.fill();
-  context.restore();
+function calcularPerfilLuz(nx, ny) {
+  const radial = Math.hypot(nx, ny);
+  if (radial >= MULTIPLICADOR_ALCANCE_FABRICA) return 0;
+  const distancia = Math.hypot(Math.max(0, Math.abs(nx) - 0.1), ny);
+  const axial = Math.exp(-0.8 * (nx / 0.14) ** 2);
+  const pesoNucleo = axial * Math.exp(-0.5 * (distancia / 0.045) ** 2);
+  const nucleo = 0.46 * pesoNucleo;
+  const dispersao = 0.28 * Math.exp(-0.5 * (distancia / (0.16 * MULTIPLICADOR_ALCANCE_FABRICA)) ** 2);
+  const halo = 0.16 * Math.exp(-0.5 * (distancia / (0.45 * MULTIPLICADOR_ALCANCE_FABRICA)) ** 2);
+  // Dobra a luz difusa fora do núcleo, com transição contínua que preserva seu pico.
+  const ganhoDifuso = 1 + (GANHO_DISPERSAO_FABRICA - 1) * (1 - pesoNucleo);
+  // Amplia só a dispersão; o núcleo conserva suas dimensões e queda anteriores.
+  const perfil = nucleo * (1 - suavizar(radial)) +
+    (dispersao + halo) * ganhoDifuso * (1 - suavizar(radial / MULTIPLICADOR_ALCANCE_FABRICA));
+  // Reforça a luz suavemente, sem recortar o gradiente ou criar um platô no núcleo.
+  return 1 - (1 - perfil) ** GANHO_LUZ_FABRICA;
 }
 
-/**
- * Prepara a máscara do cone com núcleo e halo graduais, reutilizada no desenho dos quadros.
- */
-function criarMascaraCone() {
-  const canvas = document.createElement("canvas");
-  canvas.width = ALCANCE_LANTERNA;
-  canvas.height = MEIA_LARGURA_MAXIMA * 2;
-
-  const context = canvas.getContext("2d");
-  const image = context.createImageData(canvas.width, canvas.height);
-  const centerY = MEIA_LARGURA_MAXIMA;
-
-  for (let x = 0; x < canvas.width; x += 1) {
-    const progresso = x / (canvas.width - 1);
-    const meiaLargura =
-      MEIA_LARGURA_INICIAL +
-      (MEIA_LARGURA_MAXIMA - MEIA_LARGURA_INICIAL) *
-        Math.pow(progresso, 0.82);
-    const inicioSuave = smoothstep(0, 0.045, progresso);
-    const fimSuave = 1 - smoothstep(0.76, 1, progresso);
-    const quedaDistancia = 1 - 0.34 * progresso;
-
-    for (let y = 0; y < canvas.height; y += 1) {
-      const deslocamentoLateral = Math.abs(y - centerY) / meiaLargura;
-      if (deslocamentoLateral >= 1) continue;
-
-      const bordaSuave = 1 - smoothstep(0.72, 1, deslocamentoLateral);
-      const nucleo =
-        INTENSIDADE_NUCLEO *
-        Math.exp(-Math.pow(deslocamentoLateral / 0.3, 2) * 2);
-      const halo =
-        INTENSIDADE_HALO *
-        Math.exp(-Math.pow(deslocamentoLateral / 0.72, 2) * 2);
-      const variacao =
-        0.95 +
-        Math.sin(progresso * 22 + deslocamentoLateral * 7) * 0.025 +
-        Math.sin(progresso * 47 - deslocamentoLateral * 13) * 0.015;
-      const alpha = Math.min(
-        1,
-        (nucleo + halo) *
-          bordaSuave *
-          inicioSuave *
-          fimSuave *
-          quedaDistancia *
-          variacao,
-      );
-      const pixel = (y * canvas.width + x) * 4;
-
-      image.data[pixel] = 255;
-      image.data[pixel + 1] = 255;
-      image.data[pixel + 2] = 255;
-      image.data[pixel + 3] = Math.round(alpha * 255);
+/** Um perfil compartilhado, calculado só na criação da iluminação. */
+function criarPerfilLuminaria() {
+  const perfil = new Uint8Array(TAMANHO_MASCARA * TAMANHO_MASCARA);
+  for (let y = 0; y < TAMANHO_MASCARA; y++) {
+    const ny = ((y + 0.5) / TAMANHO_MASCARA * 2 - 1) * MULTIPLICADOR_ALCANCE_FABRICA;
+    for (let x = 0; x < TAMANHO_MASCARA; x++) {
+      const nx = ((x + 0.5) / TAMANHO_MASCARA * 2 - 1) * MULTIPLICADOR_ALCANCE_FABRICA;
+      perfil[y * TAMANHO_MASCARA + x] = Math.round(calcularPerfilLuz(nx, ny) * 255);
     }
   }
+  return perfil;
+}
 
+/** Branco é usado apenas para apagar a máscara; nunca é desenhado sobre o cenário. */
+function criarMascaraLuminaria(perfil, cor = 0xFFFFFF) {
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = TAMANHO_MASCARA;
+  const context = canvas.getContext("2d");
+  const image = context.createImageData(canvas.width, canvas.height);
+  const red = (cor >> 16) & 255;
+  const green = (cor >> 8) & 255;
+  const blue = cor & 255;
+  for (let i = 0; i < perfil.length; i++) {
+    image.data[i * 4] = red;
+    image.data[i * 4 + 1] = green;
+    image.data[i * 4 + 2] = blue;
+    image.data[i * 4 + 3] = perfil[i];
+  }
   context.putImageData(image, 0, 0);
-
   return canvas;
 }
 
-/**
- * Cria o overlay escuro, conecta sua atualização e expõe o controle que acende a iluminação da
- * fábrica.
- */
+function desenharLuminaria(context, canvas, luz) {
+  context.save();
+  if (luz.orientacao === "vertical") context.transform(0, 1, -1, 0, luz.x, luz.y);
+  else context.translate(luz.x, luz.y);
+  const alcance = luz.raio * MULTIPLICADOR_ALCANCE_FABRICA;
+  context.drawImage(canvas, -alcance, -alcance, alcance * 2, alcance * 2);
+  context.restore();
+}
+
+/** Uma única máscara mantém a sombra ambiente e recebe apenas as luzes do teto. */
 function criarIluminacaoTerror(scene) {
   const camera = scene.cameras.main;
   const width = Math.ceil(camera.width);
@@ -178,41 +149,70 @@ function criarIluminacaoTerror(scene) {
   );
 
   /**
-   * Redesenha a escuridão e subtrai o cone e a dispersão de luz na posição atual da lanterna.
+   * Renderer.RENDER acontece depois de camera.preRender tanto em Canvas quanto em WebGL.
+   * Scene.PRE_RENDER ainda tem a matriz do frame anterior durante o seguimento do jogador.
    */
-  const desenharEscuridao = (
-    centerX,
-    centerY,
-    zoomX = 1,
-    zoomY = 1,
-    direcao = direcaoLanterna,
-  ) => {
+  const atualizarIluminacao = (cenaRenderizada, cameraRenderizada) => {
+    if (encerrada || cenaRenderizada !== scene || cameraRenderizada !== camera) return;
+    if (width !== Math.ceil(camera.width) || height !== Math.ceil(camera.height)) {
+      width = Math.ceil(camera.width);
+      height = Math.ceil(camera.height);
+      texture.setSize(width, height);
+      overlay.setTexture(TEXTURA_ESCURIDAO_PARTE2);
+      invalidada = true;
+    }
+    posicionarOverlay();
+    const fontes = iluminacao.atualizar(scene.time.now, camera);
+    const m = camera.matrix;
+    // Compara valores em memória reutilizada, sem criar arrays ou strings a cada frame.
+    if (!invalidada && ultimoQuadro.width === width && ultimoQuadro.height === height &&
+      ultimoQuadro.a === m.a && ultimoQuadro.b === m.b && ultimoQuadro.c === m.c && ultimoQuadro.d === m.d &&
+      ultimoQuadro.e === m.e && ultimoQuadro.f === m.f && ultimoQuadro.revisao === iluminacao.revisao) return;
+    invalidada = false;
+    ultimoQuadro.width = width;
+    ultimoQuadro.height = height;
+    ultimoQuadro.a = m.a;
+    ultimoQuadro.b = m.b;
+    ultimoQuadro.c = m.c;
+    ultimoQuadro.d = m.d;
+    ultimoQuadro.e = m.e;
+    ultimoQuadro.f = m.f;
+    ultimoQuadro.revisao = iluminacao.revisao;
+
+    context.setTransform(1, 0, 0, 1, 0, 0);
+    context.globalAlpha = 1;
+    context.globalCompositeOperation = "source-over";
     context.clearRect(0, 0, width, height);
     context.fillStyle = "#000000";
     context.fillRect(0, 0, width, height);
-
-    context.globalCompositeOperation = "destination-out";
     context.save();
-    context.transform(
-      direcao.x * zoomX,
-      direcao.y * zoomY,
-      -direcao.y * zoomX,
-      direcao.x * zoomY,
-      centerX,
-      centerY,
-    );
-    context.drawImage(
-      coneCanvas,
-      0,
-      -MEIA_LARGURA_MAXIMA,
-      ALCANCE_LANTERNA,
-      MEIA_LARGURA_MAXIMA * 2,
-    );
+    context.setTransform(m.a, m.b, m.c, m.d, m.e, m.f);
+    context.globalCompositeOperation = "destination-out";
+    for (const { luz, intensidade } of fontes) {
+      context.globalAlpha = intensidade;
+      desenharLuminaria(context, luminariaCanvas, luz);
+    }
     context.restore();
-
-    desenharDispersaoLocal(context, centerX, centerY, zoomX, zoomY);
+    // Reintroduz a sombra mínima em coordenadas de tela, antes da coloração.
+    // source-in escala o campo e destination-over estabelece seu piso de opacidade.
+    context.globalCompositeOperation = "source-in";
+    context.fillStyle = `rgba(0,0,0,${OPACIDADE_CAMPO})`;
+    context.fillRect(0, 0, width, height);
+    context.globalCompositeOperation = "destination-over";
+    context.fillStyle = `rgba(0,0,0,${ESCURIDAO_MINIMA_FABRICA})`;
+    context.fillRect(0, 0, width, height);
+    context.save();
+    context.setTransform(m.a, m.b, m.c, m.d, m.e, m.f);
+    // Colore suavemente só a sombra restante. source-atop preserva seu alpha e evita
+    // acumular círculos amarelos opacos quando várias lâmpadas se sobrepõem.
+    context.globalCompositeOperation = "source-atop";
+    const escalaCor = 0.025 / Math.max(1, fontes.length);
+    for (const { luz, intensidade } of fontes) {
+      context.globalAlpha = intensidade * escalaCor;
+      desenharLuminaria(context, coresCanvas.get(luz.cor.css), luz);
+    }
+    context.restore();
     context.globalCompositeOperation = "source-over";
-
     texture.refresh();
   };
 
@@ -322,6 +322,8 @@ function criarIluminacaoTerror(scene) {
    * cena.
    */
   const limparIluminacao = () => {
+    if (encerrada) return;
+    encerrada = true;
     scene.events.off(Phaser.Scenes.Events.SHUTDOWN, limparIluminacao);
     scene.events.off(Phaser.Scenes.Events.PRE_RENDER, atualizarLanterna);
     partida = null;
@@ -330,16 +332,14 @@ function criarIluminacaoTerror(scene) {
       scene.definirIluminacaoFabrica = null;
     }
     overlay.destroy();
-    if (scene.textures.exists(TEXTURA_ESCURIDAO_PARTE2)) {
-      scene.textures.remove(TEXTURA_ESCURIDAO_PARTE2);
+    if (scene.textures.exists(TEXTURA_ESCURIDAO_PARTE2)) scene.textures.remove(TEXTURA_ESCURIDAO_PARTE2);
+    for (const canvas of [luminariaCanvas, ...coresCanvas.values()]) {
+      canvas.width = canvas.height = 0;
     }
-    coneCanvas.width = 0;
-    coneCanvas.height = 0;
+    coresCanvas.clear();
   };
-
-  scene.events.on(Phaser.Scenes.Events.PRE_RENDER, atualizarLanterna);
+  renderer.on(Phaser.Renderer.Events.RENDER, atualizarIluminacao);
   scene.events.once(Phaser.Scenes.Events.SHUTDOWN, limparIluminacao);
-
   return limparIluminacao;
 }
 
