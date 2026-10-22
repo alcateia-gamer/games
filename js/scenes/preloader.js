@@ -8,6 +8,7 @@ import { carregarSonsInimigos } from "../sounds/inimigos.js";
 import { carregarSonsKatana } from "../sounds/katana.js";
 import { carregarSonsPersonagem } from "../sounds/personagem.js";
 import { carregarSomGerador } from "../sounds/gerador.js";
+import { carregarSomLuzFabrica } from "../sounds/luzFabrica.js";
 import { preloadInventoryItemImages } from "../inventory/InventoryItems.js";
 
 class Preloader extends Phaser.Scene {
@@ -396,6 +397,7 @@ class Preloader extends Phaser.Scene {
     carregarSonsKatana(this.load);
     carregarSonsInimigos(this.load);
     carregarSomGerador(this.load);
+    carregarSomLuzFabrica(this.load);
 
     // =====================================================
     // MAPAS

@@ -4,6 +4,7 @@
  */
 
 import { GENERATOR_LOOP_START_SECONDS } from "../sounds/gerador.js";
+import { criarSomLuzFabrica } from "../sounds/luzFabrica.js";
 
 // Tentativas de partida, quedas breves de tensão e recuperação final, sem flashes brancos.
 const PARTIDA_GERADOR = [
@@ -12,6 +13,19 @@ const PARTIDA_GERADOR = [
   [0.62, 0.56], [0.66, 0.28], [0.78, 0.78], [0.83, 0.69],
   [0.92, 0.94], [1, 1],
 ];
+
+// O áudio observa as quedas existentes, sem alterar a curva de iluminação.
+const QUEDAS_LUZ_FABRICA = PARTIDA_GERADOR.flatMap(([inicio, luz], indice) => {
+  const proximo = PARTIDA_GERADOR[indice + 1];
+  return proximo && luz > proximo[1]
+    ? [{
+      inicio,
+      inicioOscilacao: PARTIDA_GERADOR[indice - 1]?.[0] ?? inicio,
+      fim: proximo[0],
+      intensidade: luz - proximo[1],
+    }]
+    : [];
+});
 
 function intensidadeLuzPartida(progresso) {
   const p = Math.max(0, Math.min(1, progresso));
@@ -207,6 +221,7 @@ function criarIluminacaoTerror(scene) {
     .setDisplaySize(width, height);
 
   let partida = null;
+  const somOscilacoes = criarSomLuzFabrica(scene, QUEDAS_LUZ_FABRICA);
   const aplicarIntensidade = (intensidade) => {
     overlay.setAlpha(1 - intensidade).setVisible(intensidade < 1);
   };
@@ -215,6 +230,7 @@ function criarIluminacaoTerror(scene) {
    * Usa o relógio do áudio durante a partida; visitas posteriores já começam iluminadas.
    */
   const definirIluminacaoFabrica = (ligada, obterProgresso = null) => {
+    somOscilacoes.stop();
     partida = ligada && obterProgresso
       ? { obterProgresso, inicio: scene.time.now }
       : null;
@@ -248,6 +264,7 @@ function criarIluminacaoTerror(scene) {
       // Se o áudio estiver bloqueado ou pausado, seu progresso também segura a luz.
       const progresso = partida.obterProgresso() ??
         (scene.time.now - partida.inicio) / (GENERATOR_LOOP_START_SECONDS * 1000);
+      somOscilacoes.update(progresso);
       aplicarIntensidade(intensidadeLuzPartida(progresso));
       if (progresso >= 1) partida = null;
     }
@@ -294,6 +311,7 @@ function criarIluminacaoTerror(scene) {
     scene.events.off(Phaser.Scenes.Events.SHUTDOWN, limparIluminacao);
     scene.events.off(Phaser.Scenes.Events.PRE_RENDER, atualizarLanterna);
     partida = null;
+    somOscilacoes.destroy();
     if (scene.definirIluminacaoFabrica === definirIluminacaoFabrica) {
       scene.definirIluminacaoFabrica = null;
     }
@@ -311,5 +329,5 @@ function criarIluminacaoTerror(scene) {
   return limparIluminacao;
 }
 
-export { intensidadeLuzPartida };
+export { intensidadeLuzPartida, QUEDAS_LUZ_FABRICA };
 export default criarIluminacaoTerror;
