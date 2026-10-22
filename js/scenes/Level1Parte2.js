@@ -10,6 +10,7 @@ import {
   atualizarDepthGarras,
   atualizarDepthObjetosProducaoEArmazem,
   atualizarDepthComputadoresPcAdm,
+  atualizarDepthObjetosDepthPerso,
 } from "../map/ProfundidadeMapa.js";
 
 import criarAnimacoesPlayer, {
@@ -628,6 +629,7 @@ class Level1Parte2 extends Phaser.Scene {
         remote = this.add
           .sprite(player.x, player.y, texture, initialFrame)
           .setOrigin(0.5, 0.5)
+          .setVertexRoundMode("safe")
           .setAlpha(0.88)
           .setDepth(13);
 
@@ -942,6 +944,7 @@ class Level1Parte2 extends Phaser.Scene {
     this.profundidadePersonagemParte2 = valor;
 
     atualizarDepthPlayer(this);
+    atualizarDepthObjetosDepthPerso(this);
   }
 
   // =====================================================

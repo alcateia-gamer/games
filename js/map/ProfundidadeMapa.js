@@ -109,10 +109,9 @@ function atualizarDepthGarras(scene) {
 }
 
 /**
- * Compara os centros visuais do jogador e dos computadores PcAdm para inverter a sobreposição
- * durante a passagem.
+ * Ordena individualmente os objetos de uma camada pelo centro visual em relação ao jogador.
  */
-function atualizarDepthComputadoresPcAdm(scene) {
+function atualizarDepthObjetosPeloCentro(scene, nomeCamada) {
   const player = scene.player;
   if (!player?.active || !Array.isArray(scene.objetosMapaParte2)) {
     return;
@@ -121,15 +120,30 @@ function atualizarDepthComputadoresPcAdm(scene) {
   const centroPlayerY = player.getBounds().centerY;
 
   scene.objetosMapaParte2.forEach((visual) => {
-    if (!visual?.active || visual.getData("objectLayerName") !== "PcAdm") {
+    if (!visual?.active || visual.getData("objectLayerName") !== nomeCamada) {
       return;
     }
 
     const centroObjetoY = visual.getBounds().centerY;
-    const personagemAcima = centroPlayerY > centroObjetoY;
+    // Preserva o Y negativo do mapa: -1200 fica mais abaixo que -1300.
+    const personagemAbaixo = centroPlayerY > centroObjetoY;
 
-    visual.setDepth(player.depth + (personagemAcima ? -0.01 : 0.01));
+    visual.setDepth(player.depth + (personagemAbaixo ? -0.01 : 0.01));
   });
+}
+
+/**
+ * Compara os centros do jogador e dos computadores PcAdm durante a passagem.
+ */
+function atualizarDepthComputadoresPcAdm(scene) {
+  atualizarDepthObjetosPeloCentro(scene, "PcAdm");
+}
+
+/**
+ * Alterna a sobreposição de cada objeto da camada DepthPerso pelo centro de ambos.
+ */
+function atualizarDepthObjetosDepthPerso(scene) {
+  atualizarDepthObjetosPeloCentro(scene, "DepthPerso");
 }
 
 export {
@@ -141,4 +155,5 @@ export {
   atualizarDepthObjetosProducaoEArmazem,
   atualizarDepthGarras,
   atualizarDepthComputadoresPcAdm,
+  atualizarDepthObjetosDepthPerso,
 };

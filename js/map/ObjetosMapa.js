@@ -107,6 +107,7 @@ function criarBaseVisual(scene, map, object, textureKeyByTilesetName) {
       frameName,
     )
     .setOrigin(0.5, 1)
+    .setVertexRoundMode("safe")
     .setScale(width / tileWidth, height / tileHeight)
     .setDepth(depthFromWorldY(object.y));
 
@@ -260,6 +261,7 @@ function criarObjetosFabrica(scene, map, textureKeyByTilesetName) {
             frameName,
           )
           .setOrigin(0.5, 1)
+          .setVertexRoundMode("safe")
           .setScale(width / tileWidth, height / tileHeight)
           .setDepth(profundidade);
 

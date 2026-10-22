@@ -9,6 +9,13 @@ var config = {
   // Resolução lógica: o modo FIT adapta esse espaço ao tamanho real da janela.
   width: 850,
   height: 405,
+  // Preserva os pixels das imagens, inclusive nos frames de ataque dos personagens.
+  render: {
+    antialias: false,
+    antialiasGL: false,
+    // O mundo alinha os próprios vértices; a câmera mantém o HUD estável durante o zoom.
+    roundPixels: false,
+  },
   // Meta de quadros por segundo e escolha do agendador de atualização.
   fps: {
     target: 30,

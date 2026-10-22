@@ -31,6 +31,8 @@ body {
 #game-container canvas {
   display: block;
   touch-action: none;
+  /* O modo FIT amplia o canvas via CSS; mantém os pixels nítidos nessa ampliação. */
+  image-rendering: pixelated;
 }
 
 /* Campo HTML usado no mobile para abrir o teclado virtual e digitar o código da sala. */

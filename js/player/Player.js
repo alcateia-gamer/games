@@ -80,14 +80,6 @@ function texturaWalk(scene, direcao = scene.direcaoAtual) {
 }
 
 /**
- * Aplica filtragem de vizinho mais próximo à textura de caminhada do Magnus.
- */
-function configurarFiltroPersonagem2(scene) {
-  const texture = scene.textures.get("personagem2-walk");
-  texture?.setFilter(Phaser.Textures.FilterMode.NEAREST);
-}
-
-/**
  * Configura a origem visual de caminhada e ajusta o ponto de ancoragem específico da Aria.
  */
 function configurarVisualWalk(scene) {
@@ -171,9 +163,8 @@ function criarPlayer(scene) {
     frameParado(scene, "down"),
   );
 
-  if (personagem2Ativa(scene)) {
-    configurarFiltroPersonagem2(scene);
-  }
+  // Usa o mesmo alinhamento dos tiles, sem arredondar posições físicas ou a câmera.
+  scene.player.setVertexRoundMode("safe");
 
   scene.player.setAlpha(1).clearTint().setBlendMode(Phaser.BlendModes.NORMAL);
   configurarVisualWalk(scene);
