@@ -7,11 +7,11 @@ import { causarDanoInimigo } from "../enemies/EnemyTest.js";
 import { causarDanoBoss } from "../enemies/BossFinal.js";
 
 const DIRECOES_PROJETIL = {
-  // x/y definem o movimento; frame escolhe o desenho correspondente na folha da flecha.
-  up: { x: 0, y: -1, frame: 0 },
-  left: { x: -1, y: 0, frame: 1 },
-  right: { x: 1, y: 0, frame: 2 },
-  down: { x: 0, y: 1, frame: 3 },
+  // arcoX/arcoY marcam a saída da corda no frame de ataque de 64×64.
+  up: { x: 0, y: -1, frame: 0, arcoX: 29, arcoY: 16 },
+  left: { x: -1, y: 0, frame: 1, arcoX: 28, arcoY: 28 },
+  right: { x: 1, y: 0, frame: 2, arcoX: 36, arcoY: 28 },
+  down: { x: 0, y: 1, frame: 3, arcoX: 29, arcoY: 44 },
 };
 
 const VELOCIDADE_PROJETIL = 420;
@@ -88,8 +88,10 @@ function dispararProjetil(scene) {
 
   criarSistemaProjeteis(scene);
 
-  const origemX = scene.player.x + direcao.x * 38;
-  const origemY = scene.player.y + direcao.y * 38;
+  // A flecha mede 32 pixels: sua cauda começa na corda do arco.
+  // Usa a origem atual da Aria também quando ela muda de direção durante a carga.
+  const origemX = scene.player.x + direcaoBase.arcoX - scene.player.displayOriginX + direcao.x * 16;
+  const origemY = scene.player.y + direcaoBase.arcoY - scene.player.displayOriginY + direcao.y * 16;
   const projetil = scene.physics.add.sprite(
     origemX,
     origemY,
@@ -109,14 +111,12 @@ function dispararProjetil(scene) {
   projetil.body.setAllowGravity(false);
   projetil.body.setImmovable(true);
   const projetilHorizontal = direcao.x !== 0;
-  const larguraHitbox = projetilHorizontal ? 59 : 8;
-  const alturaHitbox = projetilHorizontal ? 8 : 46;
+  const larguraHitbox = projetilHorizontal ? 32 : 6;
+  const alturaHitbox = projetilHorizontal ? 6 : 32;
   projetil.body.setSize(larguraHitbox, alturaHitbox, true);
-  const deslocamentoX = projetilHorizontal ? -5 : 3;
-  const deslocamentoY = projetilHorizontal ? -4 : 0;
   projetil.body.setOffset(
-    (64 - larguraHitbox) / 2 + deslocamentoX,
-    (64 - alturaHitbox) / 2 + deslocamentoY,
+    (64 - larguraHitbox) / 2,
+    (64 - alturaHitbox) / 2,
   );
   const velocidadeProjetil = scene.velocidadeProjetil ?? VELOCIDADE_PROJETIL;
   projetil.velocidade = velocidadeProjetil;

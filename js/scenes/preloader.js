@@ -481,7 +481,7 @@ class Preloader extends Phaser.Scene {
 
     this.load.spritesheet(
       "personagem3-attack",
-      "PERSONAGENS/PERSONAGENS PRICIPAIS/ARIA_KADE 3/ARIA_ARCO_ATAQUE.png",
+      "PERSONAGENS/PERSONAGENS PRICIPAIS/ARIA_KADE 3/ARIA_ARCO_ATAQUE_ROSA.png",
       {
         frameWidth: 64,
         frameHeight: 64,
@@ -490,7 +490,7 @@ class Preloader extends Phaser.Scene {
 
     this.load.spritesheet(
       "aria-arrow",
-      "PERSONAGENS/PERSONAGENS PRICIPAIS/ARIA_KADE 3/Arrow.png",
+      "PERSONAGENS/PERSONAGENS PRICIPAIS/ARIA_KADE 3/Arrow_ROSA.png",
       {
         frameWidth: 64,
         frameHeight: 64,
