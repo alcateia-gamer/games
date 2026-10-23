@@ -450,7 +450,7 @@ class Preloader extends Phaser.Scene {
 
     this.load.spritesheet(
       "personagem2-attack",
-      "PERSONAGENS/PERSONAGENS PRICIPAIS/MAGNUS_FORCE 2/magnus_ataque_1.png",
+      "PERSONAGENS/PERSONAGENS PRICIPAIS/MAGNUS_FORCE 2/magnus_ataque_LARANJA.png",
       {
         frameWidth: 128,
         frameHeight: 128,
