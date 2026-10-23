@@ -64,11 +64,19 @@ export function causarDanoJogador(boss, quantidade) {
   const scene = boss.scene;
   const player = scene?.player;
 
-  if (!player?.active || player.invulneravel || scene.morteEmAndamento) {
-    return false;
-  }
+  
+if (!player?.active || player.invulneravel || scene.morteEmAndamento) {
+  return false;
+}
 
-  player.invulneravel = true;
+// KAI - BARREIRA DE PARRY
+// Enquanto estiver ativa, impede o dano do boss.
+if (scene.tentarBloquearDanoEspecial?.(boss)) {
+  return false;
+}
+
+// Dano original quando não há proteção.
+player.invulneravel = true;
 
   tomarDano(scene, quantidade, boss);
 

@@ -40,15 +40,22 @@ function criarControles(scene) {
 }
 
 // =====================================================
-// UPDATE
+// ATUALIZAR CONTROLES
 // =====================================================
 
 function atualizarControles(scene) {
+  // Movimento normal e dash.
   atualizarMovimento(scene);
 
-  // Atualizar habilidades, projéteis refletidos
-  // e efeitos especiais ativos.
-  atualizarSistemaEspeciais(scene);
+  // Delta real do loop do Phaser.
+  const delta = scene.game?.loop?.delta ?? 16.67;
+
+  // Habilidades especiais e seus efeitos.
+  atualizarSistemaEspeciais(scene, delta);
 }
+
+// =====================================================
+// EXPORTAÇÕES
+// =====================================================
 
 export { criarControles, atualizarControles };

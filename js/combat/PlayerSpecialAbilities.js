@@ -1,20 +1,54 @@
 /**
- * Sistema de habilidades especiais dos personagens.
- * Primeira implementação: modo solo.
+ * Habilidades especiais de Kai, Magnus, Aria e Nyx.
+ * Integração atual: somente modo solo.
+ * Não modifica dash, ataques normais ou hitboxes originais.
  */
 
 import { causarDanoInimigo } from "../enemies/EnemyHealth.js";
 import { causarDanoBoss } from "../enemies/BossFinal.js";
+
 import {
   caminhoDiretoBloqueado,
-  caminhoMovimentoBloqueado,
+  retanguloLivreDoMapa,
 } from "../enemies/EnemyPathfinding.js";
 
+// =====================================================
+// CONFIGURAÇÃO DOS PERSONAGENS
+// =====================================================
+
 const ESPECIAIS = Object.freeze({
-  "kai-mercer": { cooldown: 2000, cor: 0x38bdf8 },
-  "magnus-force": { cooldown: 8000, cor: 0xfb923c },
-  "aria-kade": { cooldown: 12000, cor: 0xf472b6 },
-  nyx: { cooldown: 5000, cor: 0xa78bfa },
+  "kai-mercer": {
+    cooldown: 7000,
+    cor: 0x38bdf8,
+  },
+
+  "magnus-force": {
+    cooldown: 8000,
+    cor: 0xfb923c,
+  },
+
+  "aria-kade": {
+    cooldown: 12000,
+    cor: 0xf472b6,
+  },
+
+  nyx: {
+    cooldown: 5000,
+    cor: 0xa78bfa,
+  },
+});
+
+const CONFIG = Object.freeze({
+  kaiDuracao: 1800,
+  kaiRaio: 57,
+
+  ariaDuracao: 4500,
+  ariaVelocidade: 145,
+  ariaDistanciaInicial: 34,
+
+  nyxVelocidade: 490,
+  nyxAlcance: 540,
+  nyxRaio: 19,
 });
 
 const DIRECOES = {
@@ -24,26 +58,16 @@ const DIRECOES = {
   right: { x: 1, y: 0 },
 };
 
+// =====================================================
+// FUNÇÕES COMPARTILHADAS
+// =====================================================
+
 function direcaoJogador(scene) {
   return DIRECOES[scene.direcaoAtual] || DIRECOES.down;
 }
 
 function distancia(a, b) {
   return Math.hypot(a.x - b.x, a.y - b.y);
-}
-
-function dentroDoCone(scene, x, y, alcance, cosMin = 0.1) {
-  const player = scene.player;
-  const dx = x - player.x;
-  const dy = y - player.y;
-  const d = Math.hypot(dx, dy);
-
-  if (d > alcance) return false;
-  if (d < 0.001) return true;
-
-  const frente = direcaoJogador(scene);
-
-  return (dx * frente.x + dy * frente.y) / d >= cosMin;
 }
 
 function pontoMaisProximo(rect, x, y) {
@@ -53,14 +77,14 @@ function pontoMaisProximo(rect, x, y) {
   };
 }
 
-function alvosComuns(scene) {
+function inimigosVivos(scene) {
   return (scene.inimigos || []).filter(
     (robo) => robo?.active && !robo.morto && robo.hitboxDano,
   );
 }
 
-function obterAlvos(scene) {
-  const alvos = alvosComuns(scene);
+function alvosEspeciais(scene) {
+  const alvos = inimigosVivos(scene);
 
   if (
     scene.bossFinal?.active &&
@@ -73,9 +97,10 @@ function obterAlvos(scene) {
   return alvos;
 }
 
-function darDano(scene, alvo, quantidade, area = null) {
+function danoEspecial(scene, alvo, quantidade, area = null) {
   if (alvo === scene.bossFinal) {
-    // O boss continua usando suas zonas verdes de dano.
+    // O chefe continua recebendo dano
+    // somente nas regiões verdes.
     return causarDanoBoss(scene, quantidade, area);
   }
 
@@ -87,59 +112,246 @@ function darDano(scene, alvo, quantidade, area = null) {
 }
 
 // =====================================================
-// EFEITO VISUAL COMPARTILHADO
+// EFEITOS VISUAIS COMPARTILHADOS
 // =====================================================
 
-function circular(scene, x, y, raio, cor, duracao = 260) {
+function pulsoVisual(scene, x, y, raio, cor, tempo = 230) {
   const anel = scene.add
-    .circle(x, y, raio, cor, 0.07)
-    .setStrokeStyle(3, cor, 0.95)
-    .setDepth((scene.player?.depth || 50) + 0.05);
+    .circle(x, y, raio, cor, 0.08)
+    .setStrokeStyle(3, cor, 0.9)
+    .setDepth((scene.player?.depth ?? 50) + 0.1);
 
   scene.tweens.add({
     targets: anel,
-    scale: 1.45,
     alpha: 0,
-    duration: duracao,
-    onComplete: () => anel.destroy(),
+    scale: 1.4,
+    duration: tempo,
+
+    onComplete: () => {
+      anel.destroy();
+    },
   });
 }
 
 // =====================================================
-// KAI - PARRY
+// VERIFICAR POSIÇÃO LIVRE PARA TELEPORTE
 // =====================================================
 
-function criarParry(scene, estado, agora) {
-  // 150 ms de parry perfeito.
-  // 270 ms de bloqueio total.
+function posicaoLivrePlayer(scene, x, y) {
+  const player = scene.player;
+  const body = player?.body;
 
-  estado.parryAte = agora + 270;
-  estado.parryPerfeitoAte = agora + 150;
+  if (!body || !Number.isFinite(x) || !Number.isFinite(y)) {
+    return false;
+  }
 
-  circular(scene, scene.player.x, scene.player.y - 5, 29, 0x38bdf8, 250);
+  // Usa a hitbox física real do personagem.
+  // Não altera o corpo durante o teste.
+  const area = new Phaser.Geom.Rectangle(
+    x + (body.x - player.x),
+    y + (body.y - player.y),
+    body.width,
+    body.height,
+  );
+
+  const mundo = scene.physics?.world?.bounds;
+
+  if (
+    body.collideWorldBounds &&
+    mundo &&
+    (area.left < mundo.left ||
+      area.right > mundo.right ||
+      area.top < mundo.top ||
+      area.bottom > mundo.bottom)
+  ) {
+    return false;
+  }
+
+  return retanguloLivreDoMapa(scene, area);
 }
 
 // =====================================================
-// MAGNUS - ONDA DE CHOQUE
+// KAI — BARREIRA DE PARRY
+// =====================================================
+
+function iniciarParry(scene, estado, agora) {
+  estado.parryAte = agora + CONFIG.kaiDuracao;
+
+  estado.parryGrafico?.destroy();
+
+  estado.parryGrafico = scene.add
+    .graphics()
+    .setDepth((scene.player.depth ?? 50) + 0.15);
+
+  pulsoVisual(scene, scene.player.x, scene.player.y, 29, 0x38bdf8, 230);
+}
+
+// =====================================================
+// ATUALIZAR A ESFERA DO KAI
+// =====================================================
+
+function atualizarParry(scene, estado, agora) {
+  const g = estado.parryGrafico;
+
+  if (!g) {
+    return;
+  }
+
+  if (agora >= estado.parryAte || !scene.player?.active) {
+    g.destroy();
+    estado.parryGrafico = null;
+    return;
+  }
+
+  const player = scene.player;
+
+  const fase = Math.sin(agora * 0.015) * 0.08;
+
+  const r = CONFIG.kaiRaio;
+
+  // A esfera acompanha a posição atual
+  // do jogador durante toda sua duração.
+  g.clear()
+    .fillStyle(0x38bdf8, 0.055 + fase * 0.2)
+    .fillCircle(player.x, player.y - 4, r)
+    .lineStyle(5, 0x006baa, 0.32)
+    .strokeCircle(player.x, player.y - 4, r + 3)
+    .lineStyle(2.5, 0x8de7ff, 0.8 + fase)
+    .strokeCircle(player.x, player.y - 4, r);
+}
+
+// =====================================================
+// VERIFICAR SE O PARRY ESTÁ ATIVO
+// =====================================================
+
+function parryAtivo(scene, estado) {
+  return (
+    scene.personagemSelecionada === "kai-mercer" &&
+    scene.player?.active &&
+    scene.time.now < estado.parryAte
+  );
+}
+
+// =====================================================
+// BLOQUEAR GOLPES FÍSICOS
+// =====================================================
+
+function bloquearAtaqueKai(scene, estado, atacante) {
+  if (!parryAtivo(scene, estado)) {
+    return false;
+  }
+
+  // Enquanto a barreira existe,
+  // os golpes que causariam dano são bloqueados.
+  pulsoVisual(scene, scene.player.x, scene.player.y - 4, 19, 0x38bdf8, 150);
+
+  if (atacante?.tipoRobo && atacante.active && !atacante.morto) {
+    atacante.especialAtordoadoAte = Math.max(
+      atacante.especialAtordoadoAte || 0,
+      scene.time.now + 340,
+    );
+  }
+
+  return true;
+}
+
+// =====================================================
+// REFLETIR LASERS COM A BARREIRA
+// =====================================================
+
+function refletirLaser(scene, estado, laser) {
+  if (
+    !parryAtivo(scene, estado) ||
+    !laser?.active ||
+    laser.especialRefletido ||
+    distancia(scene.player, laser) > CONFIG.kaiRaio + 5
+  ) {
+    return false;
+  }
+
+  const origem = laser.especialAtirador;
+
+  const alvo =
+    origem?.active && !origem.morto
+      ? origem
+      : inimigosVivos(scene).sort(
+          (a, b) => distancia(a, laser) - distancia(b, laser),
+        )[0];
+
+  const frente = direcaoJogador(scene);
+
+  const vx = alvo ? alvo.x - laser.x : frente.x;
+
+  const vy = alvo ? alvo.y - laser.y : frente.y;
+
+  const tamanho = Math.max(0.001, Math.hypot(vx, vy));
+
+  // O laser muda de equipe.
+  laser.especialRefletido = true;
+  laser.danoEspecial = 30;
+
+  laser.setFillStyle(0x38bdf8, 1);
+  laser.setStrokeStyle(2, 0xb9f0ff, 1);
+
+  // Direcionar o projétil de volta ao inimigo.
+  laser.body?.setVelocity((vx / tamanho) * 530, (vy / tamanho) * 530);
+
+  pulsoVisual(scene, laser.x, laser.y, 11, 0x38bdf8, 150);
+
+  return true;
+}
+
+// =====================================================
+// LASERS REFLETIDOS CAUSANDO DANO
+// =====================================================
+
+function atualizarLasersRefletidos(scene) {
+  const lasers = scene.lasersInimigo?.getChildren?.() || [];
+
+  for (const laser of lasers) {
+    if (!laser?.active || !laser.especialRefletido) {
+      continue;
+    }
+
+    for (const robo of inimigosVivos(scene)) {
+      const ponto = pontoMaisProximo(robo.hitboxDano, laser.x, laser.y);
+
+      if (distancia(ponto, laser) <= 8) {
+        danoEspecial(scene, robo, laser.danoEspecial || 30);
+
+        laser.destroy();
+        break;
+      }
+    }
+  }
+}
+
+// =====================================================
+// MAGNUS — ONDA DE CHOQUE ORIGINAL
 // =====================================================
 
 function iniciarOnda(scene, estado, agora) {
   estado.onda = {
     x: scene.player.x,
     y: scene.player.y,
+
     inicio: agora,
     duracao: 390,
     raio: 110,
     raioAtual: 0,
+
     atingidos: new Set(),
 
-    grafico: scene.add.graphics().setDepth((scene.player?.depth || 50) - 0.02),
+    grafico: scene.add.graphics().setDepth((scene.player.depth ?? 50) - 0.02),
   };
 }
 
 function atualizarOnda(scene, estado, agora) {
   const onda = estado.onda;
-  if (!onda) return;
+
+  if (!onda) {
+    return;
+  }
 
   const progresso = Phaser.Math.Clamp(
     (agora - onda.inicio) / onda.duracao,
@@ -149,7 +361,6 @@ function atualizarOnda(scene, estado, agora) {
 
   onda.raioAtual = onda.raio * progresso;
 
-  // Dois anéis laranja de energia.
   onda.grafico
     .clear()
     .lineStyle(5, 0xfb923c, 0.95 * (1 - progresso))
@@ -157,8 +368,10 @@ function atualizarOnda(scene, estado, agora) {
     .lineStyle(2, 0xffe0a6, 0.8 * (1 - progresso))
     .strokeCircle(onda.x, onda.y, Math.max(0, onda.raioAtual - 9));
 
-  for (const alvo of obterAlvos(scene)) {
-    if (onda.atingidos.has(alvo)) continue;
+  for (const alvo of alvosEspeciais(scene)) {
+    if (onda.atingidos.has(alvo)) {
+      continue;
+    }
 
     const ponto = pontoMaisProximo(alvo.hitboxDano, onda.x, onda.y);
 
@@ -171,9 +384,9 @@ function atualizarOnda(scene, estado, agora) {
 
     onda.atingidos.add(alvo);
 
-    // Boss não é empurrado.
+    // Boss não sofre empurrão.
     if (alvo === scene.bossFinal) {
-      darDano(
+      danoEspecial(
         scene,
         alvo,
         8,
@@ -184,25 +397,28 @@ function atualizarOnda(scene, estado, agora) {
           onda.raioAtual * 2,
         ),
       );
+
       continue;
     }
 
-    darDano(scene, alvo, 18);
+    danoEspecial(scene, alvo, 18);
 
-    if (!alvo.active || alvo.morto) continue;
+    if (!alvo.active || alvo.morto) {
+      continue;
+    }
 
     const dx = alvo.x - onda.x;
     const dy = alvo.y - onda.y;
+
     const mag = Math.max(1, Math.hypot(dx, dy));
 
-    // Empurrão utilizando a física existente.
     alvo.setVelocity((dx / mag) * 240, (dy / mag) * 240);
 
     alvo.especialEmpurraoAte = agora + 200;
     alvo.especialAtordoadoAte = agora + 650;
   }
 
-  // Destruir lasers alcançados pela onda.
+  // Destruir lasers que a onda alcançar.
   for (const laser of scene.lasersInimigo?.getChildren?.() || []) {
     if (
       laser?.active &&
@@ -221,385 +437,465 @@ function atualizarOnda(scene, estado, agora) {
 }
 
 // =====================================================
-// ARIA - HOLOGRAMA
+// ARIA — DESTRUIR HOLOGRAMA
 // =====================================================
 
 function destruirHolograma(scene, estado, emitirPulso = true) {
-  const holograma = estado.holograma;
-  if (!holograma) return;
+  const holo = estado.holograma;
+
+  if (!holo) {
+    return;
+  }
 
   estado.holograma = null;
 
-  if (!holograma.active) return;
+  scene.tweens.killTweensOf(holo);
 
-  const { x, y } = holograma;
+  if (!holo.active) {
+    return;
+  }
 
-  scene.tweens.killTweensOf(holograma);
-  holograma.destroy();
+  const { x, y } = holo;
 
-  if (!emitirPulso) return;
+  holo.destroy();
 
-  // Pulso de desorientação ao desaparecer.
-  circular(scene, x, y, 30, 0xf472b6, 350);
+  if (!emitirPulso) {
+    return;
+  }
 
-  const agora = scene.time.now;
+  pulsoVisual(scene, x, y, 30, 0xf472b6, 350);
 
-  for (const robo of alvosComuns(scene)) {
+  for (const robo of inimigosVivos(scene)) {
     if (distancia(robo, { x, y }) < 76) {
       robo.especialAtordoadoAte = Math.max(
         robo.especialAtordoadoAte || 0,
-        agora + 350,
+        scene.time.now + 350,
       );
     }
   }
 }
 
+// =====================================================
+// ARIA — INVOCAR HOLOGRAMA
+// =====================================================
+
 function invocarHolograma(scene, estado, agora) {
   const player = scene.player;
-  const frente = direcaoJogador(scene);
 
-  // Encontrar uma posição livre à frente.
-  let destino = null;
+  // A direção é guardada no momento da invocação.
+  const vetor = {
+    ...direcaoJogador(scene),
+  };
 
-  for (const d of [112, 84, 56, 28]) {
-    const ponto = {
-      x: player.x + frente.x * d,
-      y: player.y + frente.y * d,
+  let inicio = {
+    x: player.x,
+    y: player.y,
+  };
+
+  // Procurar um ponto válido para o spawn.
+  for (const distanciaInicial of [CONFIG.ariaDistanciaInicial, 18, 0]) {
+    const candidato = {
+      x: player.x + vetor.x * distanciaInicial,
+      y: player.y + vetor.y * distanciaInicial,
     };
 
-    if (!caminhoMovimentoBloqueado(scene, player, ponto)) {
-      destino = ponto;
+    if (
+      posicaoLivrePlayer(scene, candidato.x, candidato.y) &&
+      !caminhoDiretoBloqueado(scene, player, candidato)
+    ) {
+      inicio = candidato;
       break;
     }
   }
 
-  if (!destino) {
-    destino = { x: player.x, y: player.y };
-  }
-
-  // Copiar o visual atual da Aria.
-  const holograma = scene.add
-    .image(destino.x, destino.y, player.texture.key, player.frame.name)
+  // Cópia visual da Aria.
+  const holo = scene.add
+    .sprite(inicio.x, inicio.y, player.texture.key, player.frame.name)
     .setOrigin(player.originX, player.originY)
     .setDisplaySize(player.displayWidth, player.displayHeight)
     .setFlip(player.flipX, player.flipY)
     .setTint(0xff9bd5)
-    .setAlpha(0.63)
-    .setDepth(player.depth - 0.01);
+    .setAlpha(0.65)
+    .setDepth((player.depth ?? 50) - 0.01);
 
-  holograma.especialHolograma = true;
-  holograma.integridade = 2;
-  holograma.expiraEm = agora + 4500;
+  // Usar animação de caminhada que já existe.
+  const animacao = `walk-${scene.direcaoAtual}`;
 
-  estado.holograma = holograma;
+  if (scene.anims.exists(animacao)) {
+    holo.play(animacao);
+  }
 
-  // Efeito de oscilação holográfica.
+  holo.especialHolograma = true;
+  holo.integridade = 2;
+  holo.expiraEm = agora + CONFIG.ariaDuracao;
+
+  // Direção permanente da cópia.
+  holo.direcaoEspecial = vetor;
+
+  holo.parado = false;
+
+  estado.holograma = holo;
+
+  // Oscilação visual holográfica.
   scene.tweens.add({
-    targets: holograma,
-    alpha: 0.33,
-    duration: 360,
+    targets: holo,
+    alpha: 0.36,
+    duration: 410,
     yoyo: true,
     repeat: -1,
   });
 
-  circular(scene, destino.x, destino.y, 24, 0xf472b6, 350);
+  pulsoVisual(scene, inicio.x, inicio.y, 24, 0xf472b6, 350);
 }
 
-function trocarComHolograma(scene, estado) {
-  const holograma = estado.holograma;
+// =====================================================
+// ARIA — MOVIMENTAÇÃO DO HOLOGRAMA
+// =====================================================
 
-  if (!holograma?.active || holograma.expiraEm <= scene.time.now) {
+function atualizarHolograma(scene, estado, delta, agora) {
+  const holo = estado.holograma;
+
+  if (!holo?.active) {
+    return;
+  }
+
+  // A cópia desaparece após sua duração.
+  if (agora >= holo.expiraEm) {
+    destruirHolograma(scene, estado, true);
+
+    return;
+  }
+
+  // Se encontrou uma parede, permanece parada.
+  if (holo.parado) {
+    return;
+  }
+
+  const passo =
+    CONFIG.ariaVelocidade * Math.min(0.05, Math.max(0, delta) / 1000);
+
+  const destino = {
+    x: holo.x + holo.direcaoEspecial.x * passo,
+    y: holo.y + holo.direcaoEspecial.y * passo,
+  };
+
+  // Não atravessar paredes ou obstáculos do mapa.
+  if (
+    !posicaoLivrePlayer(scene, destino.x, destino.y) ||
+    caminhoDiretoBloqueado(scene, holo, destino)
+  ) {
+    holo.parado = true;
+    holo.anims.stop();
+    return;
+  }
+
+  // Caminhada em linha reta, na direção inicial.
+  holo.setPosition(destino.x, destino.y);
+
+  holo.setDepth((scene.player?.depth ?? 50) - 0.01);
+}
+
+// =====================================================
+// ARIA — TROCA DE POSIÇÃO
+// =====================================================
+
+function trocarComHolograma(scene, estado) {
+  const holo = estado.holograma;
+
+  if (!holo?.active || holo.expiraEm <= scene.time.now) {
+    return false;
+  }
+
+  const destino = {
+    x: holo.x,
+    y: holo.y,
+  };
+
+  // Não existe mais limite de 170 pixels.
+  // A distância pode ser grande, desde
+  // que o holograma esteja vivo.
+  //
+  // O destino precisa estar livre.
+  if (!posicaoLivrePlayer(scene, destino.x, destino.y)) {
     return false;
   }
 
   const player = scene.player;
-
-  const destino = {
-    x: holograma.x,
-    y: holograma.y,
-  };
-
-  // Não permitir teleporte para dentro de obstáculos.
-  if (
-    distancia(player, destino) > 170 ||
-    caminhoMovimentoBloqueado(scene, player, destino)
-  ) {
-    return false;
-  }
 
   const origem = {
     x: player.x,
     y: player.y,
   };
 
+  // Teleportar instantaneamente.
   player.setPosition(destino.x, destino.y);
+
   player.setVelocity(0, 0);
+
   player.body?.updateFromGameObject();
 
-  // Sincronizar hitbox de recebimento de dano.
+  // Alinhar imediatamente a hitbox de dano.
   if (scene.hitboxDanoPlayer?.setTo) {
-    scene.hitboxDanoPlayer.setTo(destino.x - 19, destino.y - 20, 38, 46);
+    scene.hitboxDanoPlayer.setTo(destino.x - 15, destino.y - 20, 30, 46);
   }
 
-  circular(scene, origem.x, origem.y, 24, 0xf472b6, 280);
+  pulsoVisual(scene, origem.x, origem.y, 24, 0xf472b6, 280);
 
-  circular(scene, destino.x, destino.y, 24, 0xf472b6, 280);
+  pulsoVisual(scene, destino.x, destino.y, 24, 0xf472b6, 280);
 
+  // A cópia é consumida pela troca.
   destruirHolograma(scene, estado, false);
 
   return true;
 }
 
 // =====================================================
-// NYX - CORTE DE RUPTURA
-// =====================================================
-
-function iniciarCorteNyx(scene, estado, agora) {
-  estado.corteAte = agora + 240;
-  estado.corteAtingidos = new Set();
-
-  const frente = direcaoJogador(scene);
-
-  const anguloInicial = {
-    right: -65,
-    down: 25,
-    left: 115,
-    up: 205,
-  };
-
-  const anguloFinal = {
-    right: 65,
-    down: 155,
-    left: 245,
-    up: 335,
-  };
-
-  // Efeito gráfico do corte.
-  const arco = scene.add
-    .arc(
-      scene.player.x + frente.x * 28,
-      scene.player.y + frente.y * 28,
-      58,
-      anguloInicial[scene.direcaoAtual] ?? 25,
-      anguloFinal[scene.direcaoAtual] ?? 155,
-      false,
-      0xa78bfa,
-      0.21,
-    )
-    .setStrokeStyle(4, 0xd9bdff, 0.9)
-    .setDepth((scene.player.depth || 50) + 0.1);
-
-  scene.tweens.add({
-    targets: arco,
-    alpha: 0,
-    duration: 230,
-    onComplete: () => arco.destroy(),
-  });
-
-  // Dano nos inimigos atingidos pelo arco.
-  for (const alvo of obterAlvos(scene)) {
-    const ponto = pontoMaisProximo(
-      alvo.hitboxDano,
-      scene.player.x,
-      scene.player.y,
-    );
-
-    if (
-      !dentroDoCone(scene, ponto.x, ponto.y, 100, 0.13) ||
-      caminhoDiretoBloqueado(scene, scene.player, ponto)
-    ) {
-      continue;
-    }
-
-    if (estado.corteAtingidos.has(alvo)) continue;
-
-    const area = new Phaser.Geom.Rectangle(
-      scene.player.x - 100,
-      scene.player.y - 100,
-      200,
-      200,
-    );
-
-    const dano = alvo === scene.bossFinal ? 12 : 22;
-
-    if (darDano(scene, alvo, dano, area)) {
-      estado.corteAtingidos.add(alvo);
-    }
-  }
-}
-
-// =====================================================
-// KAI E NYX - INTERCEPTAÇÃO DE LASERS
-// =====================================================
-
-function tentarInterceptarLaser(scene, estado, laser) {
-  if (!laser?.active || laser.especialRefletido || !scene.player?.active) {
-    return false;
-  }
-
-  const agora = scene.time.now;
-  const personagem = scene.personagemSelecionada;
-  const d = distancia(laser, scene.player);
-
-  // KAI
-  if (
-    personagem === "kai-mercer" &&
-    agora <= estado.parryAte &&
-    d <= 57 &&
-    dentroDoCone(scene, laser.x, laser.y, 57, -0.1)
-  ) {
-    const perfeito = agora <= estado.parryPerfeitoAte;
-
-    if (!perfeito) {
-      circular(scene, laser.x, laser.y, 8, 0x38bdf8, 130);
-
-      laser.destroy();
-      return true;
-    }
-
-    const atirador = laser.especialAtirador;
-    const alvo = atirador?.active ? atirador : null;
-
-    const vetor = alvo
-      ? {
-          x: alvo.x - laser.x,
-          y: alvo.y - laser.y,
-        }
-      : direcaoJogador(scene);
-
-    const mag = Math.max(1, Math.hypot(vetor.x, vetor.y));
-
-    laser.especialRefletido = true;
-    laser.danoEspecial = 30;
-
-    laser.setFillStyle(0x38bdf8, 1);
-    laser.setStrokeStyle(2, 0xe0f7ff, 1);
-
-    laser.body?.setVelocity((vetor.x / mag) * 520, (vetor.y / mag) * 520);
-
-    circular(scene, laser.x, laser.y, 10, 0x38bdf8, 180);
-
-    return true;
-  }
-
-  // NYX
-  if (
-    personagem === "nyx" &&
-    agora <= estado.corteAte &&
-    dentroDoCone(scene, laser.x, laser.y, 105, -0.12)
-  ) {
-    circular(scene, laser.x, laser.y, 10, 0xa78bfa, 160);
-
-    
-laser.destroy();
-
-// Recompensa por destruir um disparo.
-if (
-  typeof scene.estamina === "number" &&
-  typeof scene.estaminaMaxima === "number"
-) {
-  scene.estamina = Math.min(scene.estaminaMaxima, scene.estamina + 3);
-}
-
-return true;
-  }
-
-  return false;
-}
-
-// =====================================================
-// KAI - PARRY CONTRA ROBÔ-SERRA
-// =====================================================
-
-function tentarParryFisico(scene, estado, robo) {
-  const agora = scene.time.now;
-
-  if (
-    scene.personagemSelecionada !== "kai-mercer" ||
-    agora > estado.parryAte ||
-    !robo?.active ||
-    !dentroDoCone(scene, robo.x, robo.y, 100, -0.15)
-  ) {
-    return false;
-  }
-
-  if (agora <= estado.parryPerfeitoAte) {
-    robo.especialAtordoadoAte = Math.max(
-      robo.especialAtordoadoAte || 0,
-      agora + 650,
-    );
-
-    causarDanoInimigo(scene, robo, 15);
-  }
-
-  circular(scene, scene.player.x, scene.player.y, 24, 0x38bdf8, 200);
-
-  return true;
-}
-
-// =====================================================
-// ARIA - HOLOGRAMA RECEBENDO ATAQUES
+// ARIA — HOLOGRAMA RECEBENDO ATAQUES
 // =====================================================
 
 function acertarHolograma(scene, estado, atacante) {
-  const holograma = estado.holograma;
+  const holo = estado.holograma;
 
-  if (!holograma?.active) return false;
-
-  const eLaser = atacante.especialLaserInimigo === true;
-
-  const dist = distancia(atacante, holograma);
-
-  if (dist > (eLaser ? 26 : 70)) {
+  if (!holo?.active || !atacante?.active) {
     return false;
   }
 
-  holograma.integridade -= 1;
+  const eLaser = atacante.especialLaserInimigo === true;
+
+  // Lasers refletidos não acertam hologramas.
+  if (eLaser && atacante.especialRefletido) {
+    return false;
+  }
+
+  const alcanceAcerto = eLaser ? 29 : 70;
+
+  if (distancia(atacante, holo) > alcanceAcerto) {
+    return false;
+  }
+
+  holo.integridade -= 1;
 
   if (eLaser) {
     atacante.destroy();
   }
 
-  if (holograma.integridade <= 0) {
+  if (holo.integridade <= 0) {
     destruirHolograma(scene, estado, true);
   } else {
-    circular(scene, holograma.x, holograma.y, 16, 0xf472b6, 150);
+    pulsoVisual(scene, holo.x, holo.y, 16, 0xf472b6, 150);
   }
 
   return true;
 }
 
 // =====================================================
-// LASERS REFLETIDOS ACERTANDO ROBÔS
+// NYX — DESTRUIR PROJÉTIL DE CORTE
 // =====================================================
 
-function atualizarRefletidos(scene) {
+function destruirCorte(estado, corte) {
+  if (!corte) {
+    return;
+  }
+
+  corte.grafico?.destroy();
+  estado.cortes.delete(corte);
+}
+
+// =====================================================
+// NYX — DISPARAR CORTE ENERGÉTICO
+// =====================================================
+
+function dispararCorteNyx(scene, estado) {
+  const player = scene.player;
+
+  // Direção definida ao disparar.
+  const vetor = {
+    ...direcaoJogador(scene),
+  };
+
+  const x = player.x + vetor.x * 30;
+
+  const y = player.y + vetor.y * 30;
+
+  // Gráfico independente do jogador.
+  const grafico = scene.add
+    .graphics()
+    .setPosition(x, y)
+    .setRotation(Math.atan2(vetor.y, vetor.x))
+    .setDepth((player.depth ?? 50) + 0.1);
+
+  // Corte em formato de meia-lua.
+  grafico.lineStyle(11, 0x7e22ce, 0.27);
+
+  grafico.beginPath();
+  grafico.arc(0, 0, 27, -1.12, 1.12, false);
+  grafico.strokePath();
+
+  grafico.lineStyle(5, 0xb36aff, 0.95);
+
+  grafico.beginPath();
+  grafico.arc(0, 0, 27, -1.12, 1.12, false);
+  grafico.strokePath();
+
+  grafico.lineStyle(2, 0xf5e8ff, 1);
+
+  grafico.beginPath();
+  grafico.arc(0, 0, 25, -1.0, 1.0, false);
+  grafico.strokePath();
+
+  // Registrar o projétil em movimento.
+  estado.cortes.add({
+    x,
+    y,
+
+    inicioX: x,
+    inicioY: y,
+
+    direcao: vetor,
+    grafico,
+  });
+
+  pulsoVisual(scene, x, y, 12, 0xa78bfa, 120);
+}
+
+// =====================================================
+// NYX — ATUALIZAR MOVIMENTO DO CORTE
+// =====================================================
+
+function atualizarCortesNyx(scene, estado, delta) {
+  if (!estado.cortes.size) {
+    return;
+  }
+
   const lasers = scene.lasersInimigo?.getChildren?.() || [];
 
-  for (const laser of lasers) {
-    if (!laser?.active || !laser.especialRefletido) {
-      continue;
-    }
+  const passoTotal =
+    CONFIG.nyxVelocidade * Math.min(0.05, Math.max(0, delta) / 1000);
 
-    for (const alvo of alvosComuns(scene)) {
-      const rect = alvo.hitboxDano;
+  for (const corte of [...estado.cortes]) {
+    let terminou = false;
 
-      const ponto = pontoMaisProximo(rect, laser.x, laser.y);
+    // Pequenos passos para evitar atravessar
+    // paredes ou inimigos entre frames.
+    const partes = Math.max(1, Math.ceil(passoTotal / 8));
 
-      if (distancia(ponto, laser) > 7) {
-        continue;
+    const passo = passoTotal / partes;
+
+    for (let i = 0; i < partes && !terminou; i++) {
+      const proximo = {
+        x: corte.x + corte.direcao.x * passo,
+
+        y: corte.y + corte.direcao.y * passo,
+      };
+
+      const areaCurta = new Phaser.Geom.Rectangle(
+        proximo.x - 8,
+        proximo.y - 8,
+        16,
+        16,
+      );
+
+      // Colisão com obstáculos do cenário.
+      if (
+        caminhoDiretoBloqueado(scene, corte, proximo) ||
+        !retanguloLivreDoMapa(scene, areaCurta)
+      ) {
+        terminou = true;
+        break;
       }
 
-      darDano(scene, alvo, laser.danoEspecial || 30);
+      // Mover o corte no mundo.
+      corte.x = proximo.x;
+      corte.y = proximo.y;
 
-      laser.destroy();
-      break;
+      corte.grafico.setPosition(corte.x, corte.y);
+
+      // Destruir se atingir o alcance máximo.
+      if (
+        distancia(corte, {
+          x: corte.inicioX,
+          y: corte.inicioY,
+        }) >= CONFIG.nyxAlcance
+      ) {
+        terminou = true;
+        break;
+      }
+
+      // =========================================
+      // DESTRUIÇÃO DE LASERS
+      // =========================================
+
+      for (const laser of lasers) {
+        if (!laser?.active || laser.especialRefletido) {
+          continue;
+        }
+
+        if (distancia(corte, laser) <= CONFIG.nyxRaio + 7) {
+          pulsoVisual(scene, laser.x, laser.y, 9, 0xa78bfa, 160);
+
+          laser.destroy();
+
+          // Recuperar um pouco de estamina.
+          if (
+            Number.isFinite(scene.estamina) &&
+            Number.isFinite(scene.estaminaMaxima)
+          ) {
+            scene.estamina = Math.min(scene.estaminaMaxima, scene.estamina + 3);
+          }
+        }
+      }
+
+      // =========================================
+      // COLISÃO COM INIMIGOS
+      // =========================================
+
+      const areaCorte = new Phaser.Geom.Rectangle(
+        corte.x - 23,
+        corte.y - 23,
+        46,
+        46,
+      );
+
+      for (const alvo of alvosEspeciais(scene)) {
+        if (alvo === scene.bossFinal) {
+          // Verificar as áreas verdes do boss.
+          const zonas = alvo.hitboxesReceberDano || [];
+
+          const acertouZona = zonas.some((r) =>
+            Phaser.Geom.Intersects.RectangleToRectangle(r, areaCorte),
+          );
+
+          if (acertouZona && danoEspecial(scene, alvo, 12, areaCorte)) {
+            terminou = true;
+            break;
+          }
+        } else {
+          // Robôs comuns e robôs-serra.
+          const acertou = Phaser.Geom.Intersects.RectangleToRectangle(
+            alvo.hitboxDano,
+            areaCorte,
+          );
+
+          if (acertou) {
+            danoEspecial(scene, alvo, 22);
+
+            terminou = true;
+            break;
+          }
+        }
+      }
+    }
+
+    // O corte termina após acertar um inimigo,
+    // parede ou alcançar a distância máxima.
+    if (terminou) {
+      destruirCorte(estado, corte);
     }
   }
 }
 
 // =====================================================
-// INICIALIZAR SISTEMA
+// CRIAR SISTEMA DAS HABILIDADES
 // =====================================================
 
 function criarSistemaEspeciais(scene) {
@@ -607,41 +903,65 @@ function criarSistemaEspeciais(scene) {
 
   const estado = {
     proximoUso: 0,
+
     parryAte: 0,
-    parryPerfeitoAte: 0,
-    corteAte: 0,
-    corteAtingidos: new Set(),
+    parryGrafico: null,
+
     onda: null,
+
     holograma: null,
+
+    cortes: new Set(),
   };
 
   scene.estadoEspecial = estado;
+
+  // ===================================================
+  // ATIVAR BOTÃO ESPECIAL
+  // ===================================================
 
   const ativar = () => {
     if (
       scene.multiplayer ||
       !scene.player?.active ||
       scene.morteEmAndamento ||
-      scene.movimentoBloqueado ||
       scene.generatorMenuOpen ||
-      scene.atacando ||
-      scene.estadoDash?.ativo
+      scene.movimentoBloqueado
     ) {
       return false;
     }
 
-    const agora = scene.time.now;
     const personagem = scene.personagemSelecionada || "kai-mercer";
 
     const perfil = ESPECIAIS[personagem];
 
-    if (!perfil) return false;
+    if (!perfil) {
+      return false;
+    }
 
-    // A Aria pode usar o segundo toque para trocar
-    // de posição durante a vida do holograma.
+    // ===============================================
+    // ARIA — TROCA PRIORITÁRIA
+    // ===============================================
+    //
+    // Pode usar o segundo toque em qualquer instante
+    // enquanto o holograma estiver vivo.
+    //
+    // Não depende do cooldown da invocação.
+    // Não depende de estar atacando.
+    // Não depende de estar usando dash.
+    // ===============================================
+
     if (personagem === "aria-kade" && estado.holograma?.active) {
       return trocarComHolograma(scene, estado);
     }
+
+    // Impedir apenas novas ativações durante
+    // ataque ou dash.
+    if (scene.atacando || scene.estadoDash?.ativo) {
+      return false;
+    }
+
+    const agora = scene.time.now;
 
     if (agora < estado.proximoUso) {
       return false;
@@ -650,7 +970,7 @@ function criarSistemaEspeciais(scene) {
     estado.proximoUso = agora + perfil.cooldown;
 
     if (personagem === "kai-mercer") {
-      criarParry(scene, estado, agora);
+      iniciarParry(scene, estado, agora);
     }
 
     if (personagem === "magnus-force") {
@@ -662,45 +982,63 @@ function criarSistemaEspeciais(scene) {
     }
 
     if (personagem === "nyx") {
-      iniciarCorteNyx(scene, estado, agora);
+      dispararCorteNyx(scene, estado);
     }
 
     return true;
   };
 
-  const aoEspecial = () => ativar();
+  // Evento já emitido pelo botão especial.
+  scene.events.on("player:especial", ativar);
 
-  scene.events.on("player:especial", aoEspecial);
+  // ===================================================
+  // INTEGRAR COM LASERS E IA
+  // ===================================================
 
   scene.tentarInterceptarLaserEspecial = (laser) =>
-    tentarInterceptarLaser(scene, estado, laser);
+    refletirLaser(scene, estado, laser);
 
   scene.tentarParryFisicoEspecial = (robo) =>
-    tentarParryFisico(scene, estado, robo);
+    bloquearAtaqueKai(scene, estado, robo);
+
+  scene.tentarBloquearDanoEspecial = (atacante) =>
+    bloquearAtaqueKai(scene, estado, atacante);
 
   scene.acertarHologramaEspecial = (atacante) =>
     acertarHolograma(scene, estado, atacante);
 
+  // Permite que a IA veja o holograma atual.
   Object.defineProperty(scene, "especialHolograma", {
     configurable: true,
+
     get: () => estado.holograma,
   });
 
-  // Limpeza automática ao trocar de mapa.
+  // ===================================================
+  // LIMPEZA AO TROCAR DE MAPA
+  // ===================================================
+
   const limpar = () => {
-    scene.events.off("player:especial", aoEspecial);
+    scene.events.off("player:especial", ativar);
 
     scene.events.off(Phaser.Scenes.Events.SHUTDOWN, limpar);
 
+    estado.parryGrafico?.destroy();
     estado.onda?.grafico?.destroy();
 
     destruirHolograma(scene, estado, false);
+
+    for (const corte of [...estado.cortes]) {
+      destruirCorte(estado, corte);
+    }
 
     delete scene.especialHolograma;
 
     scene.tentarInterceptarLaserEspecial = null;
     scene.tentarParryFisicoEspecial = null;
+    scene.tentarBloquearDanoEspecial = null;
     scene.acertarHologramaEspecial = null;
+
     scene.estadoEspecial = null;
 
     if (scene.limparSistemaEspeciais === limpar) {
@@ -714,10 +1052,10 @@ function criarSistemaEspeciais(scene) {
 }
 
 // =====================================================
-// ATUALIZAR ESPECIAIS A CADA FRAME
+// ATUALIZAR AS HABILIDADES
 // =====================================================
 
-function atualizarSistemaEspeciais(scene) {
+function atualizarSistemaEspeciais(scene, delta = 16.67) {
   const estado = scene.estadoEspecial;
 
   if (!estado || scene.multiplayer || !scene.player?.active) {
@@ -726,32 +1064,43 @@ function atualizarSistemaEspeciais(scene) {
 
   const agora = scene.time.now;
 
+  // KAI
+  atualizarParry(scene, estado, agora);
+
+  // MAGNUS
   atualizarOnda(scene, estado, agora);
 
-  // Expiração do holograma.
-  if (estado.holograma?.active && agora >= estado.holograma.expiraEm) {
-    destruirHolograma(scene, estado, true);
-  }
+  // ARIA
+  atualizarHolograma(scene, estado, delta, agora);
 
-  // Interceptação de lasers.
+  // NYX
+  atualizarCortesNyx(scene, estado, delta);
+
+  // Atualizar interceptação de lasers do Kai.
   for (const laser of scene.lasersInimigo?.getChildren?.() || []) {
     if (laser?.active && !laser.especialRefletido) {
-      tentarInterceptarLaser(scene, estado, laser);
+      refletirLaser(scene, estado, laser);
     }
   }
 
-  atualizarRefletidos(scene);
+  atualizarLasersRefletidos(scene);
 
-  // Feedback visual da recarga no botão.
+  // ===================================================
+  // OPACIDADE DO BOTÃO DURANTE A RECARGA
+  // ===================================================
+
   if (scene.botaoEspecial?.active) {
-    const cd = ESPECIAIS[scene.personagemSelecionada]?.cooldown || 1;
+    const nome = scene.personagemSelecionada;
 
-    const recarga = Phaser.Math.Clamp((estado.proximoUso - agora) / cd, 0, 1);
+    const recarga = ESPECIAIS[nome]?.cooldown || 1;
 
-    const trocaDisponivel =
-      scene.personagemSelecionada === "aria-kade" && estado.holograma?.active;
+    const esperando = agora < estado.proximoUso;
 
-    scene.botaoEspecial.setAlpha(recarga > 0 && !trocaDisponivel ? 0.35 : 0.75);
+    // A Aria pode utilizar a troca mesmo
+    // que a habilidade esteja em recarga.
+    const trocaDisponivel = nome === "aria-kade" && estado.holograma?.active;
+
+    scene.botaoEspecial.setAlpha(esperando && !trocaDisponivel ? 0.35 : 0.75);
   }
 }
 
