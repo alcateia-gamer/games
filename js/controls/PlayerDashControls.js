@@ -5,6 +5,7 @@
 
 import { gastarEstamina } from "../player/PlayerStatus.js";
 import { obterDirecaoMovimento } from "./PlayerMovementInput.js";
+import { posicionarBotaoFixo } from "./FixedActionButton.js";
 
 // =====================================================
 // DASH SANDEVISTAN - CORES POR PERSONAGEM
@@ -539,9 +540,9 @@ function criarControlesDash(scene) {
   // POSIÇÃO DO BOTÃO
   // ===================================================
 
-  const x = ataque.x - CONFIG_DASH.distanciaXBotao;
+  const x = 720 - CONFIG_DASH.distanciaXBotao;
 
-  const y = ataque.y - CONFIG_DASH.distanciaYBotao;
+  const y = 350 - CONFIG_DASH.distanciaYBotao;
 
   // ===================================================
   // CARREGAR SPRITE DO BOTÃO
@@ -585,6 +586,14 @@ function criarControlesDash(scene) {
     iniciarDash(scene);
   });
 
+  const escalaX = scene.botaoDash.scaleX;
+  const escalaY = scene.botaoDash.scaleY;
+  const atualizarPosicaoDash = () => {
+    posicionarBotaoFixo(scene.cameras.main, scene.botaoDash, x, y, escalaX, escalaY);
+  };
+  scene.events.on("prerender", atualizarPosicaoDash);
+  atualizarPosicaoDash();
+
   // ===================================================
   // ATALHOS TECLADO Q E F
   // ===================================================
@@ -609,6 +618,7 @@ function criarControlesDash(scene) {
    * controles.
    */
   const limpar = () => {
+    scene.events.off("prerender", atualizarPosicaoDash);
     teclaQ?.off("down", pressionarDash);
     teclaF?.off("down", pressionarDash);
 

@@ -4,6 +4,7 @@
  */
 
 import { atacar, soltarAtaque } from "../player/Player.js";
+import { posicionarBotaoFixo } from "./FixedActionButton.js";
 
 import {
   iniciarSomTensaoAria,
@@ -128,9 +129,21 @@ function criarControlesAtaque(scene) {
   const atualizarPosicaoAtaque = () => {
     const escala = botaoPressionado ? 0.92 : 1;
 
-    scene.botaoAtaque.setScale(escala);
-    scene.iconeAtaque.setScale(escala);
+    posicionarBotaoFixo(scene.cameras.main, scene.botaoAtaque, 720, 350, escala);
+    posicionarBotaoFixo(scene.cameras.main, scene.iconeAtaque, 720, 350, escala);
   };
+
+  const limparPosicao = () => {
+    scene.events.off("prerender", atualizarPosicaoAtaque);
+    scene.events.off("shutdown", limparPosicao);
+    if (scene.limparControlesAtaqueFixos === limparPosicao) {
+      scene.limparControlesAtaqueFixos = null;
+    }
+  };
+  scene.limparControlesAtaqueFixos = limparPosicao;
+  scene.events.on("prerender", atualizarPosicaoAtaque);
+  scene.events.once("shutdown", limparPosicao);
+  atualizarPosicaoAtaque();
 
   // =====================================================
   // INICIAR ATAQUE E SOM DE TENSÃO
