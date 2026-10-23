@@ -7,11 +7,11 @@
 // VOLUMES DOS SONS DOS INIMIGOS
 // =====================================================
 
-// Volume máximo do passo do robô.
-const VOLUME_PASSO_ROBO_MAXIMO = 0.8;
-const DISTANCIA_FADE_PASSO_ROBO = 240;
+// Volume máximo do passo do robô que atira laser (15%).
+const VOLUME_PASSO_ROBO_MAXIMO = 0.22;
 const VOLUME_PASSO_SERRA_MAXIMO = 0.020;
-const DISTANCIA_SOM_PASSO_SERRA = 480;
+// Alcance compartilhado; a serra ganha 40 pixels em relação aos 480 anteriores.
+const DISTANCIA_SOM_PASSOS_ROBOS = 700;
 
 // Volume dos sons existentes.
 const VOLUME_TIRO_LASER = 0.02;
@@ -369,25 +369,14 @@ function atualizarSomPassoRobo(
 
   const podeTocar = estaSeMovendo;
 
-  const distanciaInicioFade = inimigo.distanciaDeteccao;
-
-  const distanciaFimFade = distanciaInicioFade + DISTANCIA_FADE_PASSO_ROBO;
-
   // O ouvinte é o jogador local, mesmo quando o robô persegue outro jogador.
   const distanciaOuvinte = scene.player
     ? Math.hypot(scene.player.x - inimigo.x, scene.player.y - inimigo.y)
     : distancia;
 
+  // Ambos perdem a mesma proporção do volume com a distância, independentemente da IA.
   const volumeRelativo =
-    ehSerra
-      ? Phaser.Math.Clamp(1 - distanciaOuvinte / DISTANCIA_SOM_PASSO_SERRA, 0, 1) ** 2
-      : distanciaOuvinte <= distanciaInicioFade
-        ? Math.max(1 - distanciaOuvinte / distanciaInicioFade, 0.2)
-        : Phaser.Math.Clamp(
-            0.2 * ((distanciaFimFade - distanciaOuvinte) / DISTANCIA_FADE_PASSO_ROBO),
-            0,
-            0.2,
-          );
+    Phaser.Math.Clamp(1 - distanciaOuvinte / DISTANCIA_SOM_PASSOS_ROBOS, 0, 1) ** 2;
 
   const volume = volumeRelativo *
     (ehSerra ? VOLUME_PASSO_SERRA_MAXIMO : VOLUME_PASSO_ROBO_MAXIMO);
