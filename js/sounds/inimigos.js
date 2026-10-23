@@ -8,14 +8,14 @@
 // =====================================================
 
 // Volume máximo do passo do robô.
-const VOLUME_PASSO_ROBO_MAXIMO = 0.12;
+const VOLUME_PASSO_ROBO_MAXIMO = 0.8;
 const DISTANCIA_FADE_PASSO_ROBO = 240;
-const VOLUME_PASSO_SERRA_MAXIMO = 0.015;
+const VOLUME_PASSO_SERRA_MAXIMO = 0.020;
 const DISTANCIA_SOM_PASSO_SERRA = 480;
 
 // Volume dos sons existentes.
 const VOLUME_TIRO_LASER = 0.02;
-const VOLUME_MORTE_ROBO = 0.15;
+const VOLUME_MORTE_ROBO = 0.3;
 
 // =====================================================
 // NOVO: CONFIGURAÇÕES DO SOCO DO BOSS
