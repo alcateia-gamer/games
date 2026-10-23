@@ -53,7 +53,7 @@ class Start extends Phaser.Scene {
 
     this.load.spritesheet(
       "start-character-2",
-      "assets/PERSONAGENS/PERSONAGENS PRICIPAIS/MAGNUS_FORCE 2/magnus_walk.png",
+      "assets/PERSONAGENS/PERSONAGENS PRICIPAIS/MAGNUS_FORCE 2/magnus_walk_LARANJA.png",
       {
         frameWidth: 64,
         frameHeight: 64,
