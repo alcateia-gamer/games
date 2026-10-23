@@ -3,6 +3,8 @@
  * atualização e liberação dos sistemas.
  */
 
+import { criarHudBoss } from "./BossHud.js";
+
 import {
   bossBaseY,
   bossDepth,
@@ -119,21 +121,6 @@ const CUSTO_ESTAMINA = {
 
 const PAUSA_ESTAMINA_MS = 250;
 const RECUPERACAO_ESTAMINA_MS = 3250;
-
-// =====================================================
-// APARÊNCIA DO HUD DO BOSS
-// =====================================================
-
-const POSICAO_VERTICAL_HUD = 0.9;
-const POSICAO_ESTAMINA_Y = -18;
-
-const ALTURA_VIDA = 18;
-const ALTURA_ESTAMINA = 10;
-const MARGEM_INTERNA = 2;
-
-const OPACIDADE_FUNDO = 0.22;
-const ESPESSURA_CONTORNO = 1;
-const OPACIDADE_CONTORNO = 0.55;
 
 // =====================================================
 // NOVO: INTERROMPER COMBATE FORA DA ARENA
@@ -485,167 +472,6 @@ function atualizarRecuperacaoEstamina(boss, delta) {
 }
 
 // =====================================================
-// DESENHO DAS BARRAS
-// =====================================================
-
-/**
- * Desenha o fundo e o contorno arredondados de uma barra da HUD do boss.
- */
-function desenharFundoArredondado(grafico, largura, altura, centroY) {
-  grafico.clear();
-
-  const x = -largura / 2;
-  const y = centroY - altura / 2;
-
-  const raio = Math.min(altura / 2, largura / 2);
-
-  grafico.fillStyle(0x000000, OPACIDADE_FUNDO);
-
-  grafico.fillRoundedRect(x, y, largura, altura, raio);
-
-  grafico.lineStyle(ESPESSURA_CONTORNO, 0x000000, OPACIDADE_CONTORNO);
-
-  grafico.strokeRoundedRect(x, y, largura, altura, raio);
-}
-
-/**
- * Desenha o preenchimento arredondado limitado à porcentagem e à largura disponíveis.
- */
-function desenharPreenchimentoArredondado(
-  grafico,
-  larguraMaxima,
-  altura,
-  centroY,
-  percentual,
-  cor,
-) {
-  grafico.clear();
-
-  const proporcao = Phaser.Math.Clamp(percentual, 0, 1);
-
-  const larguraAtual = larguraMaxima * proporcao;
-
-  if (larguraAtual <= 0) return;
-
-  const direita = larguraMaxima / 2;
-  const x = direita - larguraAtual;
-  const y = centroY - altura / 2;
-
-  const raio = Math.min(altura / 2, larguraAtual / 2);
-
-  grafico.fillStyle(cor, 1);
-
-  grafico.fillRoundedRect(x, y, larguraAtual, altura, raio);
-}
-
-// =====================================================
-// HUD DO BOSS
-// =====================================================
-
-/**
- * Cria as barras de vida e estamina e conecta seu posicionamento fixo na tela.
- */
-function criarHudBoss(scene, boss) {
-  boss.hudVida = scene.add.container(0, 0).setScrollFactor(0).setDepth(100000);
-
-  boss.fundoVida = scene.add.graphics();
-  boss.barraVida = scene.add.graphics();
-  boss.fundoEstamina = scene.add.graphics();
-  boss.barraEstamina = scene.add.graphics();
-
-  boss.hudVida.add([
-    boss.fundoVida,
-    boss.barraVida,
-    boss.fundoEstamina,
-    boss.barraEstamina,
-  ]);
-
-  boss.hudVida.setVisible(false);
-
-  /**
-   * Redesenha e posiciona as barras com compensação de zoom, exibindo-as somente com o boss
-   * ativo dentro da arena.
-   */
-  const atualizarHud = () => {
-    if (!boss.hudVida?.scene) return;
-
-    const camera = scene.cameras.main;
-    if (!camera) return;
-
-    const zoomX = camera.zoomX || camera.zoom || 1;
-
-    const zoomY = camera.zoomY || camera.zoom || 1;
-
-    const largura = Math.min(320, camera.width * 0.38);
-
-    const larguraInterna = Math.max(0, largura - MARGEM_INTERNA * 2);
-
-    const centroX = camera.width * camera.originX;
-
-    const centroY = camera.height * camera.originY;
-
-    const telaX = camera.width * 0.5;
-
-    const telaY = camera.height * POSICAO_VERTICAL_HUD;
-
-    boss.hudVida.setPosition(
-      centroX + (telaX - centroX) / zoomX,
-      centroY + (telaY - centroY) / zoomY,
-    );
-
-    boss.hudVida.setScale(1 / zoomX, 1 / zoomY);
-
-    boss.larguraBarraVida = larguraInterna;
-
-    desenharFundoArredondado(boss.fundoVida, largura, ALTURA_VIDA, 0);
-
-    desenharPreenchimentoArredondado(
-      boss.barraVida,
-      larguraInterna,
-      ALTURA_VIDA - MARGEM_INTERNA * 2,
-      0,
-      boss.vida / boss.vidaMaxima,
-      0xff354d,
-    );
-
-    desenharFundoArredondado(
-      boss.fundoEstamina,
-      largura,
-      ALTURA_ESTAMINA,
-      POSICAO_ESTAMINA_Y,
-    );
-
-    desenharPreenchimentoArredondado(
-      boss.barraEstamina,
-      larguraInterna,
-      ALTURA_ESTAMINA - MARGEM_INTERNA * 2,
-      POSICAO_ESTAMINA_Y,
-      boss.estamina / boss.estaminaMaxima,
-      boss.recuperandoEstamina ? 0xffc857 : 0x45dfff,
-    );
-
-    boss.hudVida.setVisible(
-      boss.active && boss.visible && !boss.morto && boss.dentroArena === true,
-    );
-  };
-
-  atualizarHud();
-
-  scene.events.on(Phaser.Scenes.Events.PRE_RENDER, atualizarHud);
-
-  /**
-   * Remove a atualização da HUD e destrói seu container ao liberar o boss.
-   */
-  boss.limparHudVida = () => {
-    scene.events.off(Phaser.Scenes.Events.PRE_RENDER, atualizarHud);
-
-    if (boss.hudVida?.scene) {
-      boss.hudVida.destroy();
-    }
-  };
-}
-
-// =====================================================
 // CRIAÇÃO DO BOSS
 // =====================================================
 
@@ -686,7 +512,6 @@ function criarBoss(scene) {
   boss.vidaMaxima = bossVidaMaxima * MULTIPLICADOR_VIDA;
 
   boss.vida = boss.vidaMaxima;
-  boss.larguraBarraVida = 206;
 
   // ===================================================
   // ESTAMINA

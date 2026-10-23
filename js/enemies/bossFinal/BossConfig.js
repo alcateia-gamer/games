@@ -279,13 +279,10 @@ export function obterNumeroFrameAnimacao(frame) {
 // =====================================================
 
 /**
- * Atualiza a largura da barra de vida conforme a proporção entre vida atual e máxima.
+ * Atualiza o recorte da arte da HUD após dano ou cura.
  */
 export function atualizarBarraVidaBoss(boss) {
-  if (boss?.barraVida) {
-    boss.barraVida.width =
-      boss.larguraBarraVida * (boss.vida / boss.vidaMaxima);
-  }
+  boss?.atualizarHudVida?.();
 }
 
 // =====================================================

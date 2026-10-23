@@ -543,6 +543,11 @@ class Preloader extends Phaser.Scene {
     // BOSS FINAL
     // =====================================================
 
+    this.load.image(
+      "boss-hud",
+      "PERSONAGENS/INIMIGOS PRINCIPAIS/BOSS_FINAL/BARRA_VIDA_BOSS_2.png",
+    );
+
     this.load.spritesheet(
       "boss-ataque-chao",
       "PERSONAGENS/INIMIGOS PRINCIPAIS/BOSS_FINAL/BOSS_ATAQUE_CHAO.png",
