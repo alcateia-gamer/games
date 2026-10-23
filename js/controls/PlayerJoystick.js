@@ -49,6 +49,9 @@ class PlayerJoystick {
         return;
       }
 
+      // O primeiro deslocamento, mesmo dentro da zona morta, solicita um passo.
+      if (distancia > 0 && this.forceX === 0 && this.forceY === 0) scene.solicitarPasso?.();
+
       // Histerese evita alternar entre andar e parar com pequenas variações no centro.
       this.ativo = distancia > (this.ativo ? ZONA_SOLTURA : ZONA_MORTA);
       this.direcao.x = this.ativo ? x / distancia : 0;

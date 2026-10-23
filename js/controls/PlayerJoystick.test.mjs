@@ -319,3 +319,19 @@ test("recriar e encerrar a cena remove listeners e referências de toque antigos
   assert.equal(scene.joystick.base.active, false);
   assert.equal(scene.joystickPointerId, null);
 });
+
+test("um toque mínimo solicita o primeiro passo sem repetir por evento de movimento", t => {
+  const scene = criarCena(t);
+  let passos = 0;
+  scene.solicitarPasso = () => passos++;
+  const pointer = pressionar(scene);
+  assert.equal(passos, 0);
+  mover(scene, pointer, 100.1, 305);
+  assert.equal(passos, 1);
+  mover(scene, pointer, 100.2, 305);
+  mover(scene, pointer, 130, 305);
+  assert.equal(passos, 1);
+  scene.input.emit("pointerup", pointer);
+  pressionar(scene, 101, 305, 2);
+  assert.equal(passos, 2);
+});
