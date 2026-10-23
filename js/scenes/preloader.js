@@ -338,6 +338,7 @@ class Preloader extends Phaser.Scene {
     });
 
     this.load.once("complete", () => {
+      this.prepararRenderizacaoPersonagens();
       this.prepararNovoRaioBase();
       this.finalizarCarregamento();
     });
@@ -356,6 +357,25 @@ class Preloader extends Phaser.Scene {
    */
   preload() {
     // Carregamento iniciado após clicar em JOGAR.
+  }
+
+  /**
+   * Evita que detalhes dos sprites desapareçam no zoom fracionado da arena.
+   * O shader de pixel art suaviza a redução e mantém os blocos na ampliação;
+   * inclui caminhada e ataque para a aparência não mudar durante os golpes.
+   */
+  prepararRenderizacaoPersonagens() {
+    const texturas = [
+      "walk", "attack",
+      "personagem2-walk", "personagem2-attack", "personagem2-idle",
+      "personagem3-walk", "personagem3-attack",
+      "personagem4-walk", "personagem4-attack",
+    ];
+    for (const chave of texturas) {
+      if (this.textures.exists(chave)) {
+        this.textures.get(chave).setSmoothPixelArt(true);
+      }
+    }
   }
 
   // =====================================================
