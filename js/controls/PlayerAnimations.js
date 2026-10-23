@@ -13,7 +13,8 @@ function tocarAnimacaoSeNecessario(scene, chave) {
     scene.ariaAtaqueCarregando &&
     chave.startsWith("walk-")
   ) {
-    atualizarDirecaoAtaqueAria(scene, chave.slice(5));
+    // Entradas antigas sem controle de mira ainda podem orientar pela caminhada.
+    if (!scene.ariaAttackJoystick) atualizarDirecaoAtaqueAria(scene, chave.slice(5));
     return;
   }
 
@@ -35,6 +36,10 @@ function tocarAnimacaoSeNecessario(scene, chave) {
  */
 function atualizarVelocidadeAnimacao(scene) {
   if (!scene.player || !scene.player.anims) {
+    return;
+  }
+  if (scene.personagemSelecionada === "aria-kade" && scene.atacando) {
+    scene.player.anims.timeScale = 1;
     return;
   }
 

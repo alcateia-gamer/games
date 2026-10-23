@@ -136,6 +136,12 @@ function criarControlesAtaque(scene) {
   const limparPosicao = () => {
     scene.events.off("prerender", atualizarPosicaoAtaque);
     scene.events.off("shutdown", limparPosicao);
+    scene.input.off("pointerdown", aoPressionarMouse);
+    scene.input.off("pointerup", soltarAtaqueAtual);
+    scene.botaoAtaque?.destroy();
+    scene.iconeAtaque?.destroy();
+    scene.botaoAtaque = null;
+    scene.iconeAtaque = null;
     if (scene.limparControlesAtaqueFixos === limparPosicao) {
       scene.limparControlesAtaqueFixos = null;
     }
@@ -263,7 +269,7 @@ function criarControlesAtaque(scene) {
   // BOTÃO ESQUERDO DO MOUSE
   // =====================================================
 
-  scene.input.on("pointerdown", (pointer, objetosClicados) => {
+  const aoPressionarMouse = (pointer, objetosClicados) => {
     if (!pointer.leftButtonDown()) {
       return;
     }
@@ -277,7 +283,8 @@ function criarControlesAtaque(scene) {
     scene.pointerAtaque = pointer.id;
 
     iniciarAtaqueComSom();
-  });
+  };
+  scene.input.on("pointerdown", aoPressionarMouse);
 
   // Quando solta o mouse ou o dedo.
   scene.input.on("pointerup", soltarAtaqueAtual);

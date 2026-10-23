@@ -957,7 +957,7 @@ function criarSistemaEspeciais(scene) {
 
     // Impedir apenas novas ativações durante
     // ataque ou dash.
-    if (scene.atacando || scene.estadoDash?.ativo) {
+    if ((scene.atacando && personagem !== "aria-kade") || scene.estadoDash?.ativo) {
       return false;
     }
 

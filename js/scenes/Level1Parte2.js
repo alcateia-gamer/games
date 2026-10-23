@@ -496,6 +496,7 @@ class Level1Parte2 extends Phaser.Scene {
             x: projetil.x,
             y: projetil.y,
             frame: projetil.frameProjetil,
+            rotation: projetil.rotation,
           })) ?? [],
       );
     }
@@ -755,6 +756,7 @@ class Level1Parte2 extends Phaser.Scene {
         }
 
         remoteProjectile.setFrame(projectile.frame ?? 0);
+        remoteProjectile.setRotation(projectile.rotation ?? 0);
 
         remoteProjectile.targetX = projectile.x;
 

@@ -58,6 +58,7 @@ function criarSprite(x, y, textura, frame, personagem) {
     get displayOriginX() { return this.originX * this.width; },
     get displayOriginY() { return this.originY * this.height; },
     setFrame(name) { this.frame = { name }; return this; },
+    setRotation(rotation) { this.rotation = rotation; return this; },
     setDepth(depth) { this.depth = depth; return this; },
     setVertexRoundMode() { return this; },
     setAlpha() { return this; }, clearTint() { return this; }, setBlendMode() { return this; },
@@ -185,7 +186,7 @@ for (const personagem of Object.keys(PERSONAGENS)) {
     });
   }
 
-  test(`${personagem}: ataque na fila com saldo continua e restaura a colisão ao terminar`, () => {
+  test(`${personagem}: fila respeita a soltura da Aria e restaura a colisão ao terminar`, () => {
     const scene = criarCena(personagem, 40);
     mover(scene, 1, -1);
     const geometriaWalk = geometriaRelativa(scene);
@@ -194,6 +195,13 @@ for (const personagem of Object.keys(PERSONAGENS)) {
     atacar(scene);
     scene.time.now += 50;
     concluirAtaque(scene);
+    if (personagem === "aria-kade") {
+      assert.equal(scene.atacando, false); // Nunca inicia uma carga sem um novo toque.
+      assert.equal(scene.estamina, 20);
+      assert.equal(scene.networkAttackId, 1);
+      conferirGeometria(scene, geometriaWalk);
+      return;
+    }
     assert.equal(scene.atacando, true);
     assert.equal(scene.estamina, 0);
     assert.equal(scene.networkAttackId, 2);

@@ -341,7 +341,7 @@ function iniciarDash(scene) {
   }
 
   // NÃO INTERROMPER ATAQUE
-  if (scene.atacando) {
+  if (scene.atacando && scene.personagemSelecionada !== "aria-kade") {
     return false;
   }
 

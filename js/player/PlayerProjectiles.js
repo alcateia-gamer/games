@@ -5,6 +5,7 @@
 
 import { causarDanoInimigo } from "../enemies/EnemyTest.js";
 import { causarDanoBoss } from "../enemies/BossFinal.js";
+import { tempoImpactoFlecha, obstaculosFlecha } from "./ArrowCollision.js";
 
 const DIRECOES_PROJETIL = {
   // arcoX/arcoY marcam a saída da corda no frame de ataque de 64×64.
@@ -19,20 +20,19 @@ const ALCANCE_MAXIMO_PROJETIL = 1800;
 const DANO_PROJETIL_ARIA = 25;
 
 /**
- * Converte um vetor em direção unitária preservando o frame; retorna null para um vetor sem
+ * Converte um vetor em direção unitária; retorna null para um vetor sem
  * comprimento.
  */
 function normalizarDirecao(direcao) {
   const magnitude = Math.hypot(direcao.x, direcao.y);
 
-  if (magnitude === 0) {
+  if (!Number.isFinite(magnitude) || magnitude === 0) {
     return null;
   }
 
   return {
     x: direcao.x / magnitude,
     y: direcao.y / magnitude,
-    frame: direcao.frame,
   };
 }
 
@@ -61,26 +61,13 @@ function criarSistemaProjeteis(scene) {
 }
 
 /**
- * Identifica qual dos dois objetos recebidos em uma colisão é o projétil do jogador.
- */
-function encontrarProjetil(primeiro, segundo) {
-  if (primeiro?.projetilPlayer) {
-    return primeiro;
-  }
-  if (segundo?.projetilPlayer) {
-    return segundo;
-  }
-  return null;
-}
-
-/**
  * Cria a flecha com hitbox orientada, ID de rede, colisão com obstáculos e limite de duração
  * por alcance.
  */
-function dispararProjetil(scene) {
+function dispararProjetil(scene, opcoes = {}) {
   const direcaoBase =
     DIRECOES_PROJETIL[scene.direcaoAtaque ?? scene.direcaoAtual];
-  const direcao = direcaoBase ? normalizarDirecao(direcaoBase) : null;
+  const direcao = direcaoBase ? normalizarDirecao(opcoes.direction ?? direcaoBase) : null;
 
   if (!scene.player?.active || !direcao) {
     return;
@@ -96,7 +83,7 @@ function dispararProjetil(scene) {
     origemX,
     origemY,
     "aria-arrow",
-    direcao.frame,
+    direcaoBase.frame,
   );
 
   projetil.setOrigin(0.5, 0.5);
@@ -104,13 +91,18 @@ function dispararProjetil(scene) {
   projetil.projetilPlayer = true;
   scene.networkProjectileId = (scene.networkProjectileId || 0) + 1;
   projetil.networkId = `${scene.multiplayerManager?.playerId || "local"}-${scene.networkProjectileId}`;
-  projetil.frameProjetil = direcao.frame;
+  projetil.frameProjetil = direcaoBase.frame;
+  // Cada frame já aponta para uma cardinal; gira somente a diferença angular.
+  if (opcoes.direction) projetil.setRotation(
+    Math.atan2(direcao.y, direcao.x) - Math.atan2(direcaoBase.y, direcaoBase.x),
+  );
   projetil.acertou = false;
   projetil.direcaoDisparo = { x: direcao.x, y: direcao.y };
-  projetil.dano = DANO_PROJETIL_ARIA;
+  projetil.dano = opcoes.damage ?? DANO_PROJETIL_ARIA;
+  projetil.distanciaPercorrida = 0;
   projetil.body.setAllowGravity(false);
   projetil.body.setImmovable(true);
-  const projetilHorizontal = direcao.x !== 0;
+  const projetilHorizontal = direcaoBase.x !== 0;
   const larguraHitbox = projetilHorizontal ? 32 : 6;
   const alturaHitbox = projetilHorizontal ? 6 : 32;
   projetil.body.setSize(larguraHitbox, alturaHitbox, true);
@@ -118,25 +110,13 @@ function dispararProjetil(scene) {
     (64 - larguraHitbox) / 2,
     (64 - alturaHitbox) / 2,
   );
-  const velocidadeProjetil = scene.velocidadeProjetil ?? VELOCIDADE_PROJETIL;
+  const velocidadeProjetil = opcoes.speed ?? scene.velocidadeProjetil ?? VELOCIDADE_PROJETIL;
   projetil.velocidade = velocidadeProjetil;
   projetil.body.setVelocity(0, 0);
   scene.projeteisPlayer.add(projetil);
 
-  if (scene.collisionGroup) {
-    scene.physics.add.collider(
-      projetil,
-      scene.collisionGroup,
-      (primeiro, segundo) => {
-        destruirProjetil(encontrarProjetil(primeiro, segundo));
-      },
-    );
-  }
-
-  scene.time.delayedCall(
-    (ALCANCE_MAXIMO_PROJETIL / velocidadeProjetil) * 1000,
-    () => destruirProjetil(projetil),
-  );
+  // A colisão real é o retângulo orientado varrido, não o corpo Arcade sem rotação.
+  return projetil;
 }
 
 /**
@@ -152,54 +132,43 @@ function atualizarProjeteis(scene, delta = 0) {
 
   const inimigos = Array.isArray(scene.inimigos) ? scene.inimigos : [];
 
-  grupoProjeteis.getChildren().forEach((projetil) => {
+  // Destruir uma flecha remove sua entrada do grupo; a cópia preserva a atualização das demais.
+  grupoProjeteis.getChildren().slice().forEach((projetil) => {
     if (!projetil?.active || projetil.acertou) {
       return;
     }
 
-    const segundos = Math.max(0, delta) / 1000;
-    projetil.x += projetil.direcaoDisparo.x * projetil.velocidade * segundos;
-    projetil.y += projetil.direcaoDisparo.y * projetil.velocidade * segundos;
-    projetil.body.updateFromGameObject();
-
-    const boundsProjetil = new Phaser.Geom.Rectangle(
-      projetil.body.x,
-      projetil.body.y,
-      projetil.body.width,
-      projetil.body.height,
-    );
+    const distancia = Math.min(Math.max(0, delta) / 1000 * projetil.velocidade,
+      ALCANCE_MAXIMO_PROJETIL - projetil.distanciaPercorrida);
+    const inicio = { x: projetil.x, y: projetil.y };
+    const fim = {
+      x: inicio.x + projetil.direcaoDisparo.x * distancia,
+      y: inicio.y + projetil.direcaoDisparo.y * distancia,
+    };
+    let impacto = null;
+    const testar = (retangulo, alvo = null) => {
+      if (!retangulo) return;
+      const tempo = tempoImpactoFlecha(inicio, fim, projetil.direcaoDisparo, retangulo);
+      // Obstáculos são testados primeiro e vencem empates com alvos.
+      if (tempo !== null && (!impacto || tempo < impacto.tempo)) impacto = { tempo, alvo };
+    };
+    for (const corpo of obstaculosFlecha(scene, inicio, fim)) testar(corpo);
     const boss = scene.bossFinal;
-    const bossAtingido =
-      boss?.active &&
-      !boss.morto &&
-      Phaser.Geom.Intersects.RectangleToRectangle(
-        boundsProjetil,
-        boss.hitboxDano,
-      );
-    const inimigoAtingido = bossAtingido
-      ? null
-      : inimigos.find(
-          (inimigo) =>
-            inimigo?.active &&
-            !inimigo.morto &&
-            inimigo.hitboxDano &&
-            Phaser.Geom.Intersects.RectangleToRectangle(
-              boundsProjetil,
-              inimigo.hitboxDano,
-            ),
-        );
-
-    if (!bossAtingido && !inimigoAtingido) {
+    if (boss?.active && !boss.morto) testar(boss.hitboxDano, boss);
+    for (const inimigo of inimigos) {
+      if (inimigo?.active && !inimigo.morto) testar(inimigo.hitboxDano, inimigo);
+    }
+    const proporcao = impacto?.tempo ?? 1;
+    projetil.x = inicio.x + (fim.x - inicio.x) * proporcao;
+    projetil.y = inicio.y + (fim.y - inicio.y) * proporcao;
+    projetil.distanciaPercorrida += distancia * proporcao;
+    projetil.body.updateFromGameObject();
+    if (!impacto) {
+      if (projetil.distanciaPercorrida >= ALCANCE_MAXIMO_PROJETIL) destruirProjetil(projetil);
       return;
     }
-
-    if (bossAtingido) {
-      causarDanoBoss(scene, projetil.dano);
-    } else {
-      causarDanoInimigo(scene, inimigoAtingido, projetil.dano, {
-        playSound: true,
-      });
-    }
+    if (impacto.alvo === boss && boss) causarDanoBoss(scene, projetil.dano);
+    else if (impacto.alvo) causarDanoInimigo(scene, impacto.alvo, projetil.dano, { playSound: true });
 
     destruirProjetil(projetil);
   });

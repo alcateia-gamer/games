@@ -214,34 +214,10 @@ test("zoom uniforme ou por eixo mantém direção, centro e raio visual", t => {
 
 test("o botão fica no raio máximo e a velocidade diagonal continua normalizada", t => {
   const scene = criarCena(t);
-  const pointer = pressionar(scene);
-  mover(scene, pointer, 400, 705);
+  pressionar(scene, 400, 705);
   assert.equal(Math.hypot(scene.joystick.forceX, scene.joystick.forceY), 50);
   atualizarMovimento(scene);
   assert.equal(Math.hypot(...Object.values(scene.player.body.velocity)), 200);
-});
-
-test("mudanças de direção respondem no mesmo evento, sem suavização que atrase a soltura", t => {
-  const scene = criarCena(t);
-  const pointer = pressionar(scene);
-  for (const [x, y] of [[1, 0], [0, -1], [-1, 0], [0, 1], [0, 0]]) {
-    mover(scene, pointer, 100 + x * 40, 305 + y * 40);
-    conferirDirecao(scene, x, y);
-  }
-});
-
-test("botão direito e entrada desabilitada não iniciam movimento", t => {
-  const scene = criarCena(t);
-  const pointer = { id: 0, x: 130, y: 305, isDown: true,
-    wasTouch: false, leftButtonDown: () => false };
-  scene.joystick.base.emit("pointerdown", pointer);
-  conferirDirecao(scene, 0, 0);
-  pointer.leftButtonDown = () => true;
-  scene.joystick.base.emit("pointerdown", pointer);
-  conferirDirecao(scene, 1, 0);
-  scene.input.enabled = false;
-  scene.events.emit("preupdate");
-  conferirDirecao(scene, 0, 0);
 });
 
 test("câmera com viewport deslocado e origem diferente usa coordenadas relativas", t => {

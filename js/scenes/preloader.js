@@ -659,6 +659,16 @@ class Preloader extends Phaser.Scene {
     );
 
     // =====================================================
+    // JOYSTICK
+    // =====================================================
+
+    this.load.plugin(
+      "rexvirtualjoystickplugin",
+      "../js/libs/rexvirtualjoystickplugin.min.js",
+      true
+    );
+
+    // =====================================================
     // TILESETS - CIDADE
     // =====================================================
 

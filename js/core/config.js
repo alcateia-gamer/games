@@ -33,7 +33,7 @@ var config = {
   },
   // Configura ponteiros adicionais para uso simultâneo dos controles por toque.
   input: {
-    activePointers: 3,
+    activePointers: 4,
   },
   // Habilita elementos HTML sobre o jogo, como o campo de código da sala.
   dom: {

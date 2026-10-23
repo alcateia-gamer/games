@@ -5,6 +5,8 @@
 
 import { gastarEstamina } from "./PlayerStatus.js";
 import { dispararProjetil } from "./PlayerProjectiles.js";
+import { ARIA_ATTACK_CONFIG, ARIA_AIM_DIRECTIONS, calcularCargaAria } from "../controls/AriaAttackConfig.js";
+import { pararSomTensaoAria } from "../sounds/SOUNDS_PERSONAGENS.js/sounds_Aria.js";
 
 import { causarDanoInimigo } from "../enemies/EnemyTest.js";
 import { causarDanoBoss } from "../enemies/BossFinal.js";
@@ -146,6 +148,9 @@ function criarPlayer(scene) {
   scene.movimentoBloqueado = false;
   scene.atacando = false;
   scene.ariaAtaqueCarregando = false;
+  scene.ariaCargaInicio = null;
+  scene.ariaMira = null;
+  scene.ariaProximoDisparoRapido = 0;
   scene.attackPhase = "normal";
   scene.attackBufferedUntil = 0;
   scene.combatHitStopRemaining = 0;
@@ -234,6 +239,7 @@ function criarPlayer(scene) {
     // =================================================
 
     scene.atacando = false;
+    if (personagem3Ativa(scene)) scene.ariaCargaInicio = null;
 
     if (
       scene.multiplayer !== true &&
@@ -333,7 +339,31 @@ function atualizarDirecaoAtaqueAria(scene, direcao) {
   scene.player.anims.stop();
   scene.player.setTexture("personagem3-attack");
   scene.player.setFrame(framesCarregadosAria[direcao]);
-  scene.player.setOrigin(0.5, 0.5);
+  alinharVisualAtaqueAria(scene);
+}
+
+/** Compensa somente a folha de 64px; mantém o corpo nos mesmos pés da caminhada. */
+function alinharVisualAtaqueAria(scene) {
+  scene.player.setDisplayOrigin(35, 32);
+}
+
+/** Cancela sem criar projétil ou deixar ataques na fila. */
+function cancelarAtaqueAria(scene) {
+  pararSomTensaoAria(scene);
+  scene.ariaCargaInicio = null;
+  scene.ariaMira = null;
+  scene.attackBufferedUntil = 0;
+  if (!scene.ariaAtaqueCarregando) return;
+  scene.ariaAtaqueCarregando = false;
+  scene.atacando = false;
+  scene.attackPhase = "normal";
+  scene.direcaoAtaque = null;
+  if (scene.player?.active) {
+    scene.player.anims.stop();
+    scene.player.setTexture(texturaWalk(scene), frameParado(scene));
+    configurarVisualWalk(scene);
+    configurarHitboxWalk(scene);
+  }
 }
 
 // =====================================================
@@ -650,6 +680,8 @@ function atacar(scene) {
   // =====================================================
 
   if (scene.atacando) {
+    // Aria dispara na soltura: enfileirar outro ataque criaria uma carga sem dedo.
+    if (personagem3Ativa(scene)) return false;
     if (scene.multiplayer !== true && scene.time) {
       scene.attackBufferedUntil =
         scene.time.now + COMBAT_FEEL.inputBufferMs;
@@ -686,7 +718,11 @@ function atacar(scene) {
 
   if (personagem3Ativa(scene)) {
     scene.ariaAtaqueCarregando = true;
+    scene.ariaCargaInicio = scene.time.now;
+    scene.ariaMira = { ...ARIA_AIM_DIRECTIONS[scene.direcaoAtaque] };
+    scene.player.anims.timeScale = 1;
     scene.player.anims.play(`aria-charge-${scene.direcaoAtaque}`, false);
+    alinharVisualAtaqueAria(scene);
     configurarHitboxAtaque(scene);
     return true;
   }
@@ -757,7 +793,7 @@ function atacar(scene) {
 /**
  * Encerra a carga da Aria, cria a flecha e executa a animação de soltura na direção escolhida.
  */
-function soltarAtaque(scene) {
+function soltarAtaque(scene, agora = scene.time.now) {
   if (
     !personagem3Ativa(scene) ||
     !scene.atacando ||
@@ -766,11 +802,25 @@ function soltarAtaque(scene) {
     return;
   }
 
+  const tempo = Math.max(0, agora - (scene.ariaCargaInicio ?? agora));
+  const config = scene.ariaAttackConfig ?? ARIA_ATTACK_CONFIG;
+  if (tempo <= config.quickTapThreshold && agora < scene.ariaProximoDisparoRapido) {
+    cancelarAtaqueAria(scene);
+    return false;
+  }
+  const potencia = calcularCargaAria(tempo, config);
+  const direction = scene.ariaAttackJoystick
+    ? scene.ariaMira ?? ARIA_AIM_DIRECTIONS[scene.direcaoAtaque]
+    : ARIA_AIM_DIRECTIONS[scene.direcaoAtaque];
   scene.ariaAtaqueCarregando = false;
+  scene.ariaCargaInicio = null;
+  scene.ariaProximoDisparoRapido = agora + config.quickShotCooldown;
   scene.attackPhase = "release";
-  dispararProjetil(scene);
+  dispararProjetil(scene, { direction, damage: potencia.damage, speed: potencia.speed });
   scene.player.anims.play(`aria-release-${scene.direcaoAtaque}`, false);
+  alinharVisualAtaqueAria(scene);
   configurarHitboxAtaque(scene);
+  return true;
 }
 
 // =====================================================
@@ -782,6 +832,8 @@ function soltarAtaque(scene) {
  * estados de ataque.
  */
 function respawnPlayer(scene) {
+  scene.ariaAttackJoystick?.cancelar();
+  if (personagem3Ativa(scene)) cancelarAtaqueAria(scene);
   scene.player.combatKnockbackUntil = 0;
 
   // =====================================================
@@ -853,6 +905,7 @@ export {
   atacar,
   soltarAtaque,
   atualizarDirecaoAtaqueAria,
+  cancelarAtaqueAria,
   respawnPlayer,
   atualizarHitboxDanoPlayer,
   atualizarDepthPlayer,

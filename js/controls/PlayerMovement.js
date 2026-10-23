@@ -16,6 +16,7 @@ import {
 
 import { atualizarDash } from "./PlayerDashControls.js";
 import { obterDirecaoMovimento } from "./PlayerMovementInput.js";
+import { ARIA_ATTACK_CONFIG } from "./AriaAttackConfig.js";
 
 /**
  * Prepara o som de caminhada ou corrida usado pelo sistema de movimento.
@@ -73,8 +74,13 @@ function atualizarMovimento(scene) {
 
   const velocidadeAtualBase = usandoTurbo ? velocidadeTurbo : velocidadeBase;
 
-  const velocidadeAtual =
-    !scene.multiplayer && scene.atacando
+  const configAria = scene.ariaAttackConfig ?? ARIA_ATTACK_CONFIG;
+  const penalidadeAria = scene.ariaAtaqueCarregando &&
+    scene.time.now - scene.ariaCargaInicio >= configAria.movePenaltyStart
+    ? configAria.movePenaltyMultiplier : 1;
+  const velocidadeAtual = scene.personagemSelecionada === "aria-kade"
+    ? velocidadeAtualBase * penalidadeAria
+    : !scene.multiplayer && scene.atacando
       ? velocidadeAtualBase * 0.72
       : velocidadeAtualBase;
 
