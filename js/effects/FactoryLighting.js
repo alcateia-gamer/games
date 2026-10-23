@@ -112,6 +112,15 @@ function luzAfetaCamera(luz, camera) {
     y + raioY > 0 && y - raioY < camera.height;
 }
 
+// Exige a luminária dentro da tela, mesmo quando seu halo alcança a câmera de fora.
+export function luzDentroCampoVisao(luz, camera) {
+  const m = camera?.matrix;
+  if (!m) return false;
+  const x = m.a * luz.x + m.c * luz.y + m.e;
+  const y = m.b * luz.x + m.d * luz.y + m.f;
+  return x >= 0 && x < camera.width && y >= 0 && y < camera.height;
+}
+
 class FactoryLighting {
   constructor(map, { aleatorio = Math.random, avisar = console.warn } = {}) {
     this.lampadas = lerLuzesFabrica(map, avisar);
@@ -121,9 +130,12 @@ class FactoryLighting {
     this.progressoPartida = null;
     this.fontesVisiveis = [];
     this.revisao = 0;
+    this.falhasIniciadas = [];
+    this.proximaFalha = null;
+    this.ultimaLuz = null;
     // Estados separados dos dados do mapa: nada é escrito nos objetos do Tiled.
     this.estados = this.lampadas.map((luz, indice) => ({
-      luz, indice, intensidade: 0, proximaFalha: null, falha: null,
+      luz, indice, intensidade: 0, falha: null,
     }));
   }
 
@@ -132,35 +144,54 @@ class FactoryLighting {
     this.progressoPartida = null;
     this.partida = this.energia && typeof obterProgresso === "function"
       ? { obterProgresso, inicio: agora } : null;
+    this.proximaFalha = null;
+    this.ultimaLuz = null;
+    this.falhasIniciadas.length = 0;
     for (const estado of this.estados) {
-      estado.proximaFalha = null;
       estado.falha = null;
     }
   }
 
-  /** Piscadas breves e visíveis, com recuperação suave e intervalos irregulares. */
+  /** Uma única contagem escolhe uma luminária visível a cada 5–10 segundos. */
+  agendarFalhaVisivel(agora, camera) {
+    if (this.proximaFalha === null) {
+      this.proximaFalha = agora + 5000 + this.aleatorio() * 5000;
+    }
+    if (agora < this.proximaFalha) return;
+    const visiveis = this.estados.filter(({ luz }) => luz.piscando && luz.ligada &&
+      luz.intensidade > 0 && luz.cor.alpha > 0 && luzDentroCampoVisao(luz, camera));
+    if (!visiveis.length) return;
+
+    // Prefere outra região da tela, sem atrasar a cadência se houver poucas luzes.
+    const distantes = this.ultimaLuz ? visiveis.filter(({ luz }) =>
+      Math.hypot(luz.x - this.ultimaLuz.x, luz.y - this.ultimaLuz.y) >= 450) : [];
+    const outras = visiveis.filter(({ luz }) => luz !== this.ultimaLuz);
+    const candidatas = distantes.length ? distantes : outras.length ? outras : visiveis;
+    const estado = candidatas[Math.min(candidatas.length - 1,
+      Math.floor(this.aleatorio() * candidatas.length))];
+    estado.falha = {
+      inicio: agora, duracao: 900 + this.aleatorio() * 300,
+      queda: 0.45 + this.aleatorio() * 0.35,
+    };
+    this.ultimaLuz = estado.luz;
+    this.falhasIniciadas.push(estado.luz);
+    this.proximaFalha = agora + 5000 + this.aleatorio() * 5000;
+  }
+
+  /** Recuperação suave da única piscada agendada. */
   calcularFalha(estado, agora) {
-    if (estado.proximaFalha === null) {
-      estado.proximaFalha = agora + 2000 + this.aleatorio() * 3000;
-    }
-    if (!estado.falha && agora >= estado.proximaFalha) {
-      estado.falha = {
-        inicio: agora, duracao: 900 + this.aleatorio() * 300,
-        queda: 0.45 + this.aleatorio() * 0.35,
-      };
-    }
     const falha = estado.falha;
     if (!falha) return 1;
     const p = (agora - falha.inicio) / falha.duracao;
     if (p >= 1) {
       estado.falha = null;
-      estado.proximaFalha = agora + 2000 + this.aleatorio() * 3000;
       return 1;
     }
     return 1 - falha.queda * Math.sin(Math.PI * p) ** 2;
   }
 
   atualizar(agora, camera) {
+    this.falhasIniciadas.length = 0;
     let progresso = 1;
     this.progressoPartida = null;
     if (this.partida) {
@@ -172,6 +203,7 @@ class FactoryLighting {
       if (progresso >= 1) this.partida = null;
     }
     const energia = this.energia ? intensidadeLuzPartida(progresso) : 0;
+    if (this.energia && !this.partida) this.agendarFalhaVisivel(agora, camera);
     let quantidade = 0;
     let alteradas = false;
     for (const estado of this.estados) {
@@ -198,8 +230,11 @@ class FactoryLighting {
     this.partida = null;
     this.progressoPartida = null;
     this.energia = false;
+    this.proximaFalha = null;
+    this.ultimaLuz = null;
     this.fontesVisiveis.length = 0;
     this.estados.length = 0;
+    this.falhasIniciadas.length = 0;
     this.lampadas.length = 0;
   }
 }

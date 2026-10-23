@@ -585,7 +585,7 @@ test("blinking lamps dim visibly at irregular intervals while healthy lamps rema
   const values = [];
   const starts = [];
   let wasFailing = false;
-  for (let now = 0; now < 40000; now += 33) {
+  for (let now = 0; now < 160000; now += 33) {
     const [faulty, healthy] = lights.atualizar(now, camera);
     assert.equal(healthy.intensidade, 1);
     values.push(faulty.intensidade);
@@ -621,7 +621,7 @@ test("culling uses the configured world radius and current camera matrix at nega
 });
 
 
-test("som acompanha apenas a partida do gerador, sem tocar nas falhas aleatórias ou na revisita", t => {
+test("som da partida mantém os três estalos e não se repete na revisita", t => {
   const reproducoes = [];
   const som = {
     totalDuration: 0.78, isPlaying: false, destruido: false,
@@ -649,9 +649,9 @@ test("som acompanha apenas a partida do gerador, sem tocar nas falhas aleatória
   }
   assert.equal(reproducoes.length, 3);
   assert.equal(som.isPlaying, false, "o último quadro da partida encerra o som");
-  scene.time.now = 7000;
+  scene.time.now = 17000;
   render();
-  scene.time.now = 7450;
+  scene.time.now = 17450;
   render();
   assert.ok(scene.iluminacaoFabrica.estados[0].falha, "uma luz está piscando durante o jogo");
   assert.equal(reproducoes.length, 3, "essa piscada não produz som");
@@ -667,4 +667,82 @@ test("som acompanha apenas a partida do gerador, sem tocar nas falhas aleatória
   assert.equal(som.isPlaying, false, "interromper a partida silencia o som");
   scene.events.emit("shutdown");
   assert.equal(som.destruido, true);
+});
+
+
+test("falhas são raras e espaçadas, especialmente entre lâmpadas vizinhas", () => {
+  const lights = new FactoryLighting(mapa(
+    ponto({ Piscando: true }, 100, 225),
+    ponto({ Piscando: true }, 200, 225),
+    ponto({ Piscando: true }, 700, 225),
+  ), { aleatorio: () => 0 });
+  lights.definirEnergia(true);
+  const camera = criarCamera();
+  const eventos = [];
+  for (let agora = 0; agora < 120000; agora += 100) {
+    lights.atualizar(agora, camera);
+    for (const luz of lights.falhasIniciadas) eventos.push({ agora, luz });
+  }
+  assert.ok(eventos.length > 3);
+  assert.ok(eventos[0].agora >= 5000);
+  for (let i = 1; i < eventos.length; i++) {
+    const atual = eventos[i];
+    assert.equal(atual.agora - eventos[i - 1].agora, 5000);
+    assert.ok(Math.abs(atual.luz.x - eventos[i - 1].luz.x) >= 450);
+    for (const anterior of eventos.slice(0, i)) {
+      if (anterior.luz === atual.luz) assert.ok(atual.agora - anterior.agora >= 10000);
+      else if (Math.abs(atual.luz.x - anterior.luz.x) < 450) {
+        assert.ok(atual.agora - anterior.agora >= 8000);
+      }
+    }
+  }
+  lights.definirEnergia(false);
+  lights.atualizar(130000, camera);
+  assert.equal(lights.falhasIniciadas.length, 0);
+});
+
+
+test("uma única luz visível pisca a cada intervalo global de 5 a 10 segundos", () => {
+  for (const sorteio of [0, 0.5, 1]) {
+    const lights = new FactoryLighting(mapa(
+      ponto({ Piscando: true }, 100, 200),
+      ponto({ Piscando: true }, 200, 200),
+      ponto({ Piscando: true }, 300, 200),
+    ), { aleatorio: () => sorteio });
+    lights.definirEnergia(true);
+    const camera = criarCamera();
+    const intervalo = 5000 + sorteio * 5000;
+    lights.atualizar(0, camera);
+    for (let evento = 1; evento <= 5; evento++) {
+      lights.atualizar(evento * intervalo - 1, camera);
+      assert.equal(lights.falhasIniciadas.length, 0);
+      lights.atualizar(evento * intervalo, camera);
+      assert.equal(lights.falhasIniciadas.length, 1);
+    }
+  }
+});
+
+test("escolhe a luz no campo de visão atual e não acumula piscadas fora da tela", () => {
+  const lights = new FactoryLighting(mapa(
+    ponto({ Piscando: true }, -50, 200),
+    ponto({ Piscando: true }, 900, 200),
+  ), { aleatorio: () => 0 });
+  lights.definirEnergia(true);
+  const camera = criarCamera();
+  for (const tempo of [0, 10000, 20000, 30000]) {
+    lights.atualizar(tempo, camera);
+    assert.equal(lights.falhasIniciadas.length, 0, "o halo visível não basta");
+  }
+  camera.setScroll(500, 0);
+  camera.preRender();
+  lights.atualizar(31000, camera);
+  assert.deepEqual(lights.falhasIniciadas.map(luz => luz.x), [900]);
+  lights.atualizar(31001, camera);
+  assert.equal(lights.falhasIniciadas.length, 0, "não dispara eventos acumulados");
+  camera.setScroll(-500, 0);
+  camera.preRender();
+  lights.atualizar(35999, camera);
+  assert.equal(lights.falhasIniciadas.length, 0);
+  lights.atualizar(36000, camera);
+  assert.deepEqual(lights.falhasIniciadas.map(luz => luz.x), [-50]);
 });

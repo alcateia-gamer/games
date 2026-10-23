@@ -1,3 +1,4 @@
+import { luzDentroCampoVisao } from "../effects/FactoryLighting.js";
 /** Três falhas de contato acompanhando o início, o meio e o fim das piscadas. */
 import { GENERATOR_LOOP_START_SECONDS } from "./gerador.js";
 
@@ -165,4 +166,56 @@ function criarSomLuzFabrica(scene, quedas) {
   };
 }
 
-export { carregarSomLuzFabrica, criarSomLuzFabrica };
+/** Estalos de fundo das falhas ocasionais, atenuados pela distância ao jogador. */
+function criarSomPiscadasAmbiente(scene) {
+  if (!scene.cache?.audio?.exists(CHAVE_SOM_LUZ)) {
+    return { update() {}, stop() {}, destroy() {} };
+  }
+  const som = scene.sound.add(CHAVE_SOM_LUZ, { volume: 0, loop: false });
+  const inicio = encontrarInicioEstalo(som.audioBuffer);
+  const duracao = Math.min(0.51, som.totalDuration - inicio);
+  if (duracao > 0) som.addMarker({ name: "piscada-distante", start: inicio, duration: duracao });
+  let ativo = null;
+  let agendado = false;
+  const stop = () => {
+    const gain = som.volumeNode?.gain;
+    if (gain) {
+      gain.cancelScheduledValues(som.manager.context.currentTime);
+      gain.setValueAtTime(0, som.manager.context.currentTime);
+    }
+    som.stop();
+    ativo = null;
+  };
+  return {
+    update(luzes) {
+      if (ativo) {
+        const decorrido = (scene.time.now - ativo.tempo) / 1000;
+        if (decorrido >= duracao || !luzDentroCampoVisao(ativo.luz, scene.cameras?.main)) stop();
+        else if (!agendado) som.setVolume(calcularVolumeContato(ativo, decorrido));
+      }
+      const player = scene.player;
+      if (!player?.active || duracao <= 0) return;
+      const posicao = player.body?.center ?? player;
+      for (const luz of luzes) {
+        if (!luzDentroCampoVisao(luz, scene.cameras?.main)) continue;
+        const distancia = Math.hypot(luz.x - posicao.x, luz.y - posicao.y);
+        const proximidade = Math.max(0, 1 - distancia / 900);
+        const volume = 0.025 * proximidade * proximidade;
+        if (volume <= 0) continue;
+        stop();
+        const estalo = {
+          luz, tempo: scene.time.now, inicio: 0, inicioQueda: 0, duracaoQueda: duracao,
+          duracao, volume, perfil: PERFIS_CONTATO[2],
+        };
+        if (som.play("piscada-distante", { volume: 0, loop: false, rate: 1 })) {
+          ativo = estalo;
+          agendado = agendarDinamica(som, estalo, 0);
+        }
+      }
+    },
+    stop,
+    destroy() { stop(); som.destroy(); },
+  };
+}
+
+export { carregarSomLuzFabrica, criarSomLuzFabrica, criarSomPiscadasAmbiente };

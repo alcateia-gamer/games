@@ -4,7 +4,7 @@
  */
 
 import FactoryLighting, { ESCURIDAO_AMBIENTE_FABRICA, MULTIPLICADOR_ALCANCE_FABRICA, QUEDAS_LUZ_FABRICA } from "./FactoryLighting.js";
-import { criarSomLuzFabrica } from "../sounds/luzFabrica.js";
+import { criarSomLuzFabrica, criarSomPiscadasAmbiente } from "../sounds/luzFabrica.js";
 export { intensidadeLuzPartida, QUEDAS_LUZ_FABRICA } from "./FactoryLighting.js";
 
 const TEXTURA_ESCURIDAO_PARTE2 = "level1-parte2-escuridao";
@@ -100,6 +100,7 @@ function criarIluminacaoTerror(scene) {
   const iluminacao = new FactoryLighting(scene.map);
   scene.iluminacaoFabrica = iluminacao;
   const somPartida = criarSomLuzFabrica(scene, QUEDAS_LUZ_FABRICA);
+  const somPiscadas = criarSomPiscadasAmbiente(scene);
 
   if (scene.textures.exists(TEXTURA_ESCURIDAO_PARTE2)) {
     scene.textures.remove(TEXTURA_ESCURIDAO_PARTE2);
@@ -124,6 +125,7 @@ function criarIluminacaoTerror(scene) {
 
   const definirIluminacaoFabrica = (ligada, obterProgresso = null) => {
     somPartida.stop();
+    somPiscadas.stop();
     iluminacao.definirEnergia(ligada, obterProgresso, scene.time.now);
     invalidada = true;
   };
@@ -158,8 +160,9 @@ function criarIluminacaoTerror(scene) {
     posicionarOverlay();
     const fontes = iluminacao.atualizar(scene.time.now, camera);
     // Usa a mesma leitura do relógio do gerador que move as luzes, inclusive no último quadro.
-    // Piscadas aleatórias, após a estabilização, não acionam este som.
+    // O som da partida e os estalos ambientes têm volumes e controles próprios.
     if (iluminacao.progressoPartida !== null) somPartida.update(iluminacao.progressoPartida);
+    somPiscadas.update(iluminacao.falhasIniciadas);
     const m = camera.matrix;
     // Compara valores em memória reutilizada, sem criar arrays ou strings a cada frame.
     if (!invalidada && ultimoQuadro.width === width && ultimoQuadro.height === height &&
@@ -221,6 +224,7 @@ function criarIluminacaoTerror(scene) {
     if (scene.definirIluminacaoFabrica === definirIluminacaoFabrica) scene.definirIluminacaoFabrica = null;
     if (scene.iluminacaoFabrica === iluminacao) scene.iluminacaoFabrica = null;
     somPartida.destroy();
+    somPiscadas.destroy();
     iluminacao.destroy();
     overlay.destroy();
     if (scene.textures.exists(TEXTURA_ESCURIDAO_PARTE2)) scene.textures.remove(TEXTURA_ESCURIDAO_PARTE2);
