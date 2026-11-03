@@ -91,7 +91,7 @@ class MultiplayerLobby extends Phaser.Scene {
     if (this.started) return;
     this.started = true;
     const local = room.players.find((player) => player.id === this.manager.playerId);
-    this.scene.start("preloader", { personagem: local?.character || "kai-mercer", multiplayer: true });
+    this.scene.start("BootPartida", { personagem: local?.character || "kai-mercer", multiplayer: true });
   }
 
   /**

@@ -4,7 +4,7 @@
  */
 
 import { criarTextoMenu } from "../ui/MenuText.js";
-import { PERSONAGENS_TESTE, carregarPersonagemTeste } from "../player/PersonagemTeste.js";
+import { PERSONAGENS_TESTE } from "../player/PersonagemTeste.js";
 
 class Start extends Phaser.Scene {
   /**
@@ -33,17 +33,24 @@ class Start extends Phaser.Scene {
   // =====================================================
 
   /**
-   * Coloca na fila a música do menu e as folhas de sprites usadas na seleção de personagens.
+   * O menu inicial precisa apenas da música; retratos são carregados ao escolher SOLO.
    */
   preload() {
-    carregarPersonagemTeste(this, "assets/");
     // Música dos menus, carregamento e multiplayer.
-    this.load.audio(
+    if (!this.cache.audio.exists("musica-menu")) this.load.audio(
       "musica-menu",
       "assets/sounds.mp3/sons.musicais.mp3/cyberpunk-2077.mp3",
     );
+  }
 
-    // Personagens.
+  carregarRetratos() {
+    // Só a pose exibida no cartão; armas e golpes ficam para o preloader da partida.
+    for (const personagem of PERSONAGENS_TESTE.filter(p => p.ativo)) {
+      if (!this.textures.exists(personagem.textura)) this.load.spritesheet(
+        personagem.textura, "assets/" + personagem.arquivo,
+        { frameWidth: personagem.frameSize, frameHeight: personagem.frameSize, endFrame: personagem.totalFrames - 1 },
+      );
+    }
     this.load.spritesheet(
       "start-character",
       "assets/PERSONAGENS/PERSONAGENS PRICIPAIS/KAI_MERCER 1/KAI_WALK.png",
@@ -79,6 +86,12 @@ class Start extends Phaser.Scene {
         frameHeight: 64,
       },
     );
+  }
+
+  retratosProntos() {
+    return ["start-character", "start-character-2", "start-character-3", "start-character-4",
+      ...PERSONAGENS_TESTE.filter(p => p.ativo).map(p => p.textura)]
+      .every(key => this.textures.exists(key));
   }
 
   // =====================================================
@@ -194,18 +207,7 @@ class Start extends Phaser.Scene {
     });
     musica.once("destroy", () => entradaVolume.remove());
 
-    // Para quando o jogo realmente começar.
-    // Funciona tanto no solo quanto no multiplayer.
-    const cenaJogo = this.scene.get("Level1");
-
-    cenaJogo.events.once(Phaser.Scenes.Events.START, () => {
-      if (this.game.musicaMenu === musica) {
-        musica.stop();
-        musica.destroy();
-        this.game.musicaMenu = null;
-
-      }
-    });
+    // O preloader encerra a música ao entrar na fase, que ainda não foi importada aqui.
   }
 
   // =====================================================
@@ -598,6 +600,7 @@ class Start extends Phaser.Scene {
    * a janela.
    */
   selectMenuOption(option) {
+    this.selecaoSoloSolicitada = option === "SOLO";
     if (option === "SOLO") {
       this.showSoloSelection();
       return;
@@ -748,6 +751,26 @@ class Start extends Phaser.Scene {
    * voltar.
    */
   showSoloSelection() {
+    if (!this.retratosProntos()) {
+      if (this.carregandoRetratos) return;
+      this.carregandoRetratos = true;
+      this.menuStatus.setText("CARREGANDO OPERADORES...");
+      const concluir = () => {
+        this.carregandoRetratos = false;
+        if (this.scene.isActive() && !this.startingGame && this.selecaoSoloSolicitada) {
+          if (this.retratosProntos()) this.showSoloSelection();
+          else this.menuStatus.setText("FALHA AO CARREGAR OPERADORES. TENTE NOVAMENTE.");
+        }
+      };
+      this.load.once("complete", concluir);
+      this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+        this.load.off("complete", concluir);
+        this.carregandoRetratos = false;
+      });
+      this.carregarRetratos();
+      this.load.start();
+      return;
+    }
     this.menuLayer.setVisible(false);
 
     this.soloLayer = this.add.container(0, 0).setDepth(21).setAlpha(0);
@@ -925,7 +948,7 @@ class Start extends Phaser.Scene {
   startSoloGame() {
     if (this.startingGame) return;
     this.startingGame = true;
-    this.scene.start("preloader", {
+    this.scene.start("BootPartida", {
       personagem: this.selectedCharacter,
       multiplayer: false,
     });

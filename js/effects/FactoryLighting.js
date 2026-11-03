@@ -5,10 +5,10 @@
 
 import { GENERATOR_LOOP_START_SECONDS } from "../sounds/gerador.js";
 
-const ESCURIDAO_AMBIENTE_FABRICA = 0.55;
+const ESCURIDAO_AMBIENTE_FABRICA = 0.75;
 const MULTIPLICADOR_ALCANCE_FABRICA = 1.5;
 const PADROES_LUZ_FABRICA = Object.freeze({
-  raio: 170, intensidade: 1, cor: "#FFD27A", piscando: false, ligada: true,
+  raio: 170, intensidade: 1, cor: "#FFD27A", piscando: false, pulsando: false, ligada: true,
   orientacao: "horizontal",
 });
 const PARTIDA_GERADOR = [
@@ -30,6 +30,12 @@ const QUEDAS_LUZ_FABRICA = PARTIDA_GERADOR.flatMap(([inicio, luz], indice) => {
     : [];
 });
 const limitar = valor => Math.max(0, Math.min(1, valor));
+const PERIODO_PULSO_MS = 1600;
+
+/** Ciclo suave e sincronizado de emergência, entre 10% e 100% da luz configurada. */
+function intensidadePulso(agora) {
+  return 0.1 + 0.9 * (0.5 + 0.5 * Math.cos(agora * 2 * Math.PI / PERIODO_PULSO_MS));
+}
 
 function suavizar(valor) {
   const p = limitar(valor);
@@ -73,25 +79,36 @@ function lerLuzesFabrica(map, avisar = console.warn) {
     return [];
   }
   return (camada.objects ?? []).flatMap(objeto => {
-    if (objeto.point !== true || !Number.isFinite(objeto.x) || !Number.isFinite(objeto.y)) {
-      avisar(`[Iluminação da fábrica] Objeto ${objeto.id} ignorado: use Point com X/Y válidos em LuzesFabrica.`);
+    const area = objeto.point !== true && !objeto.ellipse && !objeto.polygon && !objeto.polyline && !objeto.gid &&
+      Number.isFinite(objeto.width) && objeto.width > 0 && Number.isFinite(objeto.height) && objeto.height > 0;
+    if ((!area && objeto.point !== true) || !Number.isFinite(objeto.x) || !Number.isFinite(objeto.y)) {
+      avisar(`[Iluminação da fábrica] Objeto ${objeto.id} ignorado: use Point ou retângulo com X/Y válidos em LuzesFabrica.`);
       return [];
     }
     const raio = lerPropriedade(objeto, "Raio");
     const intensidade = lerPropriedade(objeto, "Intensidade");
     const piscando = lerPropriedade(objeto, "Piscando");
+    const pulsando = lerPropriedade(objeto, "Pulsando");
     const ligada = lerPropriedade(objeto, "Ligada");
     const orientacaoConfigurada = lerPropriedade(objeto, "Orientacao");
     const orientacao = typeof orientacaoConfigurada === "string"
       ? orientacaoConfigurada.toLowerCase()
       : null;
+    const cor = lerCorTiled(lerPropriedade(objeto, "Cor"));
+    if (pulsando === true) {
+      cor.css = "#FF0000";
+      cor.phaser = 0xFF0000;
+    }
     return [{
       id: objeto.id, x: objeto.x, y: objeto.y,
+      ...(area ? { area: true, largura: objeto.width, altura: objeto.height,
+        rotacao: Number.isFinite(objeto.rotation) ? objeto.rotation * Math.PI / 180 : 0 } : {}),
       raio: Number.isInteger(raio) && raio > 0 ? raio : PADROES_LUZ_FABRICA.raio,
       intensidade: typeof intensidade === "number" && Number.isFinite(intensidade) && intensidade >= 0
         ? intensidade : PADROES_LUZ_FABRICA.intensidade,
-      cor: lerCorTiled(lerPropriedade(objeto, "Cor")),
+      cor,
       piscando: typeof piscando === "boolean" ? piscando : PADROES_LUZ_FABRICA.piscando,
+      pulsando: typeof pulsando === "boolean" ? pulsando : PADROES_LUZ_FABRICA.pulsando,
       ligada: (typeof ligada === "boolean" ? ligada : PADROES_LUZ_FABRICA.ligada) &&
         camada.visible !== false && objeto.visible !== false,
       orientacao: ["horizontal", "vertical"].includes(orientacao)
@@ -103,6 +120,18 @@ function lerLuzesFabrica(map, avisar = console.warn) {
 /** Usa a matriz já atualizada da câmera, inclusive scroll negativo, zoom e viewport. */
 function luzAfetaCamera(luz, camera) {
   const matriz = camera.matrix;
+  if (luz.area) {
+    const cos = Math.cos(luz.rotacao), sin = Math.sin(luz.rotacao);
+    const cx = luz.x + cos * luz.largura / 2 - sin * luz.altura / 2;
+    const cy = luz.y + sin * luz.largura / 2 + cos * luz.altura / 2;
+    const x = matriz.a * cx + matriz.c * cy + matriz.e;
+    const y = matriz.b * cx + matriz.d * cy + matriz.f;
+    const rx = (Math.abs(matriz.a * cos + matriz.c * sin) * luz.largura +
+      Math.abs(-matriz.a * sin + matriz.c * cos) * luz.altura) / 2;
+    const ry = (Math.abs(matriz.b * cos + matriz.d * sin) * luz.largura +
+      Math.abs(-matriz.b * sin + matriz.d * cos) * luz.altura) / 2;
+    return x + rx > 0 && x - rx < camera.width && y + ry > 0 && y - ry < camera.height;
+  }
   const x = matriz.a * luz.x + matriz.c * luz.y + matriz.e;
   const y = matriz.b * luz.x + matriz.d * luz.y + matriz.f;
   const alcance = luz.raio * MULTIPLICADOR_ALCANCE_FABRICA;
@@ -215,7 +244,8 @@ class FactoryLighting {
         ? 1 - (1 - progresso) * 0.12 * Math.sin(progresso * 15 + estado.indice) ** 2
         : luz.piscando ? this.calcularFalha(estado, agora) : 1;
       // Limita e quantiza em passos de alpha: evita saturação e uploads sem mudança visível.
-      const intensidade = Math.round(limitar(luz.intensidade * luz.cor.alpha) * energia * oscilacao * 255) / 255;
+      const pulso = luz.pulsando ? intensidadePulso(agora) : 1;
+      const intensidade = Math.round(limitar(luz.intensidade * luz.cor.alpha) * energia * oscilacao * pulso * 255) / 255;
       if (this.fontesVisiveis[quantidade] !== estado || estado.intensidade !== intensidade) alteradas = true;
       estado.intensidade = intensidade;
       this.fontesVisiveis[quantidade++] = estado;

@@ -6,13 +6,9 @@
 import config from "./config.js";
 
 import Start from "../scenes/start.js";
-import PreLoader from "../scenes/preloader.js";
-import Level1 from "../scenes/Level1.js";
-import Level1Parte2 from "../scenes/Level1Parte2.js";
+import BootPartida from "../scenes/BootPartida.js";
 import MultiplayerMenu from "../scenes/MultiplayerMenu.js";
 import MultiplayerLobby from "../scenes/MultiplayerLobby.js";
-import MqttClient from "../mqttClient.js";
-import MultiplayerManager from "../multiplayer/multiplayerManager.js";
 
 /**
  * Atualiza a escala do canvas após uma mudança no tamanho visível da página.
@@ -97,20 +93,10 @@ class Game extends Phaser.Game {
       );
     });
 
-    // O registry compartilha estas instâncias entre menus e fases.
-    const mqttClient = new MqttClient(config.mqtt);
-    const multiplayer = new MultiplayerManager(mqttClient);
-    this.registry.set("mqtt", mqttClient);
-    this.registry.set("multiplayer", multiplayer);
-
     // As chaves registradas aqui devem coincidir com os nomes usados em scene.start.
     this.scene.add("Start", Start);
 
-    this.scene.add("preloader", PreLoader);
-
-    this.scene.add("Level1", Level1);
-
-    this.scene.add("Level1Parte2", Level1Parte2);
+    this.scene.add("BootPartida", BootPartida);
     this.scene.add("MultiplayerMenu", MultiplayerMenu);
     this.scene.add("MultiplayerLobby", MultiplayerLobby);
 

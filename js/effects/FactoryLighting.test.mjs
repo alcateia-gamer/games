@@ -265,15 +265,94 @@ test("one mask preserves configured ambient shadow and soft local openings witho
   assert.equal(texture.refreshes, uploads, "stationary scenes reuse the composed texture");
 });
 
-test("the player emits no cone or halo with power off or on, and movement does not invalidate the mask", t => {
+test("pulsing lamps have a soft diffuse red glow while ordinary lamps keep their color", t => {
+  const { render, texture, scene } = cenaComMascara(t, [
+    ponto({ Pulsando: true, Cor: "#ff00ff00" }, 200, 225),
+    ponto({ Cor: "#ff00ff00" }, 600, 225),
+  ], true);
+  render();
+  const emergency = texture.canvas.rgbaEm(240, 225);
+  const normal = texture.canvas.rgbaEm(640, 225);
+  assert.ok(emergency[0] > 0.4, "emergency overlay keeps its red tint");
+  assert.equal(emergency[1], 0);
+  assert.equal(emergency[2], 0);
+  const center = texture.canvas.rgbaEm(200, 225);
+  const redCenter = center[0] * center[3];
+  assert.ok(redCenter > 0.3 && redCenter < 0.5, "center preserves the floor instead of covering it in opaque red");
+  const halo = texture.canvas.rgbaEm(200, 325);
+  const redHalo = halo[0] * halo[3];
+  assert.ok(redHalo > 0.08 && redHalo < redCenter, "red diffuses gradually away from the lamp");
+  assert.ok(normal[1] > normal[0], "ordinary lamp keeps its configured green tint");
+  assert.equal(scene.iluminacaoFabrica.lampadas[1].cor.css, "#00FF00");
+});
+
+test("pulsing light redraws the shared mask while the camera stays stationary", t => {
+  const { scene, render, texture } = cenaComMascara(t, [
+    ponto({ Pulsando: true, Cor: "#ffed333b", Orientacao: "Vertical" }),
+  ], true);
+  render();
+  const peak = texture.canvas.rgbaEm(400, 225)[0];
+  const uploads = texture.refreshes;
+  scene.time.now = 800;
+  render();
+  assert.ok(texture.canvas.rgbaEm(400, 225)[0] < peak - 0.1);
+  assert.equal(texture.refreshes, uploads + 1);
+  render();
+  assert.equal(texture.refreshes, uploads + 1, "paused time reuses the texture");
+  scene.time.now = 1600;
+  render();
+  assert.equal(texture.canvas.rgbaEm(400, 225)[0], peak);
+});
+
+test("rectangular emergency areas cover all edges and corners at reduced intensity and pulse with generator power", t => {
+  const area = { id: 2000, x: 100, y: 75, width: 600, height: 300, rotation: 0,
+    properties: { Pulsando: true, Ligada: true, Raio: 60 } };
+  const { scene, render, texture } = cenaComMascara(t, [area]);
+  render();
+  assertSombraAmbiente(texture.canvas.alphaEm(400, 225));
+  scene.definirIluminacaoFabrica(true);
+  render();
+  const sampleRed = (x, y) => {
+    const rgba = texture.canvas.rgbaEm(x, y);
+    assert.equal(rgba[1], 0);
+    assert.equal(rgba[2], 0);
+    return rgba[0] * rgba[3];
+  };
+  const peak = sampleRed(400, 225);
+  assert.ok(peak > 0.2 && peak < 0.3);
+  assert.equal(sampleRed(250, 225), peak, "fills the rectangle beyond a point lamp radius");
+  assert.equal(sampleRed(100, 75), peak, "covers the corners at full area intensity");
+  assert.equal(sampleRed(699, 374), peak, "covers the opposite edge too");
+  assert.equal(sampleRed(90, 225), 0, "stays inside the configured area");
+  assert.equal(sampleRed(400, 385), 0);
+  scene.time.now = 800;
+  render();
+  assert.ok(sampleRed(400, 225) < peak / 5);
+  scene.definirIluminacaoFabrica(false);
+  render();
+  assertSombraAmbiente(texture.canvas.alphaEm(400, 225));
+});
+
+test("rectangle culling uses its full bounds even with an offscreen origin", () => {
+  const [area] = lerLuzesFabrica(mapa({ id: 1, x: -1000, y: 100, width: 1600, height: 200,
+    properties: [{ name: "Pulsando", type: "bool", value: true }] }));
+  const camera = criarCamera();
+  assert.equal(area.area, true);
+  assert.equal(area.pulsando, true);
+  assert.equal(luzAfetaCamera(area, camera), true);
+  assert.equal(luzAfetaCamera({ ...area, x: -2000 }, camera), false);
+  assert.equal(luzAfetaCamera({ ...area, x: 500, y: -1000, rotacao: Math.PI / 2 }, camera), true);
+});
+
+test("flashlight illuminates before power, switches off immediately with factory power, and returns after power loss", t => {
   const { scene, render, texture, canvases } = cenaComMascara(t, [ponto({}, 60, 80)]);
   scene.player = { active: true, body: { velocity: { x: 1, y: 0 } },
     x: 140, y: 330,
-    getCenter() { assert.fail("factory lighting must not read the player position"); } };
+    getCenter(out) { return out.set(this.x, this.y); } };
   render();
   const sample = (x, y) => texture.canvas.alphaEm(x, y);
-  assertSombraAmbiente(sample(240, 340));
-  assertSombraAmbiente(sample(140, 330));
+  assert.ok(sample(240, 340) < ESCURIDAO_AMBIENTE_FABRICA - 0.1);
+  assert.ok(sample(140, 330) < ESCURIDAO_AMBIENTE_FABRICA);
   assertSombraAmbiente(sample(60, 80));
   scene.definirIluminacaoFabrica(true);
   render();
@@ -292,8 +371,27 @@ test("the player emits no cone or halo with power off or on, and movement does n
   assert.equal(canvases.length, canvasCount, "masks are reused without creating per-frame canvases");
   scene.definirIluminacaoFabrica(false);
   render();
-  assertSombraAmbiente(sample(240, 340));
+  assert.ok(sample(scene.player.x + 100, scene.player.y) < ESCURIDAO_AMBIENTE_FABRICA - 0.1);
   assertSombraAmbiente(sample(60, 80));
+});
+
+test("flashlight rear halo fades smoothly before the texture boundary in all directions", t => {
+  const { scene, render, texture } = cenaComMascara(t, []);
+  scene.player = { active: true, x: 400, y: 225 };
+  for (const [direction, dx, dy] of [["right", 1, 0], ["left", -1, 0], ["up", 0, -1], ["down", 0, 1]]) {
+    scene.direcaoAtual = direction;
+    render();
+    const alpha = distance => texture.canvas.alphaEm(400 - dx * distance, 225 - dy * distance);
+    assertSombraAmbiente(alpha(100));
+    assertSombraAmbiente(alpha(91));
+    let previous = alpha(100);
+    for (let distance = 99; distance >= 5; distance--) {
+      const current = alpha(distance);
+      assert.ok(Math.abs(current - previous) < 0.025, "rear halo has no abrupt straight cutoff");
+      previous = current;
+    }
+    assert.ok(alpha(10) < ESCURIDAO_AMBIENTE_FABRICA - 0.1);
+  }
 });
 
 test("capsule light varies continuously along and across its core without a uniform rectangular plateau", () => {
@@ -507,6 +605,46 @@ test("Orientacao accepts horizontal or vertical in raw and Phaser properties and
       assert.equal(light.orientacao, value.toLowerCase());
     }
   }
+});
+
+test("Pulsando reads only booleans from raw Tiled and Phaser properties", () => {
+  for (const value of [undefined, null, 0, 1, "true", "false", false, true]) {
+    for (const properties of [{ Pulsando: value }, [{ name: "Pulsando", type: "bool", value }]]) {
+      const [light] = lerLuzesFabrica(mapa(ponto(properties)));
+      assert.equal(light.pulsando, value === true);
+    }
+  }
+});
+
+test("emergency lamps pulse smoothly together, preserving map settings and generator power", () => {
+  const lights = new FactoryLighting(mapa(
+    ponto({ Pulsando: true, Cor: "#ffed333b", Orientacao: "Vertical", Intensidade: 0.8 }),
+    ponto({ Pulsando: true, Intensidade: 0.8 }),
+    ponto({ Pulsando: false }),
+    ponto({ Pulsando: true, Ligada: false }),
+  ));
+  const camera = criarCamera();
+  assert.equal(lights.atualizar(0, camera).length, 0);
+  lights.definirEnergia(true);
+  const values = [];
+  for (let now = 0; now <= 3200; now += 20) {
+    const [red, other, steady] = lights.atualizar(now, camera);
+    assert.equal(lights.fontesVisiveis.length, 3);
+    assert.equal(red.intensidade, other.intensidade);
+    assert.equal(steady.intensidade, 1);
+    assert.equal(red.luz.cor.css, "#FF0000");
+    assert.equal(red.luz.orientacao, "vertical");
+    values.push(red.intensidade);
+  }
+  assert.equal(values[0], 0.8);
+  assert.ok(Math.min(...values) < 0.09);
+  assert.equal(values[0], values[80]);
+  assert.equal(values[0], values[160]);
+  for (let i = 1; i < values.length; i++) assert.ok(Math.abs(values[i] - values[i - 1]) < 0.04);
+  lights.definirEnergia(false);
+  assert.equal(lights.atualizar(3400, camera).length, 0);
+  lights.definirEnergia(true, () => 0);
+  assert.equal(lights.atualizar(3400, camera).length, 0);
 });
 
 test("camera culling includes the rounded halo in either focal orientation", () => {

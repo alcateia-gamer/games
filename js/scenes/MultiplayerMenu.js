@@ -4,6 +4,9 @@
  */
 
 import { criarTextoMenu } from "../ui/MenuText.js";
+import config from "../core/config.js";
+import MqttClient from "../mqttClient.js";
+import MultiplayerManager from "../multiplayer/multiplayerManager.js";
 
 class MultiplayerMenu extends Phaser.Scene {
   /**
@@ -14,11 +17,22 @@ class MultiplayerMenu extends Phaser.Scene {
     this.code = "";
   }
 
+  preload() {
+    if (typeof globalThis.mqtt === "undefined") {
+      this.load.script("mqtt-lib", "https://unpkg.com/mqtt@5.10.4/dist/mqtt.min.js");
+    }
+  }
+
   /**
    * Monta a interface e conecta os eventos de busca, criação, atualização e erro do
    * gerenciador de salas.
    */
   create() {
+    if (!this.registry.get("multiplayer")) {
+      const mqtt = new MqttClient(config.mqtt);
+      this.registry.set("mqtt", mqtt);
+      this.registry.set("multiplayer", new MultiplayerManager(mqtt));
+    }
     this.manager = this.registry.get("multiplayer");
     this.cameras.main.setBackgroundColor("#020805");
     criarTextoMenu(this, 400, 62, "MULTIJOGADOR", {

@@ -398,6 +398,9 @@ class Preloader extends Phaser.Scene {
     this.textoStatus.setText("INCURSÃO PRONTA");
 
     this.time.delayedCall(1500, () => {
+      this.game.musicaMenu?.stop();
+      this.game.musicaMenu?.destroy();
+      this.game.musicaMenu = null;
       this.scene.start("Level1", {
         personagem: this.personagemSelecionada,
         multiplayer: this.multiplayer,

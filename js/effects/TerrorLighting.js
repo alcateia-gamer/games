@@ -48,13 +48,22 @@ function calcularPerfilLuz(nx, ny) {
 }
 
 /** Um perfil compartilhado, calculado só na criação da iluminação. */
-function criarPerfilLuminaria() {
+function criarPerfilLuminaria(pulsando = false) {
   const perfil = new Uint8Array(TAMANHO_MASCARA * TAMANHO_MASCARA);
   for (let y = 0; y < TAMANHO_MASCARA; y++) {
     const ny = ((y + 0.5) / TAMANHO_MASCARA * 2 - 1) * MULTIPLICADOR_ALCANCE_FABRICA;
     for (let x = 0; x < TAMANHO_MASCARA; x++) {
       const nx = ((x + 0.5) / TAMANHO_MASCARA * 2 - 1) * MULTIPLICADOR_ALCANCE_FABRICA;
-      perfil[y * TAMANHO_MASCARA + x] = Math.round(calcularPerfilLuz(nx, ny) * 255);
+      let alpha = calcularPerfilLuz(nx, ny);
+      if (pulsando) {
+        const radial = Math.hypot(nx, ny);
+        const distancia = Math.hypot(Math.max(0, Math.abs(nx) - 0.1), ny);
+        // Núcleo discreto com halo largo; o alcance continua respeitando o raio do mapa.
+        const halo = Math.exp(-0.5 * (distancia / 0.55) ** 2) *
+          (1 - suavizar(radial / MULTIPLICADOR_ALCANCE_FABRICA));
+        alpha = alpha * 0.12 + halo * 0.65;
+      }
+      perfil[y * TAMANHO_MASCARA + x] = Math.round(alpha * 255);
     }
   }
   return perfil;
@@ -79,8 +88,32 @@ function criarMascaraLuminaria(perfil, cor = 0xFFFFFF) {
   return canvas;
 }
 
+function criarMascaraLanterna() {
+  const perfil = new Uint8Array(TAMANHO_MASCARA ** 2);
+  for (let y = 0; y < TAMANHO_MASCARA; y++) {
+    for (let x = 0; x < TAMANHO_MASCARA; x++) {
+      const px = (x + 0.5) / TAMANHO_MASCARA * 460 - 100;
+      const py = (y + 0.5) / TAMANHO_MASCARA * 320 - 160;
+      const distancia = Math.hypot(px, py);
+      const cone = px > 0 ? (1 - suavizar(Math.abs(Math.atan2(py, px)) / 0.55)) *
+        suavizar(distancia / 40) * (1 - suavizar(distancia / 350)) : 0;
+      // O halo termina antes da borda da textura, evitando o recorte reto atrás do jogador.
+      const halo = 0.4 * Math.exp(-0.5 * (distancia / 28) ** 2) * (1 - suavizar(distancia / 90));
+      perfil[y * TAMANHO_MASCARA + x] = Math.round(Math.max(cone, halo) * 255);
+    }
+  }
+  return criarMascaraLuminaria(perfil);
+}
+
 function desenharLuminaria(context, canvas, luz) {
   context.save();
+  if (luz.area) {
+    const cos = Math.cos(luz.rotacao), sin = Math.sin(luz.rotacao);
+    context.transform(cos, sin, -sin, cos, luz.x, luz.y);
+    context.drawImage(canvas, 0, 0, luz.largura, luz.altura);
+    context.restore();
+    return;
+  }
   if (luz.orientacao === "vertical") context.transform(0, 1, -1, 0, luz.x, luz.y);
   else context.translate(luz.x, luz.y);
   const alcance = luz.raio * MULTIPLICADOR_ALCANCE_FABRICA;
@@ -111,9 +144,23 @@ function criarIluminacaoTerror(scene) {
   const context = texture.getContext();
   const perfil = criarPerfilLuminaria();
   const luminariaCanvas = criarMascaraLuminaria(perfil);
+  const perfilPulso = criarPerfilLuminaria(true);
+  const luminariaPulsoCanvas = criarMascaraLuminaria(perfilPulso);
+  const corPulsoCanvas = criarMascaraLuminaria(perfilPulso, 0xFF0000);
+  const lanternaCanvas = criarMascaraLanterna();
+  const centroPlayer = { x: 0, y: 0, set(x, y) { this.x = x; this.y = y; return this; } };
+  const lanternaAnterior = { x: null, y: null, angulo: null };
   const coresCanvas = new Map();
+  const areasCanvas = new Map();
   for (const luz of iluminacao.lampadas) {
     if (!coresCanvas.has(luz.cor.css)) coresCanvas.set(luz.cor.css, criarMascaraLuminaria(perfil, luz.cor.phaser));
+    if (luz.area) {
+      const perfilArea = new Uint8Array(TAMANHO_MASCARA * TAMANHO_MASCARA);
+      // A área inteira recebe a mesma luz, inclusive junto às bordas e nos cantos.
+      perfilArea.fill(Math.round(0.55 * 255));
+      areasCanvas.set(luz, { mascara: criarMascaraLuminaria(perfilArea),
+        cor: criarMascaraLuminaria(perfilArea, luz.cor.phaser) });
+    }
   }
 
   // Já cobre a cena antes do primeiro render, mesmo sem jogador ou lâmpadas visíveis.
@@ -159,6 +206,24 @@ function criarIluminacaoTerror(scene) {
     }
     posicionarOverlay();
     const fontes = iluminacao.atualizar(scene.time.now, camera);
+    const player = scene.player;
+    const lanternaAtiva = !iluminacao.energia && player?.active !== false &&
+      !!player && (typeof player.getCenter === "function" || (Number.isFinite(player.x) && Number.isFinite(player.y)));
+    let angulo = null;
+    if (lanternaAtiva) {
+      if (typeof player.getCenter === "function") player.getCenter(centroPlayer);
+      else centroPlayer.set(player.x, player.y);
+      const velocidade = player.body?.velocity;
+      angulo = velocidade && Math.hypot(velocidade.x, velocidade.y) > 1
+        ? Math.atan2(velocidade.y, velocidade.x)
+        : ({ right: 0, down: Math.PI / 2, left: Math.PI, up: -Math.PI / 2 }[scene.direcaoAtual] ?? Math.PI / 2);
+    }
+    const lx = lanternaAtiva ? centroPlayer.x : null;
+    const ly = lanternaAtiva ? centroPlayer.y : null;
+    if (lanternaAnterior.x !== lx || lanternaAnterior.y !== ly || lanternaAnterior.angulo !== angulo) {
+      invalidada = true;
+      Object.assign(lanternaAnterior, { x: lx, y: ly, angulo });
+    }
     // Usa a mesma leitura do relógio do gerador que move as luzes, inclusive no último quadro.
     // O som da partida e os estalos ambientes têm volumes e controles próprios.
     if (iluminacao.progressoPartida !== null) somPartida.update(iluminacao.progressoPartida);
@@ -190,7 +255,15 @@ function criarIluminacaoTerror(scene) {
     context.globalCompositeOperation = "destination-out";
     for (const { luz, intensidade } of fontes) {
       context.globalAlpha = intensidade;
-      desenharLuminaria(context, luminariaCanvas, luz);
+      desenharLuminaria(context, areasCanvas.get(luz)?.mascara ?? (luz.pulsando ? luminariaPulsoCanvas : luminariaCanvas), luz);
+    }
+    if (lanternaAtiva) {
+      context.save();
+      context.globalAlpha = 1;
+      const cos = Math.cos(angulo), sin = Math.sin(angulo);
+      context.transform(cos, sin, -sin, cos, lx, ly);
+      context.drawImage(lanternaCanvas, -100, -160, 460, 320);
+      context.restore();
     }
     context.restore();
     // Reintroduz a sombra mínima em coordenadas de tela, antes da coloração.
@@ -208,8 +281,17 @@ function criarIluminacaoTerror(scene) {
     context.globalCompositeOperation = "source-atop";
     const escalaCor = 0.025 / Math.max(1, fontes.length);
     for (const { luz, intensidade } of fontes) {
+      if (luz.pulsando) continue;
       context.globalAlpha = intensidade * escalaCor;
-      desenharLuminaria(context, coresCanvas.get(luz.cor.css), luz);
+      desenharLuminaria(context, areasCanvas.get(luz)?.cor ?? coresCanvas.get(luz.cor.css), luz);
+    }
+    // Vermelho puro sobre o cenário: limitar a cor à sombra residual deixava o piso
+    // claro dominar o pulso. O mesmo gradiente mantém as bordas suaves.
+    context.globalCompositeOperation = "source-over";
+    for (const { luz, intensidade } of fontes) {
+      if (!luz.pulsando) continue;
+      context.globalAlpha = intensidade * 0.45;
+      desenharLuminaria(context, areasCanvas.get(luz)?.cor ?? corPulsoCanvas, luz);
     }
     context.restore();
     context.globalCompositeOperation = "source-over";
@@ -228,10 +310,14 @@ function criarIluminacaoTerror(scene) {
     iluminacao.destroy();
     overlay.destroy();
     if (scene.textures.exists(TEXTURA_ESCURIDAO_PARTE2)) scene.textures.remove(TEXTURA_ESCURIDAO_PARTE2);
-    for (const canvas of [luminariaCanvas, ...coresCanvas.values()]) {
+    for (const canvas of [luminariaCanvas, luminariaPulsoCanvas, corPulsoCanvas, lanternaCanvas, ...coresCanvas.values()]) {
       canvas.width = canvas.height = 0;
     }
     coresCanvas.clear();
+    for (const { mascara, cor } of areasCanvas.values()) {
+      mascara.width = mascara.height = cor.width = cor.height = 0;
+    }
+    areasCanvas.clear();
   };
   renderer.on(Phaser.Renderer.Events.RENDER, atualizarIluminacao);
   scene.events.once(Phaser.Scenes.Events.SHUTDOWN, limparIluminacao);
