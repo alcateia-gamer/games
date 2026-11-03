@@ -1,0 +1,35 @@
+{
+  "escudo-energia.gif": {
+    "sha256": "1aa275888ca835053b06fb685c847270f0779568be0e8698f043c4b484ecfd3a",
+    "folha": "escudo-energia-quadros.png",
+    "larguraFrame": 800,
+    "alturaFrame": 800,
+    "quadros": 5,
+    "duracoesMs": [
+      100,
+      100,
+      100,
+      100,
+      100
+    ],
+    "colunas": 3
+  },
+  "ataque-explosão.gif": {
+    "sha256": "bafb01b29badd34f4316de396f69485450b3411be7b3468f7d1449aee49320e3",
+    "folha": "ataque-explosao-quadros.png",
+    "larguraFrame": 600,
+    "alturaFrame": 600,
+    "quadros": 8,
+    "duracoesMs": [
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80
+    ],
+    "colunas": 3
+  }
+}

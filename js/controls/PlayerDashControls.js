@@ -6,6 +6,7 @@
 import { gastarEstamina } from "../player/PlayerStatus.js";
 import { obterDirecaoMovimento } from "./PlayerMovementInput.js";
 import { posicionarBotaoFixo } from "./FixedActionButton.js";
+import { jogadorPresoNovoBoss } from "../player/PlayerControlEffects.js";
 
 // =====================================================
 // DASH SANDEVISTAN - CORES POR PERSONAGEM
@@ -319,7 +320,7 @@ function iniciarDash(scene) {
   const estado = scene.estadoDash;
   const player = scene.player;
 
-  if (scene.movimentoBloqueado || !estado || !player?.active || !player.body) {
+  if (scene.movimentoBloqueado || jogadorPresoNovoBoss(scene) || !estado || !player?.active || !player.body) {
     return false;
   }
 

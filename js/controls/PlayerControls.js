@@ -12,6 +12,7 @@ import { criarMovimento, atualizarMovimento } from "./PlayerMovement.js";
 import { criarControlesDash } from "./PlayerDashControls.js";
 
 import { criarControlesEspecial } from "./PlayerSpecialControls.js";
+import { criarControlesAcaoTeste } from "./PlayerTestActionControls.js";
 
 import {
   criarSistemaEspeciais,
@@ -37,6 +38,7 @@ function criarControles(scene) {
 
   // Mecânicas exclusivas.
   criarSistemaEspeciais(scene);
+  criarControlesAcaoTeste(scene);
 }
 
 // =====================================================

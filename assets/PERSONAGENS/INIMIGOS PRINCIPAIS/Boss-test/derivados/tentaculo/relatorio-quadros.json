@@ -1,0 +1,1962 @@
+[
+  {
+    "quadro": 1,
+    "bbox": [
+      347,
+      310,
+      707,
+      499
+    ],
+    "pixelsSolidosPreservados": 23116,
+    "pixelsBordaAlfaParcial": 1813,
+    "pixelsBordaEstimativaIncertos": 106,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1211,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 2,
+    "bbox": [
+      347,
+      334,
+      711,
+      499
+    ],
+    "pixelsSolidosPreservados": 22931,
+    "pixelsBordaAlfaParcial": 1802,
+    "pixelsBordaEstimativaIncertos": 106,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1218,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 3,
+    "bbox": [
+      347,
+      356,
+      715,
+      499
+    ],
+    "pixelsSolidosPreservados": 22840,
+    "pixelsBordaAlfaParcial": 1779,
+    "pixelsBordaEstimativaIncertos": 93,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1206,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 4,
+    "bbox": [
+      347,
+      347,
+      713,
+      499
+    ],
+    "pixelsSolidosPreservados": 22522,
+    "pixelsBordaAlfaParcial": 1812,
+    "pixelsBordaEstimativaIncertos": 124,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1226,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 5,
+    "bbox": [
+      347,
+      339,
+      713,
+      499
+    ],
+    "pixelsSolidosPreservados": 23182,
+    "pixelsBordaAlfaParcial": 1802,
+    "pixelsBordaEstimativaIncertos": 98,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1211,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 6,
+    "bbox": [
+      347,
+      336,
+      697,
+      499
+    ],
+    "pixelsSolidosPreservados": 22779,
+    "pixelsBordaAlfaParcial": 1755,
+    "pixelsBordaEstimativaIncertos": 97,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1182,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 7,
+    "bbox": [
+      347,
+      333,
+      684,
+      499
+    ],
+    "pixelsSolidosPreservados": 22700,
+    "pixelsBordaAlfaParcial": 1749,
+    "pixelsBordaEstimativaIncertos": 87,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1187,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 8,
+    "bbox": [
+      347,
+      327,
+      675,
+      499
+    ],
+    "pixelsSolidosPreservados": 22928,
+    "pixelsBordaAlfaParcial": 1740,
+    "pixelsBordaEstimativaIncertos": 89,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1186,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 9,
+    "bbox": [
+      347,
+      321,
+      665,
+      499
+    ],
+    "pixelsSolidosPreservados": 23256,
+    "pixelsBordaAlfaParcial": 1760,
+    "pixelsBordaEstimativaIncertos": 87,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1197,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 10,
+    "bbox": [
+      347,
+      315,
+      657,
+      499
+    ],
+    "pixelsSolidosPreservados": 23639,
+    "pixelsBordaAlfaParcial": 1783,
+    "pixelsBordaEstimativaIncertos": 97,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1197,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 11,
+    "bbox": [
+      347,
+      309,
+      647,
+      499
+    ],
+    "pixelsSolidosPreservados": 24128,
+    "pixelsBordaAlfaParcial": 1781,
+    "pixelsBordaEstimativaIncertos": 97,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1202,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 12,
+    "bbox": [
+      347,
+      305,
+      647,
+      499
+    ],
+    "pixelsSolidosPreservados": 24173,
+    "pixelsBordaAlfaParcial": 1826,
+    "pixelsBordaEstimativaIncertos": 105,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1239,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 13,
+    "bbox": [
+      347,
+      301,
+      645,
+      499
+    ],
+    "pixelsSolidosPreservados": 24189,
+    "pixelsBordaAlfaParcial": 1822,
+    "pixelsBordaEstimativaIncertos": 94,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1218,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 14,
+    "bbox": [
+      347,
+      297,
+      645,
+      499
+    ],
+    "pixelsSolidosPreservados": 24177,
+    "pixelsBordaAlfaParcial": 1849,
+    "pixelsBordaEstimativaIncertos": 97,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1238,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 15,
+    "bbox": [
+      347,
+      292,
+      645,
+      499
+    ],
+    "pixelsSolidosPreservados": 24135,
+    "pixelsBordaAlfaParcial": 1912,
+    "pixelsBordaEstimativaIncertos": 105,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1296,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 16,
+    "bbox": [
+      347,
+      279,
+      651,
+      499
+    ],
+    "pixelsSolidosPreservados": 24700,
+    "pixelsBordaAlfaParcial": 1967,
+    "pixelsBordaEstimativaIncertos": 99,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1326,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 17,
+    "bbox": [
+      347,
+      263,
+      657,
+      499
+    ],
+    "pixelsSolidosPreservados": 25922,
+    "pixelsBordaAlfaParcial": 1988,
+    "pixelsBordaEstimativaIncertos": 85,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1331,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 18,
+    "bbox": [
+      347,
+      255,
+      653,
+      499
+    ],
+    "pixelsSolidosPreservados": 26112,
+    "pixelsBordaAlfaParcial": 1989,
+    "pixelsBordaEstimativaIncertos": 111,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1337,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 19,
+    "bbox": [
+      347,
+      248,
+      649,
+      499
+    ],
+    "pixelsSolidosPreservados": 26340,
+    "pixelsBordaAlfaParcial": 1959,
+    "pixelsBordaEstimativaIncertos": 112,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1307,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 20,
+    "bbox": [
+      342,
+      239,
+      633,
+      499
+    ],
+    "pixelsSolidosPreservados": 25811,
+    "pixelsBordaAlfaParcial": 1957,
+    "pixelsBordaEstimativaIncertos": 110,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1330,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 21,
+    "bbox": [
+      335,
+      228,
+      617,
+      499
+    ],
+    "pixelsSolidosPreservados": 25444,
+    "pixelsBordaAlfaParcial": 1948,
+    "pixelsBordaEstimativaIncertos": 108,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1317,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 22,
+    "bbox": [
+      325,
+      206,
+      587,
+      499
+    ],
+    "pixelsSolidosPreservados": 25519,
+    "pixelsBordaAlfaParcial": 1993,
+    "pixelsBordaEstimativaIncertos": 109,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1335,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 23,
+    "bbox": [
+      311,
+      177,
+      557,
+      499
+    ],
+    "pixelsSolidosPreservados": 26576,
+    "pixelsBordaAlfaParcial": 2012,
+    "pixelsBordaEstimativaIncertos": 105,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1343,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 24,
+    "bbox": [
+      301,
+      167,
+      509,
+      499
+    ],
+    "pixelsSolidosPreservados": 25298,
+    "pixelsBordaAlfaParcial": 1951,
+    "pixelsBordaEstimativaIncertos": 107,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1300,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 25,
+    "bbox": [
+      285,
+      151,
+      462,
+      499
+    ],
+    "pixelsSolidosPreservados": 24557,
+    "pixelsBordaAlfaParcial": 1910,
+    "pixelsBordaEstimativaIncertos": 99,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1258,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 26,
+    "bbox": [
+      269,
+      147,
+      455,
+      499
+    ],
+    "pixelsSolidosPreservados": 23827,
+    "pixelsBordaAlfaParcial": 1875,
+    "pixelsBordaEstimativaIncertos": 80,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1256,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 27,
+    "bbox": [
+      249,
+      144,
+      455,
+      499
+    ],
+    "pixelsSolidosPreservados": 23843,
+    "pixelsBordaAlfaParcial": 1861,
+    "pixelsBordaEstimativaIncertos": 103,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1228,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 28,
+    "bbox": [
+      233,
+      153,
+      455,
+      499
+    ],
+    "pixelsSolidosPreservados": 23598,
+    "pixelsBordaAlfaParcial": 1840,
+    "pixelsBordaEstimativaIncertos": 102,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1220,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 29,
+    "bbox": [
+      211,
+      161,
+      455,
+      499
+    ],
+    "pixelsSolidosPreservados": 23399,
+    "pixelsBordaAlfaParcial": 1841,
+    "pixelsBordaEstimativaIncertos": 110,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1239,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 30,
+    "bbox": [
+      190,
+      182,
+      455,
+      499
+    ],
+    "pixelsSolidosPreservados": 23135,
+    "pixelsBordaAlfaParcial": 1804,
+    "pixelsBordaEstimativaIncertos": 80,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1212,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 31,
+    "bbox": [
+      157,
+      207,
+      455,
+      497
+    ],
+    "pixelsSolidosPreservados": 23233,
+    "pixelsBordaAlfaParcial": 1864,
+    "pixelsBordaEstimativaIncertos": 104,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1233,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 32,
+    "bbox": [
+      133,
+      225,
+      455,
+      497
+    ],
+    "pixelsSolidosPreservados": 23532,
+    "pixelsBordaAlfaParcial": 1893,
+    "pixelsBordaEstimativaIncertos": 104,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1268,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 33,
+    "bbox": [
+      122,
+      249,
+      455,
+      497
+    ],
+    "pixelsSolidosPreservados": 22943,
+    "pixelsBordaAlfaParcial": 1849,
+    "pixelsBordaEstimativaIncertos": 127,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1249,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 34,
+    "bbox": [
+      109,
+      272,
+      455,
+      497
+    ],
+    "pixelsSolidosPreservados": 22988,
+    "pixelsBordaAlfaParcial": 1839,
+    "pixelsBordaEstimativaIncertos": 112,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1225,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 35,
+    "bbox": [
+      103,
+      293,
+      456,
+      497
+    ],
+    "pixelsSolidosPreservados": 22572,
+    "pixelsBordaAlfaParcial": 1839,
+    "pixelsBordaEstimativaIncertos": 114,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1234,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 36,
+    "bbox": [
+      95,
+      313,
+      456,
+      497
+    ],
+    "pixelsSolidosPreservados": 23081,
+    "pixelsBordaAlfaParcial": 1808,
+    "pixelsBordaEstimativaIncertos": 128,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1198,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 37,
+    "bbox": [
+      91,
+      337,
+      456,
+      497
+    ],
+    "pixelsSolidosPreservados": 22873,
+    "pixelsBordaAlfaParcial": 1835,
+    "pixelsBordaEstimativaIncertos": 113,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1192,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 38,
+    "bbox": [
+      86,
+      355,
+      456,
+      497
+    ],
+    "pixelsSolidosPreservados": 22816,
+    "pixelsBordaAlfaParcial": 1792,
+    "pixelsBordaEstimativaIncertos": 141,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1174,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 39,
+    "bbox": [
+      89,
+      347,
+      456,
+      497
+    ],
+    "pixelsSolidosPreservados": 22518,
+    "pixelsBordaAlfaParcial": 1813,
+    "pixelsBordaEstimativaIncertos": 124,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1210,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 40,
+    "bbox": [
+      89,
+      339,
+      456,
+      497
+    ],
+    "pixelsSolidosPreservados": 23170,
+    "pixelsBordaAlfaParcial": 1848,
+    "pixelsBordaEstimativaIncertos": 105,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1222,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 41,
+    "bbox": [
+      105,
+      335,
+      456,
+      497
+    ],
+    "pixelsSolidosPreservados": 22772,
+    "pixelsBordaAlfaParcial": 1767,
+    "pixelsBordaEstimativaIncertos": 136,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1174,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 42,
+    "bbox": [
+      119,
+      333,
+      456,
+      497
+    ],
+    "pixelsSolidosPreservados": 22702,
+    "pixelsBordaAlfaParcial": 1742,
+    "pixelsBordaEstimativaIncertos": 100,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1144,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 43,
+    "bbox": [
+      129,
+      327,
+      456,
+      497
+    ],
+    "pixelsSolidosPreservados": 22902,
+    "pixelsBordaAlfaParcial": 1785,
+    "pixelsBordaEstimativaIncertos": 110,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1169,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 44,
+    "bbox": [
+      138,
+      321,
+      456,
+      497
+    ],
+    "pixelsSolidosPreservados": 23243,
+    "pixelsBordaAlfaParcial": 1803,
+    "pixelsBordaEstimativaIncertos": 124,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1193,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 45,
+    "bbox": [
+      147,
+      315,
+      456,
+      497
+    ],
+    "pixelsSolidosPreservados": 23621,
+    "pixelsBordaAlfaParcial": 1826,
+    "pixelsBordaEstimativaIncertos": 123,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1194,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 46,
+    "bbox": [
+      155,
+      309,
+      456,
+      497
+    ],
+    "pixelsSolidosPreservados": 24116,
+    "pixelsBordaAlfaParcial": 1827,
+    "pixelsBordaEstimativaIncertos": 119,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1218,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 47,
+    "bbox": [
+      156,
+      305,
+      456,
+      497
+    ],
+    "pixelsSolidosPreservados": 24161,
+    "pixelsBordaAlfaParcial": 1820,
+    "pixelsBordaEstimativaIncertos": 130,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1201,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 48,
+    "bbox": [
+      157,
+      301,
+      456,
+      497
+    ],
+    "pixelsSolidosPreservados": 24192,
+    "pixelsBordaAlfaParcial": 1881,
+    "pixelsBordaEstimativaIncertos": 118,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1260,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 49,
+    "bbox": [
+      157,
+      296,
+      456,
+      497
+    ],
+    "pixelsSolidosPreservados": 24159,
+    "pixelsBordaAlfaParcial": 1893,
+    "pixelsBordaEstimativaIncertos": 128,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1254,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 50,
+    "bbox": [
+      157,
+      291,
+      456,
+      497
+    ],
+    "pixelsSolidosPreservados": 24124,
+    "pixelsBordaAlfaParcial": 1925,
+    "pixelsBordaEstimativaIncertos": 132,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1276,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 51,
+    "bbox": [
+      151,
+      279,
+      457,
+      497
+    ],
+    "pixelsSolidosPreservados": 24717,
+    "pixelsBordaAlfaParcial": 1998,
+    "pixelsBordaEstimativaIncertos": 127,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1328,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 52,
+    "bbox": [
+      145,
+      263,
+      457,
+      497
+    ],
+    "pixelsSolidosPreservados": 25936,
+    "pixelsBordaAlfaParcial": 2050,
+    "pixelsBordaEstimativaIncertos": 133,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1368,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 53,
+    "bbox": [
+      149,
+      255,
+      457,
+      497
+    ],
+    "pixelsSolidosPreservados": 26075,
+    "pixelsBordaAlfaParcial": 2056,
+    "pixelsBordaEstimativaIncertos": 120,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1342,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 54,
+    "bbox": [
+      152,
+      247,
+      457,
+      497
+    ],
+    "pixelsSolidosPreservados": 26319,
+    "pixelsBordaAlfaParcial": 2050,
+    "pixelsBordaEstimativaIncertos": 114,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1347,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 55,
+    "bbox": [
+      167,
+      239,
+      460,
+      497
+    ],
+    "pixelsSolidosPreservados": 25807,
+    "pixelsBordaAlfaParcial": 1962,
+    "pixelsBordaEstimativaIncertos": 139,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1304,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 56,
+    "bbox": [
+      183,
+      227,
+      465,
+      497
+    ],
+    "pixelsSolidosPreservados": 25427,
+    "pixelsBordaAlfaParcial": 1999,
+    "pixelsBordaEstimativaIncertos": 121,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1328,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 57,
+    "bbox": [
+      211,
+      205,
+      475,
+      497
+    ],
+    "pixelsSolidosPreservados": 25530,
+    "pixelsBordaAlfaParcial": 2006,
+    "pixelsBordaEstimativaIncertos": 133,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1337,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 58,
+    "bbox": [
+      238,
+      176,
+      485,
+      497
+    ],
+    "pixelsSolidosPreservados": 26571,
+    "pixelsBordaAlfaParcial": 2056,
+    "pixelsBordaEstimativaIncertos": 112,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1375,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 59,
+    "bbox": [
+      283,
+      167,
+      493,
+      497
+    ],
+    "pixelsSolidosPreservados": 25314,
+    "pixelsBordaAlfaParcial": 1937,
+    "pixelsBordaEstimativaIncertos": 109,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1285,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 60,
+    "bbox": [
+      331,
+      150,
+      509,
+      497
+    ],
+    "pixelsSolidosPreservados": 24569,
+    "pixelsBordaAlfaParcial": 1910,
+    "pixelsBordaEstimativaIncertos": 103,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1263,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 61,
+    "bbox": [
+      341,
+      147,
+      525,
+      497
+    ],
+    "pixelsSolidosPreservados": 23827,
+    "pixelsBordaAlfaParcial": 1866,
+    "pixelsBordaEstimativaIncertos": 103,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1244,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 62,
+    "bbox": [
+      343,
+      143,
+      548,
+      497
+    ],
+    "pixelsSolidosPreservados": 23850,
+    "pixelsBordaAlfaParcial": 1852,
+    "pixelsBordaEstimativaIncertos": 97,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1219,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 63,
+    "bbox": [
+      345,
+      151,
+      565,
+      497
+    ],
+    "pixelsSolidosPreservados": 23605,
+    "pixelsBordaAlfaParcial": 1804,
+    "pixelsBordaEstimativaIncertos": 107,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1188,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 64,
+    "bbox": [
+      347,
+      159,
+      589,
+      497
+    ],
+    "pixelsSolidosPreservados": 23395,
+    "pixelsBordaAlfaParcial": 1835,
+    "pixelsBordaEstimativaIncertos": 110,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1220,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 65,
+    "bbox": [
+      347,
+      179,
+      611,
+      497
+    ],
+    "pixelsSolidosPreservados": 23334,
+    "pixelsBordaAlfaParcial": 1809,
+    "pixelsBordaEstimativaIncertos": 132,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1207,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 66,
+    "bbox": [
+      347,
+      206,
+      645,
+      498
+    ],
+    "pixelsSolidosPreservados": 23240,
+    "pixelsBordaAlfaParcial": 1831,
+    "pixelsBordaEstimativaIncertos": 132,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1235,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 67,
+    "bbox": [
+      347,
+      223,
+      667,
+      498
+    ],
+    "pixelsSolidosPreservados": 23564,
+    "pixelsBordaAlfaParcial": 1804,
+    "pixelsBordaEstimativaIncertos": 110,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1236,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 68,
+    "bbox": [
+      347,
+      247,
+      679,
+      498
+    ],
+    "pixelsSolidosPreservados": 23203,
+    "pixelsBordaAlfaParcial": 1826,
+    "pixelsBordaEstimativaIncertos": 114,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1217,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 69,
+    "bbox": [
+      347,
+      270,
+      693,
+      498
+    ],
+    "pixelsSolidosPreservados": 23580,
+    "pixelsBordaAlfaParcial": 1752,
+    "pixelsBordaEstimativaIncertos": 92,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1200,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 70,
+    "bbox": [
+      347,
+      289,
+      699,
+      498
+    ],
+    "pixelsSolidosPreservados": 22838,
+    "pixelsBordaAlfaParcial": 1764,
+    "pixelsBordaEstimativaIncertos": 93,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1170,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 71,
+    "bbox": [
+      347,
+      309,
+      707,
+      498
+    ],
+    "pixelsSolidosPreservados": 23150,
+    "pixelsBordaAlfaParcial": 1736,
+    "pixelsBordaEstimativaIncertos": 83,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1189,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 72,
+    "bbox": [
+      347,
+      333,
+      711,
+      498
+    ],
+    "pixelsSolidosPreservados": 22953,
+    "pixelsBordaAlfaParcial": 1694,
+    "pixelsBordaEstimativaIncertos": 87,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1139,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 73,
+    "bbox": [
+      347,
+      355,
+      715,
+      498
+    ],
+    "pixelsSolidosPreservados": 22855,
+    "pixelsBordaAlfaParcial": 1732,
+    "pixelsBordaEstimativaIncertos": 74,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1189,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 74,
+    "bbox": [
+      347,
+      347,
+      713,
+      498
+    ],
+    "pixelsSolidosPreservados": 22556,
+    "pixelsBordaAlfaParcial": 1710,
+    "pixelsBordaEstimativaIncertos": 84,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1179,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 75,
+    "bbox": [
+      347,
+      339,
+      713,
+      498
+    ],
+    "pixelsSolidosPreservados": 23195,
+    "pixelsBordaAlfaParcial": 1742,
+    "pixelsBordaEstimativaIncertos": 103,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1173,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 76,
+    "bbox": [
+      347,
+      335,
+      697,
+      498
+    ],
+    "pixelsSolidosPreservados": 22797,
+    "pixelsBordaAlfaParcial": 1677,
+    "pixelsBordaEstimativaIncertos": 82,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1150,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 77,
+    "bbox": [
+      347,
+      333,
+      684,
+      498
+    ],
+    "pixelsSolidosPreservados": 22711,
+    "pixelsBordaAlfaParcial": 1697,
+    "pixelsBordaEstimativaIncertos": 78,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1146,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 78,
+    "bbox": [
+      347,
+      327,
+      675,
+      498
+    ],
+    "pixelsSolidosPreservados": 22931,
+    "pixelsBordaAlfaParcial": 1681,
+    "pixelsBordaEstimativaIncertos": 86,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1135,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 79,
+    "bbox": [
+      347,
+      321,
+      665,
+      498
+    ],
+    "pixelsSolidosPreservados": 23263,
+    "pixelsBordaAlfaParcial": 1694,
+    "pixelsBordaEstimativaIncertos": 84,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1125,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 80,
+    "bbox": [
+      347,
+      315,
+      656,
+      498
+    ],
+    "pixelsSolidosPreservados": 23665,
+    "pixelsBordaAlfaParcial": 1677,
+    "pixelsBordaEstimativaIncertos": 70,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1136,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 81,
+    "bbox": [
+      347,
+      309,
+      647,
+      498
+    ],
+    "pixelsSolidosPreservados": 24130,
+    "pixelsBordaAlfaParcial": 1733,
+    "pixelsBordaEstimativaIncertos": 86,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1169,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 82,
+    "bbox": [
+      347,
+      305,
+      647,
+      498
+    ],
+    "pixelsSolidosPreservados": 24190,
+    "pixelsBordaAlfaParcial": 1773,
+    "pixelsBordaEstimativaIncertos": 96,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1216,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 83,
+    "bbox": [
+      347,
+      300,
+      645,
+      498
+    ],
+    "pixelsSolidosPreservados": 24213,
+    "pixelsBordaAlfaParcial": 1757,
+    "pixelsBordaEstimativaIncertos": 86,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1186,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 84,
+    "bbox": [
+      347,
+      295,
+      645,
+      498
+    ],
+    "pixelsSolidosPreservados": 24200,
+    "pixelsBordaAlfaParcial": 1802,
+    "pixelsBordaEstimativaIncertos": 82,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1209,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 85,
+    "bbox": [
+      347,
+      291,
+      645,
+      498
+    ],
+    "pixelsSolidosPreservados": 24147,
+    "pixelsBordaAlfaParcial": 1862,
+    "pixelsBordaEstimativaIncertos": 86,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1251,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 86,
+    "bbox": [
+      347,
+      278,
+      651,
+      498
+    ],
+    "pixelsSolidosPreservados": 24714,
+    "pixelsBordaAlfaParcial": 1890,
+    "pixelsBordaEstimativaIncertos": 100,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1286,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 87,
+    "bbox": [
+      347,
+      261,
+      657,
+      498
+    ],
+    "pixelsSolidosPreservados": 25942,
+    "pixelsBordaAlfaParcial": 1961,
+    "pixelsBordaEstimativaIncertos": 93,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1341,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 88,
+    "bbox": [
+      347,
+      255,
+      653,
+      498
+    ],
+    "pixelsSolidosPreservados": 26106,
+    "pixelsBordaAlfaParcial": 1950,
+    "pixelsBordaEstimativaIncertos": 87,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1292,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 89,
+    "bbox": [
+      347,
+      247,
+      649,
+      498
+    ],
+    "pixelsSolidosPreservados": 26358,
+    "pixelsBordaAlfaParcial": 1929,
+    "pixelsBordaEstimativaIncertos": 74,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1309,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 90,
+    "bbox": [
+      342,
+      239,
+      633,
+      498
+    ],
+    "pixelsSolidosPreservados": 25831,
+    "pixelsBordaAlfaParcial": 1906,
+    "pixelsBordaEstimativaIncertos": 100,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1303,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 91,
+    "bbox": [
+      335,
+      227,
+      617,
+      498
+    ],
+    "pixelsSolidosPreservados": 25451,
+    "pixelsBordaAlfaParcial": 1943,
+    "pixelsBordaEstimativaIncertos": 95,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1322,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 92,
+    "bbox": [
+      325,
+      205,
+      587,
+      498
+    ],
+    "pixelsSolidosPreservados": 25551,
+    "pixelsBordaAlfaParcial": 1917,
+    "pixelsBordaEstimativaIncertos": 133,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1315,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 93,
+    "bbox": [
+      311,
+      175,
+      557,
+      498
+    ],
+    "pixelsSolidosPreservados": 26588,
+    "pixelsBordaAlfaParcial": 1966,
+    "pixelsBordaEstimativaIncertos": 111,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1329,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 94,
+    "bbox": [
+      301,
+      167,
+      509,
+      498
+    ],
+    "pixelsSolidosPreservados": 25322,
+    "pixelsBordaAlfaParcial": 1889,
+    "pixelsBordaEstimativaIncertos": 98,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1273,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 95,
+    "bbox": [
+      285,
+      150,
+      462,
+      498
+    ],
+    "pixelsSolidosPreservados": 24576,
+    "pixelsBordaAlfaParcial": 1889,
+    "pixelsBordaEstimativaIncertos": 98,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1267,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 96,
+    "bbox": [
+      269,
+      147,
+      456,
+      498
+    ],
+    "pixelsSolidosPreservados": 23828,
+    "pixelsBordaAlfaParcial": 1859,
+    "pixelsBordaEstimativaIncertos": 102,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1244,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 97,
+    "bbox": [
+      249,
+      143,
+      455,
+      498
+    ],
+    "pixelsSolidosPreservados": 23860,
+    "pixelsBordaAlfaParcial": 1822,
+    "pixelsBordaEstimativaIncertos": 91,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1231,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 98,
+    "bbox": [
+      233,
+      153,
+      455,
+      498
+    ],
+    "pixelsSolidosPreservados": 23616,
+    "pixelsBordaAlfaParcial": 1784,
+    "pixelsBordaEstimativaIncertos": 83,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1190,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 99,
+    "bbox": [
+      211,
+      161,
+      455,
+      498
+    ],
+    "pixelsSolidosPreservados": 23403,
+    "pixelsBordaAlfaParcial": 1827,
+    "pixelsBordaEstimativaIncertos": 102,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1225,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 100,
+    "bbox": [
+      190,
+      181,
+      455,
+      498
+    ],
+    "pixelsSolidosPreservados": 23149,
+    "pixelsBordaAlfaParcial": 1772,
+    "pixelsBordaEstimativaIncertos": 76,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1200,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 101,
+    "bbox": [
+      157,
+      207,
+      455,
+      497
+    ],
+    "pixelsSolidosPreservados": 23236,
+    "pixelsBordaAlfaParcial": 1850,
+    "pixelsBordaEstimativaIncertos": 94,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1227,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 102,
+    "bbox": [
+      133,
+      225,
+      455,
+      497
+    ],
+    "pixelsSolidosPreservados": 23535,
+    "pixelsBordaAlfaParcial": 1897,
+    "pixelsBordaEstimativaIncertos": 91,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1279,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 103,
+    "bbox": [
+      122,
+      249,
+      455,
+      497
+    ],
+    "pixelsSolidosPreservados": 22939,
+    "pixelsBordaAlfaParcial": 1849,
+    "pixelsBordaEstimativaIncertos": 120,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1246,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 104,
+    "bbox": [
+      109,
+      272,
+      455,
+      497
+    ],
+    "pixelsSolidosPreservados": 22991,
+    "pixelsBordaAlfaParcial": 1843,
+    "pixelsBordaEstimativaIncertos": 108,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1229,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 105,
+    "bbox": [
+      103,
+      293,
+      456,
+      497
+    ],
+    "pixelsSolidosPreservados": 22573,
+    "pixelsBordaAlfaParcial": 1838,
+    "pixelsBordaEstimativaIncertos": 115,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1239,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 106,
+    "bbox": [
+      95,
+      313,
+      456,
+      497
+    ],
+    "pixelsSolidosPreservados": 23086,
+    "pixelsBordaAlfaParcial": 1802,
+    "pixelsBordaEstimativaIncertos": 138,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1199,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 107,
+    "bbox": [
+      91,
+      337,
+      456,
+      497
+    ],
+    "pixelsSolidosPreservados": 22878,
+    "pixelsBordaAlfaParcial": 1835,
+    "pixelsBordaEstimativaIncertos": 107,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1192,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 108,
+    "bbox": [
+      86,
+      355,
+      456,
+      497
+    ],
+    "pixelsSolidosPreservados": 22816,
+    "pixelsBordaAlfaParcial": 1803,
+    "pixelsBordaEstimativaIncertos": 140,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1186,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 109,
+    "bbox": [
+      89,
+      347,
+      456,
+      497
+    ],
+    "pixelsSolidosPreservados": 22521,
+    "pixelsBordaAlfaParcial": 1799,
+    "pixelsBordaEstimativaIncertos": 123,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1197,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 110,
+    "bbox": [
+      89,
+      339,
+      456,
+      497
+    ],
+    "pixelsSolidosPreservados": 23175,
+    "pixelsBordaAlfaParcial": 1839,
+    "pixelsBordaEstimativaIncertos": 107,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1217,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 111,
+    "bbox": [
+      105,
+      335,
+      456,
+      497
+    ],
+    "pixelsSolidosPreservados": 22776,
+    "pixelsBordaAlfaParcial": 1780,
+    "pixelsBordaEstimativaIncertos": 124,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1189,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 112,
+    "bbox": [
+      119,
+      333,
+      457,
+      497
+    ],
+    "pixelsSolidosPreservados": 22705,
+    "pixelsBordaAlfaParcial": 1749,
+    "pixelsBordaEstimativaIncertos": 108,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1156,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 113,
+    "bbox": [
+      129,
+      327,
+      456,
+      497
+    ],
+    "pixelsSolidosPreservados": 22909,
+    "pixelsBordaAlfaParcial": 1779,
+    "pixelsBordaEstimativaIncertos": 112,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1174,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 114,
+    "bbox": [
+      138,
+      321,
+      457,
+      497
+    ],
+    "pixelsSolidosPreservados": 23246,
+    "pixelsBordaAlfaParcial": 1798,
+    "pixelsBordaEstimativaIncertos": 127,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1195,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 115,
+    "bbox": [
+      147,
+      315,
+      457,
+      497
+    ],
+    "pixelsSolidosPreservados": 23625,
+    "pixelsBordaAlfaParcial": 1819,
+    "pixelsBordaEstimativaIncertos": 125,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1189,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 116,
+    "bbox": [
+      155,
+      309,
+      456,
+      497
+    ],
+    "pixelsSolidosPreservados": 24123,
+    "pixelsBordaAlfaParcial": 1824,
+    "pixelsBordaEstimativaIncertos": 117,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1216,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 117,
+    "bbox": [
+      156,
+      305,
+      456,
+      497
+    ],
+    "pixelsSolidosPreservados": 24169,
+    "pixelsBordaAlfaParcial": 1823,
+    "pixelsBordaEstimativaIncertos": 116,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1212,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 118,
+    "bbox": [
+      157,
+      301,
+      456,
+      497
+    ],
+    "pixelsSolidosPreservados": 24198,
+    "pixelsBordaAlfaParcial": 1874,
+    "pixelsBordaEstimativaIncertos": 122,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1262,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 119,
+    "bbox": [
+      157,
+      296,
+      456,
+      497
+    ],
+    "pixelsSolidosPreservados": 24161,
+    "pixelsBordaAlfaParcial": 1911,
+    "pixelsBordaEstimativaIncertos": 122,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1272,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 120,
+    "bbox": [
+      157,
+      291,
+      456,
+      497
+    ],
+    "pixelsSolidosPreservados": 24124,
+    "pixelsBordaAlfaParcial": 1932,
+    "pixelsBordaEstimativaIncertos": 130,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1286,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 121,
+    "bbox": [
+      151,
+      279,
+      456,
+      497
+    ],
+    "pixelsSolidosPreservados": 24715,
+    "pixelsBordaAlfaParcial": 2015,
+    "pixelsBordaEstimativaIncertos": 135,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1343,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 122,
+    "bbox": [
+      145,
+      263,
+      457,
+      497
+    ],
+    "pixelsSolidosPreservados": 25937,
+    "pixelsBordaAlfaParcial": 2055,
+    "pixelsBordaEstimativaIncertos": 144,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1370,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 123,
+    "bbox": [
+      149,
+      255,
+      457,
+      497
+    ],
+    "pixelsSolidosPreservados": 26082,
+    "pixelsBordaAlfaParcial": 2055,
+    "pixelsBordaEstimativaIncertos": 131,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1350,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 124,
+    "bbox": [
+      152,
+      247,
+      457,
+      497
+    ],
+    "pixelsSolidosPreservados": 26320,
+    "pixelsBordaAlfaParcial": 2044,
+    "pixelsBordaEstimativaIncertos": 122,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1344,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 125,
+    "bbox": [
+      167,
+      239,
+      461,
+      497
+    ],
+    "pixelsSolidosPreservados": 25810,
+    "pixelsBordaAlfaParcial": 1959,
+    "pixelsBordaEstimativaIncertos": 143,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1302,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 126,
+    "bbox": [
+      183,
+      227,
+      465,
+      497
+    ],
+    "pixelsSolidosPreservados": 25433,
+    "pixelsBordaAlfaParcial": 1981,
+    "pixelsBordaEstimativaIncertos": 120,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1320,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 127,
+    "bbox": [
+      211,
+      205,
+      475,
+      497
+    ],
+    "pixelsSolidosPreservados": 25525,
+    "pixelsBordaAlfaParcial": 2007,
+    "pixelsBordaEstimativaIncertos": 131,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1333,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 128,
+    "bbox": [
+      238,
+      176,
+      485,
+      497
+    ],
+    "pixelsSolidosPreservados": 26572,
+    "pixelsBordaAlfaParcial": 2048,
+    "pixelsBordaEstimativaIncertos": 100,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1365,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 129,
+    "bbox": [
+      284,
+      167,
+      493,
+      497
+    ],
+    "pixelsSolidosPreservados": 25305,
+    "pixelsBordaAlfaParcial": 1954,
+    "pixelsBordaEstimativaIncertos": 120,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1289,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 130,
+    "bbox": [
+      331,
+      150,
+      509,
+      497
+    ],
+    "pixelsSolidosPreservados": 24568,
+    "pixelsBordaAlfaParcial": 1919,
+    "pixelsBordaEstimativaIncertos": 107,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1274,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 131,
+    "bbox": [
+      341,
+      147,
+      525,
+      497
+    ],
+    "pixelsSolidosPreservados": 23826,
+    "pixelsBordaAlfaParcial": 1865,
+    "pixelsBordaEstimativaIncertos": 109,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1243,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 132,
+    "bbox": [
+      343,
+      143,
+      548,
+      497
+    ],
+    "pixelsSolidosPreservados": 23847,
+    "pixelsBordaAlfaParcial": 1842,
+    "pixelsBordaEstimativaIncertos": 102,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1204,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 133,
+    "bbox": [
+      346,
+      151,
+      565,
+      497
+    ],
+    "pixelsSolidosPreservados": 23606,
+    "pixelsBordaAlfaParcial": 1816,
+    "pixelsBordaEstimativaIncertos": 112,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1198,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 134,
+    "bbox": [
+      347,
+      159,
+      589,
+      497
+    ],
+    "pixelsSolidosPreservados": 23397,
+    "pixelsBordaAlfaParcial": 1826,
+    "pixelsBordaEstimativaIncertos": 109,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1214,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 135,
+    "bbox": [
+      347,
+      179,
+      611,
+      497
+    ],
+    "pixelsSolidosPreservados": 23337,
+    "pixelsBordaAlfaParcial": 1800,
+    "pixelsBordaEstimativaIncertos": 130,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1199,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 136,
+    "bbox": [
+      347,
+      206,
+      645,
+      498
+    ],
+    "pixelsSolidosPreservados": 23243,
+    "pixelsBordaAlfaParcial": 1833,
+    "pixelsBordaEstimativaIncertos": 118,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1242,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 137,
+    "bbox": [
+      347,
+      223,
+      667,
+      498
+    ],
+    "pixelsSolidosPreservados": 23564,
+    "pixelsBordaAlfaParcial": 1813,
+    "pixelsBordaEstimativaIncertos": 110,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1245,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 138,
+    "bbox": [
+      347,
+      247,
+      679,
+      498
+    ],
+    "pixelsSolidosPreservados": 23201,
+    "pixelsBordaAlfaParcial": 1818,
+    "pixelsBordaEstimativaIncertos": 116,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1207,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 139,
+    "bbox": [
+      347,
+      270,
+      693,
+      498
+    ],
+    "pixelsSolidosPreservados": 23582,
+    "pixelsBordaAlfaParcial": 1757,
+    "pixelsBordaEstimativaIncertos": 93,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1211,
+    "falhaPixelsSolidos": false
+  },
+  {
+    "quadro": 140,
+    "bbox": [
+      347,
+      289,
+      699,
+      498
+    ],
+    "pixelsSolidosPreservados": 22843,
+    "pixelsBordaAlfaParcial": 1759,
+    "pixelsBordaEstimativaIncertos": 86,
+    "pixelsPerdidosNoGifPorAlfaBinario": 1169,
+    "falhaPixelsSolidos": false
+  }
+]

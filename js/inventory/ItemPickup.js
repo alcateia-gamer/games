@@ -11,6 +11,9 @@ import {
 } from "./InventoryItems.js";
 import { obterInventarioDoJogador } from "./Inventory.js";
 import { createCollectibleMarker } from "../ui/CollectibleMarker.js";
+import { PERSONAGEM_TESTE, personagemTesteAtivo } from "../player/PersonagemTeste.js";
+import { POSICAO_ACAO_TESTE } from "../controls/PlayerTestActionControls.js";
+import { posicionarBotaoFixo } from "../controls/FixedActionButton.js";
 
 const ITEM_LAYER_NAMES = ["Coletaveis", "Itens"];
 const DEFAULT_PICKUP_RANGE = 64;
@@ -84,7 +87,7 @@ function preparePickupTexture(scene, item, displaySize) {
  */
 function createPickupButton(scene) {
   return scene.add
-    .image(0, 0, "hand_icon")
+    .image(0, 0, personagemTesteAtivo(scene) ? PERSONAGEM_TESTE.botaoAcao.textura : "hand_icon")
     .setDisplaySize(CONFIG_BOTAO_COLETA.tamanho, CONFIG_BOTAO_COLETA.tamanho)
     .setDepth(PICKUP_BUTTON_DEPTH)
     .setScrollFactor(0)
@@ -127,6 +130,7 @@ function criarSistemaInventario(scene) {
     } else {
       scene.botaoColetarItem.disableInteractive();
     }
+    scene.atualizarAcoesPersonagemTeste?.();
   };
 
   /**
@@ -306,6 +310,15 @@ function criarSistemaInventario(scene) {
     const camera = scene.cameras.main;
     const zoomX = camera.zoomX || camera.zoom || 1;
     const zoomY = camera.zoomY || camera.zoom || 1;
+    if (personagemTesteAtivo(scene)) {
+      posicionarBotaoFixo(camera, scene.botaoColetarItem,
+        POSICAO_ACAO_TESTE.x, POSICAO_ACAO_TESTE.y);
+      scene.botaoColetarItem.setDisplaySize(
+        PERSONAGEM_TESTE.botaoAcao.tamanho / zoomX,
+        PERSONAGEM_TESTE.botaoAcao.tamanho / zoomY,
+      );
+      return;
+    }
     const originX = camera.width * camera.originX;
     const originY = camera.height * camera.originY;
     const screenX =

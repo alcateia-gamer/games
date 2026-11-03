@@ -1,0 +1,466 @@
+{
+  "fonte": "tentáculo.gif",
+  "sha256Original": "d0ff1698291b251d558cc60e7de4e30079da28ce3f4df75d53b78150e9f64b24",
+  "dimensoes": [
+    800,
+    600
+  ],
+  "quadrosOriginais": 140,
+  "quadrosProcessadosNestaPrevia": [
+    1,
+    11,
+    26,
+    46,
+    111
+  ],
+  "duracoesOriginaisMs": [
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40
+  ],
+  "loop": 0,
+  "coresFundo": 88,
+  "coresSolidasTentaculo": 20,
+  "coresBordaMescladas": [
+    {
+      "corOriginal": [
+        153,
+        194,
+        197
+      ],
+      "alfa": 8,
+      "erroModeloRGB": 4.509,
+      "roxoEstimado": [
+        90,
+        46,
+        143
+      ]
+    },
+    {
+      "corOriginal": [
+        150,
+        196,
+        194
+      ],
+      "alfa": 8,
+      "erroModeloRGB": 0.111,
+      "roxoEstimado": [
+        86,
+        42,
+        135
+      ]
+    },
+    {
+      "corOriginal": [
+        154,
+        184,
+        198
+      ],
+      "alfa": 27,
+      "erroModeloRGB": 9.742,
+      "roxoEstimado": [
+        90,
+        46,
+        143
+      ]
+    },
+    {
+      "corOriginal": [
+        134,
+        149,
+        180
+      ],
+      "alfa": 83,
+      "erroModeloRGB": 2.944,
+      "roxoEstimado": [
+        90,
+        46,
+        143
+      ]
+    },
+    {
+      "corOriginal": [
+        96,
+        100,
+        144
+      ],
+      "alfa": 174,
+      "erroModeloRGB": 0.135,
+      "roxoEstimado": [
+        73,
+        53,
+        122
+      ]
+    },
+    {
+      "corOriginal": [
+        132,
+        158,
+        177
+      ],
+      "alfa": 73,
+      "erroModeloRGB": 0.239,
+      "roxoEstimado": [
+        90,
+        46,
+        143
+      ]
+    },
+    {
+      "corOriginal": [
+        147,
+        184,
+        191
+      ],
+      "alfa": 27,
+      "erroModeloRGB": 1.767,
+      "roxoEstimado": [
+        90,
+        46,
+        143
+      ]
+    },
+    {
+      "corOriginal": [
+        147,
+        172,
+        192
+      ],
+      "alfa": 49,
+      "erroModeloRGB": 7.507,
+      "roxoEstimado": [
+        90,
+        46,
+        143
+      ]
+    },
+    {
+      "corOriginal": [
+        63,
+        66,
+        109
+      ],
+      "alfa": 218,
+      "erroModeloRGB": 10.913,
+      "roxoEstimado": [
+        58,
+        38,
+        106
+      ]
+    },
+    {
+      "corOriginal": [
+        146,
+        192,
+        189
+      ],
+      "alfa": 10,
+      "erroModeloRGB": 0.3,
+      "roxoEstimado": [
+        90,
+        46,
+        143
+      ]
+    },
+    {
+      "corOriginal": [
+        59,
+        54,
+        108
+      ],
+      "alfa": 235,
+      "erroModeloRGB": 7.218,
+      "roxoEstimado": [
+        58,
+        38,
+        106
+      ]
+    },
+    {
+      "corOriginal": [
+        118,
+        123,
+        165
+      ],
+      "alfa": 130,
+      "erroModeloRGB": 0.115,
+      "roxoEstimado": [
+        86,
+        46,
+        140
+      ]
+    },
+    {
+      "corOriginal": [
+        157,
+        192,
+        201
+      ],
+      "alfa": 15,
+      "erroModeloRGB": 9.978,
+      "roxoEstimado": [
+        90,
+        46,
+        143
+      ]
+    },
+    {
+      "corOriginal": [
+        141,
+        163,
+        186
+      ],
+      "alfa": 65,
+      "erroModeloRGB": 4.515,
+      "roxoEstimado": [
+        90,
+        46,
+        143
+      ]
+    },
+    {
+      "corOriginal": [
+        149,
+        193,
+        192
+      ],
+      "alfa": 13,
+      "erroModeloRGB": 0.928,
+      "roxoEstimado": [
+        76,
+        40,
+        126
+      ]
+    },
+    {
+      "corOriginal": [
+        78,
+        75,
+        126
+      ],
+      "alfa": 197,
+      "erroModeloRGB": 0.227,
+      "roxoEstimado": [
+        58,
+        38,
+        106
+      ]
+    },
+    {
+      "corOriginal": [
+        117,
+        135,
+        164
+      ],
+      "alfa": 111,
+      "erroModeloRGB": 0.077,
+      "roxoEstimado": [
+        78,
+        49,
+        129
+      ]
+    },
+    {
+      "corOriginal": [
+        156,
+        200,
+        200
+      ],
+      "alfa": 1,
+      "erroModeloRGB": 5.745,
+      "roxoEstimado": [
+        73,
+        53,
+        122
+      ]
+    },
+    {
+      "corOriginal": [
+        162,
+        192,
+        207
+      ],
+      "alfa": 10,
+      "erroModeloRGB": 16.594,
+      "roxoEstimado": [
+        90,
+        46,
+        143
+      ]
+    }
+  ],
+  "amostras": [
+    {
+      "quadro": 1,
+      "pixelsOpacos": 23116,
+      "pixelsTransparentes": 455071,
+      "pixelsBordaComAlfaParcial": 1813
+    },
+    {
+      "quadro": 11,
+      "pixelsOpacos": 24128,
+      "pixelsTransparentes": 454091,
+      "pixelsBordaComAlfaParcial": 1781
+    },
+    {
+      "quadro": 26,
+      "pixelsOpacos": 23827,
+      "pixelsTransparentes": 454298,
+      "pixelsBordaComAlfaParcial": 1875
+    },
+    {
+      "quadro": 46,
+      "pixelsOpacos": 24116,
+      "pixelsTransparentes": 454057,
+      "pixelsBordaComAlfaParcial": 1827
+    },
+    {
+      "quadro": 111,
+      "pixelsOpacos": 22776,
+      "pixelsTransparentes": 455444,
+      "pixelsBordaComAlfaParcial": 1780
+    }
+  ],
+  "limites": [
+    "Bordas mescladas na fonte exigem estimativa de alfa; não há recorte original sem fundo.",
+    "PNG preserva alfa parcial. GIF tem transparência binária e não reproduz exatamente esse alfa.",
+    "Só cinco amostras processadas: aguarda avaliação antes de converter os 140 quadros."
+  ]
+}

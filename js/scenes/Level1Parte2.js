@@ -1,5 +1,5 @@
 /**
- * @file Cena da fábrica. Integra iluminação, gerador, porta interativa, boss, inventário e
+ * @file Cena da fábrica. Integra iluminação, gerador, porta interativa, inventário e
  * mudança de sobreposição por região.
  */
 
@@ -55,7 +55,8 @@ import {
   atualizarProjeteis,
 } from "../player/PlayerProjectiles.js";
 
-import { prepararIABoss, atualizarIABoss } from "../enemies/BossFinal.js";
+import { localizarPecasBoss } from "../enemies/bossFinal/BossConfig.js";
+import { prepararNovoBoss, atualizarNovoBoss } from "../enemies/novoBoss/NovoBoss.js";
 import criarIluminacaoTerror from "../effects/TerrorLighting.js";
 import {
   atualizarSistemaInventario,
@@ -97,6 +98,7 @@ class Level1Parte2 extends Phaser.Scene {
    * de transição.
    */
   init(data) {
+    this.novoBossConfig = data.novoBossConfig ?? null;
     this.luzFabricaAcesa =
       this.game.registry.get(FACTORY_GENERATOR_STATE_KEY) === true;
     this.respawnX = data.spawnX ?? -1093;
@@ -191,8 +193,7 @@ class Level1Parte2 extends Phaser.Scene {
   // =====================================================
 
   /**
-   * Monta mapa, jogador, controles, inventário, interações, retorno à cidade e integração do
-   * boss.
+   * Monta mapa, jogador, controles, inventário, interações e retorno à cidade.
    */
   create() {
     this.physics.resume();
@@ -260,7 +261,13 @@ class Level1Parte2 extends Phaser.Scene {
       this.iniciarMultiplayer();
     }
 
-    prepararIABoss(this);
+    // Boss antigo desativado: não registrar entrada, IA, ataques ou eventos da arena.
+    // Ocultar apenas suas peças, preservando os dados do mapa e a decoração ao redor.
+    for (const peca of localizarPecasBoss(this)) {
+      peca.setVisible(false);
+      if (peca.body) peca.body.enable = false;
+    }
+    prepararNovoBoss(this);
 
     // =====================================================
     // TEXTO DE COORDENADAS
@@ -405,6 +412,7 @@ class Level1Parte2 extends Phaser.Scene {
    * profundidade, inimigos e rede.
    */
   update(time, delta) {
+    atualizarNovoBoss(this, time, delta);
     this.minimap?.update(time);
     if (this.morteEmAndamento) {
       return;
@@ -456,7 +464,6 @@ class Level1Parte2 extends Phaser.Scene {
 
     atualizarInimigoTeste(this, time);
     atualizarProjeteis(this, delta);
-    atualizarIABoss(this, delta);
 
     if (!this.multiplayer) {
       atualizarCompanionPet(this, time, delta);

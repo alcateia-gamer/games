@@ -1,0 +1,615 @@
+{
+  "fonte": "tentáculo.gif",
+  "sha256Original": "d0ff1698291b251d558cc60e7de4e30079da28ce3f4df75d53b78150e9f64b24",
+  "larguraFrame": 800,
+  "alturaFrame": 600,
+  "quadros": 140,
+  "duracoesMs": [
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40
+  ],
+  "duracaoMs": 5600,
+  "loop": 0,
+  "alfaGif": "binário, corte 128; PNG conserva o alfa parcial aprovado",
+  "coresFundo": 88,
+  "coresSolidas": 20,
+  "bordasEstimadas": [
+    {
+      "corOriginal": [
+        153,
+        194,
+        197
+      ],
+      "alfa": 8,
+      "erroModeloRGB": 4.509,
+      "roxoEstimado": [
+        90,
+        46,
+        143
+      ]
+    },
+    {
+      "corOriginal": [
+        150,
+        196,
+        194
+      ],
+      "alfa": 8,
+      "erroModeloRGB": 0.111,
+      "roxoEstimado": [
+        86,
+        42,
+        135
+      ]
+    },
+    {
+      "corOriginal": [
+        154,
+        184,
+        198
+      ],
+      "alfa": 27,
+      "erroModeloRGB": 9.742,
+      "roxoEstimado": [
+        90,
+        46,
+        143
+      ]
+    },
+    {
+      "corOriginal": [
+        134,
+        149,
+        180
+      ],
+      "alfa": 83,
+      "erroModeloRGB": 2.944,
+      "roxoEstimado": [
+        90,
+        46,
+        143
+      ]
+    },
+    {
+      "corOriginal": [
+        96,
+        100,
+        144
+      ],
+      "alfa": 174,
+      "erroModeloRGB": 0.135,
+      "roxoEstimado": [
+        73,
+        53,
+        122
+      ]
+    },
+    {
+      "corOriginal": [
+        132,
+        158,
+        177
+      ],
+      "alfa": 73,
+      "erroModeloRGB": 0.239,
+      "roxoEstimado": [
+        90,
+        46,
+        143
+      ]
+    },
+    {
+      "corOriginal": [
+        147,
+        184,
+        191
+      ],
+      "alfa": 27,
+      "erroModeloRGB": 1.767,
+      "roxoEstimado": [
+        90,
+        46,
+        143
+      ]
+    },
+    {
+      "corOriginal": [
+        147,
+        172,
+        192
+      ],
+      "alfa": 49,
+      "erroModeloRGB": 7.507,
+      "roxoEstimado": [
+        90,
+        46,
+        143
+      ]
+    },
+    {
+      "corOriginal": [
+        63,
+        66,
+        109
+      ],
+      "alfa": 218,
+      "erroModeloRGB": 10.913,
+      "roxoEstimado": [
+        58,
+        38,
+        106
+      ]
+    },
+    {
+      "corOriginal": [
+        146,
+        192,
+        189
+      ],
+      "alfa": 10,
+      "erroModeloRGB": 0.3,
+      "roxoEstimado": [
+        90,
+        46,
+        143
+      ]
+    },
+    {
+      "corOriginal": [
+        59,
+        54,
+        108
+      ],
+      "alfa": 235,
+      "erroModeloRGB": 7.218,
+      "roxoEstimado": [
+        58,
+        38,
+        106
+      ]
+    },
+    {
+      "corOriginal": [
+        118,
+        123,
+        165
+      ],
+      "alfa": 130,
+      "erroModeloRGB": 0.115,
+      "roxoEstimado": [
+        86,
+        46,
+        140
+      ]
+    },
+    {
+      "corOriginal": [
+        157,
+        192,
+        201
+      ],
+      "alfa": 15,
+      "erroModeloRGB": 9.978,
+      "roxoEstimado": [
+        90,
+        46,
+        143
+      ]
+    },
+    {
+      "corOriginal": [
+        141,
+        163,
+        186
+      ],
+      "alfa": 65,
+      "erroModeloRGB": 4.515,
+      "roxoEstimado": [
+        90,
+        46,
+        143
+      ]
+    },
+    {
+      "corOriginal": [
+        149,
+        193,
+        192
+      ],
+      "alfa": 13,
+      "erroModeloRGB": 0.928,
+      "roxoEstimado": [
+        76,
+        40,
+        126
+      ]
+    },
+    {
+      "corOriginal": [
+        78,
+        75,
+        126
+      ],
+      "alfa": 197,
+      "erroModeloRGB": 0.227,
+      "roxoEstimado": [
+        58,
+        38,
+        106
+      ]
+    },
+    {
+      "corOriginal": [
+        117,
+        135,
+        164
+      ],
+      "alfa": 111,
+      "erroModeloRGB": 0.077,
+      "roxoEstimado": [
+        78,
+        49,
+        129
+      ]
+    },
+    {
+      "corOriginal": [
+        156,
+        200,
+        200
+      ],
+      "alfa": 1,
+      "erroModeloRGB": 5.745,
+      "roxoEstimado": [
+        73,
+        53,
+        122
+      ]
+    },
+    {
+      "corOriginal": [
+        162,
+        192,
+        207
+      ],
+      "alfa": 10,
+      "erroModeloRGB": 16.594,
+      "roxoEstimado": [
+        90,
+        46,
+        143
+      ]
+    }
+  ],
+  "paginasAtlas": [
+    {
+      "imagem": "tentaculo-atlas-1.png",
+      "dados": "tentaculo-atlas-1.json",
+      "quadros": [
+        "tentaculo-000",
+        "tentaculo-001",
+        "tentaculo-002",
+        "tentaculo-003",
+        "tentaculo-004",
+        "tentaculo-005",
+        "tentaculo-006",
+        "tentaculo-007",
+        "tentaculo-008",
+        "tentaculo-009",
+        "tentaculo-010",
+        "tentaculo-011",
+        "tentaculo-012",
+        "tentaculo-013",
+        "tentaculo-014",
+        "tentaculo-015",
+        "tentaculo-016",
+        "tentaculo-017",
+        "tentaculo-018",
+        "tentaculo-019",
+        "tentaculo-020",
+        "tentaculo-021",
+        "tentaculo-022",
+        "tentaculo-023",
+        "tentaculo-024",
+        "tentaculo-025",
+        "tentaculo-026",
+        "tentaculo-027",
+        "tentaculo-028",
+        "tentaculo-029",
+        "tentaculo-030",
+        "tentaculo-031",
+        "tentaculo-032",
+        "tentaculo-033",
+        "tentaculo-034",
+        "tentaculo-035",
+        "tentaculo-036",
+        "tentaculo-037",
+        "tentaculo-038",
+        "tentaculo-039",
+        "tentaculo-040",
+        "tentaculo-041",
+        "tentaculo-042",
+        "tentaculo-043",
+        "tentaculo-044",
+        "tentaculo-045",
+        "tentaculo-046",
+        "tentaculo-047",
+        "tentaculo-048",
+        "tentaculo-049",
+        "tentaculo-050",
+        "tentaculo-051",
+        "tentaculo-052",
+        "tentaculo-053",
+        "tentaculo-054",
+        "tentaculo-055",
+        "tentaculo-056",
+        "tentaculo-057",
+        "tentaculo-058",
+        "tentaculo-059",
+        "tentaculo-060",
+        "tentaculo-061",
+        "tentaculo-062",
+        "tentaculo-063",
+        "tentaculo-064",
+        "tentaculo-065",
+        "tentaculo-066",
+        "tentaculo-067",
+        "tentaculo-068",
+        "tentaculo-069",
+        "tentaculo-070",
+        "tentaculo-071",
+        "tentaculo-072",
+        "tentaculo-073",
+        "tentaculo-074",
+        "tentaculo-075",
+        "tentaculo-076",
+        "tentaculo-077",
+        "tentaculo-078",
+        "tentaculo-079",
+        "tentaculo-080",
+        "tentaculo-081",
+        "tentaculo-082",
+        "tentaculo-083",
+        "tentaculo-084",
+        "tentaculo-085",
+        "tentaculo-086",
+        "tentaculo-087",
+        "tentaculo-088",
+        "tentaculo-089",
+        "tentaculo-090",
+        "tentaculo-091",
+        "tentaculo-092",
+        "tentaculo-093",
+        "tentaculo-094",
+        "tentaculo-095",
+        "tentaculo-096",
+        "tentaculo-097",
+        "tentaculo-098",
+        "tentaculo-099",
+        "tentaculo-100",
+        "tentaculo-101",
+        "tentaculo-102",
+        "tentaculo-103",
+        "tentaculo-104",
+        "tentaculo-105",
+        "tentaculo-106",
+        "tentaculo-107",
+        "tentaculo-108",
+        "tentaculo-109",
+        "tentaculo-110",
+        "tentaculo-111",
+        "tentaculo-112",
+        "tentaculo-113",
+        "tentaculo-114",
+        "tentaculo-115",
+        "tentaculo-116",
+        "tentaculo-117",
+        "tentaculo-118",
+        "tentaculo-119",
+        "tentaculo-120",
+        "tentaculo-121",
+        "tentaculo-122",
+        "tentaculo-123",
+        "tentaculo-124",
+        "tentaculo-125",
+        "tentaculo-126",
+        "tentaculo-127",
+        "tentaculo-128",
+        "tentaculo-129",
+        "tentaculo-130",
+        "tentaculo-131",
+        "tentaculo-132",
+        "tentaculo-133",
+        "tentaculo-134",
+        "tentaculo-135",
+        "tentaculo-136",
+        "tentaculo-137",
+        "tentaculo-138",
+        "tentaculo-139"
+      ]
+    }
+  ],
+  "paginasAgarrão": [
+    {
+      "imagem": "agarrao-atlas-1.png",
+      "dados": "agarrao-atlas-1.json",
+      "quadros": [
+        "agarrao-000",
+        "agarrao-001",
+        "agarrao-002",
+        "agarrao-003",
+        "agarrao-004",
+        "agarrao-005",
+        "agarrao-006",
+        "agarrao-007",
+        "agarrao-008",
+        "agarrao-009",
+        "agarrao-010",
+        "agarrao-011",
+        "agarrao-012",
+        "agarrao-013",
+        "agarrao-014",
+        "agarrao-015",
+        "agarrao-016",
+        "agarrao-017",
+        "agarrao-018",
+        "agarrao-019"
+      ]
+    }
+  ],
+  "agarrao": {
+    "quadros": 20,
+    "frameMs": 40,
+    "fechar": [
+      0,
+      7
+    ],
+    "sustentar": [
+      8,
+      11
+    ],
+    "abrir": [
+      12,
+      19
+    ],
+    "origem": "cópias do quadro 26, espelhadas, deslocadas em pixels inteiros"
+  }
+}

@@ -17,6 +17,8 @@ import {
 import { atualizarDash } from "./PlayerDashControls.js";
 import { obterDirecaoMovimento } from "./PlayerMovementInput.js";
 import { ARIA_ATTACK_CONFIG } from "./AriaAttackConfig.js";
+import { obterImpulsoFlorete } from "../player/FloretePersonagemTeste.js";
+import { jogadorPresoNovoBoss } from "../player/PlayerControlEffects.js";
 
 /**
  * Prepara o som de caminhada ou corrida usado pelo sistema de movimento.
@@ -45,7 +47,7 @@ function atualizarColisaoMapaPlayer(scene) {
 function atualizarMovimento(scene) {
   atualizarColisaoMapaPlayer(scene);
 
-  if (scene.movimentoBloqueado) {
+  if (scene.movimentoBloqueado || jogadorPresoNovoBoss(scene)) {
     scene.player.setVelocity(0, 0);
     atualizarSomCorrida(scene, false);
     return;
@@ -84,23 +86,26 @@ function atualizarMovimento(scene) {
       ? velocidadeAtualBase * 0.72
       : velocidadeAtualBase;
 
-  // MOVIMENTO E CAMINHADA
-  if (direcao.x !== 0 || direcao.y !== 0) {
+  const impulso = obterImpulsoFlorete(scene);
+  const controle = impulso?.controle ?? 1;
+  // Estocadas somam um passo; no terceiro golpe o dash assume a direção da mira.
+  if (direcao.x !== 0 || direcao.y !== 0 || impulso) {
     // Armazena a direção para o próximo dash.
     scene.ultimaDirecaoDash?.copy(direcao);
 
     scene.player.setVelocity(
-      direcao.x * velocidadeAtual,
-      direcao.y * velocidadeAtual,
+      direcao.x * velocidadeAtual * controle + (impulso?.x ?? 0),
+      direcao.y * velocidadeAtual * controle + (impulso?.y ?? 0),
     );
 
     atualizarSomCorrida(scene, true);
     atualizarVelocidadeAnimacao(scene);
 
-    if (Math.abs(direcao.x) > Math.abs(direcao.y)) {
-      atualizarAnimacaoCaminhada(scene, direcao.x > 0 ? "right" : "left");
+    const animacao = direcao.x || direcao.y ? direcao : impulso;
+    if (Math.abs(animacao.x) > Math.abs(animacao.y)) {
+      atualizarAnimacaoCaminhada(scene, animacao.x > 0 ? "right" : "left");
     } else {
-      atualizarAnimacaoCaminhada(scene, direcao.y > 0 ? "down" : "up");
+      atualizarAnimacaoCaminhada(scene, animacao.y > 0 ? "down" : "up");
     }
   } else {
     atualizarSomCorrida(scene, false);

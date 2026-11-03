@@ -5,6 +5,8 @@
 
 import { causarDanoInimigo } from "../enemies/EnemyTest.js";
 import { causarDanoBoss } from "../enemies/BossFinal.js";
+import { alvosAdicionaisCombate, eAlvoAdicionalCombate,
+  causarDanoAlvoAdicional } from "../combat/CombatTargets.js";
 import { tempoImpactoFlecha, obstaculosFlecha } from "./ArrowCollision.js";
 
 const DIRECOES_PROJETIL = {
@@ -155,6 +157,7 @@ function atualizarProjeteis(scene, delta = 0) {
     for (const corpo of obstaculosFlecha(scene, inicio, fim)) testar(corpo);
     const boss = scene.bossFinal;
     if (boss?.active && !boss.morto) testar(boss.hitboxDano, boss);
+    for (const alvo of alvosAdicionaisCombate(scene)) testar(alvo.hitboxDano, alvo);
     for (const inimigo of inimigos) {
       if (inimigo?.active && !inimigo.morto) testar(inimigo.hitboxDano, inimigo);
     }
@@ -167,7 +170,8 @@ function atualizarProjeteis(scene, delta = 0) {
       if (projetil.distanciaPercorrida >= ALCANCE_MAXIMO_PROJETIL) destruirProjetil(projetil);
       return;
     }
-    if (impacto.alvo === boss && boss) causarDanoBoss(scene, projetil.dano);
+    if (eAlvoAdicionalCombate(scene, impacto.alvo)) causarDanoAlvoAdicional(scene, impacto.alvo, projetil.dano);
+    else if (impacto.alvo === boss && boss) causarDanoBoss(scene, projetil.dano);
     else if (impacto.alvo) causarDanoInimigo(scene, impacto.alvo, projetil.dano, { playSound: true });
 
     destruirProjetil(projetil);

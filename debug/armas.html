@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="pt-BR">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Encaixe das armas — laboratório visual</title>
+<style>
+body{margin:20px;background:#161e2a;color:#e4ecf4;font:15px system-ui}label{display:inline-block;margin:8px}select,input,button{padding:6px}#jogo{width:100%;max-width:1000px}canvas{max-width:100%;height:auto;image-rendering:pixelated}p{max-width:1000px;line-height:1.5}output{display:block;white-space:pre-wrap;font:14px monospace;margin:12px 0}
+</style>
+<h1>Encaixe das armas</h1>
+<label>Personagem <select id="personagem"></select></label>
+<label>Arma <select id="arma"></select></label>
+<label>Corpo <select id="animacao"><option>idle</option><option>walk</option></select></label>
+<label>Quadro <input id="quadro" type="range" min="0" max="7" value="0"></label>
+<label>Mira ° <input id="angulo" type="range" min="-180" max="180" value="0"></label>
+<label>Rotação <select id="rotacao"><option value="0">Contínua</option><option value="8">Comparar 8 direções</option><option value="16">Comparar 16 direções</option></select></label>
+<label><input type="checkbox" id="animar"> Animar corpo</label>
+<label><input type="checkbox" id="debug" checked> Pontos e mira</label>
+<button id="atacar">Atacar</button><button id="cancelar">Cancelar</button>
+<div id="jogo"></div><output id="dados"></output>
+<p>Verde: mão medida. Cruz rosa: pivô/empunhadura. Amarelo: cano/ponta. Azul: mira.
+O painel informa se a arma está à frente ou atrás do corpo. O comparativo de 8/16 direções
+é exclusivo desta página; o jogo mantém a mira contínua. A prévia usa Phaser e os mesmos
+módulos, sprites originais e golpes do jogo, sem alterar arquivos de imagem.</p>
+<script src="../js/libs/phaser.min.js"></script>
+<script type="module" src="./armas.js"></script>
+</html>

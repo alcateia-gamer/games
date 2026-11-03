@@ -1,0 +1,255 @@
+/** Exercita os ataques reais; o encontro substituto só registra seu contrato de dano. */
+import test from "node:test";
+import assert from "node:assert/strict";
+import { EventEmitter } from "node:events";
+import { criarPlayer, atacar } from "../player/Player.js";
+import { dispararProjetil, atualizarProjeteis } from "../player/PlayerProjectiles.js";
+import { criarSistemaEspeciais, atualizarSistemaEspeciais } from "./PlayerSpecialAbilities.js";
+import { criarArmaPersonagemTeste, atualizarArmaPersonagemTeste,
+  obterAlvoArmaTeste, trocarArmaPersonagemTeste } from "../player/ArmaPersonagemTeste.js";
+import { PERSONAGEM_TESTE, PERSONAGEM_TESTE_2, ESPADA_PERSONAGEM_TESTE,
+  FLORETE_PERSONAGEM_TESTE } from "../player/PersonagemTeste.js";
+
+class Rectangle {
+  constructor(x, y, width, height) { this.setTo(x, y, width, height); }
+  setTo(x, y, width, height) { Object.assign(this, { x, y, width, height }); return this; }
+  get left() { return this.x; }
+  get right() { return this.x + this.width; }
+  get top() { return this.y; }
+  get bottom() { return this.y + this.height; }
+}
+globalThis.Phaser = {
+  BlendModes: { ADD: 1, NORMAL: 0 }, TintModes: { FILL: 1, MULTIPLY: 0 },
+  Scenes: { Events: { SHUTDOWN: "shutdown" } },
+  Math: { Clamp: (v, min, max) => Math.min(max, Math.max(min, v)),
+    FloatBetween: (a, b) => (a + b) / 2, Between: (a, b) => Math.floor((a + b) / 2),
+    Angle: { Between: (x, y, a, b) => Math.atan2(b - y, a - x) } },
+  Geom: { Rectangle, Intersects: { RectangleToRectangle: (a, b) =>
+    a.x <= b.x + b.width && a.x + a.width >= b.x &&
+    a.y <= b.y + b.height && a.y + a.height >= b.y } },
+};
+
+function objeto(x = 0, y = 0) {
+  const obj = new EventEmitter();
+  Object.assign(obj, { x, y, active: true, visible: true, alpha: 1, depth: 0,
+    width: 128, height: 128, displayOriginX: 32, displayOriginY: 32,
+    setPosition(x, y) { Object.assign(this, { x, y }); return this; },
+    setScale(x, y = x) { Object.assign(this, { scaleX: x, scaleY: y }); return this; },
+    setOrigin(x, y) { Object.assign(this, { originX: x, originY: y }); return this; },
+    setDisplayOrigin(x, y) { Object.assign(this, { displayOriginX: x, displayOriginY: y }); return this; },
+    setRotation(rotation) { this.rotation = rotation; return this; },
+    setFlipY(flipY) { this.flipY = flipY; return this; },
+    setFlipX(flipX) { this.flipX = flipX; return this; },
+    setTexture(key, frame) { this.texture = { key }; this.frame = { name: frame }; return this; },
+    setDepth(depth) { this.depth = depth; return this; },
+    setVisible(visible) { this.visible = visible; return this; },
+    setAlpha(alpha) { this.alpha = alpha; return this; },
+    setTint() { return this; }, setTintMode() { return this; }, clearTint() { return this; },
+    setStrokeStyle() { return this; }, setFillStyle() { return this; }, setBlendMode() { return this; },
+    setVertexRoundMode() { return this; },
+    clear() { return this; }, lineStyle() { return this; }, fillStyle() { return this; },
+    fillTriangle() { return this; }, lineBetween() { return this; }, strokeCircle() { return this; },
+    fillCircle() { return this; }, beginPath() { return this; }, arc() { return this; },
+    strokePath() { return this; },
+    setVelocity(x, y) { this.body.setVelocity(x, y); return this; },
+    destroy() { this.active = false; },
+  });
+  obj.body = { enable: true, velocity: { x: 0, y: 0 }, x, y, width: 30, height: 15,
+    get bottom() { return this.y + this.height; },
+    setVelocity(x, y) { Object.assign(this.velocity, { x, y }); return this; },
+    setSize(width, height) { Object.assign(this, { width, height }); return this; },
+    setOffset() { return this; }, setAllowGravity() { return this; },
+    setImmovable() { return this; }, updateFromGameObject() {},
+  };
+  obj.anims = { play() {}, stop() {} };
+  return obj;
+}
+
+function encontro(x, y) {
+  return { active: true, visible: true, morto: false, x, y,
+    vida: 1000, vidaMaxima: 1000, body: { enable: true },
+    hitboxDano: new Rectangle(x - 10, y - 10, 20, 20), acertos: [],
+    receberDano(quantidade, area) {
+      this.acertos.push({ quantidade, area });
+      if (this.invulneravel) return false;
+      this.vida -= quantidade;
+      return true;
+    },
+  };
+}
+
+function cena(personagem = "kai-mercer", xBoss = 40, yBoss = 0) {
+  const eventosHitbox = [], scene = {
+    personagemSelecionada: personagem, player: objeto(), respawnX: 0, respawnY: 0,
+    inimigos: [], direcaoAtual: "right", vida: 100, estamina: 100, custoAtaque: 20,
+    events: new EventEmitter(), input: { keyboard: new EventEmitter() },
+    time: { now: 0, delayedCall() {}, addEvent(config) {
+      eventosHitbox.push(config.callback); return { remove() {} };
+    } },
+    add: { graphics: objeto, image: objeto, circle: objeto, rectangle: objeto },
+    textures: { get: () => ({ has: () => true }) },
+    cache: { audio: { exists: () => false } }, sound: { play() {} },
+    tweens: { add() {}, killTweensOf() {} },
+    physics: { add: { sprite: objeto, group: () => ({ active: true,
+      children: { entries: [] }, add(p) { this.children.entries.push(p); },
+      getChildren() { return this.children.entries; } }) } },
+    novoBoss: encontro(xBoss, yBoss), eventosHitbox,
+  };
+  return scene;
+}
+
+function avancarArma(scene, ate) {
+  while (scene.time.now < ate) {
+    const delta = Math.min(10, ate - scene.time.now);
+    scene.time.now += delta;
+    atualizarArmaPersonagemTeste(scene, delta);
+  }
+}
+
+test("golpes normais Kai, Magnus e Nyx atingem o contrato do novo boss uma vez", () => {
+  for (const personagem of ["kai-mercer", "magnus-force", "nyx"]) {
+    const scene = cena(personagem);
+    criarPlayer(scene);
+    scene.direcaoAtual = "right";
+    assert.equal(atacar(scene), true);
+    for (let i = 0; i < 10; i++) scene.eventosHitbox.forEach(callback => callback());
+    assert.equal(scene.novoBoss.acertos.length, 1);
+    assert.equal(scene.novoBoss.acertos[0].quantidade, 25);
+    assert.ok(scene.novoBoss.acertos[0].area instanceof Rectangle);
+    assert.equal(scene.novoBoss.vida, 975);
+    assert.deepEqual(scene.inimigos, []);
+    assert.equal(scene.bossFinal, undefined);
+  }
+});
+
+test("flecha Aria atinge boss pelo primeiro impacto e mantém valor configurado", () => {
+  const scene = cena("aria-kade", 150, 0);
+  const flecha = dispararProjetil(scene, { damage: 47, speed: 900 });
+  atualizarProjeteis(scene, 500);
+  atualizarProjeteis(scene, 500);
+  assert.equal(flecha.active, false);
+  assert.equal(scene.novoBoss.vida, 953);
+  assert.deepEqual(scene.novoBoss.acertos, [{ quantidade: 47, area: null }]);
+});
+
+test("parede vence empate com boss na varredura da flecha", () => {
+  const scene = cena("aria-kade", 150, 0);
+  scene.collisionGroup = { getChildren: () => [{ active: true,
+    body: { ...scene.novoBoss.hitboxDano, enable: true } }] };
+  const flecha = dispararProjetil(scene);
+  atualizarProjeteis(scene, 500);
+  assert.equal(flecha.active, false);
+  assert.equal(scene.novoBoss.acertos.length, 0);
+});
+
+test("teletransporte invisível ou com corpo desabilitado não intercepta flechas", () => {
+  for (const mutacao of [b => { b.visible = false; }, b => { b.body.enable = false; }]) {
+    const scene = cena("aria-kade", 150, 0);
+    mutacao(scene.novoBoss);
+    const flecha = dispararProjetil(scene);
+    atualizarProjeteis(scene, 500);
+    assert.equal(scene.novoBoss.acertos.length, 0);
+    assert.equal(flecha.active, true);
+  }
+});
+
+test("Magnus causa os 8 de dano de boss, sem empurrão ou atordoamento", () => {
+  const scene = cena("magnus-force", 50, 0);
+  criarSistemaEspeciais(scene);
+  scene.events.emit("player:especial");
+  scene.time.now = 390;
+  atualizarSistemaEspeciais(scene);
+  atualizarSistemaEspeciais(scene);
+  assert.equal(scene.novoBoss.vida, 992);
+  assert.equal(scene.novoBoss.acertos.length, 1);
+  assert.ok(scene.novoBoss.acertos[0].area instanceof Rectangle);
+  assert.equal(scene.novoBoss.especialEmpurraoAte, undefined);
+  assert.equal(scene.novoBoss.especialAtordoadoAte, undefined);
+});
+
+test("onda Magnus respeita obstáculo antes do boss", () => {
+  const scene = cena("magnus-force", 70, 0);
+  scene.collisionGroup = { getChildren: () => [{ active: true,
+    body: { x: 30, y: -30, width: 4, height: 60, enable: true } }] };
+  criarSistemaEspeciais(scene);
+  scene.events.emit("player:especial");
+  scene.time.now = 390;
+  atualizarSistemaEspeciais(scene);
+  assert.equal(scene.novoBoss.acertos.length, 0);
+});
+
+test("corte Nyx usa hitbox nova, dano 12 e termina após acerto aceito", () => {
+  const scene = cena("nyx", 70, 0);
+  criarSistemaEspeciais(scene);
+  scene.events.emit("player:especial");
+  for (let i = 0; i < 5; i++) atualizarSistemaEspeciais(scene, 50);
+  assert.equal(scene.novoBoss.vida, 988);
+  assert.equal(scene.novoBoss.acertos.length, 1);
+  assert.equal(scene.estadoEspecial.cortes.size, 0);
+});
+
+test("corte Nyx continua quando encontro rejeita dano", () => {
+  const scene = cena("nyx", 70, 0);
+  scene.novoBoss.invulneravel = true;
+  criarSistemaEspeciais(scene);
+  scene.events.emit("player:especial");
+  atualizarSistemaEspeciais(scene, 16);
+  assert.ok(scene.novoBoss.acertos.length > 0);
+  assert.equal(scene.novoBoss.vida, 1000);
+  assert.equal(scene.estadoEspecial.cortes.size, 1);
+});
+
+test("parry Kai direciona o laser para novo boss e devolve dano pelo contrato", () => {
+  const scene = cena("kai-mercer", 80, 0), laser = objeto(20, 0);
+  scene.lasersInimigo = { getChildren: () => [laser] };
+  criarSistemaEspeciais(scene);
+  scene.events.emit("player:especial");
+  assert.equal(scene.tentarInterceptarLaserEspecial(laser), true);
+  assert.equal(laser.especialRefletido, true);
+  assert.ok(laser.body.velocity.x > 0);
+  laser.setPosition(75, 0);
+  atualizarSistemaEspeciais(scene);
+  assert.equal(laser.active, false);
+  assert.equal(scene.novoBoss.vida, 970);
+  assert.equal(scene.novoBoss.acertos.length, 1);
+});
+
+test("rifle de teste mira no novo boss e só causa um acerto por laser", () => {
+  const scene = cena(PERSONAGEM_TESTE.id, 150, 12);
+  criarArmaPersonagemTeste(scene);
+  assert.equal(obterAlvoArmaTeste(scene), scene.novoBoss);
+  assert.equal(atacar(scene), true);
+  atualizarArmaPersonagemTeste(scene, 500);
+  atualizarArmaPersonagemTeste(scene, 500);
+  assert.equal(scene.novoBoss.vida, 1000 - PERSONAGEM_TESTE.arma.danoLaser);
+  assert.equal(scene.novoBoss.acertos.length, 1);
+  assert.equal(scene.armaPersonagemTeste.lasers.length, 0);
+});
+
+test("espada e florete de teste reconhecem boss novo e preservam dano único por golpe", () => {
+  for (const florete of [false, true]) {
+    const scene = cena(PERSONAGEM_TESTE_2.id, florete ? 55 : 40, 14);
+    criarArmaPersonagemTeste(scene);
+    if (florete) assert.equal(trocarArmaPersonagemTeste(scene), true);
+    assert.equal(obterAlvoArmaTeste(scene), scene.novoBoss);
+    assert.equal(atacar(scene), true);
+    avancarArma(scene, 800);
+    const config = florete ? FLORETE_PERSONAGEM_TESTE : ESPADA_PERSONAGEM_TESTE;
+    assert.equal(scene.novoBoss.vida, 1000 - config.dano);
+    assert.equal(scene.novoBoss.acertos.length, 1);
+  }
+});
+
+test("parede barra rifle, espada e florete antes do novo boss", () => {
+  for (const arma of ["rifle", "espada", "florete"]) {
+    const scene = cena(arma === "rifle" ? PERSONAGEM_TESTE.id : PERSONAGEM_TESTE_2.id,
+      arma === "rifle" ? 150 : 55, 14);
+    scene.collisionGroup = { getChildren: () => [{ active: true,
+      body: { x: 27, y: -100, width: 3, height: 200, enable: true } }] };
+    criarArmaPersonagemTeste(scene);
+    if (arma === "florete") trocarArmaPersonagemTeste(scene);
+    assert.equal(atacar(scene), true);
+    avancarArma(scene, 800);
+    assert.equal(scene.novoBoss.acertos.length, 0, arma);
+  }
+});

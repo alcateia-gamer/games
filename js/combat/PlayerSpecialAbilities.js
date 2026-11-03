@@ -6,6 +6,9 @@
 
 import { causarDanoInimigo } from "../enemies/EnemyHealth.js";
 import { causarDanoBoss } from "../enemies/BossFinal.js";
+import { jogadorPresoNovoBoss } from "../player/PlayerControlEffects.js";
+import { alvosAdicionaisCombate, eAlvoAdicionalCombate,
+  causarDanoAlvoAdicional } from "./CombatTargets.js";
 
 import {
   caminhoDiretoBloqueado,
@@ -94,10 +97,14 @@ function alvosEspeciais(scene) {
     alvos.push(scene.bossFinal);
   }
 
-  return alvos;
+  return [...alvos, ...alvosAdicionaisCombate(scene)];
 }
 
 function danoEspecial(scene, alvo, quantidade, area = null) {
+  if (eAlvoAdicionalCombate(scene, alvo)) {
+    return causarDanoAlvoAdicional(scene, alvo, quantidade, area);
+  }
+
   if (alvo === scene.bossFinal) {
     // O chefe continua recebendo dano
     // somente nas regiões verdes.
@@ -274,7 +281,7 @@ function refletirLaser(scene, estado, laser) {
   const alvo =
     origem?.active && !origem.morto
       ? origem
-      : inimigosVivos(scene).sort(
+      : [...inimigosVivos(scene), ...alvosAdicionaisCombate(scene)].sort(
           (a, b) => distancia(a, laser) - distancia(b, laser),
         )[0];
 
@@ -305,15 +312,19 @@ function refletirLaser(scene, estado, laser) {
 // LASERS REFLETIDOS CAUSANDO DANO
 // =====================================================
 
+function lasersEspeciais(scene) {
+  return [...(scene.lasersInimigo?.getChildren?.() || []), ...(scene.novoBoss?.projeteisBoss || [])];
+}
+
 function atualizarLasersRefletidos(scene) {
-  const lasers = scene.lasersInimigo?.getChildren?.() || [];
+  const lasers = lasersEspeciais(scene);
 
   for (const laser of lasers) {
     if (!laser?.active || !laser.especialRefletido) {
       continue;
     }
 
-    for (const robo of inimigosVivos(scene)) {
+    for (const robo of [...inimigosVivos(scene), ...alvosAdicionaisCombate(scene)]) {
       const ponto = pontoMaisProximo(robo.hitboxDano, laser.x, laser.y);
 
       if (distancia(ponto, laser) <= 8) {
@@ -385,7 +396,7 @@ function atualizarOnda(scene, estado, agora) {
     onda.atingidos.add(alvo);
 
     // Boss não sofre empurrão.
-    if (alvo === scene.bossFinal) {
+    if (alvo === scene.bossFinal || eAlvoAdicionalCombate(scene, alvo)) {
       danoEspecial(
         scene,
         alvo,
@@ -419,7 +430,7 @@ function atualizarOnda(scene, estado, agora) {
   }
 
   // Destruir lasers que a onda alcançar.
-  for (const laser of scene.lasersInimigo?.getChildren?.() || []) {
+  for (const laser of lasersEspeciais(scene)) {
     if (
       laser?.active &&
       !laser.especialRefletido &&
@@ -600,6 +611,7 @@ function atualizarHolograma(scene, estado, delta, agora) {
 // =====================================================
 
 function trocarComHolograma(scene, estado) {
+  if (jogadorPresoNovoBoss(scene)) return false;
   const holo = estado.holograma;
 
   if (!holo?.active || holo.expiraEm <= scene.time.now) {
@@ -767,7 +779,7 @@ function atualizarCortesNyx(scene, estado, delta) {
     return;
   }
 
-  const lasers = scene.lasersInimigo?.getChildren?.() || [];
+  const lasers = lasersEspeciais(scene);
 
   const passoTotal =
     CONFIG.nyxVelocidade * Math.min(0.05, Math.max(0, delta) / 1000);
@@ -857,7 +869,16 @@ function atualizarCortesNyx(scene, estado, delta) {
       );
 
       for (const alvo of alvosEspeciais(scene)) {
-        if (alvo === scene.bossFinal) {
+        if (eAlvoAdicionalCombate(scene, alvo)) {
+          const acertou = Phaser.Geom.Intersects.RectangleToRectangle(
+            alvo.hitboxDano,
+            areaCorte,
+          );
+          if (acertou && danoEspecial(scene, alvo, 12, areaCorte)) {
+            terminou = true;
+            break;
+          }
+        } else if (alvo === scene.bossFinal) {
           // Verificar as áreas verdes do boss.
           const zonas = alvo.hitboxesReceberDano || [];
 
@@ -1077,7 +1098,7 @@ function atualizarSistemaEspeciais(scene, delta = 16.67) {
   atualizarCortesNyx(scene, estado, delta);
 
   // Atualizar interceptação de lasers do Kai.
-  for (const laser of scene.lasersInimigo?.getChildren?.() || []) {
+  for (const laser of lasersEspeciais(scene)) {
     if (laser?.active && !laser.especialRefletido) {
       refletirLaser(scene, estado, laser);
     }

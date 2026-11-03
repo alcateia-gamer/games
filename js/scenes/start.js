@@ -4,6 +4,7 @@
  */
 
 import { criarTextoMenu } from "../ui/MenuText.js";
+import { PERSONAGENS_TESTE, carregarPersonagemTeste } from "../player/PersonagemTeste.js";
 
 class Start extends Phaser.Scene {
   /**
@@ -35,6 +36,7 @@ class Start extends Phaser.Scene {
    * Coloca na fila a música do menu e as folhas de sprites usadas na seleção de personagens.
    */
   preload() {
+    carregarPersonagemTeste(this, "assets/");
     // Música dos menus, carregamento e multiplayer.
     this.load.audio(
       "musica-menu",
@@ -742,7 +744,7 @@ class Start extends Phaser.Scene {
   // =====================================================
 
   /**
-   * Cria os quatro cartões de personagem, o destaque da seleção e os botões de iniciar e
+   * Cria os cartões de personagem, o destaque da seleção e os botões de iniciar e
    * voltar.
    */
   showSoloSelection() {
@@ -801,6 +803,23 @@ class Start extends Phaser.Scene {
         name: "NYX // 04",
       },
     ];
+
+    for (const personagem of PERSONAGENS_TESTE.filter(p => p.ativo)) {
+      characters.push({
+        id: personagem.id,
+        texture: personagem.textura,
+        frame: 0,
+        scale: 1.5 * personagem.tamanho / personagem.frameSize,
+        name: personagem.nome,
+      });
+    }
+    if (characters.length > 4) {
+      // Seis cartões cabem na tela; desativar os testes restaura o layout original.
+      const espacamento = Math.min(152, (this.width - 160) / (characters.length - 1));
+      characters.forEach((character, index) => {
+        character.x = this.width / 2 + (index - (characters.length - 1) / 2) * espacamento;
+      });
+    }
 
     const characterViews = characters.map((character) => {
       const frame = this.add

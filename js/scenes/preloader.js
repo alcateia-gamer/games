@@ -10,6 +10,8 @@ import { carregarSonsPersonagem } from "../sounds/personagem.js";
 import { carregarSomGerador } from "../sounds/gerador.js";
 import { carregarSomLuzFabrica } from "../sounds/luzFabrica.js";
 import { preloadInventoryItemImages } from "../inventory/InventoryItems.js";
+import { PERSONAGEM_TESTE, PERSONAGENS_TESTE, ARMAS_PERSONAGEM_TESTE, carregarPersonagemTeste } from "../player/PersonagemTeste.js";
+import { carregarAssetsNovoBoss } from "../enemies/novoBoss/NovoBossAssets.js";
 
 class Preloader extends Phaser.Scene {
   /**
@@ -370,6 +372,10 @@ class Preloader extends Phaser.Scene {
       "personagem2-walk", "personagem2-attack", "personagem2-idle",
       "personagem3-walk", "personagem3-attack",
       "personagem4-walk", "personagem4-attack",
+      ...PERSONAGENS_TESTE.flatMap(p => [p.textura, p.walk?.textura].filter(Boolean)),
+      ...new Set([...ARMAS_PERSONAGEM_TESTE, ...PERSONAGENS_TESTE.flatMap(p => p.armas ?? [])]
+        .map(arma => arma.textura)),
+      PERSONAGEM_TESTE.botaoTroca.textura,
     ];
     for (const chave of texturas) {
       if (this.textures.exists(chave)) {
@@ -409,6 +415,8 @@ class Preloader extends Phaser.Scene {
    */
   carregarAssets() {
     this.load.setPath("./assets/");
+    carregarPersonagemTeste(this);
+    carregarAssetsNovoBoss(this);
 
     preloadInventoryItemImages(this);
     this.load.image("hand_icon", "../Tilesets/extras/Hand_icon.png");

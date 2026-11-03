@@ -4,6 +4,7 @@
  */
 
 import { atacar, soltarAtaque } from "../player/Player.js";
+import { PERSONAGEM_TESTE, personagemTesteAtivo } from "../player/PersonagemTeste.js";
 import { posicionarBotaoFixo } from "./FixedActionButton.js";
 
 import {
@@ -23,79 +24,88 @@ function criarControlesAtaque(scene) {
   // BOTÃO DE ATAQUE
   // =====================================================
 
-  scene.botaoAtaque = scene.add.circle(720, 350, 46, 0xffffff, 1);
-  scene.botaoAtaque.setAlpha(0.75);
+  const arteTeste = personagemTesteAtivo(scene) ? PERSONAGEM_TESTE.botaoAtaque : null;
+  if (arteTeste) {
+    scene.botaoAtaque = scene.add.image(720, 350, arteTeste.textura)
+      .setAlpha(0.85).setScrollFactor(0).setDepth(100).setInteractive();
+    // Mantém a referência usada pelo controle contextual, sem desenhar outra espada.
+    scene.iconeAtaque = scene.add.graphics();
+  } else {
+    scene.botaoAtaque = scene.add.circle(720, 350, 46, 0xffffff, 1);
+    scene.botaoAtaque.setAlpha(0.75);
 
-  scene.botaoAtaque
-    .setStrokeStyle(4, 0x333333, 1)
-    .setScrollFactor(0)
-    .setDepth(100)
-    .setInteractive();
+    scene.botaoAtaque
+      .setStrokeStyle(4, 0x333333, 1)
+      .setScrollFactor(0)
+      .setDepth(100)
+      .setInteractive();
 
-  // =====================================================
-  // ESPADA DO BOTÃO
-  // =====================================================
+    // =====================================================
+    // ESPADA DO BOTÃO
+    // =====================================================
 
-  scene.iconeAtaque = scene.add.graphics();
+    scene.iconeAtaque = scene.add.graphics();
 
-  scene.iconeAtaque
-    .setPosition(720, 350)
-    .setScrollFactor(0)
-    .setDepth(101)
-    .setAlpha(0.75);
+    scene.iconeAtaque
+      .setPosition(720, 350)
+      .setScrollFactor(0)
+      .setDepth(101)
+      .setAlpha(0.75);
   
-  // =====================================================
-  // LÂMINA
-  // =====================================================
+    // =====================================================
+    // LÂMINA
+    // =====================================================
 
-  scene.iconeAtaque.fillStyle(0xdddddd, 1);
-  scene.iconeAtaque.lineStyle(2, 0x333333, 1);
+    scene.iconeAtaque.fillStyle(0xdddddd, 1);
+    scene.iconeAtaque.lineStyle(2, 0x333333, 1);
 
-  scene.iconeAtaque.beginPath();
-  scene.iconeAtaque.moveTo(0, -31);
-  scene.iconeAtaque.lineTo(5, -21);
-  scene.iconeAtaque.lineTo(5, 9);
-  scene.iconeAtaque.lineTo(-5, 9);
-  scene.iconeAtaque.lineTo(-5, -21);
-  scene.iconeAtaque.closePath();
+    scene.iconeAtaque.beginPath();
+    scene.iconeAtaque.moveTo(0, -31);
+    scene.iconeAtaque.lineTo(5, -21);
+    scene.iconeAtaque.lineTo(5, 9);
+    scene.iconeAtaque.lineTo(-5, 9);
+    scene.iconeAtaque.lineTo(-5, -21);
+    scene.iconeAtaque.closePath();
 
-  scene.iconeAtaque.fillPath();
-  scene.iconeAtaque.strokePath();
+    scene.iconeAtaque.fillPath();
+    scene.iconeAtaque.strokePath();
 
-  // =====================================================
-  // DETALHE DA LÂMINA
-  // =====================================================
+    // =====================================================
+    // DETALHE DA LÂMINA
+    // =====================================================
 
-  scene.iconeAtaque.lineStyle(1, 0xffffff, 0.8);
+    scene.iconeAtaque.lineStyle(1, 0xffffff, 0.8);
 
-  scene.iconeAtaque.beginPath();
-  scene.iconeAtaque.moveTo(0, -26);
-  scene.iconeAtaque.lineTo(0, 5);
-  scene.iconeAtaque.strokePath();
+    scene.iconeAtaque.beginPath();
+    scene.iconeAtaque.moveTo(0, -26);
+    scene.iconeAtaque.lineTo(0, 5);
+    scene.iconeAtaque.strokePath();
 
-  // =====================================================
-  // GUARDA, CABO E FINAL DO CABO
-  // =====================================================
+    // =====================================================
+    // GUARDA, CABO E FINAL DO CABO
+    // =====================================================
 
-  scene.iconeAtaque.fillStyle(0x555555, 1);
-  scene.iconeAtaque.fillRoundedRect(-13, 8, 26, 5, 2);
+    scene.iconeAtaque.fillStyle(0x555555, 1);
+    scene.iconeAtaque.fillRoundedRect(-13, 8, 26, 5, 2);
 
-  scene.iconeAtaque.fillStyle(0x333333, 1);
-  scene.iconeAtaque.fillRoundedRect(-4, 12, 8, 18, 2);
+    scene.iconeAtaque.fillStyle(0x333333, 1);
+    scene.iconeAtaque.fillRoundedRect(-4, 12, 8, 18, 2);
 
-  scene.iconeAtaque.fillStyle(0x555555, 1);
-  scene.iconeAtaque.fillCircle(0, 31, 5);
+    scene.iconeAtaque.fillStyle(0x555555, 1);
+    scene.iconeAtaque.fillCircle(0, 31, 5);
 
-  // =====================================================
-  // INCLINAÇÃO E ÁREA CLICÁVEL DA ESPADA
-  // =====================================================
+    // =====================================================
+    // INCLINAÇÃO E ÁREA CLICÁVEL DA ESPADA
+    // =====================================================
 
-  scene.iconeAtaque.setAngle(18);
+    scene.iconeAtaque.setAngle(18);
 
-  scene.iconeAtaque.setInteractive(
-    new Phaser.Geom.Rectangle(-25, -40, 50, 80),
-    Phaser.Geom.Rectangle.Contains,
-  );
+    scene.iconeAtaque.setInteractive(
+      new Phaser.Geom.Rectangle(-25, -40, 50, 80),
+      Phaser.Geom.Rectangle.Contains,
+    );
+
+  }
 
   // =====================================================
   // IDENTIFICAR TOQUE
@@ -129,7 +139,8 @@ function criarControlesAtaque(scene) {
   const atualizarPosicaoAtaque = () => {
     const escala = botaoPressionado ? 0.92 : 1;
 
-    posicionarBotaoFixo(scene.cameras.main, scene.botaoAtaque, 720, 350, escala);
+    posicionarBotaoFixo(scene.cameras.main, scene.botaoAtaque, 720, 350,
+      escala * (arteTeste ? arteTeste.tamanho / arteTeste.largura : 1));
     posicionarBotaoFixo(scene.cameras.main, scene.iconeAtaque, 720, 350, escala);
   };
 

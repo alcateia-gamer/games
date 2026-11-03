@@ -64,6 +64,7 @@ Os arquivos de teste aparecem junto do sistema que verificam. Os quatro arquivos
 | [js/controls/PlayerMovement.js](../js/controls/PlayerMovement.js) | Converte WASD ou joystick em movimento normalizado, respeitando bloqueios, dash e animações. |
 | [js/controls/PlayerInput.js](../js/controls/PlayerInput.js) | Cria WASD, controles de desenvolvedor, joystick e tela cheia; mantém os elementos fixos durante o zoom. |
 | [js/controls/PlayerAttackControls.js](../js/controls/PlayerAttackControls.js) | Entrada do ataque por mouse e toque. Coordena o botão de espada e a carga e soltura do arco da Aria. |
+| [js/controls/PlayerTestActionControls.js](../js/controls/PlayerTestActionControls.js) | Exclusivo do personagem de teste: alterna ataque e mão no botão principal e exibe a troca de arma com a miniatura no centro transparente. |
 | [js/controls/PlayerDashControls.js](../js/controls/PlayerDashControls.js) | Impulso de dash com custo de estamina, recarga e rastro temporal. O movimento normal consulta este módulo antes de aplicar sua velocidade. |
 
 ### Jogador e companheiro
@@ -73,6 +74,10 @@ Os arquivos de teste aparecem junto do sistema que verificam. Os quatro arquivos
 | [js/player/Player.js](../js/player/Player.js) | Sprite e combate do jogador. Mantém separadas as colisões com o chão, a área que recebe dano e a área ofensiva da katana. |
 | [js/player/PlayerAnimations.js](../js/player/PlayerAnimations.js) | Registra animações de caminhada, repouso e ataque para o jogador local e para os personagens remotos. |
 | [js/player/PlayerProjectiles.js](../js/player/PlayerProjectiles.js) | Flechas da Aria: criação, movimento por delta, alcance, colisão com o mapa e dano a inimigos ou boss. |
+| [js/player/PersonagemTeste.js](../js/player/PersonagemTeste.js) | Define as duas personagens de teste, folhas de idle/caminhada, armas permitidas e parâmetros do combo. |
+| [js/player/ArmaPersonagemTeste.js](../js/player/ArmaPersonagemTeste.js) | Mira e armas de teste; encadeia os três golpes da nova personagem pelo botão padrão, com um toque preparado no fim do efeito. |
+| [js/player/EspadaPersonagemTeste.js](../js/player/EspadaPersonagemTeste.js) | Exclusivo do personagem de teste: sincroniza a espada e o dano com os três Slash completos (B/N/M), desenhando o efeito acima da lâmina e removendo-o ao cancelar o golpe. |
+| [js/player/FloretePersonagemTeste.js](../js/player/FloretePersonagemTeste.js) | Guarda, estocada, retorno e rastro do florete da segunda personagem; calcula o pequeno impulso aplicado pela física e limita o dano à direção da ponta. |
 | [js/player/PlayerStatus.js](../js/player/PlayerStatus.js) | Vida, estamina e HUD do personagem. Prepara os recortes da imagem original em cache e desenha a interface em canvas DOM na resolução da tela. |
 | [js/player/CompanionPet.js](../js/player/CompanionPet.js) | Companheiro robótico do modo solo. Segue o jogador com desvio de obstáculos, afastamento de inimigos e recuperação quando fica preso. |
 | [js/player/colisoes/index.mjs](../js/player/colisoes/index.mjs) | Consulta central das hitboxes por personagem. Dimensões e offsets são definidos nos arquivos individuais e o padrão é Kai. |
