@@ -4,7 +4,7 @@
  */
 
 /**
- * Substitui os erros animados pela tela de derrota e aguarda o clique para voltar ao menu.
+ * Substitui os erros animados pela tela de derrota e aguarda o clique para recarregar o jogo.
  */
 function mostrarOpcaoJogarNovamente(scene, camada) {
   for (const objeto of camada.list) {
@@ -49,10 +49,8 @@ function mostrarOpcaoJogarNovamente(scene, camada) {
   botao.on("pointerout", () => botao.setFillStyle(0x350812));
   botao.once("pointerdown", () => {
     botao.disableInteractive();
-    if (scene.multiplayer) {
-      scene.multiplayerManager?.leaveRoom();
-    }
-    scene.scene.start("Start", { abrirMenu: true });
+    // Equivalente a F5: descarta todo o estado da partida e carrega a página novamente.
+    window.location.reload();
   });
 }
 
@@ -68,6 +66,17 @@ function mostrarTelaMorte(scene) {
   scene.movimentoBloqueado = true;
   scene.sound?.stopAll();
   scene.limparPainelStatusFixo?.();
+  // Esses elementos usam canvas HTML e ficam acima do overlay desenhado pelo Phaser.
+  scene.minimap?.destroy();
+  for (const controle of [
+    scene.botaoDesenvolvedor,
+    scene.textoBotaoDesenvolvedor,
+    scene.botaoLuzFabrica,
+    scene.textoLuzFabrica,
+  ]) {
+    controle?.setVisible(false);
+    controle?.disableInteractive();
+  }
   scene.player.invulneravel = true;
   scene.player.setVelocity(0, 0);
   scene.physics.pause();
