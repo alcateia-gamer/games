@@ -54,33 +54,47 @@ try {
   console.log("PASS: 140 poses, 40 ms por quadro, loop, resolução lógica 800×600 e base fixa; atlas preserva alfa parcial e não contém verde/roxo residual.");
 
   await posicionar(-1093, -5520); assert.ok(await iniciar());
+  const alvo=await page.evaluate(()=>window.__game.scene.getScene("Level1Parte2").novoBoss.ataqueAtual.snapshot().armadilhas[0]);
+  await posicionar(alvo.x,alvo.y-26);
   await avancar(999); let s = await snapshot();
   assert.equal(s.restricao, null); assert.ok(s.visuais.length > 0 && s.visuais.every(v => !v.visivel));
   const vidaAntes = s.vida;
   await avancar(1); s = await snapshot();
-  assert.equal(s.restricao?.restanteMs, 2500);
+  assert.equal(s.restricao?.apertosNecessarios, 8);
   assert.ok(s.visuais.some(v => v.visivel && v.segurando && v.chave === "novo-boss-tentaculo-agarrao"));
   await avancar(400); s = await snapshot();
-  assert.equal(s.restricao?.restanteMs, 2100); assert.equal(s.vida, vidaAntes);
+  assert.equal(s.restricao?.apertos, 0); assert.equal(s.vida, vidaAntes);
   assert.ok(s.visuais.some(v => v.segurando && Number(v.frame.slice(-3)) >= 8));
   assert.ok(await page.evaluate(() => {
     const scene = window.__game.scene.getScene("Level1Parte2");
     const grip = scene.children.list.find(o => o.active && o.novoBossTentaculoVisual && o.novoBossTentaculoSegurando);
-    return grip && Math.abs(grip.y - scene.hitboxDanoPlayer.centerY) < 0.001 &&
+    return grip && Math.abs(grip.y - scene.hitboxDanoPlayer.bottom) < 0.001 &&
       Math.abs(grip.x - scene.hitboxDanoPlayer.centerX) < 0.001 &&
       Math.abs(grip.scaleY * 352 - scene.hitboxDanoPlayer.height * 1.35) < 0.001;
-  }), "O agarrão envolve o corpo do jogador, sem flutuar acima dele.");
+  }), "O agarrão fica no chão e envolve o jogador puxado até a base.");
   await page.evaluate(() => {
     const scene = window.__game.scene.getScene("Level1Parte2");
     scene.cameras.main.stopFollow().setZoom(1.5).centerOn(scene.player.x, scene.player.y - 30);
   });
   await page.screenshot({ path: "/tmp/novo-boss-tentaculo/agarrao-no-jogo.png" });
   await avancar(2099); assert.ok((await snapshot()).restricao);
+  await page.evaluate(()=>{
+    const scene=window.__game.scene.getScene("Level1Parte2");
+    for(let i=0;i<8;i++){
+      const p={id:99,isDown:true,leftButtonDown:()=>true};
+      scene.input.emit("pointerdown",p,[]);scene.input.emit("pointerup",p);
+    }
+  });
   await avancar(1); s = await snapshot();
   assert.equal(s.restricao, null); assert.equal(s.vida, vidaAntes);
   assert.ok(s.visuais.filter(v => v.segurando).every(v => !v.visivel));
-  await avancar(1000); assert.equal((await snapshot()).visuais.length, 0);
-  console.log("PASS: aviso não captura; agarrão fecha e sustenta o jogador por 2500 ms, sem dano, e libera/limpa os sprites.");
+  // Já decorreram 3500 ms desde o aviso; os outros tentáculos ficam até 19000 ms.
+  await posicionar(-590, -5520);
+  await avancar(15499); s = await snapshot();
+  assert.ok(s.visuais.some(v => v.visivel && !v.segurando), "Tentáculos permanecem por 18 segundos após surgir.");
+  assert.ok(s.ataque.armadilhas.some(a => a.ativa));
+  await avancar(1); assert.equal((await snapshot()).visuais.length, 0);
+  console.log("PASS: aviso não captura; agarrão fecha sem dano e libera/limpa os sprites após oito apertos.");
 
   await sessao.reiniciar(); await posicionar(-1093, -5520); assert.ok(await iniciar());
   await posicionar(-590, -5520); await avancar(1400); s = await snapshot();
@@ -95,7 +109,7 @@ try {
   assert.ok(await page.evaluate(() => window.__game.scene.getScene("Level1Parte2").novoBoss.iniciarClones()));
   assert.ok(await iniciar()); await posicionar(-590, -5520); await avancar(1400);
   s = await snapshot(); const falsos = s.visuais.filter(v => v.ilusorio);
-  assert.ok(falsos.length > 0 && falsos.every(v => !v.corpo && !v.segurando && v.alpha === 0.32));
+  assert.ok(falsos.length > 0 && falsos.every(v => !v.corpo && !v.segurando && v.alpha === 1));
   assert.equal(s.restricao, null);
   await posicionar(-1093, -5350); await avancar(0);
   assert.equal((await snapshot()).visuais.length, 0);

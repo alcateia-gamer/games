@@ -299,3 +299,15 @@ test("configuração desativada e clones ativos impedem quatro aparições", () 
   encontro.sistemaClones = { ativo: true };
   assert.equal(sistema.iniciarQuatro(), false);
 });
+
+test("núcleo da verdadeira não denuncia as ondas de clones móveis", () => {
+  const { encontro, sistema } = preparar();
+  sistema.atualizar(0);
+  assert.equal(sistema.core.visible, true);
+  encontro.sistemaClones = { ativo: true };
+  sistema.atualizar(16);
+  assert.equal(sistema.core.visible, false);
+  encontro.sistemaClones.ativo = false;
+  sistema.atualizar(16);
+  assert.equal(sistema.core.visible, true);
+});

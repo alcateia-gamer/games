@@ -144,11 +144,13 @@ try {
   assert.equal((await snapshot()).sprite.alpha, 1);
   await fotografar("morte");
   await avancar(150);
-  assert.equal((await snapshot()).sprite.alpha, 0.5);
-  await avancar(150);
-  assert.equal((await snapshot()).sprite.visible, false);
+  assert.equal((await snapshot()).sprite.alpha, 1);
+  await avancar(60000);
+  assert.equal((await snapshot()).sprite.visible, true);
+  assert.equal((await snapshot()).sprite.alpha, 1);
+  assert.equal((await snapshot()).sprite.corpo, false);
   assert.ok((await snapshot()).efeitos.every(o => !o.visible));
-  console.log("PASS: derrota real usa pose de morte sem alterar escala/direção, mantém física desligada e termina em 900 ms.");
+  console.log("PASS: corpo derrotado permanece visível e opaco após 60 s, com física desligada e ameaças removidas.");
 
   await sessao.reiniciar({ personagem: "personagem-teste" });
   state = await snapshot();

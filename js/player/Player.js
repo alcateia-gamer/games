@@ -4,6 +4,7 @@
  */
 
 import { gastarEstamina } from "./PlayerStatus.js";
+import { jogadorPresoNovoBoss } from "./PlayerControlEffects.js";
 import { dispararProjetil } from "./PlayerProjectiles.js";
 import { ARIA_ATTACK_CONFIG, ARIA_AIM_DIRECTIONS, calcularCargaAria } from "../controls/AriaAttackConfig.js";
 import { pararSomTensaoAria } from "../sounds/SOUNDS_PERSONAGENS.js/sounds_Aria.js";
@@ -699,6 +700,7 @@ function criarHitboxKatana(scene) {
  * houver ataque em andamento. Retorna se um novo ataque foi iniciado.
  */
 function atacar(scene) {
+  if (jogadorPresoNovoBoss(scene)) return false;
   // A arma é independente do idle: atacar não troca a folha nem bloqueia a caminhada.
   if (personagemTesteAtivo(scene)) return atacarComArmaPersonagemTeste(scene);
   // =====================================================
@@ -820,6 +822,10 @@ function atacar(scene) {
  * Encerra a carga da Aria, cria a flecha e executa a animação de soltura na direção escolhida.
  */
 function soltarAtaque(scene, agora = scene.time.now) {
+  if (jogadorPresoNovoBoss(scene)) {
+    if (personagem3Ativa(scene)) cancelarAtaqueAria(scene);
+    return false;
+  }
   if (
     !personagem3Ativa(scene) ||
     !scene.atacando ||

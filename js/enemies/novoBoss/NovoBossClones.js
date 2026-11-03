@@ -1,4 +1,5 @@
 /** Clones móveis inofensivos; a verdadeira continua sendo a entidade original. */
+import { tempoMovimentoNovoBoss, moverCorpoEmPressaoNovoBoss } from "./NovoBossMovimento.js";
 import { sincronizarCorpoNovoBoss } from "./NovoBossTeleporte.js";
 import {
   criarAlvoIlusorio, destinoIlusorioValido, encontroIlusorioVisivel,
@@ -75,8 +76,7 @@ export function prepararClonesNovoBoss(scene, encontro) {
       const variacao = rng() * Math.PI * 2;
       for (let indice = 0; indice < quantidade; indice++) {
         const alvo = criarAlvoIlusorio(scene, encontro, origem, `movel-${indice + 1}`, "clone");
-        // Nove clones + núcleo real continuam legíveis sobre as marcações no piso.
-        alvo.sprite.setAlpha(0.86);
+        alvo.sprite.setAlpha(1);
         alvos.push(alvo);
         rumos.set(alvo, variacao + indice / quantidade * Math.PI * 2);
       }
@@ -102,7 +102,11 @@ export function prepararClonesNovoBoss(scene, encontro) {
       ataqueAnterior = ataque;
       for (const alvo of alvos) {
         if (!alvo.active) continue;
-        rumos.set(alvo, mover(alvo, rumos.get(alvo), passo));
+        if (encontro.fase === 2 && encontro.config.fase2?.movimento?.ativo) {
+          const tempoMovel = tempoMovimentoNovoBoss(scene, encontro, passo);
+          // Rotas próprias espalham os corpos; a política e a velocidade são compartilhadas.
+          moverCorpoEmPressaoNovoBoss(scene, encontro, alvo, tempoMovel, rumos.get(alvo));
+        } else rumos.set(alvo, mover(alvo, rumos.get(alvo), passo));
         alvo.atualizarVisual(passo);
       }
       if (tempo >= duracaoMs) cancelar();
@@ -118,7 +122,9 @@ export function prepararClonesNovoBoss(scene, encontro) {
     cancelar,
     destruir() { if (!destruido) { cancelar(); destruido = true; } },
     snapshot() {
-      return { ativo, destruido, tempo, duracaoMs, quantidade, velocidade,
+      return { ativo, destruido, tempo, duracaoMs, quantidade,
+        velocidade: encontro.fase === 2 && encontro.config.fase2?.movimento?.ativo
+          ? encontro.config.fase2.movimento.velocidade : velocidade,
         imitacaoAtual, alvos: alvos.map(alvo => alvo.snapshot()) };
     },
   };

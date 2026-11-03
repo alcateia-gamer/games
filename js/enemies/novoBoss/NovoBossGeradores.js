@@ -67,6 +67,13 @@ export function prepararGeradoresNovoBoss(scene, encontro) {
   encontro.obstaculosTeleporte ??= [];
   const barreira = scene.add.graphics().setDepth(52).setName("novo-boss-barreira");
   const escudo = criarEscudoEnergia(scene, config.raioBarreira ?? 95);
+  // Corpo exclusivo do escudo: não entra nos obstáculos que validam o próprio boss.
+  const raioBarreira = config.raioBarreira ?? 95;
+  const colisaoBarreira = scene.add.circle(encontro.sprite.x, encontro.sprite.y + 16,
+    raioBarreira, 0, 0).setVisible(false).setName("novo-boss-barreira-colisao");
+  scene.physics.add.existing(colisaoBarreira, true);
+  colisaoBarreira.body.setCircle(raioBarreira);
+  colliders.push(scene.physics.add.collider(scene.player, colisaoBarreira));
   const geradores = config.pontos.map((ponto, indice) => {
     const visual = scene.add.rectangle(ponto.x, ponto.y, config.tamanho,
       config.tamanho, 0x122b36, 1)
@@ -142,7 +149,12 @@ export function prepararGeradoresNovoBoss(scene, encontro) {
       if (gerador.ligado) gerador.nucleo.setAlpha(0.72 + Math.sin(tempo / 220) * 0.22);
     }
     barreira.clear();
-    barreira.setVisible(visivel && encontro.barreiraAtiva && Boolean(encontro.sprite?.visible));
+    barreira.setVisible(visivel && encontro.barreiraAtiva && Boolean(encontro.sprite?.visible) &&
+      !encontro.teleporte && (encontro.sprite.alpha ?? 1) > 0);
+    colisaoBarreira.x = encontro.sprite.x;
+    colisaoBarreira.y = encontro.sprite.y + 16;
+    colisaoBarreira.body.updateFromGameObject();
+    colisaoBarreira.body.enable = barreira.visible;
     escudo?.atualizar(delta, encontro.sprite.x, encontro.sprite.y + 16,
       barreira.visible, encontro.sprite.alpha ?? 1);
     if (!barreira.visible) return;
@@ -169,6 +181,7 @@ export function prepararGeradoresNovoBoss(scene, encontro) {
       gerador.label.destroy();
     }
     barreira.destroy();
+    colisaoBarreira.destroy();
     escudo?.destruir();
     for (let indice = encontro.obstaculosTeleporte.length - 1; indice >= 0; indice--) {
       if (propiosObstaculos.includes(encontro.obstaculosTeleporte[indice])) {
@@ -185,6 +198,7 @@ export function prepararGeradoresNovoBoss(scene, encontro) {
   };
   const sistema = {
     atualizar, destruir, interagir,
+    get corpoBarreira() { return colisaoBarreira.body; },
     snapshot: () => ({
       destruido, barreiraAtiva: encontro.barreiraAtiva,
       restantes: geradores.filter(item => item.ligado).length,

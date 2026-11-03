@@ -36,26 +36,26 @@ function preparar({ distancia = 100, danoAceito = true } = {}) {
   return { ataque, scene, encontro, eventos, graficos, avisos };
 }
 
-test("pulso é anunciado e a frente se expande antes de alcançar o jogador", () => {
-  const { ataque, eventos, avisos, graficos } = preparar();
-  assert.equal(ataque.duracao, 1150);
-  assert.equal(avisos[0].raio, 145);
-  assert.equal(avisos[0].duracao, 900);
-  ataque.atualizar(899);
-  assert.equal(graficos.length, 0);
-  assert.deepEqual(eventos, ["aviso"]);
-  ataque.atualizar(126);
-  assert.equal(avisos[0].destruidos, 1);
-  assert.equal(graficos[0].depth, 52);
-  assert.equal(ataque.snapshot().raio, 72.5);
-  assert.deepEqual(eventos, ["aviso"]);
-  ataque.atualizar(50);
-  assert.equal(eventos.length, 2);
-  assert.deepEqual(eventos[1], { dano: 14, origem: { x: 0, y: 0 },
-    opcoes: { empurrao: 230, duracaoEmpurrao: 180 }, aceito: true });
-  assert.equal(ataque.snapshot().atingiu, true);
-  ataque.atualizar(50);
-  assert.equal(eventos.length, 2);
+test("pulso resolve todo o raio no zero do aviso, antes da cauda visual", () => {
+  for (const distancia of [0, 72, 100, 144, 145]) {
+    const { ataque, eventos, avisos, graficos } = preparar({ distancia });
+    assert.equal(ataque.duracao, 1150);
+    assert.equal(avisos[0].raio, 145);
+    assert.equal(avisos[0].duracao, 900);
+    ataque.atualizar(899);
+    assert.equal(graficos.length, 0);
+    assert.deepEqual(eventos, ["aviso"]);
+    ataque.atualizar(1);
+    assert.equal(avisos[0].destruidos, 1);
+    assert.equal(graficos[0].depth, 52);
+    assert.equal(ataque.snapshot().raio, 145);
+    assert.equal(ataque.snapshot().impactoEm, 900);
+    assert.deepEqual(eventos[1], { dano: 14, origem: { x: 0, y: 0 },
+      opcoes: { empurrao: 230, duracaoEmpurrao: 180 }, aceito: true });
+    assert.equal(ataque.snapshot().atingiu, true);
+    ataque.atualizar(250);
+    assert.equal(eventos.length, 2);
+  }
 });
 
 test("ficar fora do alcance permite esquivar sem dano ou repulsão", () => {
@@ -64,7 +64,7 @@ test("ficar fora do alcance permite esquivar sem dano ou repulsão", () => {
   assert.deepEqual(eventos, ["aviso"]);
 });
 
-test("quem cruza para trás da onda já passada não recebe dano", () => {
+test("quem entra depois do zero não recebe dano durante a animação", () => {
   const { ataque, scene, eventos } = preparar({ distancia: 200 });
   ataque.atualizar(1025);
   scene.player.x = 20;
@@ -103,7 +103,7 @@ test("delta longo preserva frente atravessada e encerra sem efeitos órfãos", (
 });
 
 test("cancelar no aviso ou onda é idempotente e impede acerto tardio", () => {
-  for (const tempo of [0, 910]) {
+  for (const tempo of [0, 899]) {
     const { ataque, avisos, graficos, eventos } = preparar();
     ataque.atualizar(tempo);
     ataque.destruir();
@@ -124,4 +124,20 @@ test("parâmetros alteram o alcance, a velocidade da onda e a repulsão", () => 
   assert.equal(ataque.duracao, 300);
   ataque.atualizar(290);
   assert.deepEqual(eventos, [[3, { x: 10, y: 20 }, { empurrao: 80, duracaoEmpurrao: 90 }]]);
+});
+
+test("sair no último milissegundo evita o pulso, mas sair após o zero não desfaz o impacto", () => {
+  const antes=preparar();
+  antes.ataque.atualizar(899);
+  antes.scene.player.x=146;
+  antes.ataque.atualizar(1);
+  assert.deepEqual(antes.eventos,["aviso"]);
+  assert.equal(antes.ataque.snapshot().tentouAcertar,true);
+  const depois=preparar({distancia:144});
+  depois.ataque.atualizar(900);
+  assert.equal(depois.eventos.length,2);
+  depois.scene.player.x=300;
+  depois.ataque.atualizar(10);
+  assert.equal(depois.ataque.snapshot().atingiu,true);
+  assert.equal(depois.eventos.length,2);
 });

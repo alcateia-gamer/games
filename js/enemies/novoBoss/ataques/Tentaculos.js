@@ -4,10 +4,14 @@ import { criarVisualTentaculo } from "../NovoBossTentaculoVisual.js";
 let proximaExecucao = 0;
 
 const padrao = Object.freeze({
-  quantidade: 3,
+  quantidadeMinima: 8,
+  quantidadeMaxima: 12,
+  distanciaMinima: 120,
+  distanciaMaxima: 300,
+  apertosParaLibertar: 8,
   raio: 18,
   avisoMs: 1000,
-  ativoMs: 3500,
+  ativoMs: 18000,
   agarrarMs: 2500,
 });
 
@@ -18,9 +22,9 @@ function numero(valor, fallback, minimo = 0) {
 export function criarTentaculos(scene, encontro, config = {}, servicos = {}) {
   const ajustes = { ...padrao, ...config };
   for (const chave of Object.keys(padrao)) ajustes[chave] = numero(ajustes[chave], padrao[chave]);
-  ajustes.quantidade = Math.max(1, Math.floor(ajustes.quantidade));
+
   ajustes.raio = Math.max(1, ajustes.raio);
-  // Regra confirmada: não há dano extra nem ação para encurtar o agarrão.
+  // Não há dano extra. A captura de produção termina pelos oito apertos de ataque.
   ajustes.agarrarMs = Math.max(2000, Math.min(3000, ajustes.agarrarMs));
   const arena = encontro.config.arena;
   const fimAtivo = ajustes.avisoMs + ajustes.ativoMs;
@@ -28,7 +32,14 @@ export function criarTentaculos(scene, encontro, config = {}, servicos = {}) {
   const execucao = ++proximaExecucao;
   const armadilhas = [];
   const rng = () => Math.max(0, Math.min(0.999999, numero(servicos.rng?.() ?? Math.random(), 0.5)));
-  const limitar = (valor, minimo, maximo) => Math.max(minimo, Math.min(maximo, valor));
+  const minimo = Math.max(8, Math.min(12, Math.floor(ajustes.quantidadeMinima)));
+  const maximo = Math.max(minimo, Math.min(12, Math.floor(ajustes.quantidadeMaxima)));
+  const quantidade = Number.isFinite(config.quantidade) ? Math.max(1, Math.floor(config.quantidade))
+    : minimo + Math.floor(rng() * (maximo - minimo + 1));
+  const origem = { x: encontro.sprite?.x ?? encontro.x ?? 0, y: encontro.sprite?.y ?? encontro.y ?? 0 };
+  const distanciaMinima = ajustes.distanciaMinima;
+  const distanciaMaxima = Math.max(distanciaMinima, ajustes.distanciaMaxima);
+  const requerApertos = ajustes.apertosParaLibertar > 0;
   const grafico = scene.add?.graphics?.();
   grafico?.setDepth?.(52);
   let decorrido = 0;
@@ -36,36 +47,49 @@ export function criarTentaculos(scene, encontro, config = {}, servicos = {}) {
   let destruido = false;
 
   function pontoAleatorio() {
-    return {
-      x: arena.xMin + ajustes.raio + rng() * Math.max(0, arena.xMax - arena.xMin - ajustes.raio * 2),
-      y: arena.yMin + ajustes.raio + rng() * Math.max(0, arena.yMax - arena.yMin - ajustes.raio * 2),
-    };
+    const angulo = rng() * Math.PI * 2;
+    const distancia = Math.sqrt(distanciaMinima ** 2 + rng() * (distanciaMaxima ** 2 - distanciaMinima ** 2));
+    return { x: origem.x + Math.cos(angulo) * distancia, y: origem.y + Math.sin(angulo) * distancia };
   }
 
   function valido(ponto) {
-    return ponto.x >= arena.xMin + ajustes.raio && ponto.x <= arena.xMax - ajustes.raio &&
-      ponto.y >= arena.yMin + ajustes.raio && ponto.y <= arena.yMax - ajustes.raio &&
+    const distancia = Math.hypot(ponto.x - origem.x, ponto.y - origem.y);
+    return distancia >= distanciaMinima - 0.001 && distancia <= distanciaMaxima + 0.001 &&
+      ponto.x >= arena.xMin + ajustes.raio && ponto.x <= arena.xMax - ajustes.raio &&
+      ponto.y >= arena.yMin + ajustes.raio && ponto.y <= Math.min(arena.yMax, arena.entradaY ?? arena.yMax) - ajustes.raio &&
       servicos.pontoLivre?.(ponto.x, ponto.y, ajustes.raio) !== false &&
-      armadilhas.every((outra) => Math.hypot(ponto.x - outra.x, ponto.y - outra.y) >= ajustes.raio * 2 + 12);
+      armadilhas.every(outra => Math.hypot(ponto.x - outra.x, ponto.y - outra.y) >= ajustes.raio * 2 + 12);
   }
 
-  // Congela a primeira marca na posição atual do jogador. As demais são
-  // sorteadas em áreas livres e nunca passam a perseguir sua movimentação.
-  for (let i = 0; i < ajustes.quantidade; i++) {
-    let ponto = i === 0 ? {
-      x: limitar(scene.player?.x ?? encontro.x, arena.xMin + ajustes.raio, arena.xMax - ajustes.raio),
-      y: limitar(scene.player?.y ?? encontro.y, arena.yMin + ajustes.raio, arena.yMax - ajustes.raio),
-    } : pontoAleatorio();
-    let tentativas = 0;
-    while (!valido(ponto) && tentativas++ < 40) ponto = pontoAleatorio();
-    if (!valido(ponto)) continue;
+  const rotacaoReserva = rng() * Math.PI * 2;
+  function procurarReserva() {
+    // Só usa posições locais; RNG repetitivo ou paredes não espalham o ataque pelo mapa.
+    for (let raio = distanciaMinima; raio <= distanciaMaxima; raio += ajustes.raio * 2 + 12) {
+      const setores = Math.max(12, Math.ceil(Math.PI * 2 * raio / (ajustes.raio * 2 + 12)));
+      for (let i = 0; i < setores; i++) {
+        const angulo = rotacaoReserva + i / setores * Math.PI * 2;
+        const ponto = { x: origem.x + Math.cos(angulo) * raio, y: origem.y + Math.sin(angulo) * raio };
+        if (valido(ponto)) return ponto;
+      }
+    }
+    return null;
+  }
+
+  for (let i = 0; i < quantidade; i++) {
+    let ponto = null;
+    for (let tentativa = 0; tentativa < 60 && !ponto; tentativa++) {
+      const candidato = pontoAleatorio();
+      if (valido(candidato)) ponto = candidato;
+    }
+    ponto ??= procurarReserva();
+    if (!ponto) continue;
     const armadilha = {
       ...ponto,
       id: `novo-boss-tentaculo-${execucao}-${i}`,
       aviso: servicos.criarAviso?.(ponto.x, ponto.y, ajustes.raio, ajustes.avisoMs),
       capturou: false,
       segurando: false,
-      liberarEm: null,
+      liberarEm: null, capturouEm: null,
     };
     armadilha.visual = criarVisualTentaculo(scene, ponto.x, ponto.y, ajustes.raio);
     armadilhas.push(armadilha);
@@ -91,19 +115,18 @@ export function criarTentaculos(scene, encontro, config = {}, servicos = {}) {
         (armadilha.segurando || (decorrido < fimAtivo && !armadilha.capturou));
       armadilha.visual?.atualizar({
         idade: Math.max(0, decorrido - ajustes.avisoMs), visivel, segurando: armadilha.segurando,
-        idadeCaptura: armadilha.segurando ? decorrido - (armadilha.liberarEm - ajustes.agarrarMs) : 0,
+        idadeCaptura: armadilha.segurando ? decorrido - armadilha.capturouEm : 0,
         alturaAlvo: scene.hitboxDanoPlayer?.height,
-        x: armadilha.segurando ? scene.hitboxDanoPlayer?.centerX ?? scene.player?.x ?? armadilha.x : armadilha.x,
-        y: armadilha.segurando ? scene.hitboxDanoPlayer?.centerY ?? scene.player?.y ?? armadilha.y : armadilha.y,
+        x: armadilha.x,
+        y: armadilha.y,
       });
-      if (!visivel || !grafico) continue;
+      if (!visivel || !grafico || armadilha.visual) continue;
       const { x, y } = armadilha;
       const oscilacao = Math.sin(decorrido / 160 + x) * ajustes.raio * 0.16;
       grafico.fillStyle(0x6d172d, 0.7);
       grafico.fillCircle(x, y, ajustes.raio);
       grafico.lineStyle(3, 0xe83a60, 1);
       grafico.strokeCircle(x, y, ajustes.raio);
-      if (armadilha.visual) continue;
       // Três segmentos curvos sugerem um tentáculo recolhendo o jogador.
       // A base indica exatamente a área de captura, sem colisão invisível.
       for (const sentido of [-1, 1]) {
@@ -132,7 +155,7 @@ export function criarTentaculos(scene, encontro, config = {}, servicos = {}) {
 
   return {
     tipo: "tentaculos",
-    duracao,
+    get duracao() { return requerApertos && armadilhas.some(a => a.segurando) ? Infinity : duracao; },
     atualizar(delta) {
       if (terminado) return true;
       decorrido += numero(delta, 0);
@@ -140,16 +163,19 @@ export function criarTentaculos(scene, encontro, config = {}, servicos = {}) {
         if (armadilha.aviso) armadilha.aviso.atualizar?.(
           ajustes.avisoMs === 0 ? 1 : Math.min(1, decorrido / ajustes.avisoMs),
         );
-        if (armadilha.segurando && decorrido >= armadilha.liberarEm) liberar(armadilha);
+        if (armadilha.segurando && (servicos.capturaAtiva?.(armadilha.id) === false ||
+            (armadilha.liberarEm !== null && decorrido >= armadilha.liberarEm))) liberar(armadilha);
       }
       if (decorrido >= ajustes.avisoMs) removerAvisos();
       if (decorrido >= ajustes.avisoMs && decorrido < fimAtivo) {
         for (const armadilha of armadilhas) {
           if (armadilha.capturou || !servicos.jogadorAtingeCirculo?.(armadilha.x, armadilha.y, ajustes.raio)) continue;
-          if (!servicos.capturarJogador?.(armadilha.id, ajustes.agarrarMs)) continue;
+          if (!servicos.capturarJogador?.(armadilha.id, ajustes.agarrarMs, { x: armadilha.x, y: armadilha.y },
+            { apertos: ajustes.apertosParaLibertar })) continue;
           armadilha.capturou = true;
           armadilha.segurando = true;
-          armadilha.liberarEm = decorrido + ajustes.agarrarMs;
+          armadilha.capturouEm = decorrido;
+          armadilha.liberarEm = requerApertos ? null : decorrido + ajustes.agarrarMs;
         }
       }
       if (decorrido >= fimAtivo && !armadilhas.some((armadilha) => armadilha.segurando)) {
@@ -161,7 +187,8 @@ export function criarTentaculos(scene, encontro, config = {}, servicos = {}) {
     },
     destruir,
     snapshot: () => ({
-      tipo: "tentaculos", decorrido, terminado,
+      tipo: "tentaculos", decorrido, terminado, quantidade, origem: { ...origem },
+      distanciaMinima, distanciaMaxima, apertosParaLibertar: ajustes.apertosParaLibertar,
       avisando: !terminado && decorrido < ajustes.avisoMs,
       armadilhas: armadilhas.map(({ id, x, y, capturou, segurando, liberarEm }) => ({
         id, x, y, raio: ajustes.raio, capturou, segurando, liberarEm,

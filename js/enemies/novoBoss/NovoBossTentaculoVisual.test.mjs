@@ -67,7 +67,7 @@ test("agarrão fecha em oito quadros e sustenta poses próprias sem alterar a ba
     v.atualizar({ idade: 1000 + t, segurando: true, idadeCaptura: t, visivel: true, x: 40, y: 20 });
     assert.ok(v.sprite.novoBossQuadroTentaculo >= 8 && v.sprite.novoBossQuadroTentaculo <= 11);
   }
-  assert.equal(v.sprite.originY, 323 / 600);
+  assert.equal(v.sprite.originY, 499 / 600);
   assert.ok(Math.abs(v.sprite.scale * 352 - 46 * 1.35) < 0.001);
   v.atualizar({ idade: 80, segurando: false, visivel: true, x: 0, y: 0 });
   assert.equal(v.sprite.texture.key, assetsNovoBoss.tentaculo.chave);
@@ -89,7 +89,7 @@ test("assets ausentes não criam sprites; ocultar, deltas inválidos e destruir 
 test("fábrica mostra agarrão apenas após captura aceita e libera em 2500 ms sem dano", () => {
   const { scene, sprites } = cena(); const capturas = [], liberacoes = [];
   const ataque = criarTentaculos(scene, { config: { arena: { xMin: -500, xMax: 500, yMin: -500, yMax: 500 } } },
-    { quantidade: 1 }, {
+    { quantidade: 1, apertosParaLibertar: 0 }, {
       jogadorAtingeCirculo: () => true,
       capturarJogador: (id, ms) => { capturas.push({ id, ms }); return true; },
       liberarJogador: id => liberacoes.push(id),
@@ -106,10 +106,27 @@ test("fábrica mostra agarrão apenas após captura aceita e libera em 2500 ms s
 test("captura recusada mantém o GIF-base e cancelar não deixa sprites ou liberações indevidas", () => {
   const { scene, sprites } = cena(); let liberacoes = 0;
   const ataque = criarTentaculos(scene, { config: { arena: { xMin: -500, xMax: 500, yMin: -500, yMax: 500 } } },
-    { quantidade: 1 }, { jogadorAtingeCirculo: () => true, capturarJogador: () => false,
+    { quantidade: 1, apertosParaLibertar: 0 }, { jogadorAtingeCirculo: () => true, capturarJogador: () => false,
       liberarJogador: () => liberacoes++ });
   ataque.atualizar(1000); assert.equal(sprites[0].texture.key, assetsNovoBoss.tentaculo.chave);
   assert.equal(sprites[0].visible, true);
   ataque.destruir(); ataque.destruir();
   assert.equal(sprites[0].destruicoes, 1); assert.equal(liberacoes, 0);
+});
+
+test("o agarrão permanece na armadilha e passa seu ponto fixo para a captura do jogador", () => {
+  const {scene,sprites}=cena();
+  scene.hitboxDanoPlayer={height:46,centerX:50,centerY:30};
+  const pontos=[];
+  const ataque=criarTentaculos(scene,{config:{arena:{xMin:-500,xMax:500,yMin:-500,yMax:500}}},
+    {quantidade:1},{jogadorAtingeCirculo:()=>true,capturarJogador:(id,ms,ponto)=>{pontos.push(ponto);return true;}});
+  scene.player.x=50;scene.player.y=30;
+  ataque.atualizar(1000);
+  const fixo=ataque.snapshot().armadilhas[0];
+  assert.deepEqual(pontos,[{x:fixo.x,y:fixo.y}]);
+  assert.deepEqual([sprites[0].x,sprites[0].y],[fixo.x,fixo.y]);
+  scene.hitboxDanoPlayer.centerX=55;scene.hitboxDanoPlayer.centerY=35;
+  ataque.atualizar(100);
+  assert.deepEqual([sprites[0].x,sprites[0].y],[fixo.x,fixo.y]);
+  ataque.destruir();
 });

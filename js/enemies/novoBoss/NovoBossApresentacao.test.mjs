@@ -343,16 +343,17 @@ test("concluir teleporte oculta o gráfico residual ao voltar à preparação", 
   assert.equal(graficos[0].chamadas.length, 0);
 });
 
-test("abertura vulnerável tem marcador apenas sem a barreira", () => {
-  const { encontro, sistema, graficos } = preparar();
-  encontro.estado = "vulneravel";
-  encontro.barreiraAtiva = true;
-  sistema.atualizar(0);
-  assert.equal(graficos.length, 0);
-  encontro.barreiraAtiva = false;
-  sistema.atualizar(0);
-  assert.deepEqual(graficos[0].chamadas.find(c => c.metodo === "strokeCircle").args,
-    [encontro.sprite.x, encontro.sprite.y + 38, 28]);
+test("abertura e proteção dos clones não criam marcadores exclusivos no chão", () => {
+  for (const protegida of [false, true]) {
+    const { encontro, sistema, graficos } = preparar();
+    encontro.estado = "vulneravel";
+    encontro.barreiraAtiva = false;
+    encontro.relogioCombate = 100;
+    encontro.invulneravelClonesAte = protegida ? 2100 : 0;
+    sistema.atualizar(16);
+    assert.equal(graficos.length, 0);
+    assert.equal(sistema.snapshot().graficoVisivel, false);
+  }
 });
 
 test("efeitos ficam ocultos fora da arena, em multiplayer, suspensão ou morte do jogador", () => {
@@ -365,7 +366,7 @@ test("efeitos ficam ocultos fora da arena, em multiplayer, suspensão ou morte d
     ({ scene }) => { scene.vida = 0; },
   ]) {
     const c = preparar();
-    c.encontro.estado = "vulneravel";
+    c.scene.events.emit("novo-boss:fase-alterada", { encontro: c.encontro, fase: 2 });
     c.sistema.atualizar(0);
     assert.equal(c.sistema.snapshot().graficoVisivel, true);
     desativar(c);
@@ -375,7 +376,7 @@ test("efeitos ficam ocultos fora da arena, em multiplayer, suspensão ou morte d
   }
 });
 
-test("derrota apaga o sprite ao longo de 900 ms, sem reiniciar por eventos duplicados", () => {
+test("derrota preserva corpo opaco mesmo sem pose própria e ignora eventos duplicados", () => {
   const { scene, encontro, sprite, sistema } = preparar();
   encontro.morto = true;
   sprite.alpha = 0.35;
@@ -383,19 +384,20 @@ test("derrota apaga o sprite ao longo de 900 ms, sem reiniciar por eventos dupli
   assert.equal(sistema.snapshot().derrotaDecorrido, null);
   scene.events.emit("novo-boss:derrotada", { encontro });
   sistema.atualizar(450);
-  assert.equal(sprite.alpha, 0.175);
+  assert.equal(sprite.alpha, 1);
   assert.equal(sprite.visible, true);
   scene.events.emit("novo-boss:derrotada", { encontro });
   sistema.atualizar(449);
   assert.equal(sistema.snapshot().derrotaDecorrido, 899);
   assert.equal(sprite.visible, true);
   sistema.atualizar(1);
-  assert.equal(sprite.alpha, 0);
-  assert.equal(sprite.visible, false);
+  sistema.atualizar(60000);
+  assert.equal(sprite.alpha, 1);
+  assert.equal(sprite.visible, true);
   assert.equal(sistema.snapshot().graficoVisivel, false);
 });
 
-test("pose de morte fornecida mantém direção e física desativada, segura 600 ms e some em 900 ms", () => {
+test("pose de morte fornecida permanece na sala com direção preservada e física desativada", () => {
   for (const flipX of [false, true]) {
     const { scene, encontro, sprite, sistema, texturas } = preparar();
     texturas.add(assetsNovoBoss.morte.chave);
@@ -410,12 +412,13 @@ test("pose de morte fornecida mantém direção e física desativada, segura 600
     assert.equal(sprite.alpha, 1);
     scene.events.emit("novo-boss:derrotada", { encontro });
     sistema.atualizar(150);
-    assert.equal(sprite.alpha, 0.5);
+    assert.equal(sprite.alpha, 1);
     assert.equal(sprite.body.enable, false);
     assert.equal(sprite.flipX, flipX);
     sistema.atualizar(150);
-    assert.equal(sprite.visible, false);
-    assert.equal(sprite.alpha, 0);
+    sistema.atualizar(60000);
+    assert.equal(sprite.visible, true);
+    assert.equal(sprite.alpha, 1);
     assert.equal(sistema.snapshot().poseMorte, true);
   }
 });
@@ -439,7 +442,7 @@ test("preparo e limpeza são idempotentes e removem somente recursos e listeners
     scene.events.on(evento, externo);
     assert.equal(scene.events.listenerCount(evento), 2);
   }
-  encontro.estado = "vulneravel";
+  scene.events.emit("novo-boss:fase-alterada", { encontro, fase: 2 });
   sistema.atualizar(0);
   scene.events.emit("novo-boss:vida", { encontro, anterior: 1000, vida: 900 });
   sistema.destruir();
@@ -453,7 +456,7 @@ test("preparo e limpeza são idempotentes e removem somente recursos e listeners
     assert.deepEqual(scene.events.listeners(evento), [externo]);
     scene.events.emit(evento, { encontro, anterior: 1000, vida: 900, fase: 2 });
   }
-  assert.equal(chamadasExternas, 4);
+  assert.equal(chamadasExternas, 5);
   sistema.atualizar(900);
   assert.equal(graficos[0].destruicoes, 1);
   assert.equal(sistema.snapshot().flashRestante, 0);

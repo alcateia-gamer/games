@@ -10,7 +10,7 @@ function preparar() {
   const objetos = [];
   const proibido = () => { throw new Error("Um holograma chamou um sistema ofensivo."); };
   function visual(x = 0, y = 0, textura = null, frame = 0) {
-    const objeto = { x, y, textura, frame, active: true, destruicoes: 0,
+    const objeto = { x, y, textura, frame, active: true, alpha: 1, destruicoes: 0,
       setDepth(depth) { this.depth = depth; return this; },
       setName(name) { this.name = name; return this; },
       setAlpha(alpha) { this.alpha = alpha; return this; },
@@ -62,8 +62,14 @@ function preparar() {
     for (const objeto of objetos) {
       assert.ok(objeto.novoBossAtaqueIlusorio);
       assert.equal(objeto.body, undefined);
-      assert.ok(objeto.depth > 50 && objeto.depth < 51);
-      assert.equal(objeto.alpha, 0.32);
+      assert.ok(objeto.depth >= 51 && objeto.depth <= 53);
+      if (objeto.textura === "novo-boss-area-ataque") {
+        assert.ok(objeto.alpha >= 0.4 && objeto.alpha <= 0.600001);
+        assert.equal(objeto.tint, 0xff6078);
+      } else {
+        assert.equal(objeto.alpha, 1);
+        assert.equal(objeto.tint, undefined);
+      }
     }
   }
   return { scene, encontro, alvo, sistema, objetos, avancar, semConsequencias };
@@ -139,13 +145,13 @@ test("espiral emite cem projéteis por dez segundos sem corpos, parry ou registr
   semConsequencias();
 });
 
-test("tentáculos reproduzem as três armadilhas e nunca capturam nem liberam o jogador", () => {
+test("tentáculos reproduzem a quantidade local de armadilhas e nunca capturam nem liberam o jogador", () => {
   const { sistema, avancar, semConsequencias } = preparar();
   sistema.iniciar("tentaculos", {}, [0.2, 0.3, 0.7, 0.6]);
-  assert.equal(sistema.snapshot().execucao.armadilhas.length, 3);
+  assert.ok(sistema.snapshot().execucao.armadilhas.length >= 8 && sistema.snapshot().execucao.armadilhas.length <= 12);
   avancar(1000);
   assert.ok(sistema.snapshot().execucao.armadilhas.every(a => a.ativa && !a.capturou && !a.segurando));
-  avancar(3499);
+  avancar(17999);
   assert.ok(sistema.snapshot().execucao.armadilhas.every(a => !a.capturou && !a.segurando));
   avancar(1);
   sistema.encerrar();
@@ -211,7 +217,7 @@ test("fim natural da verdadeira encerra os ataques das cópias no mesmo passo", 
   encontro.rng = () => 0.3;
   prepararAtaquesNovoBoss(scene, encontro);
   encontro.executarAtaque("tentaculos");
-  const resultado = encontro.avancarAtaque(4500);
+  const resultado = encontro.avancarAtaque(19000);
   assert.equal(resultado.terminou, true);
   assert.equal(sistema.snapshot().ativo, false);
   assert.equal(sistema.snapshot().objetos, 0);

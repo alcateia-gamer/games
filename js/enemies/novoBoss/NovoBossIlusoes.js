@@ -167,7 +167,7 @@ export function prepararIlusoesNovoBoss(scene, encontro) {
   function atualizarCore(delta) {
     relogioCore += Number.isFinite(delta) ? Math.max(0, delta) : 0;
     const visivel = config.ativo && encontroIlusorioVisivel(scene, encontro) &&
-      encontro.sprite.visible !== false && !encontro.teleporte;
+      encontro.sprite.visible !== false && !encontro.teleporte && !encontro.sistemaClones?.ativo;
     if (!core && visivel && scene.add?.circle) {
       core = scene.add.circle(0, 0, 4, 0xff4355, 1).setName("novo-boss-core-verdadeiro");
     }

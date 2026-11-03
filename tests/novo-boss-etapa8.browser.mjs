@@ -109,7 +109,7 @@ async function instalarDriver() {
     scene.events.on("novo-boss:derrotada", () => eventos.derrotas++);
 
     function posicionar(ponto) {
-      if (!scene.player.active || scene.restricaoControleNovoBoss?.restanteMs > 0) return false;
+      if (!scene.player.active || Boolean(scene.restricaoControleNovoBoss)) return false;
       scene.player.setPosition(ponto.x, ponto.y);
       scene.player.body.reset(ponto.x, ponto.y);
       scene.player.body.updateFromGameObject();
@@ -179,6 +179,10 @@ async function instalarDriver() {
 
     function passo(delta = 20, desviar = true) {
       if (scene.morteEmAndamento || scene.vida <= 0) throw new Error("O piloto perdeu a vida; não é permitido curar ou alterar a invulnerabilidade.");
+      if (scene.restricaoControleNovoBoss?.apertosNecessarios && tempo % 120 === 0) {
+        const pointer={id:99,isDown:true,leftButtonDown:()=>true};
+        scene.input.emit("pointerdown",pointer,[]);scene.input.emit("pointerup",pointer);
+      }
       if (desviar && !tiro?.active) esquivar();
       // A cena está pausada para determinismo, mas os timers reais continuam
       // avançando: inclusive os 500 ms de invulnerabilidade após dano normal.
@@ -406,7 +410,8 @@ try {
 
   await medirDesempenhoClones();
   state = await snapshot();
-  assert.ok(state.driver.verdadeiraMoveu && state.driver.nucleoVisivel);
+  assert.ok(state.driver.verdadeiraMoveu);
+  assert.equal(state.driver.nucleoVisivel, false, "O núcleo não deve denunciar a verdadeira entre clones móveis.");
   assert.equal(state.vida, 475);
   assert.equal(state.driver.maxClones, 9);
   await page.screenshot({ path: "/tmp/novo-boss-etapa8-clones.png" });
@@ -446,7 +451,7 @@ try {
   assert.equal(state.hud.largura, 0);
   assert.ok(state.hud.estado.includes("DERROTADA"));
   await avancar(1000);
-  assert.equal((await snapshot()).spriteVisible, false);
+  assert.equal((await snapshot()).spriteVisible, true);
   console.log("PASS: luta completa 1000→0 com quarenta impactos reais de 25, todos os ataques, ilusões, clones e teleportes; derrota limpa ameaças e HUD.");
 
   await posicionar(-1080, -5700);

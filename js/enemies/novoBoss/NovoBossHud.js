@@ -58,6 +58,11 @@ export function atualizarHudNovoBoss(scene, encontro) {
     const clones = encontro.sistemaClones.alvos.filter(alvo => alvo.active).length;
     detalhe += ` · ${clones} CLONES`;
   }
+  const captura = scene.restricaoControleNovoBoss;
+  if (captura?.apertosNecessarios > 0) {
+    hud.textoEstado.setText(`AGARRADO · APERTE ATAQUE ${captura.apertos}/${captura.apertosNecessarios}`);
+    return;
+  }
   hud.textoEstado.setText(encontro.barreiraAtiva
     ? `BARREIRA · ${ligados}/${encontro.geradores.length} GERADORES ATIVOS`
     : `FASE ${encontro.fase ?? 1} · ${detalhe}`);

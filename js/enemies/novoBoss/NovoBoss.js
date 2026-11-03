@@ -1,3 +1,4 @@
+import { prepararLibertacaoNovoBoss } from "./NovoBossLibertacao.js";
 /**
  * @file Ciclo do encontro, vida e integração dos estados e teletransportes.
  * Cada subsistema mantém recursos e cancelamento próprios do encontro.
@@ -149,7 +150,9 @@ export function prepararNovoBoss(scene, config = scene?.novoBossConfig ?? novoBo
     return acertou;
   };
   scene.novoBoss = encontro;
+  scene.restricaoControleNovoBoss ??= null;
   encontro.cameraArena = prepararCameraNovoBoss(scene, encontro);
+  encontro.libertacao = prepararLibertacaoNovoBoss(scene, encontro);
   encontro.iniciarIlusoes = () => !encontro.teleporte && !encontro.ataqueAtual &&
     !encontro.sistemaClones?.ativo && Boolean(encontro.sistemaIlusoes?.iniciarQuatro());
   encontro.iniciarClones = () => !encontro.teleporte && !encontro.ataqueAtual &&
@@ -210,6 +213,7 @@ export function destruirNovoBoss(scene) {
   encontro.transicaoFase2Pendente = false;
   encontro.proximaOndaClonesEm = Infinity;
   cancelarAtaqueNovoBoss(scene, encontro);
+  encontro.libertacao?.destruir();
   encontro.sistemaGeradores?.destruir();
   encontro.sistemaIlusoes?.destruir();
   encontro.sistemaClones?.destruir();

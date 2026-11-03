@@ -93,7 +93,6 @@ export function prepararApresentacaoNovoBoss(scene, encontro) {
   let burstRestante = 0;
   let origemBurst = null;
   let derrotaDecorrido = null;
-  let alphaDerrota = 0.35;
   let poseMorte = false;
   let tempo = 0;
   const explosoes = new Set();
@@ -119,7 +118,6 @@ export function prepararApresentacaoNovoBoss(scene, encontro) {
   const derrota = payload => {
     if (!destruido && doEncontro(payload) && derrotaDecorrido === null) {
       derrotaDecorrido = 0;
-      alphaDerrota = Math.max(0, Math.min(1, encontro.sprite?.alpha ?? 0.35));
       const asset = assetsNovoBoss.morte;
       poseMorte = Boolean(scene.textures?.exists?.(asset.chave));
       if (poseMorte) {
@@ -127,9 +125,10 @@ export function prepararApresentacaoNovoBoss(scene, encontro) {
         sprite.anims?.stop?.();
         sprite.setTexture?.(asset.chave, 0);
         sprite.setOrigin?.(sprite.flipX ? 1 - asset.origemX : asset.origemX, asset.origemY);
-        sprite.setAlpha?.(1);
-        alphaDerrota = 1;
       }
+      // A derrota limpa o combate, mas o corpo permanece até o encerramento da sala.
+      encontro.sprite?.setAlpha?.(1);
+      encontro.sprite?.setVisible?.(true);
       flashRestante = 0;
       encontro.sprite?.clearTint?.();
       limparExplosoesPulso();
@@ -180,9 +179,6 @@ export function prepararApresentacaoNovoBoss(scene, encontro) {
       }
       if (encontro.morto && derrotaDecorrido !== null) {
         derrotaDecorrido = Math.min(DERROTA_MS, derrotaDecorrido + delta);
-        const progresso = poseMorte ? Math.max(0, (derrotaDecorrido - 600) / 300) : derrotaDecorrido / DERROTA_MS;
-        sprite.setAlpha?.(alphaDerrota * (1 - progresso));
-        if (derrotaDecorrido >= DERROTA_MS) sprite.setVisible?.(false);
       }
       tempo += delta;
       if (burstRestante > 0) burstRestante = Math.max(0, burstRestante - delta);
@@ -191,9 +187,8 @@ export function prepararApresentacaoNovoBoss(scene, encontro) {
       if (!visivel || encontro.morto) return;
 
       const viagem = encontro.teleporte;
-      const protegida = encontro.relogioCombate < (encontro.invulneravelClonesAte ?? 0);
-      const vulneravel = encontro.estado === "vulneravel" && !encontro.barreiraAtiva && !protegida;
-      if (!viagem && !vulneravel && !protegida && burstRestante <= 0) {
+      // Vulnerabilidade e proteção são informadas pelo HUD, sem marcar a verdadeira no chão.
+      if (!viagem && burstRestante <= 0) {
         grafico?.setVisible(false);
         return;
       }
@@ -221,12 +216,6 @@ export function prepararApresentacaoNovoBoss(scene, encontro) {
           efeito.lineTo(origem.x + lado * 7, origem.y - 25 - p * 14);
           efeito.strokePath();
         }
-      } else if (!viagem && protegida) {
-        efeito.lineStyle(2, 0xb8a0ff, 0.7 + Math.sin(tempo / 90) * 0.15);
-        efeito.strokeCircle(sprite.x, sprite.y + 38, 42);
-      } else if (!viagem && vulneravel) {
-        efeito.lineStyle(2, 0x78edb7, 0.65 + Math.sin(tempo / 150) * 0.18);
-        efeito.strokeCircle(sprite.x, sprite.y + 38, 28);
       }
       if (burstRestante > 0 && origemBurst) {
         const p = 1 - burstRestante / BURST_MS;

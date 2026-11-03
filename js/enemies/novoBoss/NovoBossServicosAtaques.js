@@ -60,7 +60,8 @@ export function criarServicosAtaques(scene, encontro) {
       const inicio = encontro.relogioCombate + delta - idade;
       return encontro.apresentacao?.criarExplosaoPulso(origem, raio, inicio);
     },
-    capturarJogador: (fonte, duracao) => jogadorValido() && capturarJogadorNovoBoss(scene, fonte, duracao),
+    capturarJogador: (fonte, duracao, ponto, opcoes) => jogadorValido() && capturarJogadorNovoBoss(scene, fonte, duracao, ponto, opcoes),
+    capturaAtiva: fonte => scene.restricaoControleNovoBoss?.fonte === fonte,
     liberarJogador: fonte => liberarJogadorNovoBoss(scene, fonte),
     registrarLaser(visual) {
       visual.setName("novo-boss-laser").setDepth(53);

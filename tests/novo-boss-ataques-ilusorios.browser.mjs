@@ -26,7 +26,7 @@ async function preparar(grupo) {
     if (grupo === 3) {
       if (!boss.iniciarIlusoes()) throw new Error("Não criou as quatro aparições.");
     } else {
-      sincronizarCorpoNovoBoss(boss, { x: -1400, y: -5770 });
+      sincronizarCorpoNovoBoss(boss, { x: -1400, y: -5810 });
       if (grupo === 9) {
         if (!boss.iniciarClones()) throw new Error("Não criou os nove clones.");
         // Coloca uma cópia próxima do jogador, longe do alcance da verdadeira.
@@ -71,6 +71,12 @@ async function executar(tipo, grupo) {
     const emissoes = new Map();
     const donos = new Set();
     if (!boss.executarAtaque(tipo)) throw new Error(`Não iniciou ${tipo}`);
+    if (tipo === "tentaculos") {
+      const a=boss.ataqueAtual.snapshot().armadilhas[0];
+      scene.player.setPosition(a.x,a.y-26);scene.player.body.reset(a.x,a.y-26);
+      scene.player.body.updateFromGameObject();atualizarHitboxDanoPlayer(scene);
+      Object.assign(inicial,{x:scene.player.x,y:scene.player.y});
+    }
     atualizarNovoBoss(scene, scene.time.now, 0);
     for (let preparo = 0; boss.ataquePendente && preparo < 2000; preparo += 20) {
       scene.time.preUpdate();
@@ -87,10 +93,12 @@ async function executar(tipo, grupo) {
     function observar() {
       const estado = { vida: scene.vida, invulneravel: Boolean(scene.player.invulneravel),
         presa: Boolean(scene.restricaoControleNovoBoss),
-        vx: scene.player.body.velocity.x, vy: scene.player.body.velocity.y };
+        vx: scene.player.body.velocity.x, vy: scene.player.body.velocity.y,
+        x: scene.player.x, y: scene.player.y };
       const valor = JSON.stringify(estado);
       if (ultima !== valor) { assinatura.push({ tempo, ...estado }); ultima = valor; }
-      if (scene.player.x !== inicial.x || scene.player.y !== inicial.y) throw new Error("Jogador foi deslocado.");
+      if (tipo !== "tentaculos" && (scene.player.x !== inicial.x || scene.player.y !== inicial.y))
+        throw new Error("Jogador foi deslocado sem um puxão real de tentáculo.");
       if (boss.vida !== 1000) throw new Error("Ataque de uma cópia alterou a vida da verdadeira.");
       maxEfeitos = Math.max(maxEfeitos, efeitos().length);
       for (const objeto of efeitos()) {
@@ -142,6 +150,10 @@ async function executar(tipo, grupo) {
         if (scene.restricaoControleNovoBoss?.fonte !== fonte) throw new Error("Cópia liberou a captura real.");
         if (efeitos().some(o => o.novoBossDonoIlusao === alvo.id)) throw new Error("Restaram efeitos da cópia dissipada.");
       }
+      if (tipo === "tentaculos" && scene.restricaoControleNovoBoss?.apertosNecessarios) {
+        const {registrarApertoLibertacaoNovoBoss}=await import("/js/player/PlayerControlEffects.js");
+        if (tempo >= 1600 && tempo % 120 === 0) registrarApertoLibertacaoNovoBoss(scene);
+      }
       observar();
     }
     if (boss.ataqueAtual) throw new Error("Ataque não terminou.");
@@ -178,7 +190,7 @@ try {
       assert.ok(resultado.maxEfeitos > 0);
       if (tipo === "chuva") assert.ok(resultado.marcas.every(a => a.chuva === config.ataques.chuvaRaios.quantidade));
       if (tipo === "tentaculos") {
-        assert.ok(resultado.marcas.every(a => a.tentaculos === 3));
+        assert.ok(resultado.marcas.every(a => a.tentaculos >= 8 && a.tentaculos <= 12));
         assert.ok(resultado.dissipou);
       }
       if (tipo === "lasers") {

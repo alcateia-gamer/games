@@ -104,7 +104,7 @@ export function criarChuvaRaios(scene, encontro, config = {}, servicos = {}) {
     ...ponto,
     indice,
     inicio: indice * opcoes.intervaloMs,
-    aviso: null, visual: null, iniciou: false, atingiu: false, concluida: false,
+    aviso: null, visual: null, iniciou: false, impactoAvaliado: false, atingiu: false, concluida: false,
   }));
   const duracaoEfeito = Math.max(
     (opcoes.ultimoFrame + 1) * opcoes.frameMs,
@@ -173,7 +173,7 @@ export function criarChuvaRaios(scene, encontro, config = {}, servicos = {}) {
     marca.visual = null;
   }
 
-  function atualizarMarca(marca, anterior) {
+  function atualizarMarca(marca) {
     const local = tempo - marca.inicio;
     if (local < 0 || marca.concluida) return;
     iniciarMarca(marca);
@@ -198,10 +198,13 @@ export function criarChuvaRaios(scene, encontro, config = {}, servicos = {}) {
     if (local >= ateImpacto) {
       marca.aviso?.destruir();
       marca.aviso = null;
-      const anteriorLocal = anterior - marca.inicio;
-      const cruzaPerigo = anteriorLocal < ateImpacto + opcoes.perigoMs;
-      if (!marca.atingiu && cruzaPerigo && servicos.jogadorAtingeCirculo?.(marca.x, marca.y, raio)) {
-        marca.atingiu = Boolean(servicos.danoJogador?.(opcoes.dano, { x: marca.x, y: marca.y }));
+      // A seleção acontece uma vez, no zero do aviso (quadro de impacto).
+      // Sair durante a animação não desfaz dano; entrar depois não recebe dano atrasado.
+      if (!marca.impactoAvaliado) {
+        marca.impactoAvaliado = true;
+        if (servicos.jogadorAtingeCirculo?.(marca.x, marca.y, raio)) {
+          marca.atingiu = Boolean(servicos.danoJogador?.(opcoes.dano, { x: marca.x, y: marca.y }));
+        }
       }
     }
     if (local >= opcoes.avisoMs + duracaoEfeito) {
@@ -224,9 +227,8 @@ export function criarChuvaRaios(scene, encontro, config = {}, servicos = {}) {
     },
     atualizar(delta) {
       if (destruida) return true;
-      const anterior = tempo;
       tempo += Number.isFinite(delta) ? Math.max(0, delta) : 0;
-      for (const marca of marcas) atualizarMarca(marca, anterior);
+      for (const marca of marcas) atualizarMarca(marca);
       if (tempo >= duracao) this.destruir();
       return destruida;
     },
@@ -239,7 +241,8 @@ export function criarChuvaRaios(scene, encontro, config = {}, servicos = {}) {
       return { tipo: "chuvaRaios", tempo, duracao, destruida, raio, escala: opcoes.escala,
         marcas: marcas.map((marca) => ({
           x: marca.x, y: marca.y, inicio: marca.inicio,
-          iniciou: marca.iniciou, atingiu: marca.atingiu, concluida: marca.concluida,
+          iniciou: marca.iniciou, impactoAvaliado: marca.impactoAvaliado,
+          atingiu: marca.atingiu, concluida: marca.concluida,
           impactoEm: marca.inicio + ateImpacto,
         })) };
     },

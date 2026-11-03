@@ -95,6 +95,14 @@ export const assetsNovoBoss = Object.freeze({
     duracoesMs: Object.freeze([30, 20, 20, 20, 40, 30, 20, 10, 80]),
     origemX: 256 / 512, origemY: 344 / 640,
   }),
+  areaAtaque: Object.freeze({
+    chave: "novo-boss-area-ataque",
+    arquivo: "PERSONAGENS/INIMIGOS PRINCIPAIS/Boss-test/derivados/area-ataque/area-ataque-quadros.png",
+    larguraFrame: 221, alturaFrame: 157, ultimoFrame: 108,
+    origemX: 112 / 221, origemY: 84.5 / 157,
+    larguraEfeito: 188, alturaEfeito: 123,
+    duracoesMs: Object.freeze([70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70]),
+  }),
 });
 
 /** Chamado pelo preloader após load.setPath("./assets/"). */

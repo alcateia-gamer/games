@@ -1630,3 +1630,189 @@ Configuração em `NovoBossConfig.js`, bloco `cameraArena`. Os limites e a ativa
 do combate continuam independentes da margem visual da câmera. Nenhum asset ou
 arquivo do boss antigo foi alterado. Captura inspecionada:
 `/tmp/zoom-novo-boss/arena-zoom.png`.
+
+
+## Revisão do combate: seis ajustes solicitados
+
+- [x] 1. Alinhar destinos esquerdo/direito ao centro em Y = -5810, também nas quatro aparições. Validação: testes do encontro, destinos e ilusões passaram.
+- [x] 2. Colisão circular do escudo: testes de ciclo de vida e Phaser real em cinco direções passaram; desligamento no teleporte e após os quatro geradores.
+- [x] 3. Retirados anéis de vulnerabilidade/proteção; núcleo oculto durante clones móveis. HUD e pista das quatro aparições preservados. Testes de apresentação e ilusões passaram.
+- [x] 4. Removidos alfa/tint/profundidade artificiais dos ataques falsos e transparência dos clones. Testes dos quatro ataques mantêm as proibições de dano, física e controle.
+- [x] 5. Compartilhados velocidade de 250 px/s, pausas, fração de frame e validação de caminhos da fase 2. Testes de movimento/clones/fases passaram; rotas individuais preservam a dispersão.
+- [x] 6. Tentáculos fixos: jogador puxado pelos pés em 180 ms, com trajetória verificada contra paredes/geradores/escudo. Abertura e borda no piso sem alterar sprites; aviso e círculo persistente removidos quando o sprite surge. Captura mantém 2500 ms sem dano extra. Validação Node e Phaser real passou.
+
+As alterações de assets já existentes no Git pertencem ao usuário e serão preservadas.
+
+
+Arquivos de implementação desta revisão (prefixo `js/enemies/novoBoss/`, exceto onde indicado):
+
+| Etapa | Arquivos | Alteração |
+| --- | --- | --- |
+| 1 | `NovoBossConfig.js` | Destinos laterais na mesma altura do centro; ponto superior preservado. |
+| 2 | `NovoBossGeradores.js` | Corpo circular exclusivo do escudo, sincronização de posição, ativação e limpeza. Colide somente com o jogador. |
+| 3 | `NovoBossApresentacao.js`, `NovoBossIlusoes.js` | Removidos anéis de vulnerabilidade/proteção; núcleo oculto enquanto há clones móveis. Pista previamente aprovada das quatro aparições e HUD preservados. |
+| 4 | `NovoBossAtaquesIlusorios.js`, `NovoBossClones.js` | Mesmas cores, alfa e camadas da fábrica real, sem aplicar transparência à cópia. Serviços ofensivos continuam desabilitados. |
+| 5 | `NovoBossMovimento.js`, `NovoBossClones.js` | Mesma velocidade, pausas e subpassos de até 8px, com rotas individuais para dispersar os clones. Aberturas e ataques centrais continuam parados para todos. |
+| 6 | `ataques/Tentaculos.js`, `NovoBossTentaculoVisual.js` | Base fixa inclusive no agarrão, origem medida no pé da arte, abertura no piso, sem círculo vermelho persistente. O desenho da abertura é reutilizado entre quadros. |
+| 6 | `NovoBossPuxao.js` (novo), `NovoBossServicosAtaques.js`, `js/player/PlayerControlEffects.js` | Captura recebe o ponto fixo da armadilha, interpola jogador/física/hitbox e verifica trajeto em subpassos de até 4px. Trajeto obstruído recusa/cancela a captura sem mover através da parede. |
+
+Testes novos/atualizados:
+
+- Testes Node: `NovoBoss.test.mjs`, `NovoBossGeradores.test.mjs`,
+  `NovoBossApresentacao.test.mjs`, `NovoBossIlusoes.test.mjs`,
+  `NovoBossAtaquesIlusorios.test.mjs`, `NovoBossClones.test.mjs`,
+  `NovoBossTentaculoVisual.test.mjs`, `js/player/PlayerControlEffects.test.mjs`.
+- Roteiro novo `tests/novo-boss-seis-ajustes.browser.mjs`: mapa real, cinco direções
+  de colisão, desaparecimento da colisão, ausência dos marcadores, quatro ataques
+  com cores/alfa/camadas iguais, dez corpos a 250px/s e tentáculo fixo puxando o jogador.
+- `tests/novo-boss-tentaculo.browser.mjs`: atualiza ancoragem no chão e alfa das cópias;
+  140 quadros, captura, soltura, cancelamento e saída passaram.
+- `tests/novo-boss-ataques-ilusorios.browser.mjs`: compara também as posições do
+  jogador com/sem cópias, permitindo o novo puxão da verdadeira. Passaram as oito
+  combinações de quatro ataques × três/nove cópias e as cinco formas de limpeza.
+- `tests/novo-boss-disparo-energia.browser.mjs`: expectativa de alfa atualizada para 1.
+- `tests/novo-boss-etapa8.browser.mjs`: exige núcleo oculto nas ondas móveis.
+  Luta completa passou: vida 1000→0 com quarenta impactos reais de 25, três ondas
+  centrais com proteção de 2 s, todos os ataques, vitória, WASD, reinício e portal.
+  Nenhum erro JavaScript, de carregamento ou de console durante o roteiro.
+  O trecho de 10 s com nove clones também rodou em Chromium/SwiftShader; a taxa de
+  quadros desse renderizador por software não caracteriza desempenho em hardware físico.
+
+Validação geral: os 20 arquivos Node do boss e contenção passaram. Na suíte inteira,
+46 dos 50 arquivos passaram; os quatro abaixo também falham numa cópia isolada do
+`HEAD` anterior às alterações:
+
+- `js/effects/TerrorLighting.test.mjs`: fixture sem `renderer`.
+- `js/interactions/FactoryDoor.test.mjs`: fixture de textura sem `getFrame`.
+- `js/map/ColisoesMapa.test.mjs`: divergências preexistentes das formas do mapa.
+- `js/player/colisoes/PlayerCollisionConfig.test.mjs`: expectativas preexistentes
+  divergentes das dimensões de colisão atuais.
+
+Preservação verificada por SHA-256 contra o início desta tarefa: nenhuma nova
+exclusão, nenhum asset alterado e todos os arquivos do boss antigo intactos.
+As duas alterações de assets já presentes no Git foram preservadas. Mapas, cenas,
+armas, inventário, energia da fábrica e código de multiplayer não foram modificados.
+Manifesto: `/tmp/boss-seis-ajustes/preservacao.json`.
+Prévia inspecionada: `/tmp/boss-seis-ajustes/tentaculo-no-chao.png`.
+
+
+## Corpo após a derrota e impacto no zero do aviso
+
+Regra confirmada: o jogador pode sair até o aviso terminar. Quem estiver dentro
+no zero recebe o impacto naquele momento; sair durante a animação posterior não
+desfaz o dano. Entrar depois não provoca um acerto atrasado. A colisão continua
+usando a interseção exata do círculo anunciado com a hitbox de dano do jogador.
+
+- [x] Manter a pose de morte visível e opaca enquanto a sala existir, sem física,
+  ataques, HUD ou ressuscitar ao sair/voltar à área. Reinício/troca de cena continua
+  destruindo os recursos antigos. Se faltar a textura de morte, conserva o sprite
+  parado em vez de apagá-lo.
+- [x] Resolver o pulso inteiro ao terminar o aviso de 1500 ms, com raio 310.
+  A explosão continua animada, mas o dano não aguarda uma frente expansiva.
+- [x] Resolver cada Heavens Fury uma vez no zero do seu aviso, sincronizado ao
+  quadro quatro. Preservados os 1400 ms totais até impacto (1000 ms + quatro
+  quadros iniciais de 100 ms), raio 96, quantidade, duração e arte.
+- [x] Preservar valores de dano, defesas/invulnerabilidade do jogador, repulsão
+  condicionada ao dano e ataques ilusórios sem consequências.
+- [x] Passaram 21 arquivos Node: boss, ataques, contenção e integração das armas.
+- [x] `tests/novo-boss-impacto-corpo.browser.mjs`: dano real na borda do círculo,
+  ausência de dano nos cantos externos, esquiva 1 ms antes do zero, saída depois
+  do impacto, ausência de dano ao entrar na cauda visual; corpo visível após 60 s,
+  saída/reentrada, limpeza no reinício e nenhum erro de console/JavaScript/assets.
+- [x] Regressão das oito combinações de ataques com três/nove cópias, incluindo
+  dano, posição, controle e cinco formas de limpeza.
+- [x] Luta completa 1000→0 com quarenta impactos reais de 25, três ondas de clones,
+  corpo visível após vitória, WASD, reinício e portal; nenhum erro no console.
+
+Arquivos de implementação: `js/enemies/novoBoss/NovoBossApresentacao.js`,
+`js/enemies/novoBoss/ataques/PulsoRepulsao.js`,
+`js/enemies/novoBoss/ataques/ChuvaRaios.js`.
+
+Testes ajustados: `NovoBossApresentacao.test.mjs`, `ataques/PulsoRepulsao.test.mjs`,
+`ataques/ChuvaRaios.test.mjs`, `tests/novo-boss-botoes-morte-teleporte.browser.mjs`,
+`tests/novo-boss-etapa8.browser.mjs`; roteiro novo:
+`tests/novo-boss-impacto-corpo.browser.mjs`. Checklist atualizado neste documento.
+Nenhum asset, mapa, código compartilhado ou arquivo do boss antigo foi alterado
+nesta rodada. Prévia inspecionada: `/tmp/boss-corpo-impactos/corpo-apos-60s.png`.
+
+
+## Marcação animada e nova libertação dos tentáculos
+
+- [x] Inspecionar `are-de-ataque.gif`: 109 quadros de 221×157, com tempos de
+  60/70 ms e fundo verde composto por trás do rosa. Original preservado por SHA-256.
+- [x] Desfazer a contribuição do verde em uma cópia RGBA, com alfa parcial nas
+  bordas. Exportar spritesheet, GIF transparente, prévia PNG e manifesto em
+  `assets/PERSONAGENS/INIMIGOS PRINCIPAIS/Boss-test/derivados/area-ataque/`.
+  O GIF tem alfa binário; a spritesheet PNG é a versão principal usada no jogo.
+- [x] Integrar os 109 quadros aos avisos de pulso, chuva, lasers e tentáculos,
+  incluindo cópias inofensivas. No jogo, a sequência acompanha o progresso de cada
+  aviso e termina junto do impacto; os tempos originais ficam no manifesto/GIF.
+  O oval original é ajustado somente na exibição para coincidir com o círculo real
+  de dano, sem redimensionar os arquivos originais.
+- [x] Reproduzir o puxão com a física ativa: `body.reset()` guardava o canto da
+  imagem sem o offset, e `postUpdate` somava esse offset ao sprite outra vez.
+  Sincronizar `prev`, `prevFrame` e `autoFrame` após atualizar a hitbox. Agora o
+  jogador vai continuamente até a base; não retorna nem recebe deslocamento extra.
+- [x] Exigir oito apertos distintos do ataque para libertar. Segurar conta uma
+  vez; cliques do mouse e botão na tela funcionam. Movimento, troca de arma e
+  botão direito não contam. Durante a captura, novas tentativas não executam
+  ataques nem consomem estamina. HUD mostra `AGARRADO · APERTE ATAQUE 0/8`.
+- [x] Remover a soltura automática de 2,5 s no combate de produção. O ataque
+  aguarda a libertação; saída, morte, derrota, cancelamento e shutdown continuam
+  liberando o jogador. Após escapar há 600 ms sem recaptura por outro tentáculo,
+  para evitar puxões sucessivos imediatos. Isso não dá invulnerabilidade a dano.
+- [x] Sortear 8–12 tentáculos por execução, a 120–300 px da posição do boss na
+  criação. Pontos ficam fixos e separados, respeitando paredes, geradores, arena
+  e entrada. A busca alternativa permanece nesse mesmo anel local. Não há mais
+  um primeiro tentáculo automaticamente colocado sobre o jogador distante.
+- [x] Conferir PNG/GIF: `scripts/preparar-aviso-boss.py --verificar` passou,
+  incluindo todos os 109 quadros, tempos, transparência e hash da fonte.
+- [x] Passaram 23 arquivos Node do boss, controles, captura e integração de dano.
+- [x] `tests/novo-boss-aviso-libertacao.browser.mjs`: transparência real da textura,
+  quatro avisos e limpeza; 20 ondas nas quatro posições, sempre com a quantidade
+  sorteada; puxão monotônico e oito cliques nativos para Kai, Aria e personagem
+  de teste, sem tiros ou consumo de estamina. Segurar contou exatamente uma vez.
+- [x] `tests/novo-boss-ataques-ilusorios.browser.mjs`: oito combinações com três/nove
+  cópias preservaram vida, controles, posição e limpeza. Clones não capturam.
+- [x] `tests/novo-boss-tentaculo.browser.mjs`: 140 poses intactas, captura, oito
+  apertos, liberação, esquiva, cancelamento e saída passaram.
+- [x] `tests/novo-boss-etapa8.browser.mjs`: luta 1000→0 com quarenta impactos reais,
+  três ondas de clones, vitória, corpo persistente, WASD, reinício e portal,
+  sem erros JavaScript, assets ou console. Chromium/SwiftShader é renderização
+  por software e não representa desempenho em hardware físico.
+
+Implementação alterada nesta rodada:
+
+| Arquivos | Motivo |
+| --- | --- |
+| `NovoBossAssets.js`, `NovoBossAvisos.js` | Carregar e reproduzir a nova marcação transparente. |
+| `NovoBossConfig.js`, `ataques/Tentaculos.js` | Quantidade, anel local e duração da captura ligada à libertação. |
+| `NovoBossPuxao.js` | Corrigir a aplicação duplicada do offset na física ativa. |
+| `NovoBossLibertacao.js` (novo), `NovoBoss.js` | Escutar apertos reais e limpar os listeners junto do encontro. |
+| `NovoBossHud.js` | Mostrar o progresso dos oito apertos. |
+| `NovoBossServicosAtaques.js`, `NovoBossAtaquesIlusorios.js` | Consultar a captura real e manter cópias inofensivas. |
+| `js/player/PlayerControlEffects.js`, `js/player/Player.js` | Contar apertos e bloquear ataques normais enquanto preso. |
+
+Os nomes sem prefixo acima pertencem a `js/enemies/novoBoss/`. Também foram
+atualizados os testes correspondentes e os roteiros de tentáculo, ataques
+ilusórios, luta completa e seis ajustes. Novos testes: `NovoBossAvisos.test.mjs`,
+`NovoBossLibertacao.test.mjs` e `tests/novo-boss-aviso-libertacao.browser.mjs`.
+Script novo: `scripts/preparar-aviso-boss.py`. Nenhum arquivo original foi
+excluído, renomeado ou substituído. Nenhum mapa ou implementação do boss antigo
+foi alterado; as alterações de assets que já pertenciam ao usuário continuam
+preservadas. Captura inspecionada: `/tmp/boss-aviso-libertacao/agarrado-7-de-8.png`.
+
+### Permanência dos tentáculos: 18 segundos
+
+- [x] Aumentado `ativoMs` de 3500 para 18000 em `NovoBossConfig.js` e no padrão de
+  `ataques/Tentaculos.js`. A contagem começa após o aviso de um segundo.
+- [x] Mantida a libertação por oito apertos: um tentáculo que esteja segurando o
+  jogador aguarda a libertação mesmo após a janela de surgimento terminar.
+- [x] Ajustados os testes de duração em `ataques/Tentaculos.test.mjs`,
+  `NovoBossAtaquesIlusorios.test.mjs` e `tests/novo-boss-tentaculo.browser.mjs`.
+- [x] Passaram os 23 arquivos de testes Node de boss, captura e dano. No Chromium,
+  os tentáculos restantes continuaram visíveis e ativos até 17999 ms após surgir
+  e foram removidos aos 18000 ms; captura, libertação, cancelamento, cópias e
+  saída da arena também passaram, sem erros de JavaScript, assets ou console.
+
+Nenhum sprite ou arquivo original foi alterado nesta mudança.

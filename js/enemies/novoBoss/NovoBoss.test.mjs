@@ -29,6 +29,17 @@ const configIsolada = {
   fase2: { ...novoBossConfig.fase2, ativo: false },
 };
 
+test("destinos laterais e aparições compartilham a linha horizontal do centro", () => {
+  const pontos = novoBossConfig.teleporte.pontos;
+  const centro = pontos.find(p => p.id === "centro");
+  for (const id of ["esquerda", "direita"]) {
+    const lateral = pontos.find(p => p.id === id);
+    assert.equal(lateral.y, centro.y);
+    assert.equal(areaCorpoNovoBoss(novoBossConfig, lateral).y,
+      areaCorpoNovoBoss(novoBossConfig, centro).y);
+  }
+});
+
 // A cena simulada usa a mesma interface geométrica consumida pelo Phaser real.
 globalThis.Phaser = { Geom: { Rectangle: class {
   constructor(x, y, width, height) { this.setTo(x, y, width, height); }
@@ -124,7 +135,7 @@ test("limites da arena são retangulares e não acionam acima, abaixo ou pelos l
 test("usa recursos separados e recortes exatos das folhas fornecidas", () => {
   const { scene, cargas } = criarCena({ assetDisponivel: false });
   carregarAssetsNovoBoss(scene);
-  assert.equal(cargas.length, 12);
+  assert.equal(cargas.length, 13);
   assert.deepEqual(cargas[0], [
     "novo-boss-idle",
     "PERSONAGENS/INIMIGOS PRINCIPAIS/Boss-test/boss-test-idle.png",

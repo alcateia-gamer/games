@@ -1,156 +1,94 @@
-import assert from "node:assert/strict";
-import test from "node:test";
-import { criarTentaculos } from "./Tentaculos.js";
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { criarTentaculos } from './Tentaculos.js';
 
-function preparar(config = {}, extras = {}) {
-  const avisos = [];
-  const capturas = [];
-  const liberacoes = [];
-  const danos = [];
-  const encontro = { x: 0, y: 0, config: {
-    arena: { xMin: -500, xMax: 500, yMin: -500, yMax: 500 },
-  } };
-  const scene = { player: { x: 40, y: 20 } };
-  let semente = 12345;
-  const servicos = {
-    rng() { semente = (semente * 1664525 + 1013904223) >>> 0; return semente / 4294967296; },
-    criarAviso(x, y, raio) {
-      const aviso = { x, y, raio, destruicoes: 0,
-        atualizar(progresso) { this.progresso = progresso; },
-        destruir() { this.destruicoes++; },
-      };
-      avisos.push(aviso);
-      return aviso;
-    },
-    pontoLivre: () => true,
-    jogadorAtingeCirculo: (x, y, raio) => Math.hypot(x - scene.player.x, y - scene.player.y) <= raio,
-    capturarJogador(id, duracao) { capturas.push({ id, duracao }); return true; },
-    liberarJogador(id) { liberacoes.push(id); },
-    danoJogador(...args) { danos.push(args); },
-    ...extras,
+function preparar(config={},extras={}) {
+  const avisos=[],capturas=[],liberacoes=[],danos=[],ativas=new Set();
+  const encontro={x:0,y:0,config:{arena:{xMin:-500,xMax:500,yMin:-500,yMax:500}}};
+  const scene={player:{x:450,y:450}};let semente=12345;
+  const servicos={
+    rng(){semente=(semente*1664525+1013904223)>>>0;return semente/2**32;},
+    criarAviso(x,y,raio){const a={x,y,raio,destruicoes:0,atualizar(){},destruir(){this.destruicoes++;}};avisos.push(a);return a;},
+    pontoLivre:()=>true,
+    jogadorAtingeCirculo:(x,y,r)=>Math.hypot(x-scene.player.x,y-scene.player.y)<=r,
+    capturarJogador(id,duracao,ponto,opcoes){if(ativas.size)return false;capturas.push({id,duracao,ponto,opcoes});ativas.add(id);return true;},
+    capturaAtiva:id=>ativas.has(id),
+    liberarJogador(id){liberacoes.push(id);ativas.delete(id);},
+    danoJogador:(...args)=>danos.push(args),...extras,
   };
-  const ataque = criarTentaculos(scene, encontro, config, servicos);
-  return { ataque, scene, encontro, avisos, capturas, liberacoes, danos };
+  const ataque=criarTentaculos(scene,encontro,config,servicos);
+  const aproximar=(i=0)=>Object.assign(scene.player,ataque.snapshot().armadilhas[i]);
+  return {ataque,scene,encontro,avisos,capturas,liberacoes,danos,ativas,aproximar};
 }
 
-test("tentáculos criam três marcas livres separadas e congelam a marca direcionada", () => {
-  const c = preparar();
-  const antes = c.ataque.snapshot().armadilhas;
-  assert.equal(antes.length, 3);
-  assert.equal(c.avisos.length, 3);
-  assert.deepEqual({ x: antes[0].x, y: antes[0].y }, { x: 40, y: 20 });
-  c.scene.player.x = 400;
-  c.scene.player.y = 400;
-  c.ataque.atualizar(500);
-  assert.deepEqual(c.ataque.snapshot().armadilhas.map(({ x, y }) => ({ x, y })), antes.map(({ x, y }) => ({ x, y })));
-  for (let i = 0; i < antes.length; i++) {
-    assert.ok(antes[i].x >= -482 && antes[i].x <= 482);
-    assert.ok(antes[i].y >= -482 && antes[i].y <= 482);
-    for (let j = i + 1; j < antes.length; j++) {
-      assert.ok(Math.hypot(antes[i].x - antes[j].x, antes[i].y - antes[j].y) >= 48);
+test('sorteia 8–12 tentáculos entre 120 e 300px do boss, separados e fixos',()=>{
+  for(let i=0;i<5;i++){
+    const c=preparar({}, {rng:()=>i/5});const a=c.ataque.snapshot().armadilhas;
+    assert.equal(a.length,8+i);
+    for(let j=0;j<a.length;j++){
+      assert.ok(Math.hypot(a[j].x,a[j].y)>=119.999&&Math.hypot(a[j].x,a[j].y)<=300.001);
+      for(let k=0;k<j;k++)assert.ok(Math.hypot(a[j].x-a[k].x,a[j].y-a[k].y)>=48);
     }
+    const pontos=a.map(({x,y})=>({x,y}));
+    c.scene.player.x=-450;c.ataque.atualizar(500);
+    assert.deepEqual(c.ataque.snapshot().armadilhas.map(({x,y})=>({x,y})),pontos);
   }
 });
 
-test("durante o aviso não captura nem causa dano", () => {
-  const c = preparar();
-  assert.equal(c.ataque.atualizar(999), false);
-  assert.equal(c.capturas.length, 0);
-  assert.ok(c.ataque.snapshot().armadilhas.every((a) => !a.ativa));
-  assert.ok(c.avisos.every((a) => a.destruicoes === 0));
-  c.ataque.atualizar(1);
-  assert.equal(c.capturas.length, 1);
-  assert.equal(c.capturas[0].duracao, 2500);
-  assert.ok(c.avisos.every((a) => a.destruicoes === 1));
-  assert.deepEqual(c.danos, []);
+test('aviso não captura; no surgimento retira todos os avisos e pede oito apertos',()=>{
+  const c=preparar();c.aproximar();c.ataque.atualizar(999);
+  assert.equal(c.capturas.length,0);assert.ok(c.avisos.every(a=>a.destruicoes===0));
+  c.ataque.atualizar(1);assert.equal(c.capturas.length,1);
+  assert.equal(c.capturas[0].opcoes.apertos,8);
+  assert.ok(c.avisos.every(a=>a.destruicoes===1));assert.deepEqual(c.danos,[]);
 });
 
-test("libera o agarrão em 2,5 segundos e a mesma armadilha não recaptura", () => {
-  const c = preparar();
-  c.ataque.atualizar(1000);
-  const id = c.capturas[0].id;
-  c.ataque.atualizar(2499);
-  assert.deepEqual(c.liberacoes, []);
-  c.ataque.atualizar(1);
-  assert.deepEqual(c.liberacoes, [id]);
-  c.ataque.atualizar(500);
-  assert.equal(c.capturas.length, 1);
-  assert.deepEqual(c.danos, []);
+test('agarrão não termina pelo antigo prazo; aguarda a libertação e não recaptura pela mesma armadilha',()=>{
+  const c=preparar();c.aproximar();c.ataque.atualizar(1000);
+  assert.equal(c.ataque.duracao,Infinity);
+  assert.equal(c.ataque.atualizar(60000),false);assert.equal(c.liberacoes.length,0);
+  c.ativas.clear();assert.equal(c.ataque.atualizar(1),true);
+  assert.deepEqual(c.liberacoes,[c.capturas[0].id]);assert.equal(c.capturas.length,1);
+  c.ataque.destruir();assert.equal(c.liberacoes.length,1);
 });
 
-test("captura no fim da janela ativa mantém os 2,5 segundos completos", () => {
-  const c = preparar();
-  const alvo = { ...c.scene.player };
-  c.scene.player.x = 490;
-  c.scene.player.y = 490;
-  c.ataque.atualizar(4400);
-  assert.equal(c.capturas.length, 0);
-  Object.assign(c.scene.player, alvo);
-  c.ataque.atualizar(50);
-  assert.equal(c.capturas.length, 1);
-  assert.equal(c.ataque.atualizar(50), false);
-  c.ataque.atualizar(2449);
-  assert.equal(c.liberacoes.length, 0);
-  assert.equal(c.ataque.atualizar(1), true);
-  assert.equal(c.liberacoes.length, 1);
+test('captura perto do fim da janela ainda exige libertação, sem dano extra',()=>{
+  const c=preparar();c.ataque.atualizar(18900);assert.equal(c.capturas.length,0);
+  c.aproximar();c.ataque.atualizar(50);assert.equal(c.capturas.length,1);
+  assert.equal(c.ataque.atualizar(10000),false);assert.deepEqual(c.danos,[]);
+  c.ativas.clear();assert.equal(c.ataque.atualizar(1),true);
 });
 
-test("sair, morrer, mudar de fase ou cancelar libera somente fontes próprias e é idempotente", () => {
-  const c = preparar();
-  c.ataque.atualizar(1000);
-  const id = c.capturas[0].id;
-  c.ataque.destruir();
-  c.ataque.destruir();
-  assert.deepEqual(c.liberacoes, [id]);
-  assert.equal(c.ataque.atualizar(9999), true);
-  assert.deepEqual(c.liberacoes, [id]);
-  assert.ok(c.avisos.every((a) => a.destruicoes === 1));
+test('modo temporal explícito continua disponível para cenas de teste',()=>{
+  const c=preparar({apertosParaLibertar:0});c.aproximar();c.ataque.atualizar(1000);
+  c.ataque.atualizar(2499);assert.equal(c.liberacoes.length,0);
+  c.ataque.atualizar(1);assert.equal(c.liberacoes.length,1);
 });
 
-test("IDs de agarrão não colidem entre execuções independentes", () => {
-  const c = preparar();
-  const d = preparar();
-  c.ataque.atualizar(1000);
-  d.ataque.atualizar(1000);
-  assert.notEqual(c.capturas[0].id, d.capturas[0].id);
+test('cancelar libera só a captura própria, limpa avisos e é idempotente',()=>{
+  const c=preparar();c.aproximar();c.ataque.atualizar(1000);c.ataque.destruir();c.ataque.destruir();
+  assert.deepEqual(c.liberacoes,[c.capturas[0].id]);
+  assert.ok(c.avisos.every(a=>a.destruicoes===1));
+  c.ataque.atualizar(10000);assert.equal(c.capturas.length,1);
 });
 
-test("cancelar antes da captura remove todos os avisos sem liberar outros controles", () => {
-  const c = preparar();
-  c.ataque.destruir();
-  assert.equal(c.capturas.length, 0);
-  assert.equal(c.liberacoes.length, 0);
-  assert.ok(c.avisos.every((a) => a.destruicoes === 1));
+test('IDs são distintos entre execuções e cancelar no aviso não libera capturas alheias',()=>{
+  const a=preparar(),b=preparar();a.aproximar();b.aproximar();
+  a.ataque.atualizar(1000);b.ataque.atualizar(1000);
+  assert.notEqual(a.capturas[0].id,b.capturas[0].id);
+  const c=preparar();c.ataque.destruir();assert.deepEqual(c.liberacoes,[]);
 });
 
-test("sem locais livres não cria tentáculos em paredes nem fica preso no sorteio", () => {
-  const c = preparar({}, { pontoLivre: () => false });
-  assert.equal(c.avisos.length, 0);
-  assert.equal(c.ataque.snapshot().armadilhas.length, 0);
-  assert.equal(c.ataque.atualizar(10000), true);
-  assert.equal(c.capturas.length, 0);
+test('mapa bloqueado não cria armadilhas nem sorteio infinito ou captura retroativa',()=>{
+  const c=preparar({}, {pontoLivre:()=>false});assert.equal(c.ataque.snapshot().armadilhas.length,0);
+  assert.equal(c.ataque.atualizar(30000),true);assert.deepEqual(c.capturas,[]);
+  const d=preparar();d.aproximar();d.ataque.atualizar(30000);assert.deepEqual(d.capturas,[]);
 });
 
-test("nenhum perigo é aplicado retroativamente depois de expirar num delta longo", () => {
-  const c = preparar();
-  assert.equal(c.ataque.atualizar(10000), true);
-  assert.equal(c.capturas.length, 0);
-  assert.equal(c.danos.length, 0);
-});
-
-test("não consome a armadilha quando o serviço de captura recusa um alvo imune", () => {
-  let imune = true;
-  const capturas = [];
-  const c = preparar({}, {
-    capturarJogador(id, duracao) {
-      if (imune) return false;
-      capturas.push({ id, duracao });
-      return true;
-    },
-  });
-  c.ataque.atualizar(1000);
-  assert.equal(c.ataque.snapshot().armadilhas[0].capturou, false);
-  imune = false;
-  c.ataque.atualizar(16);
-  assert.equal(capturas.length, 1);
+test('captura recusada não consome a armadilha; alvo liberado pode ser capturado depois',()=>{
+  let imune=true;
+  const c=preparar({}, {capturarJogador:()=>!imune});c.aproximar();c.ataque.atualizar(1000);
+  assert.equal(c.ataque.snapshot().armadilhas[0].capturou,false);
+  imune=false;c.ataque.atualizar(10);
+  assert.equal(c.ataque.snapshot().armadilhas[0].capturou,true);
 });

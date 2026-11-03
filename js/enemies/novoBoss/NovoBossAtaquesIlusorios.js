@@ -20,22 +20,11 @@ export function criarAtaquesIlusoriosNovoBoss(scene, encontro, alvo) {
     objetos.add(objeto);
     objeto.novoBossAtaqueIlusorio = true;
     objeto.novoBossDonoIlusao = alvo.id;
-    objeto.setAlpha?.(0.32);
-    objeto.setTint?.(0xc4a8ff);
-    // Estes são objetos recém-criados da cópia; nenhum objeto da cena é adaptado.
-    const profundidade = objeto.setDepth?.bind(objeto);
+    // A mesma fábrica define cor, alfa e profundidade das execuções reais e falsas.
+    // A ausência de dano é garantida pelos serviços abaixo, sem pistas visuais.
     const nome = objeto.setName?.bind(objeto);
     const destruir = objeto.destroy.bind(objeto);
-    objeto.setDepth = valor => { profundidade?.(50.7 + Math.max(0, Math.min(2, valor - 51)) * 0.05); return objeto; };
     objeto.setName = valor => { nome?.(`${valor}-ilusorio-${alvo.id}`); return objeto; };
-    for (const metodo of ["lineStyle", "fillStyle"]) {
-      const original = objeto[metodo]?.bind(objeto);
-      if (!original) continue;
-      objeto[metodo] = (...args) => {
-        args[metodo === "lineStyle" ? 1 : 0] = 0xc4a8ff;
-        return original(...args);
-      };
-    }
     objeto.destroy = (...args) => {
       if (!objetos.delete(objeto)) return;
       destruir(...args);
@@ -92,6 +81,7 @@ export function criarAtaquesIlusoriosNovoBoss(scene, encontro, alvo) {
         danoJogador: inofensivo,
         capturarJogador: inofensivo,
         liberarJogador: inofensivo,
+        capturaAtiva: inofensivo,
         atingirJogadorComLaser: inofensivo,
         atingirAlvoComLaserRefletido: inofensivo,
         registrarLaser(visual) {

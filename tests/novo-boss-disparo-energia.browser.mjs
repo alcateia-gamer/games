@@ -76,7 +76,7 @@ try {
     return { reais: b.projeteisBoss.length, falsos: falsos.length,
       quadrosReais: b.projeteisBoss.map(o => o.novoBossQuadroEnergia),
       porClone: b.alvosIlusorios.map(a => falsos.filter(o => o.novoBossDonoIlusao === a.id).map(o => o.novoBossQuadroEnergia)),
-      seguros: falsos.every(o => !o.body && !o.especialLaserInimigo && !b.projeteisBoss.includes(o) && o.alpha === 0.32) };
+      seguros: falsos.every(o => !o.body && !o.especialLaserInimigo && !b.projeteisBoss.includes(o) && o.alpha === 1) };
   });
   assert.equal(clones.reais, 3); assert.equal(clones.falsos, 27); assert.ok(clones.seguros);
   assert.ok(clones.porClone.every(quadros => JSON.stringify(quadros) === JSON.stringify(clones.quadrosReais)));

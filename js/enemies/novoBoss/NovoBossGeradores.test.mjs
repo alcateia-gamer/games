@@ -54,7 +54,11 @@ function criarCena(opcoes = {}) {
           x: visual.x - visual.width / 2, y: visual.y - visual.height / 2,
           width: visual.width, height: visual.height, enable: true,
           setSize(width, height) { this.width = width; this.height = height; },
-          updateFromGameObject() {},
+          setCircle(radius) { this.radius = radius; this.isCircle = true; },
+          updateFromGameObject() {
+            this.x = visual.x - visual.width / 2;
+            this.y = visual.y - visual.height / 2;
+          },
         };
       },
       collider(a, b) {
@@ -90,7 +94,7 @@ test("prepara quatro corpos próprios e barreira sem alterar o mapa nem o gerado
   assert.equal(sistema, encontro.sistemaGeradores);
   assert.equal(sistema.snapshot().restantes, 4);
   assert.equal(encontro.barreiraAtiva, true);
-  assert.equal(colliders.length, 4);
+  assert.equal(colliders.length, 5);
   assert.equal(objetosMapa.length, 0);
   assert.equal(encontro.obstaculosTeleporte[0], obstaculoExtra);
   assert.equal(encontro.obstaculosTeleporte.length, 5);
@@ -98,7 +102,7 @@ test("prepara quatro corpos próprios e barreira sem alterar o mapa nem o gerado
   assert.equal(scene.factoryGenerator, factoryState);
   assert.equal(scene.luzFabricaAcesa, true);
   assert.equal(prepararGeradoresNovoBoss(scene, encontro), sistema);
-  assert.equal(colliders.length, 4);
+  assert.equal(colliders.length, 5);
 });
 
 test("E e toque desativam permanentemente só o gerador próximo; barreira cai no quarto", () => {
@@ -264,4 +268,32 @@ test("ponto coberto por colisão do mapa aguarda preparação sem criar gerador 
   objetosMapa.length = 0;
   assert.ok(prepararGeradoresNovoBoss(scene, encontro));
   assert.equal(encontro.pendencia, null);
+});
+
+test("colisão circular acompanha o escudo e desliga em teleporte, saída e queda da barreira", () => {
+  const { scene, encontro, criados, colliders } = criarCena();
+  const sistema = prepararGeradoresNovoBoss(scene, encontro);
+  const escudo = criados.find(o => o.name === "novo-boss-barreira-colisao");
+  assert.ok(escudo.body.isCircle && escudo.body.enable);
+  assert.equal(escudo.body.radius, 95);
+  assert.ok(colliders.some(c => c.a === scene.player && c.b === escudo));
+  assert.ok(!encontro.obstaculosTeleporte.includes(escudo));
+  encontro.sprite.x -= 70; encontro.sprite.y -= 40;
+  sistema.atualizar(16);
+  assert.equal(escudo.x, encontro.sprite.x);
+  assert.equal(escudo.body.y + 95, encontro.sprite.y + 16);
+  for (const ocultar of [
+    () => { encontro.teleporte = {}; },
+    () => { encontro.sprite.alpha = 0; },
+    () => { encontro.jogadorNaArena = false; },
+    () => { encontro.barreiraAtiva = false; },
+  ]) {
+    ocultar(); sistema.atualizar(0); assert.equal(escudo.body.enable, false);
+    encontro.teleporte = null; encontro.sprite.alpha = 1;
+    encontro.jogadorNaArena = true; encontro.barreiraAtiva = true;
+    sistema.atualizar(0); assert.equal(escudo.body.enable, true);
+  }
+  for (const g of encontro.geradores) { aproximar(scene, g); assert.ok(sistema.interagir(g.id)); }
+  assert.equal(escudo.body.enable, false);
+  sistema.destruir(); assert.ok(escudo.destroyed);
 });

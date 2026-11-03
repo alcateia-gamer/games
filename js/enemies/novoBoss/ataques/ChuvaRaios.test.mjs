@@ -84,7 +84,7 @@ test("Heavens Fury anuncia antes da animação e só causa dano no frame quatro"
   assert.equal(eventos.length, 2, "mesmo impacto não aplica dano outra vez");
 });
 
-test("alvo anunciado fica fixo e permite ao jogador sair do círculo", () => {
+test("alvo fica fixo: sair antes do zero esquiva e entrar na cauda não recebe dano", () => {
   const { ataque, scene, eventos } = preparar();
   scene.player.x = 200;
   ataque.atualizar(1400);
@@ -92,7 +92,7 @@ test("alvo anunciado fica fixo e permite ao jogador sair do círculo", () => {
   assert.deepEqual(eventos, ["aviso"]);
   scene.player.x = 0;
   ataque.atualizar(50);
-  assert.equal(eventos.length, 2, "entrar durante o perigo ativo ainda acerta");
+  assert.equal(eventos.length, 1, "entrar depois do zero não cria um acerto atrasado");
 });
 
 test("perigo termina após o intervalo e não atinge quem entrar depois", () => {
@@ -376,4 +376,30 @@ test("cancelar conserva os registros anunciados e impede selecionar ou emitir al
   assert.equal(c.ataque.obterAlvoChuva(2), null);
   assert.equal(c.avisos.length, 2);
   assert.ok(c.avisos.every(a => a.destruidos === 1));
+});
+
+test("chuva permite esquivar até 1ms antes do impacto; sair na animação não cancela dano", () => {
+  const antes=preparar();
+  antes.ataque.atualizar(1399);
+  antes.scene.player.x=200;
+  antes.ataque.atualizar(1);
+  assert.equal(antes.eventos.length,1);
+  assert.equal(antes.ataque.snapshot().marcas[0].impactoAvaliado,true);
+  const depois=preparar();
+  depois.ataque.atualizar(1400);
+  assert.equal(depois.eventos.length,2);
+  depois.scene.player.x=200;
+  depois.ataque.atualizar(50);
+  assert.equal(depois.eventos.length,2);
+  assert.equal(depois.ataque.snapshot().marcas[0].atingiu,true);
+});
+
+test("chuva não repete impacto recusado pela invulnerabilidade depois do zero", () => {
+  const c=preparar();let tentativas=0;
+  c.servicos.danoJogador=()=>{tentativas++;return false;};
+  c.ataque.atualizar(1400);
+  assert.equal(tentativas,1);
+  c.ataque.atualizar(50);
+  assert.equal(tentativas,1);
+  assert.equal(c.ataque.snapshot().marcas[0].atingiu,false);
 });
