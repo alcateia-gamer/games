@@ -97,6 +97,20 @@ test("rectangles near the city spawn keep the exact Tiled bounds, including frac
   }
 });
 
+test("city object 586 with zero height does not create an invisible default-size obstacle", () => {
+  const object = realObjects("InicioFase1 (1).json", "Collision")
+    .find(({ id }) => id === 586);
+  assert.ok(object);
+  assert.equal(object.x, -556.5);
+  assert.equal(object.y, -2256);
+  assert.equal(object.height, 0);
+
+  const { scene, map, children } = fixture([object]);
+  criarColisoesCidade(scene, map);
+
+  assert.equal(children.length, 0);
+});
+
 test("the ellipse beside the spawn does not block its empty bounding-box corners", () => {
   const object = realObjects("InicioFase1 (1).json", "Collision").find(object => object.id === 195);
   const { scene, map, children } = fixture([object]);

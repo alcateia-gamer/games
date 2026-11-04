@@ -11,6 +11,16 @@ function criarColisoesCidade(scene, map) {
   if (collisionLayer) {
     scene.collisionGroup = scene.physics.add.staticGroup();
     collisionLayer.objects.forEach((obj) => {
+      if (
+        obj.polyline ||
+        obj.point ||
+        obj.text ||
+        !(obj.width > 0) ||
+        !(obj.height > 0)
+      ) {
+        return;
+      }
+
       const collision = scene.collisionGroup.create(
         obj.x + obj.width / 2,
         obj.y + obj.height / 2,
@@ -96,6 +106,16 @@ function criarColisoesFabrica(scene, map) {
     collisionLayer.objects.forEach((obj) => {
       if (obj.polygon?.length >= 3) {
         adicionarCorposPoligono(scene.collisionGroup, obj);
+        return;
+      }
+
+      if (
+        obj.polyline ||
+        obj.point ||
+        obj.text ||
+        !(obj.width > 0) ||
+        !(obj.height > 0)
+      ) {
         return;
       }
 
