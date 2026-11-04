@@ -1,11 +1,15 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { EventEmitter } from "node:events";
-import { atualizarRoboBola, registrarAnimacoesRoboBola, ROBO_BOLA_CONFIG } from "./RoboBola.js";
+import { criarRoboBola, atualizarRoboBola, registrarAnimacoesRoboBola, ROBO_BOLA_CONFIG } from "./RoboBola.js";
+import { caminhoMovimentoBloqueado } from "./EnemyPathfinding.js";
 import { destruirInimigoTeste } from "./EnemyHealth.js";
 import { criarBrilhoOlho, suavizarTexturasRoboBola } from "./RoboBolaEffects.js";
 
-globalThis.Phaser = { BlendModes: { ADD: 1 }, Textures: { FilterMode: { LINEAR: 0 } }, Math: {
+globalThis.Phaser = { Geom: { Rectangle: class {
+  constructor(x, y, width, height) { this.setTo(x, y, width, height); }
+  setTo(x, y, width, height) { Object.assign(this, { x, y, width, height }); }
+} }, BlendModes: { ADD: 1 }, Textures: { FilterMode: { LINEAR: 0 } }, Math: {
   Distance: { Between: (x, y, a, b) => Math.hypot(a - x, b - y) },
   Angle: { Between: (x, y, a, b) => Math.atan2(b - y, a - x) },
   Clamp: (n, min, max) => Math.max(min, Math.min(n, max)),
@@ -20,19 +24,28 @@ function preparar() {
     scaleX: 0.56, scaleY: 0.56, originX: 0.5, originY: 0.5,
     direcaoAtual: "down", frame: { name: 0 }, tempoOnda: 0,
     ultimoTiro: 0, danoLaser: 10, velocidadeLaser: 280,
-    configBola: { ...ROBO_BOLA_CONFIG },
-    body: { enable: true, velocity: { x: 0, y: 0 } },
+    configBola: { ...ROBO_BOLA_CONFIG }, velocidade: ROBO_BOLA_CONFIG.velocidade,
+    body: { enable: true, velocity: { x: 0, y: 0 },
+      width: 33.6, height: 33.6, offset: { x: 33.5, y: 33.5 },
+      setOffset(x, y) { this.offset = { x, y }; return this; },
+    },
     hitboxDano: { setTo(x, y, width, height) { Object.assign(this, { x, y, width, height }); } },
     anims: {
       stop() {},
       play(key) { this.clip = clips.get(key); },
     },
     setVelocity(x, y) { this.body.velocity = { x, y }; },
+    setOrigin(x, y) { this.originX = x; this.originY = y; return this; },
+    setScale(scale) { this.scaleX = scale; this.scaleY = scale; return this; },
     setFlipX(value) { this.flipX = value; },
     setFrame(name) { this.frame = { name }; },
     setDepth() {},
     clearTint() {},
     setTexture(key, name) { this.texture = key; this.setFrame(name); },
+  });
+  Object.defineProperties(robo.body, {
+    x: { get: () => robo.x - robo.originX * 127 * robo.scaleX + robo.body.offset.x * robo.scaleX },
+    y: { get: () => robo.y - robo.originY * 127 * robo.scaleY + robo.body.offset.y * robo.scaleY },
   });
   const scene = {
     inimigos: [robo], inimigoTeste: robo,
@@ -57,10 +70,15 @@ function preparar() {
         active: true, x, y, width, height,
         setRotation(value) { this.rotation = value; return this; },
         setDepth() { return this; }, setStrokeStyle() { return this; },
+        setOrigin() { return this; }, setPosition(x, y) { this.x = x; this.y = y; return this; },
         destroy() { this.emit("destroy"); this.active = false; },
       });
     } },
     physics: {
+      moveTo(robo, x, y, speed) {
+        const d = Math.max(1, Math.hypot(x - robo.x, y - robo.y));
+        robo.setVelocity((x - robo.x) / d * speed, (y - robo.y) / d * speed);
+      },
       add: { existing(tiro) {
         tiro.body = { velocity: {}, setAllowGravity() {}, setSize() {}, updateFromGameObject() {} };
       } },
@@ -87,6 +105,7 @@ test("cada pose viva explode apenas na linha correspondente, mesmo com direção
     const { scene, robo } = preparar();
     scene.player.x = robo.x + x;
     scene.player.y = robo.y + y;
+    robo.direcaoAtual = direcao;
     disparar(scene);
     assert.equal(robo.frame.name, vivo, direcao);
     assert.equal(robo.flipX, false);
@@ -122,8 +141,9 @@ test("ruído nas diagonais não faz a pose oscilar, mas a mira acompanha mudanç
   }
   mirar(20);
   assert.equal(robo.direcaoAtual, "right");
+  const lembranca = { ...robo.iaUltimaPosicao };
   mirar(180);
-  assert.equal(robo.direcaoAtual, "left");
+  assert.deepEqual(robo.iaUltimaPosicao, lembranca, "não revela o alvo que saiu do campo frontal");
 });
 
 test("tiro fino e alongado nasce no olho de cada pose e aponta para o alvo", () => {
@@ -133,10 +153,11 @@ test("tiro fino e alongado nasce no olho de cada pose e aponta para o alvo", () 
     const { scene, robo, tiros } = preparar();
     scene.player.x = robo.x + dx;
     scene.player.y = robo.y + dy;
+    robo.direcaoAtual = dx > 0 ? "right" : dx < 0 ? "left" : dy < 0 ? "up" : "down";
     disparar(scene);
     const tiro = tiros[0];
     const x = robo.x + (olhoX - 63.5) * 0.56;
-    const y = robo.y + (olhoY - 63.5) * 0.56 + 2;
+    const y = robo.y + (olhoY - robo.originY * 127) * 0.56 + 2;
     assert.equal(tiro.width, 16);
     assert.equal(tiro.height, 3);
     assert.ok(Math.abs(tiro.x - Math.cos(tiro.rotation) * 8 - x) < 1e-9);
@@ -192,6 +213,7 @@ test("recua assim que o jogador avança e mantém o olho no alvo em qualquer dir
     robo.ultimoTiro = Infinity;
     scene.player.x = robo.x + dx * 135;
     scene.player.y = robo.y + dy * 135;
+    robo.direcaoAtual = dx > 0 ? "right" : dx < 0 ? "left" : dy < 0 ? "up" : "down";
     scene.player.body.velocity = { x: -dx * 200, y: -dy * 200 };
     // Mesmo que estivesse aproximando, cancela o avanço e inicia a fuga.
     robo.body.velocity = { x: dx * 145, y: dy * 145 };
@@ -273,4 +295,118 @@ test("afasta-se se o jogador estiver perto demais, mesmo parado ou sobreposto", 
     assert.ok(robo.body.velocity.y < 0);
     assert.ok(Number.isFinite(robo.body.velocity.x));
   }
+});
+
+function iniciarVigia(scene, robo) {
+  // Inicializa o mesmo estado de patrulha dos outros robôs, sem escolher destinos aleatórios.
+  scene.player.y = robo.y + 2000;
+  atualizarRoboBola(scene, 0, 16);
+  robo.iaProximoPatrulha = Infinity;
+  robo.iaProximaVirada = Infinity;
+}
+
+test("visão frontal: não adquire jogador atrás de si, de paredes ou fora do alcance", () => {
+  for (const modo of ["costas", "parede", "distante"]) {
+    const { scene, robo, tiros } = preparar();
+    iniciarVigia(scene, robo);
+    scene.player.y = robo.y + (modo === "costas" ? -135 : modo === "distante" ? 900 : 135);
+    if (modo === "parede") scene.collisionGroup = {
+      getChildren: () => [{ body: { x: 30, y: 250, width: 140, height: 20, enable: true } }],
+    };
+    for (const time of [100, 400, 1400]) atualizarRoboBola(scene, time, 16);
+    assert.equal(robo.iaEstado, "patrulha", modo);
+    assert.equal(robo.iaUltimaPosicao, null, modo);
+    assert.equal(tiros.length, 0, modo);
+  }
+});
+
+test("busca a última posição vista por A*, sem atualizar a pista pela posição escondida", () => {
+  const { scene, robo, tiros } = preparar();
+  robo.direcaoAtual = "right";
+  robo.ultimoTiro = Infinity;
+  scene.player.x = 330;
+  scene.player.y = 200;
+  atualizarRoboBola(scene, 0, 16);
+  const pista = { ...robo.iaUltimaPosicao };
+  assert.deepEqual(pista, { x: 330, y: 200 });
+  scene.collisionGroup = {
+    getChildren: () => [{ body: { x: 185, y: 120, width: 30, height: 160, enable: true } }],
+  };
+  scene.player.y = 260;
+  atualizarRoboBola(scene, 300, 16);
+  assert.deepEqual(robo.iaUltimaPosicao, pista);
+  assert.ok(robo.rotaAtual.length > 0, "calcula rota contornando o objeto");
+  // O jogador se afasta enquanto está oculto; o robô só pode usar a pista anterior.
+  scene.player.x = 2500;
+  scene.player.y = 260;
+  let chegou = false;
+  for (let time = 316; time < 8000; time += 16) {
+    atualizarRoboBola(scene, time, 16);
+    const v = robo.body.velocity;
+    const proximo = { x: robo.x + v.x * 0.016, y: robo.y + v.y * 0.016 };
+    assert.equal(caminhoMovimentoBloqueado(scene, robo, proximo), false, "não corta quinas");
+    robo.x = proximo.x;
+    robo.y = proximo.y;
+    assert.deepEqual(robo.iaUltimaPosicao, pista);
+    if (Math.hypot(robo.x - pista.x, robo.y - pista.y) <= 22) { chegou = true; break; }
+  }
+  assert.ok(chegou, "chega à última posição vista");
+  assert.equal(tiros.length, 0);
+  atualizarRoboBola(scene, 9100, 16);
+  assert.equal(robo.iaEstado, "investigar");
+  atualizarRoboBola(scene, 13000, 16);
+  assert.equal(robo.iaEstado, "retorno", "desiste após procurar por tempo limitado");
+});
+
+test("vigia parado continua levitando sem deslocar o corpo de colisão", () => {
+  const { scene, robo } = preparar();
+  iniciarVigia(scene, robo);
+  scene.player.y = robo.y - 200;
+  atualizarRoboBola(scene, 100, 16);
+  const origem = robo.originY;
+  const corpo = { x: robo.body.x, y: robo.body.y };
+  atualizarRoboBola(scene, 450, 16);
+  assert.notEqual(robo.originY, origem);
+  assert.ok(Math.abs(robo.deslocamentoFlutuacao) <= 2.5);
+  assert.ok(Math.abs(robo.body.x - corpo.x) < 1e-9);
+  assert.ok(Math.abs(robo.body.y - corpo.y) < 1e-9);
+  assert.deepEqual(robo.body.velocity, { x: 0, y: 0 });
+  assert.deepEqual({ x: robo.x, y: robo.y }, { x: 100, y: 200 });
+});
+
+test("cada spawn cria outro robô sem sobrepor aliados nem obstáculos", (t) => {
+  t.mock.method(Math, "random", () => 0.5);
+  const { scene } = preparar();
+  scene.inimigos = [];
+  scene.textures = { exists: () => true, get: () => ({ setFilter() {} }) };
+  scene.collisionGroup = { getChildren: () => [
+    { body: { x: -60, y: 290, width: 90, height: 90, enable: true } },
+  ] };
+  const colliders = [];
+  scene.physics.add.collider = () => {
+    const collider = { active: true, destroy() { this.active = false; } };
+    colliders.push(collider);
+    return collider;
+  };
+  scene.physics.add.sprite = (x, y) => {
+    const robo = preparar().robo;
+    robo.x = x; robo.y = y;
+    robo.body.setAllowGravity = () => {};
+    robo.body.updateFromGameObject = () => {};
+    robo.body.setSize = function (w, h) { this.width = w * robo.scaleX; this.height = h * robo.scaleY; return this; };
+    return robo;
+  };
+  const robos = Array.from({ length: 4 }, () => criarRoboBola(scene));
+  assert.equal(new Set(robos).size, 4);
+  assert.equal(scene.inimigos.length, 4);
+  for (const robo of robos) {
+    assert.equal(caminhoMovimentoBloqueado(scene, robo, robo), false);
+    for (const outro of robos) {
+      if (outro !== robo) assert.ok(Math.hypot(robo.x - outro.x, robo.y - outro.y) >= 50);
+    }
+  }
+  assert.equal(colliders.length, 10, "seis pares e quatro colisores de cenário");
+  for (const robo of robos) robo.emit("destroy");
+  assert.ok(colliders.every(c => !c.active));
+  scene.events.emit("shutdown");
 });

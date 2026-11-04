@@ -5,7 +5,8 @@
 
 import { calcularDepthAtor } from "../map/ProfundidadeMapa.js";
 import { tocarSomTiroLaser } from "../sounds/inimigos.js";
-import { caminhoDiretoBloqueado } from "./EnemyPathfinding.js";
+import { caminhoDiretoBloqueado, caminhoMovimentoBloqueado, retanguloLivreDoMapa } from "./EnemyPathfinding.js";
+import { atualizarIAInimigo, moverInimigoAte } from "./EnemyAI.js";
 import { suavizarTexturasRoboBola, criarBrilhoOlho, criarRastroPlasma } from "./RoboBolaEffects.js";
 
 // Grade viva 2×3: frente, disparo frontal, costas, esquerda, direita, vazio.
@@ -37,7 +38,32 @@ const ALTURA_BARRA_VIDA = 36; // Mantém uma pequena folga acima da antena.
 function atualizarHitboxRoboBola(robo) {
   const largura = TAMANHO_HITBOX * Math.abs(robo.scaleX);
   const altura = TAMANHO_HITBOX * Math.abs(robo.scaleY);
-  robo.hitboxDano?.setTo(robo.x - largura / 2, robo.y - altura / 2, largura, altura);
+  robo.hitboxDano?.setTo(robo.x - largura / 2, robo.y + (robo.deslocamentoFlutuacao || 0) - altura / 2, largura, altura);
+}
+
+/** Move só a imagem: a colisão de navegação permanece estável sobre o chão. */
+function atualizarFlutuacao(robo, time) {
+  robo.deslocamentoFlutuacao = Math.sin(time / 380 + (robo.faseFlutuacao || 0)) * 2.5;
+  const deslocamentoLocal = robo.deslocamentoFlutuacao / robo.scaleY;
+  robo.setOrigin(0.5, 0.5 - deslocamentoLocal / 127);
+  const offset = (127 - TAMANHO_HITBOX) / 2;
+  robo.body.setOffset(offset, offset - deslocamentoLocal);
+}
+
+function escolherSpawn(scene) {
+  const anguloInicial = Math.random() * Math.PI * 2;
+  const tamanho = TAMANHO_HITBOX * 0.56;
+  for (const raio of [CONFIG.distanciaIdeal, 180, 225, 270]) {
+    for (let i = 0; i < 24; i++) {
+      const angulo = anguloInicial + i * Math.PI / 12;
+      const x = scene.player.x + Math.cos(angulo) * raio;
+      const y = scene.player.y + Math.sin(angulo) * raio;
+      if (!retanguloLivreDoMapa(scene, { x: x - tamanho / 2, y: y - tamanho / 2, width: tamanho, height: tamanho })) continue;
+      if ((scene.inimigos || []).some(outro => outro?.active && !outro.morto && Math.hypot(outro.x - x, outro.y - y) < 50)) continue;
+      return { x, y };
+    }
+  }
+  return null; // Não cria um robô dentro de paredes quando não há espaço próximo.
 }
 
 function registrarAnimacoes(scene) {
@@ -139,15 +165,14 @@ function criarProjetil(scene, robo, alvo) {
 
 function criarRoboBola(scene) {
   if (!scene?.player?.active) return null;
-  const existente = scene.inimigos?.find((item) => item?.tipoRobo === "bola" && item.active);
-  if (existente) return existente;
+  const spawn = escolherSpawn(scene);
+  if (!spawn) return null;
 
   registrarAnimacoes(scene);
   suavizarTexturasRoboBola(scene);
-  const angulo = Math.random() * Math.PI * 2;
   const robo = scene.physics.add.sprite(
-    scene.player.x + Math.cos(angulo) * CONFIG.distanciaIdeal,
-    scene.player.y + Math.sin(angulo) * CONFIG.distanciaIdeal,
+    spawn.x,
+    spawn.y,
     "robo-bola",
     0,
   );
@@ -159,6 +184,13 @@ function criarRoboBola(scene) {
   const offsetHitbox = (127 - TAMANHO_HITBOX) / 2;
   robo.body.setSize(TAMANHO_HITBOX, TAMANHO_HITBOX).setOffset(offsetHitbox, offsetHitbox);
   robo.configBola = { ...CONFIG };
+  robo.velocidade = CONFIG.velocidade;
+  robo.distanciaDeteccao = 760;
+  robo.distanciaAtaque = CONFIG.alcanceTiro;
+  robo.patrolCenter = { ...spawn };
+  robo.formacaoIndex = scene.inimigos?.length || 0;
+  robo.faseFlutuacao = Math.random() * Math.PI * 2;
+  robo.body.updateFromGameObject();
   robo.tempoOnda = Math.random() * Math.PI * 2;
   robo.ultimoTiro = scene.time.now;
   robo.sentidoOrbita = Math.random() < 0.5 ? -1 : 1;
@@ -179,17 +211,18 @@ function criarRoboBola(scene) {
   criarBrilhoOlho(scene, robo, obterPosicaoOlho);
   scene.lasersInimigo = scene.lasersInimigo || scene.physics.add.group();
   scene.inimigos ||= [];
+  const colliders = [];
+  for (const aliado of scene.inimigos) {
+    if (aliado?.active && !aliado.morto) colliders.push(scene.physics.add.collider(robo, aliado));
+  }
   scene.inimigos.push(robo);
   scene.inimigoTeste ||= robo;
-  if (scene.collisionGroup) scene.physics.add.collider(robo, scene.collisionGroup);
+  if (scene.collisionGroup) colliders.push(scene.physics.add.collider(robo, scene.collisionGroup));
+  robo.once("destroy", () => colliders.forEach(collider => collider.destroy()));
   return robo;
 }
 
-function atualizarRoboBola(scene, time, delta) {
-  for (const robo of scene.inimigos || []) {
-    if (!robo?.active || robo.tipoRobo !== "bola" || robo.morto) continue;
-    const alvo = scene.player;
-    if (!alvo?.active) continue;
+function atualizarCombateRoboBola(scene, robo, alvo, time, delta) {
     const distancia = Phaser.Math.Distance.Between(robo.x, robo.y, alvo.x, alvo.y);
     const dt = Math.min(delta, 100);
     robo.tempoOnda += dt / 520;
@@ -252,7 +285,40 @@ function atualizarRoboBola(scene, time, delta) {
       vx -= dx * avancando;
       vy -= dy * avancando;
     }
-    robo.setVelocity(vx, vy);
+    // Separa aliados sem usar sua posição para revelar o jogador escondido.
+    for (const aliado of scene.inimigos || []) {
+      if (aliado === robo || !aliado?.active || aliado.morto) continue;
+      const ax = robo.x - aliado.x;
+      const ay = robo.y - aliado.y;
+      const d = Math.hypot(ax, ay);
+      if (d > 0 && d < 56) {
+        vx += ax / d * (56 - d) * 2;
+        vy += ay / d * (56 - d) * 2;
+      }
+    }
+    const escala = Math.min(1, velocidadeMaxima / Math.max(1, Math.hypot(vx, vy)));
+    vx *= escala;
+    vy *= escala;
+    const destino = { x: robo.x + vx * 0.4, y: robo.y + vy * 0.4 };
+    if (!caminhoMovimentoBloqueado(scene, robo, destino)) {
+      robo.setVelocity(vx, vy);
+    } else if (distancia > robo.configBola.distanciaMaxima) {
+      moverInimigoAte(scene, robo, alvo, time, robo.velocidade, true, distancia, alvo);
+    } else {
+      // Perto do alvo, desliza pela lateral livre em vez de insistir contra o objeto.
+      robo.setVelocity(0, 0);
+      const angulo = Math.atan2(vy, vx);
+      const velocidade = Math.min(90, Math.hypot(vx, vy));
+      for (const desvio of [Math.PI / 4, -Math.PI / 4, Math.PI / 2, -Math.PI / 2]) {
+        const sx = Math.cos(angulo + desvio) * velocidade;
+        const sy = Math.sin(angulo + desvio) * velocidade;
+        if (robo.recuando && sx * dx + sy * dy > 0) continue;
+        if (caminhoMovimentoBloqueado(scene, robo, { x: robo.x + sx * 0.5, y: robo.y + sy * 0.5 })) continue;
+        robo.setVelocity(sx, sy);
+        break;
+      }
+    }
+    robo.iaAndando = Math.hypot(robo.body.velocity.x, robo.body.velocity.y) > 1;
     const vaiAtirar = temMira && robo.cargaTiro >= 1;
     if (vaiAtirar) robo.olhoAzulAte = time + 150;
     // A pose e o cano mudam juntos, antes de criar o projétil.
@@ -264,10 +330,29 @@ function atualizarRoboBola(scene, time, delta) {
       robo.flashDisparoAte = time + 120;
       criarProjetil(scene, robo, alvo);
     }
+}
+
+function atualizarRoboBola(scene, time, delta) {
+  for (const robo of scene.inimigos || []) {
+    if (!robo?.active || robo.tipoRobo !== "bola" || robo.morto || robo.remoteOnly) continue;
+    atualizarFlutuacao(robo, time);
+    let combateVisivel = false;
+    atualizarIAInimigo(scene, time, robo, (_scene, _robo, alvo) => {
+      combateVisivel = true;
+      atualizarCombateRoboBola(scene, robo, alvo, time, delta);
+    });
+    if (!combateVisivel) {
+      robo.inicioCarga = null;
+      robo.cargaTiro = 0;
+      robo.recuando = false;
+      robo.estadoBola = robo.iaEstado || "patrulha";
+    }
+    atualizarFrame(robo, time < (robo.olhoAzulAte || 0));
     atualizarHitboxRoboBola(robo);
-    robo.fundoVida?.setPosition(robo.x, robo.y - ALTURA_BARRA_VIDA);
-    robo.barraVida?.setPosition(robo.x - 27, robo.y - ALTURA_BARRA_VIDA);
-    robo.bordaVida?.setPosition(robo.x, robo.y - ALTURA_BARRA_VIDA);
+    const yBarra = robo.y + robo.deslocamentoFlutuacao - ALTURA_BARRA_VIDA;
+    robo.fundoVida?.setPosition(robo.x, yBarra);
+    robo.barraVida?.setPosition(robo.x - 27, yBarra);
+    robo.bordaVida?.setPosition(robo.x, yBarra);
     if (robo.barraVida) robo.barraVida.width = robo.larguraBarra * robo.vida / robo.vidaMaxima;
     robo.setDepth(calcularDepthAtor(scene, robo.y + 38, robo));
   }

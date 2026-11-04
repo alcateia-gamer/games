@@ -873,7 +873,7 @@ function combaterAtirador(scene, robo, alvo, agora, d, vendo) {
  * Atualiza visão e estados do robô, respeitando retorno à origem, limites de perseguição e
  * economia para inimigos distantes.
  */
-function atualizarIAInimigo(scene, time, robo = scene.inimigoTeste) {
+function atualizarIAInimigo(scene, time, robo = scene.inimigoTeste, combaterPersonalizado = null) {
   if (!robo?.active || robo.morto || robo.remoteOnly || !robo.body?.enable) {
     return;
   }
@@ -1013,7 +1013,9 @@ function atualizarIAInimigo(scene, time, robo = scene.inimigoTeste) {
 
     atualizarEstadoVisualRobo(robo);
 
-    if (robo.tipoRobo === "serra") {
+    if (vendo && combaterPersonalizado) {
+      combaterPersonalizado(scene, robo, alvo, time);
+    } else if (robo.tipoRobo === "serra") {
       combaterSerra(scene, robo, alvo, time, d, vendo);
     } else {
       combaterAtirador(scene, robo, alvo, time, d, vendo);
@@ -1095,4 +1097,4 @@ function atualizarIAInimigo(scene, time, robo = scene.inimigoTeste) {
 // EXPORTACOES
 // =====================================================
 
-export { atualizarIAInimigo, notificarGrupo };
+export { atualizarIAInimigo, notificarGrupo, irAte as moverInimigoAte };

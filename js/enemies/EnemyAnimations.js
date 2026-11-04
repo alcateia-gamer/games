@@ -128,7 +128,7 @@ function atualizarEstadoVisualRobo(inimigo) {
     return;
   }
 
-  if (inimigo.tipoRobo === "serra") {
+  if (inimigo.tipoRobo === "serra" || inimigo.tipoRobo === "bola") {
     return;
   }
 
@@ -154,6 +154,7 @@ function atualizarEstadoVisualRobo(inimigo) {
  * ataque ativo. O atirador inverte os passos ao recuar sem virar as costas para o alvo.
  */
 function tocarAnimacaoInimigo(inimigo) {
+  if (inimigo.tipoRobo === "bola") return; // Pose e flutuação atualizadas pelo próprio robô.
   if (inimigo.tipoRobo === "serra") {
     if (inimigo.estado === "atacando" && inimigo.anims.isPlaying) {
       return;
@@ -203,6 +204,7 @@ function tocarAnimacaoInimigo(inimigo) {
  * serra.
  */
 function pararAnimacaoInimigo(inimigo) {
+  if (inimigo.tipoRobo === "bola") return;
   if (inimigo.tipoRobo === "serra") {
     if (inimigo.estado === "atacando" && inimigo.anims.isPlaying) {
       return;
