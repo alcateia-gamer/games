@@ -28,6 +28,7 @@ function criarLevel1Map(scene) {
 
   scene.camadaCercas = camadas.camadaCercas;
   scene.camadaCercaSpawn = camadas.camadaCercaSpawn;
+  scene.camadaCercaFabrica2 = camadas.camadaCercaFabrica2;
   scene.camadaCercaFabrica = camadas.camadaCercaFabrica;
   scene.depths = DEPTHS;
   scene.calcularDepthMundo = depthFromWorldY;

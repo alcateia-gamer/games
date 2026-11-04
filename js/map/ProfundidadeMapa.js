@@ -14,6 +14,10 @@ const DEPTHS = {
   overlayAboveWorld: 20,
 };
 
+const Y_LIMITE_CERCA_FABRICA2 = -2204;
+const Y_LIMITE_PERSONAGEM_FRENTE_CERCA_FABRICA2 = -2177;
+const MARGEM_DEPTH_CERCA_FABRICA2 = 0.01;
+
 /**
  * Converte a coordenada Y do mundo em uma profundidade crescente para ordenar objetos da
  * cidade.
@@ -61,6 +65,34 @@ function atualizarDepthAtores(scene) {
   for (const ator of atores) {
     if (ator?.active) ator.setDepth(calcularDepthAtor(scene, obterFootYAtor(ator), ator));
   }
+}
+
+/**
+ * Ordena a camada inteira da cerca com histerese entre as duas posições de passagem.
+ */
+function atualizarDepthCercaFabrica2(scene) {
+  const { player, camadaCercaFabrica2 } = scene;
+  if (!Number.isFinite(player?.y) || !camadaCercaFabrica2) return;
+
+  if (player.y <= Y_LIMITE_CERCA_FABRICA2) {
+    scene.personagemAtrasCercaFabrica2 = true;
+  } else if (player.y >= Y_LIMITE_PERSONAGEM_FRENTE_CERCA_FABRICA2) {
+    scene.personagemAtrasCercaFabrica2 = false;
+  } else if (typeof scene.personagemAtrasCercaFabrica2 !== "boolean") {
+    scene.personagemAtrasCercaFabrica2 =
+      Number.isFinite(player.depth) &&
+      camadaCercaFabrica2.depth > player.depth;
+  }
+
+  const depthPersonagem = Number.isFinite(player.depth)
+    ? player.depth
+    : calcularDepthAtor(scene, obterFootYAtor(player), player);
+  if (!Number.isFinite(depthPersonagem)) return;
+
+  const margem = scene.personagemAtrasCercaFabrica2
+    ? MARGEM_DEPTH_CERCA_FABRICA2
+    : -MARGEM_DEPTH_CERCA_FABRICA2;
+  camadaCercaFabrica2.setDepth(depthPersonagem + margem);
 }
 
 // Em empate, quem está pisando na base aparece à frente do cenário.
@@ -179,6 +211,7 @@ export {
   calcularDepthAtor,
   obterFootYAtor,
   atualizarDepthAtores,
+  atualizarDepthCercaFabrica2,
   calcularDepthObjeto,
   PROFUNDIDADES_OBJETOS_PARTE2,
   atualizarDepthObjetosProducaoEArmazem,

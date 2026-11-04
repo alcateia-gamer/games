@@ -186,6 +186,11 @@ function criarTilesetsCidade(map) {
 
   const shopDoor = map.addTilesetImage("!ShopDoor", "shopDoor");
 
+  const tanqueCombustivel = map.addTilesetImage(
+    "tanque_pixel_art_300x150_transparente",
+    "tanqueCombustivel",
+  );
+
   const vehiclesSpeederCivil5 = map.addTilesetImage(
     "Speeder_civil5",
     "VehiclesSpeederCivil5",
@@ -234,6 +239,7 @@ function criarTilesetsCidade(map) {
     modernInsideFactoryA1,
     wallBorder,
     shopDoor,
+    tanqueCombustivel,
     vehiclesSpeederCivil5,
     speederCivil2,
     transporterPrivate,
@@ -270,6 +276,7 @@ function criarTilesetsCidade(map) {
     ["A1_Modern_Inside_Factory_Rasak", "ModernInsideFactoryA1"],
     ["parede-borda", "wallBorder"],
     ["!ShopDoor", "shopDoor"],
+    ["tanque_pixel_art_300x150_transparente", "tanqueCombustivel"],
     ["Speeder_civil5", "VehiclesSpeederCivil5"],
     ["Speeder_civil2", "Speeder_civil2"],
     ["Transporter_Private", "Transporter_Private"],

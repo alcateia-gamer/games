@@ -4,7 +4,10 @@
  */
 
 import criarLevel1Map from "../map/MapaCidade.js";
-import { atualizarDepthAtores } from "../map/ProfundidadeMapa.js";
+import {
+  atualizarDepthAtores,
+  atualizarDepthCercaFabrica2,
+} from "../map/ProfundidadeMapa.js";
 
 import criarTransicaoParaParte2 from "../core/MapTransition.js";
 
@@ -161,7 +164,10 @@ class Level1 extends Phaser.Scene {
     // =====================================================
 
     criarPlayer(this);
-    const ordenarAtores = () => atualizarDepthAtores(this);
+    const ordenarAtores = () => {
+      atualizarDepthAtores(this);
+      atualizarDepthCercaFabrica2(this);
+    };
     this.events.on(Phaser.Scenes.Events.POST_UPDATE, ordenarAtores);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.events.off(Phaser.Scenes.Events.POST_UPDATE, ordenarAtores);

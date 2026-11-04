@@ -78,6 +78,7 @@ function criarCamadasCidade(map, tilesets, depths) {
   return {
     camadaCercas,
     camadaCercaSpawn,
+    camadaCercaFabrica2,
     camadaCercaFabrica,
   };
 }

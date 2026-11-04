@@ -10,7 +10,8 @@ import {
   atualizarDepthComputadoresPcAdm,
   atualizarDepthObjetosDepthPerso,
   atualizarDepthParedePortaBoss,
-  atualizarDepthGarras, atualizarDepthAtores, obterFootYAtor,
+  atualizarDepthGarras, atualizarDepthAtores, atualizarDepthCercaFabrica2,
+  obterFootYAtor,
 } from "./ProfundidadeMapa.js";
 import { atualizarDepthCompanionPet } from "../player/CompanionPet.js";
 import { atualizarDepthPlayer } from "../player/Player.js";
@@ -93,6 +94,54 @@ test("ordenação ignora visuais inativos, outras camadas e cenas incompletas", 
     atualizarDepthGarras, atualizarDepthParedePortaBoss, atualizarDepthAtores]) {
     assert.doesNotThrow(() => update({}));
   }
+});
+
+test("CercaFabrica2 ordena a camada inteira pelas duas posições Y do personagem", () => {
+  const camadaCercaFabrica2 = {
+    depth: 11.5,
+    setDepth(depth) {
+      this.depth = depth;
+      this.ordens = (this.ordens ?? 0) + 1;
+    },
+  };
+  const scene = {
+    player: { y: -2205, depth: 20, body: { bottom: -2100 } },
+    camadaCercaFabrica2,
+  };
+
+  atualizarDepthCercaFabrica2(scene);
+  assert.ok(
+    camadaCercaFabrica2.depth > scene.player.depth,
+    "com y <= -2204, a camada toda da cerca fica na frente",
+  );
+
+  scene.player.y = -2190;
+  scene.player.depth = 21;
+  atualizarDepthCercaFabrica2(scene);
+  assert.ok(
+    camadaCercaFabrica2.depth > scene.player.depth,
+    "entre os limites a ordenação anterior é mantida",
+  );
+
+  scene.player.y = -2177;
+  scene.player.depth = 22;
+  atualizarDepthCercaFabrica2(scene);
+  assert.ok(
+    camadaCercaFabrica2.depth < scene.player.depth,
+    "com y >= -2177, o personagem fica na frente da camada toda",
+  );
+
+  scene.player.y = -2190;
+  scene.player.depth = 23;
+  atualizarDepthCercaFabrica2(scene);
+  assert.ok(camadaCercaFabrica2.depth < scene.player.depth);
+
+  scene.player.y = -2204;
+  scene.player.depth = 24;
+  atualizarDepthCercaFabrica2(scene);
+  assert.ok(camadaCercaFabrica2.depth > scene.player.depth);
+  assert.equal(camadaCercaFabrica2.ordens, 5, "a camada inteira recebe o depth em cada atualização");
+  assert.doesNotThrow(() => atualizarDepthCercaFabrica2({}));
 });
 
 test("ParedePortaBoss mantém blocos e leitor juntos entre TODOS os atores, sem mover o mapa", () => {

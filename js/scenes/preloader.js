@@ -911,6 +911,11 @@ class Preloader extends Phaser.Scene {
     );
 
     this.load.image(
+      "tanqueCombustivel",
+      "../Tilesets/Animations/Industrial and Security/tanque_pixel_art_300x150_transparente.png"
+    );
+
+    this.load.image(
       "shieldDoorCharacter",
       "../Tilesets/Animations/Industrial and Security/!$Shield_Door_char.png"
     );
