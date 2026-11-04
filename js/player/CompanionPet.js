@@ -1,7 +1,10 @@
 /**
- * @file Companheiro robótico do modo solo. Segue o jogador com desvio de obstáculos,
- * afastamento de inimigos e recuperação quando fica preso.
+ * @file Companheiro robótico do modo solo. Atravessa obstáculos internos, evita inimigos
+ * e permanece na área desenhada do mapa.
  */
+
+import { calcularDepthAtor } from "../map/ProfundidadeMapa.js";
+import { criarAreaMapa } from "../map/AreaMapa.js";
 
 const COMPANION_CONFIG = {
   minDistance: 32,
@@ -51,26 +54,6 @@ function criarAnimacoesCompanionPet(scene) {
 }
 
 /**
- * Obtém os retângulos físicos dos obstáculos ativos presentes no mapa.
- */
-function obterRetangulosObstaculos(scene) {
-  return scene.collisionGroup?.getChildren
-    ? scene.collisionGroup
-        .getChildren()
-        .filter((object) => object?.active && object.body)
-        .map(
-          (object) =>
-            new Phaser.Geom.Rectangle(
-              object.body.x,
-              object.body.y,
-              object.body.width,
-              object.body.height,
-            ),
-        )
-    : [];
-}
-
-/**
  * Calcula o retângulo do corpo em uma posição hipotética, preservando o deslocamento da
  * hitbox.
  */
@@ -88,17 +71,11 @@ function retanguloCorpo(object, x = object.x, y = object.y) {
 }
 
 /**
- * Valida uma posição contra o cenário e, quando solicitado, contra os inimigos próximos.
+ * Respeita somente o contorno do mapa e, quando solicitado, os inimigos próximos.
  */
 function posicaoLivre(scene, pet, x, y, incluirInimigos = true) {
   const bounds = retanguloCorpo(pet, x, y);
-  if (
-    obterRetangulosObstaculos(scene).some((obstaculo) =>
-      Phaser.Geom.Intersects.RectangleToRectangle(bounds, obstaculo),
-    )
-  ) {
-    return false;
-  }
+  if (pet.areaMapa && !pet.areaMapa.contem(bounds)) return false;
 
   if (incluirInimigos) {
     return !(scene.inimigos || []).some((inimigo) => {
@@ -241,7 +218,7 @@ function escolherDirecao(scene, pet, alvo, velocidade) {
 /**
  * Cria o companheiro, configura a física e inicializa seus estados de seguimento e repouso.
  */
-function criarCompanionPet(scene, profundidadeFixa = null) {
+function criarCompanionPet(scene) {
   criarAnimacoesCompanionPet(scene);
   const pet = scene.physics.add.sprite(
     scene.player.x - 45,
@@ -249,12 +226,10 @@ function criarCompanionPet(scene, profundidadeFixa = null) {
     "robo-pet",
   );
   pet.setScale(0.2);
-  pet.setDepth(profundidadeFixa ?? 13);
   pet.setData("isCompanionPet", true);
-  pet.setData("profundidadeFixa", profundidadeFixa);
   pet.config = { ...COMPANION_CONFIG };
   pet.body.setAllowGravity(false);
-  pet.body.setImmovable(true);
+  pet.body.setImmovable(false);
   pet.body.setSize(110, 50);
   pet.body.setOffset(122, 190);
   pet.orbitAngle = Math.random() * Math.PI * 2;
@@ -273,10 +248,17 @@ function criarCompanionPet(scene, profundidadeFixa = null) {
   pet.tempoOlhar = 0;
   pet.setFrame(0);
   scene.companionPet = pet;
-
-  if (scene.collisionGroup) {
-    scene.physics.add.collider(pet, scene.collisionGroup);
-  }
+  pet.body.updateFromGameObject();
+  pet.areaMapa = criarAreaMapa(scene.map);
+  const limitar = () => limitarCompanionAoMapa(scene);
+  // A física pode levar o corpo além da borda entre dois updates da IA.
+  // Corrige antes do desenho, inclusive em teleporte ou recuperação.
+  scene.events.on(Phaser.Scenes.Events.POST_UPDATE, limitar);
+  scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+    scene.events.off(Phaser.Scenes.Events.POST_UPDATE, limitar);
+  });
+  limitar();
+  atualizarDepthCompanionPet(scene);
   return pet;
 }
 
@@ -407,7 +389,8 @@ function atualizarCompanionPet(scene, _time, delta) {
   if (pet.recoveryTime > pet.config.recoveryTimeout) {
     const recuperacao = escolherAlvo(scene, pet, distancia);
     if (posicaoLivre(scene, pet, recuperacao.x, recuperacao.y, false)) {
-      pet.setPosition(recuperacao.x, recuperacao.y);
+      pet.body.reset(recuperacao.x, recuperacao.y);
+      pet.body.updateFromGameObject();
     }
     pet.recoveryTime = 0;
   }
@@ -482,23 +465,36 @@ function atualizarAnimacaoCompanionPet(pet, velocidadeX, velocidadeY) {
 }
 
 /**
- * Aplica a profundidade fixa configurada ou calcula a ordem de desenho pela posição dos pés.
+ * Aplica ao companheiro a mesma regra de chão usada pelo jogador e pelos inimigos.
  */
 function atualizarDepthCompanionPet(scene) {
   const pet = scene.companionPet;
   if (!pet?.active) {
     return;
   }
-  const profundidadeFixa = pet.getData("profundidadeFixa");
-  if (typeof profundidadeFixa === "number") {
-    pet.setDepth(profundidadeFixa);
-    return;
-  }
   const footY = pet.body?.bottom ?? pet.getBounds().bottom;
-  const depth = scene.calcularDepthMundo
-    ? scene.calcularDepthMundo(footY)
-    : 12.5 + footY * 0.0003;
-  pet.setDepth(depth);
+  pet.setDepth(calcularDepthAtor(scene, footY, pet));
 }
 
-export { criarCompanionPet, atualizarCompanionPet, atualizarDepthCompanionPet };
+/** Mantém os pés no contorno real do mapa sem criar colisões com paredes ou portas. */
+function limitarCompanionAoMapa(scene) {
+  const pet = scene.companionPet;
+  if (!pet?.active || !pet.areaMapa) return;
+  const rect = retanguloCorpo(pet);
+  if (pet.areaMapa.contem(rect)) {
+    pet.ultimaPosicaoNoMapa = { x: pet.x, y: pet.y };
+    return;
+  }
+  let position = pet.ultimaPosicaoNoMapa;
+  if (!position) {
+    const center = pet.areaMapa.centroMaisProximo(rect.centerX, rect.centerY);
+    position = { x: pet.x + center.x - rect.centerX, y: pet.y + center.y - rect.centerY };
+  }
+  pet.body.reset(position.x, position.y);
+  pet.body.updateFromGameObject();
+  pet.setVelocity(0, 0);
+  pet.ultimaPosicaoNoMapa = { ...position };
+  atualizarDepthCompanionPet(scene);
+}
+
+export { criarCompanionPet, atualizarCompanionPet, atualizarDepthCompanionPet, limitarCompanionAoMapa };

@@ -6,6 +6,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { EventEmitter } from "node:events";
+import { criarSomGerador } from "../sounds/gerador.js";
 
 import {
   GENERATOR_REQUIREMENTS,
@@ -112,4 +114,56 @@ test("uses the registered gasoline and battery IDs at one unit each", () => {
       { id: "bateria", quantity: 1 },
     ],
   );
+});
+
+test("DEV apaga a fábrica, persiste a falta de energia e permite religar", async t => {
+  const previousPhaser = globalThis.Phaser;
+  t.after(() => { globalThis.Phaser = previousPhaser; });
+  globalThis.Phaser = { Scene: class {} };
+  const { default: Level1Parte2 } = await import("../scenes/Level1Parte2.js");
+  const calls = [];
+  const scene = Object.assign(Object.create(Level1Parte2.prototype), {
+    developerMode: true, luzFabricaAcesa: true, game: { registry: new Map() },
+    definirIluminacaoFabrica(...args) { calls.push(args); },
+  });
+  scene.apagarLuzFabrica();
+  assert.equal(scene.luzFabricaAcesa, false);
+  assert.equal(scene.game.registry.get("factoryGeneratorPowered"), false);
+  assert.deepEqual(calls, [[false]]);
+  const returned = { game: scene.game };
+  Level1Parte2.prototype.init.call(returned, {});
+  assert.equal(returned.luzFabricaAcesa, false);
+  scene.acenderLuzFabrica();
+  assert.equal(scene.luzFabricaAcesa, true);
+  assert.equal(scene.game.registry.get("factoryGeneratorPowered"), true);
+  assert.deepEqual(calls.at(-1), [true, null]);
+  scene.developerMode = false;
+  scene.apagarLuzFabrica();
+  assert.equal(scene.luzFabricaAcesa, true, "desligamento é exclusivo do DEV");
+  assert.equal(scene.game.registry.get("factoryGeneratorPowered"), true);
+});
+
+test("desligar interrompe o motor e prepara uma nova partida ao religar", () => {
+  const plays = [];
+  let stops = 0;
+  const sound = Object.assign(new EventEmitter(), {
+    totalDuration: 12, seek: 0, isPlaying: false,
+    addMarker() {}, setVolume() {}, destroy() {},
+    stop() { stops++; this.isPlaying = false; },
+    play(...args) { plays.push(args); this.isPlaying = true; return true; },
+  });
+  const scene = { luzFabricaAcesa: true,
+    cache: { audio: { exists: () => true } }, sound: { add: () => sound } };
+  const generator = criarSomGerador(scene);
+  generator.update(0);
+  assert.equal(plays[0][0], "motor", "retorno à fábrica energizada usa o loop");
+  scene.luzFabricaAcesa = false;
+  generator.update(0);
+  assert.equal(stops, 1);
+  assert.equal(generator.getStartupProgress(), 0);
+  scene.luzFabricaAcesa = true;
+  generator.update(0);
+  assert.equal(plays[1][0].seek, 0);
+  assert.equal(plays[1][0].loop, false);
+  generator.destroy();
 });

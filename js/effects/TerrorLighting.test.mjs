@@ -72,6 +72,16 @@ test("flashlight updates on movement and direction changes only while factory po
   scene.player.x += 10;
   render();
   assert.equal(uploads, stationaryUploads + 4, "lanterna acompanha o personagem sem energia");
+  Object.assign(scene.player, { texture: { key: "walk" }, frame: { name: 18 },
+    displayOriginX: 64, displayOriginY: 64 });
+  render();
+  const animationUploads = uploads;
+  scene.player.frame.name = 21;
+  render();
+  assert.equal(uploads, animationUploads, "o movimento dos braços não desloca a origem na barriga");
+  scene.player.body.velocity.x = 0;
+  render();
+  assert.equal(uploads, animationUploads, "parar preserva a mira e reutiliza a máscara");
   cleanup();
   assert.equal(scene.game.renderer.listenerCount("render"), 0);
 });

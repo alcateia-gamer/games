@@ -3,7 +3,41 @@
 O sistema é exclusivo de `Level1Parte2`. Lê os pontos de `LuzesFabrica` por
 `map.getObjectLayer`, depois da criação do mapa. Preserva posições, coordenadas
 negativas, gerador, partida elétrica, falhas e estado persistente da energia.
-O jogador não emite luz na fábrica.
+Sem energia, a lanterna do jogador ilumina a fábrica; ela apaga quando a energia liga.
+
+## Lanterna na barriga
+
+`FlashlightPose.js` posiciona a origem no centro da barriga de cada personagem,
+respeitando a origem visual, escala, espelhamento e rotação do sprite. O movimento
+dos braços e as mudanças de direção não deslocam esse ponto pelo corpo.
+
+O feixe segue a velocidade nas oito direções e conserva o último ângulo ao parar.
+Uma mudança explícita de direção parado atualiza a mira. A abertura do cone começa
+perto da barriga, com transição suave nos primeiros 8 pixels. Para baixo, quadros
+animados com a mesma posição do tronco reutilizam a máscara; com energia, a lanterna apaga.
+
+O feixe apontando para cima, inclusive nas diagonais, passa por trás do jogador.
+A silhueta do frame atual bloqueia só a contribuição da lanterna, mantendo a
+cabeça e o corpo na sombra sem recortar o cenário transparente ao redor. Para
+baixo, a luz passa sobre o personagem. Um carimbo local reutilizado acompanha
+frame, escala, origem, rotação, espelhamento e alpha; as luzes da fábrica continuam
+iluminando o personagem normalmente quando há energia.
+
+`FlashlightWalls.js` limita o feixe e seu halo à região visível desde a barriga.
+Os tiles de `ParedeAbaixoPerso` e `ParedeAcimaPerso` e os objetos de `ParedePortaBoss`
+bloqueiam a luz. `BordaAlta` e `BordaCurvas` ficam fora desse bloqueio. Colisões comuns de máquinas e
+móveis deixam os objetos receberem o feixe; a física de movimento permanece igual.
+Uma colisão extra só bloqueia luz quando seu tipo é `parede` ou `wall`. Portas com
+colisão bloqueiam até terminar a abertura. Abrir uma porta atualiza a sombra mesmo
+com o jogador parado. Aberturas e quinas preservam a passagem da luz onde há visão.
+Um índice espacial consulta só os contornos próximos; o polígono é reutilizado
+enquanto origem e portas não mudam. O recorte usa a matriz atual da câmera.
+
+A primeira parede atingida recebe luz em toda sua face, até a borda de trás da
+superfície. O espaço depois dessa borda permanece escuro. Cruzamentos de contornos
+levam em conta paredes sobrepostas e quinas; uma segunda parede não recebe luz
+através da primeira. Portas fechadas também recebem luz na superfície e bloqueiam
+o cenário atrás delas.
 
 ## Configuração no Tiled
 
@@ -14,14 +48,39 @@ Cada fonte deve ser um objeto **Point**:
 | `Raio` | int | 170 | Alcance de referência em pixels de mundo; a dispersão usa 1,5 × esse valor. Inteiro positivo. |
 | `Intensidade` | float | 1.0 | Número finito não negativo; zero apaga a fonte, valores acima de 1 são limitados. |
 | `Cor` | color | `#FFD27A` | RGB ou ARGB do Tiled (`#AARRGGBB`); alpha controla a força da fonte. |
-| `Piscando` | bool | false | Quedas suaves de 650–1300 ms, em intervalos aleatórios de 3–9 s. |
+| `Piscando` | bool | true | Campo legado: todas as lâmpadas participam das falhas, inclusive com `false` ou sem a propriedade. |
 | `Ligada` | bool | true | Permite acender a fonte apenas quando o gerador fornece energia. |
 | `Orientacao` | string | `horizontal` | `horizontal` ou `vertical`; orienta o segmento luminoso em cápsula. |
+
+A leitura de `Orientacao` aceita maiúsculas, minúsculas e espaços nas extremidades.
+Os valores `Vetical` e `Vertical` são interpretados como `vertical`, sem precisar
+alterar a grafia no mapa. O foco gira no próprio ponto da lâmpada, preservando
+suas coordenadas X/Y.
 
 Propriedades ausentes ou inválidas usam os padrões. Objetos sem Point ou sem
 coordenadas válidas são ignorados com aviso. Uma camada ausente também gera aviso
 e mantém a escuridão, sem inventar lâmpadas. As luminárias físicas do mapa não são
 alteradas pela forma da projeção luminosa.
+
+## Falhas elétricas aleatórias
+
+Após estabilizar o gerador, cada lâmpada ligada segue um relógio independente.
+A primeira falha ocorre após 4–16 segundos. Cada sequência dura 1,2–3,4 segundos,
+com 3–6 quedas irregulares: perdas rápidas de brilho, apagões parciais sustentados,
+recuperações incompletas e um retorno final suave. A luz pode cair a 3% do brilho
+configurado; as recuperações intermediárias variam entre 55% e 98%.
+
+Depois de cada sequência, a lâmpada fica estável por 8–24 segundos antes da próxima.
+Várias lâmpadas podem falhar ao mesmo tempo, inclusive vizinhas. Todas as fontes
+participam, sem precisar editar `Piscando` no Tiled. `Ligada`, intensidade, cor,
+orientação e o pulso de emergência continuam sendo respeitados.
+
+Os relógios também avançam fora da tela. Estalos só são emitidos para inícios de
+falha no campo de visão; falhas simultâneas escolhem o estalo mais próximo e não
+interrompem um estalo em reprodução. Ao suspender o jogo, eventos vencidos são
+descartados, evitando uma fila de piscadas ao retornar. Desligar a energia cancela
+as sequências e os relógios. Os perfis são sorteados uma vez por sequência, sem
+ruído aleatório por quadro nem temporizadores adicionais.
 
 ## Causa das manchas e correção
 
@@ -106,18 +165,20 @@ node --test
 Os testes usam parser, câmera e matrizes do Phaser incluído no projeto. O Canvas
 simulado amostra alpha e RGBA pelas equações Porter-Duff. Conferem propriedades,
 pontos reais, energia, partida, falhas, cápsula sem platô, transições contínuas,
-limite do alcance ampliado, 80 fontes sobrepostas, cores do piso, ausência de lanterna,
+limite do alcance ampliado, 80 fontes sobrepostas, cores do piso, lanterna condicionada à energia,
 alinhamento, persistência e limpeza. Não substituem navegador ou GPU reais.
 
 Validação manual:
 
-1. Entre com o gerador desligado e confira o escurecimento ambiente configurado sem luz do jogador.
+1. Entre com o gerador desligado e confira a lanterna na barriga ao caminhar
+   nas oito direções e ao parar, sem deslocar a origem junto com os braços durante a animação.
 2. Ligue o gerador. Confira a partida progressiva e a revelação do piso perto de
    cada luminária, mantendo sombras e sem retângulos ou anéis luminosos.
 3. Compare locais com uma e com várias fontes: o brilho deve se combinar suavemente,
    preservando os detalhes e as cores do cenário.
-4. Teste `Orientacao = vertical`, raios diferentes e `Piscando = true`. As posições
-   não devem mudar; apenas as fontes defeituosas oscilam depois da estabilização.
+4. Teste `Orientacao = vertical` e raios diferentes. As posições não devem mudar.
+   Após estabilizar o gerador, todas as lâmpadas devem apresentar sequências
+   irregulares de mau contato, com possibilidade de falhas simultâneas.
 5. Mova a câmera, altere zoom, redimensione e gire o celular. Saia e retorne à fábrica
    para conferir energia persistida e ausência de erros ou vazamentos.
 6. Confira a cidade e a loja e meça FPS/memória em um celular intermediário.

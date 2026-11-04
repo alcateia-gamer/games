@@ -5,6 +5,8 @@
 
 import FactoryLighting, { ESCURIDAO_AMBIENTE_FABRICA, MULTIPLICADOR_ALCANCE_FABRICA, QUEDAS_LUZ_FABRICA } from "./FactoryLighting.js";
 import { criarSomLuzFabrica, criarSomPiscadasAmbiente } from "../sounds/luzFabrica.js";
+import { atualizarPoseLanterna } from "./FlashlightPose.js";
+import FlashlightWalls from "./FlashlightWalls.js";
 export { intensidadeLuzPartida, QUEDAS_LUZ_FABRICA } from "./FactoryLighting.js";
 
 const TEXTURA_ESCURIDAO_PARTE2 = "level1-parte2-escuridao";
@@ -13,6 +15,8 @@ const TAMANHO_MASCARA = 256;
 const ESCURIDAO_MINIMA_FABRICA = 0.2;
 const GANHO_LUZ_FABRICA = 1.2;
 const GANHO_DISPERSAO_FABRICA = 2;
+const CAMPOS_OCLUSAO = ["x", "y", "scaleX", "scaleY", "rotation", "flipX", "flipY",
+  "displayOriginX", "displayOriginY", "alpha"];
 const COR_ESCURIDAO = `rgba(0,0,0,${ESCURIDAO_AMBIENTE_FABRICA})`;
 // Após destination-out, q é a sombra restante em [0,1]. A composição final produz
 // alpha = mínima + (ambiente - mínima) * q, sem readback de pixels por frame.
@@ -96,13 +100,44 @@ function criarMascaraLanterna() {
       const py = (y + 0.5) / TAMANHO_MASCARA * 320 - 160;
       const distancia = Math.hypot(px, py);
       const cone = px > 0 ? (1 - suavizar(Math.abs(Math.atan2(py, px)) / 0.55)) *
-        suavizar(distancia / 40) * (1 - suavizar(distancia / 350)) : 0;
+        suavizar(distancia / 8) * (1 - suavizar(distancia / 350)) : 0;
       // O halo termina antes da borda da textura, evitando o recorte reto atrás do jogador.
       const halo = 0.4 * Math.exp(-0.5 * (distancia / 28) ** 2) * (1 - suavizar(distancia / 90));
       perfil[y * TAMANHO_MASCARA + x] = Math.round(Math.max(cone, halo) * 255);
     }
   }
   return criarMascaraLuminaria(perfil);
+}
+
+/** Retira só a silhueta opaca do jogador do feixe que passa por trás dele. */
+function ocultarLanternaAtrasPlayer(context, lanterna, player, pose) {
+  context.setTransform(1, 0, 0, 1, 0, 0);
+  context.globalAlpha = 1;
+  context.globalCompositeOperation = "source-over";
+  context.clearRect(0, 0, 460, 320);
+  context.drawImage(lanterna, 0, 0, 460, 320);
+
+  // Mundo -> coordenadas da textura da lanterna, antes da transformação do sprite.
+  const cos = Math.cos(pose.angulo), sin = Math.sin(pose.angulo);
+  context.setTransform(cos, -sin, sin, cos,
+    100 - cos * pose.x - sin * pose.y, 160 + sin * pose.x - cos * pose.y);
+  const frame = player.frame;
+  const escalaX = (player.scaleX ?? 1) * (player.flipX ? -1 : 1);
+  const escalaY = (player.scaleY ?? 1) * (player.flipY ? -1 : 1);
+  const rotacao = player.rotation ?? 0;
+  const cr = Math.cos(rotacao), sr = Math.sin(rotacao);
+  context.transform(cr * escalaX, sr * escalaX, -sr * escalaY, cr * escalaY, player.x, player.y);
+  const largura = frame.realWidth ?? player.width ?? frame.cutWidth;
+  const altura = frame.realHeight ?? player.height ?? frame.cutHeight;
+  const origemX = player.displayOriginX ?? largura / 2;
+  const origemY = player.displayOriginY ?? altura / 2;
+  const ox = player.flipX ? largura - origemX : origemX;
+  const oy = player.flipY ? altura - origemY : origemY;
+  context.globalCompositeOperation = "destination-out";
+  context.globalAlpha = player.alpha ?? 1;
+  context.imageSmoothingEnabled = false;
+  context.drawImage(frame.source.image, frame.cutX, frame.cutY, frame.cutWidth, frame.cutHeight,
+    (frame.x ?? 0) - ox, (frame.y ?? 0) - oy, frame.cutWidth, frame.cutHeight);
 }
 
 function desenharLuminaria(context, canvas, luz) {
@@ -121,7 +156,7 @@ function desenharLuminaria(context, canvas, luz) {
   context.restore();
 }
 
-/** Uma única máscara mantém a sombra ambiente e recebe apenas as luzes do teto. */
+/** Uma única máscara combina sombra ambiente, luzes do teto e lanterna sem energia. */
 function criarIluminacaoTerror(scene) {
   const camera = scene.cameras.main;
   const renderer = scene.game.renderer;
@@ -131,6 +166,8 @@ function criarIluminacaoTerror(scene) {
   const ultimoQuadro = { width: 0, height: 0, a: 0, b: 0, c: 0, d: 0, e: 0, f: 0, revisao: -1 };
   let encerrada = false;
   const iluminacao = new FactoryLighting(scene.map);
+  const paredesLanterna = new FlashlightWalls(scene);
+  let revisaoParedes = -1;
   scene.iluminacaoFabrica = iluminacao;
   const somPartida = criarSomLuzFabrica(scene, QUEDAS_LUZ_FABRICA);
   const somPiscadas = criarSomPiscadasAmbiente(scene);
@@ -148,7 +185,13 @@ function criarIluminacaoTerror(scene) {
   const luminariaPulsoCanvas = criarMascaraLuminaria(perfilPulso);
   const corPulsoCanvas = criarMascaraLuminaria(perfilPulso, 0xFF0000);
   const lanternaCanvas = criarMascaraLanterna();
-  const centroPlayer = { x: 0, y: 0, set(x, y) { this.x = x; this.y = y; return this; } };
+  // Carimbo local reutilizado; não cria outra máscara do tamanho da tela.
+  const lanternaOclusaoCanvas = document.createElement("canvas");
+  lanternaOclusaoCanvas.width = 460;
+  lanternaOclusaoCanvas.height = 320;
+  const oclusaoContext = lanternaOclusaoCanvas.getContext("2d");
+  const oclusaoAnterior = { frame: null };
+  const poseLanterna = { x: 0, y: 0, angulo: null, direcao: null };
   const lanternaAnterior = { x: null, y: null, angulo: null };
   const coresCanvas = new Map();
   const areasCanvas = new Map();
@@ -208,18 +251,34 @@ function criarIluminacaoTerror(scene) {
     const fontes = iluminacao.atualizar(scene.time.now, camera);
     const player = scene.player;
     const lanternaAtiva = !iluminacao.energia && player?.active !== false &&
-      !!player && (typeof player.getCenter === "function" || (Number.isFinite(player.x) && Number.isFinite(player.y)));
+      !!player && Number.isFinite(player.x) && Number.isFinite(player.y);
     let angulo = null;
     if (lanternaAtiva) {
-      if (typeof player.getCenter === "function") player.getCenter(centroPlayer);
-      else centroPlayer.set(player.x, player.y);
-      const velocidade = player.body?.velocity;
-      angulo = velocidade && Math.hypot(velocidade.x, velocidade.y) > 1
-        ? Math.atan2(velocidade.y, velocidade.x)
-        : ({ right: 0, down: Math.PI / 2, left: Math.PI, up: -Math.PI / 2 }[scene.direcaoAtual] ?? Math.PI / 2);
+      atualizarPoseLanterna(scene, poseLanterna);
+      angulo = poseLanterna.angulo;
+      paredesLanterna.atualizarPortas();
+      if (revisaoParedes !== paredesLanterna.revisao) {
+        invalidada = true;
+        revisaoParedes = paredesLanterna.revisao;
+      }
     }
-    const lx = lanternaAtiva ? centroPlayer.x : null;
-    const ly = lanternaAtiva ? centroPlayer.y : null;
+    const lx = lanternaAtiva ? poseLanterna.x : null;
+    const ly = lanternaAtiva ? poseLanterna.y : null;
+    const lanternaAtras = lanternaAtiva && Math.sin(angulo) < -0.001 &&
+      player.visible !== false && !!player.frame?.source?.image;
+    const frameOclusao = lanternaAtras ? player.frame : null;
+    if (oclusaoAnterior.frame !== frameOclusao) {
+      invalidada = true;
+      oclusaoAnterior.frame = frameOclusao;
+    }
+    if (lanternaAtras) {
+      for (const campo of CAMPOS_OCLUSAO) {
+        if (oclusaoAnterior[campo] !== player[campo]) {
+          invalidada = true;
+          oclusaoAnterior[campo] = player[campo];
+        }
+      }
+    }
     if (lanternaAnterior.x !== lx || lanternaAnterior.y !== ly || lanternaAnterior.angulo !== angulo) {
       invalidada = true;
       Object.assign(lanternaAnterior, { x: lx, y: ly, angulo });
@@ -258,11 +317,13 @@ function criarIluminacaoTerror(scene) {
       desenharLuminaria(context, areasCanvas.get(luz)?.mascara ?? (luz.pulsando ? luminariaPulsoCanvas : luminariaCanvas), luz);
     }
     if (lanternaAtiva) {
+      if (lanternaAtras) ocultarLanternaAtrasPlayer(oclusaoContext, lanternaCanvas, player, poseLanterna);
       context.save();
       context.globalAlpha = 1;
+      paredesLanterna.recortar(context, lx, ly);
       const cos = Math.cos(angulo), sin = Math.sin(angulo);
       context.transform(cos, sin, -sin, cos, lx, ly);
-      context.drawImage(lanternaCanvas, -100, -160, 460, 320);
+      context.drawImage(lanternaAtras ? lanternaOclusaoCanvas : lanternaCanvas, -100, -160, 460, 320);
       context.restore();
     }
     context.restore();
@@ -308,9 +369,11 @@ function criarIluminacaoTerror(scene) {
     somPartida.destroy();
     somPiscadas.destroy();
     iluminacao.destroy();
+    paredesLanterna.destroy();
     overlay.destroy();
     if (scene.textures.exists(TEXTURA_ESCURIDAO_PARTE2)) scene.textures.remove(TEXTURA_ESCURIDAO_PARTE2);
-    for (const canvas of [luminariaCanvas, luminariaPulsoCanvas, corPulsoCanvas, lanternaCanvas, ...coresCanvas.values()]) {
+    for (const canvas of [luminariaCanvas, luminariaPulsoCanvas, corPulsoCanvas, lanternaCanvas,
+      lanternaOclusaoCanvas, ...coresCanvas.values()]) {
       canvas.width = canvas.height = 0;
     }
     coresCanvas.clear();

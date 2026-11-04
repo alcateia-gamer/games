@@ -4,6 +4,7 @@
  */
 
 import { criarSomGerador } from "../sounds/gerador.js";
+import { criarPainelGerador } from "./FactoryGeneratorPanel.js";
 
 const INTERACTION_LAYER_NAMES = ["interacoes", "coletaveis"];
 const GENERATOR_OBJECT_NAME = "gerador01";
@@ -124,7 +125,6 @@ function criarInteracaoGeradorFabrica(scene) {
   }
 
   const area = result.object;
-  const camera = scene.cameras.main;
   const playerCenter = new Phaser.Math.Vector2();
   const inventory = scene.inventory;
   const generatorSound = criarSomGerador(scene);
@@ -133,159 +133,13 @@ function criarInteracaoGeradorFabrica(scene) {
   let activationCloseEvent = null;
   scene.geradorInteracaoDisponivel = false;
 
-  const modal = scene.add.container(0, 0).setDepth(1000).setScrollFactor(0);
-  const backdrop = scene.add
-    .rectangle(0, 0, camera.width, camera.height, 0x02070b, 0.86)
-    .setInteractive();
-  const panel = scene.add
-    .rectangle(0, 0, 500, 330, 0x08131b, 0.98)
-    .setStrokeStyle(2, 0x29c9d8, 0.95);
-  const title = scene.add
-    .text(0, -122, "GERADOR INDUSTRIAL", {
-      color: "#e7fbff",
-      fontFamily: "monospace",
-      fontSize: "24px",
-      fontStyle: "bold",
-    })
-    .setOrigin(0.5);
-  const state = scene.add
-    .text(0, -88, "SEM ENERGIA", {
-      color: "#ff6565",
-      fontFamily: "monospace",
-      fontSize: "16px",
-      fontStyle: "bold",
-    })
-    .setOrigin(0.5);
-  const fuelLabel = scene.add.text(-205, -38, "COMBUSTÍVEL (1)", {
-    color: "#d7e4e8",
-    fontFamily: "monospace",
-    fontSize: "15px",
+  const escapeKey = scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
+  const painel = criarPainelGerador(scene, {
+    onActivate: () => ativarGerador(),
+    onClose: () => fecharModal(),
   });
-  const fuelCount = scene.add
-    .text(205, -38, "", {
-      color: "#ff6565",
-      fontFamily: "monospace",
-      fontSize: "15px",
-      fontStyle: "bold",
-    })
-    .setOrigin(1, 0);
-  const batteryLabel = scene.add.text(-205, 8, "BATERIA (1)", {
-    color: "#d7e4e8",
-    fontFamily: "monospace",
-    fontSize: "15px",
-  });
-  const batteryCount = scene.add
-    .text(205, 8, "", {
-      color: "#ff6565",
-      fontFamily: "monospace",
-      fontSize: "15px",
-      fontStyle: "bold",
-    })
-    .setOrigin(1, 0);
-  const feedback = scene.add
-    .text(0, 58, "", {
-      color: "#ff9292",
-      fontFamily: "monospace",
-      fontSize: "13px",
-      align: "center",
-      wordWrap: { width: 430 },
-    })
-    .setOrigin(0.5);
-  /**
-   * Monta um botão do modal com fundo interativo e texto centralizado.
-   */
-  const createButton = (x, y, width, label, fill, stroke) => {
-    const button = scene.add
-      .rectangle(x, y, width, 44, fill, 0.96)
-      .setStrokeStyle(2, stroke, 1)
-      .setInteractive({ useHandCursor: true });
-    const text = scene.add
-      .text(x, y, label, {
-        color: "#f0fcff",
-        fontFamily: "monospace",
-        fontSize: "13px",
-        fontStyle: "bold",
-      })
-      .setOrigin(0.5);
-    return { button, text };
-  };
-  const activateButton = createButton(
-    -95,
-    119,
-    220,
-    "LIGAR GERADOR",
-    0x07505a,
-    0x30e0e9,
-  );
-  const cancelButton = createButton(
-    157,
-    119,
-    125,
-    "CANCELAR",
-    0x282f35,
-    0x84939b,
-  );
-
-  modal.add([
-    backdrop,
-    panel,
-    title,
-    state,
-    fuelLabel,
-    fuelCount,
-    batteryLabel,
-    batteryCount,
-    feedback,
-    activateButton.button,
-    activateButton.text,
-    cancelButton.button,
-    cancelButton.text,
-  ]);
-  modal.setVisible(false);
-
-  const escapeKey = scene.input.keyboard.addKey(
-    Phaser.Input.Keyboard.KeyCodes.ESC,
-  );
-
-  /**
-   * Atualiza as quantidades disponíveis, as cores e o estado visual do botão de ativação.
-   */
-  const atualizarModal = () => {
-    const missing = listarRecursosFaltantes(inventory);
-    const fuelQuantity = inventory.getQuantity("gasolina");
-    const batteryQuantity = inventory.getQuantity("bateria");
-    fuelCount
-      .setText(`POSSUI: ${fuelQuantity}`)
-      .setColor(fuelQuantity >= 1 ? "#72f2a0" : "#ff6565");
-    batteryCount
-      .setText(`POSSUI: ${batteryQuantity}`)
-      .setColor(batteryQuantity >= 1 ? "#72f2a0" : "#ff6565");
-    activateButton.button.setAlpha(
-      scene.luzFabricaAcesa || missing.length === 0 ? 1 : 0.58,
-    );
-    return missing;
-  };
-
-  /**
-   * Mantém o modal centralizado e com tamanho fixo mesmo durante mudanças de zoom.
-   */
-  const posicionarElementosFixos = () => {
-    if (!modal.scene) return;
-
-    const zoomX = camera.zoomX || camera.zoom || 1;
-    const zoomY = camera.zoomY || camera.zoom || 1;
-    const originX = camera.width * camera.originX;
-    const originY = camera.height * camera.originY;
-    const screenCenterX = camera.width / 2;
-    const screenCenterY = camera.height / 2;
-    modal
-      .setPosition(
-        originX + (screenCenterX - originX) / zoomX,
-        originY + (screenCenterY - originY) / zoomY,
-      )
-      .setScale(1 / zoomX, 1 / zoomY);
-    backdrop.setSize(camera.width, camera.height);
-  };
+  let movimentoAnterior = false;
+  let cleanedUp = false;
 
   /**
    * Fecha o modal, libera o movimento e limpa a mensagem de retorno.
@@ -294,29 +148,27 @@ function criarInteracaoGeradorFabrica(scene) {
     if (!dialogOpen) return;
     dialogOpen = false;
     scene.generatorMenuOpen = false;
-    scene.movimentoBloqueado = false;
-    modal.setVisible(false);
-    feedback.setText("");
+    if (!scene.morteEmAndamento) scene.movimentoBloqueado = movimentoAnterior;
+    painel.close();
     scene.player?.setVelocity(0, 0);
   };
+  const handleEscape = () => {
+    if (dialogOpen && !isActivating) fecharModal();
+  };
+  escapeKey.on("down", handleEscape);
 
   /**
    * Abre o menu do gerador e bloqueia o movimento enquanto o jogador escolhe uma ação.
    */
   const abrirModal = () => {
-    if (dialogOpen || scene.luzFabricaAcesa) return;
+    if (dialogOpen || scene.luzFabricaAcesa || scene.devItemMenuOpen) return;
     dialogOpen = true;
     scene.generatorMenuOpen = true;
     scene.geradorInteracaoDisponivel = false;
+    movimentoAnterior = !!scene.movimentoBloqueado;
     scene.movimentoBloqueado = true;
     scene.player?.setVelocity(0, 0);
-    feedback.setText("");
-    feedback.setColor("#ff9292");
-    state.setText("SEM ENERGIA").setColor("#ff6565");
-    cancelButton.button.setInteractive({ useHandCursor: true });
-    activateButton.button.setInteractive({ useHandCursor: true });
-    atualizarModal();
-    modal.setVisible(true);
+    painel.open();
   };
 
   /**
@@ -333,15 +185,7 @@ function criarInteracaoGeradorFabrica(scene) {
    * confirmação visual.
    */
   const ativarGerador = () => {
-    if (isActivating || scene.luzFabricaAcesa) return;
-
-    const missing = atualizarModal();
-    if (missing.length > 0) {
-      feedback.setText(
-        `FALTANDO: ${missing.map(({ label }) => label).join(" E ")}`,
-      );
-      return;
-    }
+    if (!dialogOpen || isActivating || scene.luzFabricaAcesa || !painel.ready()) return;
 
     isActivating = true;
     const removed = inventory.removeItems(
@@ -352,8 +196,8 @@ function criarInteracaoGeradorFabrica(scene) {
     );
     if (!removed) {
       isActivating = false;
-      atualizarModal();
-      feedback.setText("RECURSOS INSUFICIENTES. VERIFIQUE O INVENTÁRIO.");
+      painel.refresh(true);
+      painel.message("Recursos insuficientes. Verifique o inventário.");
       return;
     }
 
@@ -361,49 +205,12 @@ function criarInteracaoGeradorFabrica(scene) {
     generatorSound.update(
       distanceToInteractionArea(playerCenter.x, playerCenter.y, area),
     );
-    state.setText("GERADOR INICIANDO").setColor("#72f2a0");
-    feedback
-      .setColor("#72f2a0")
-      .setText("O MOTOR ESTÁ GANHANDO FORÇA. A ENERGIA ESTÁ ESTABILIZANDO...");
-    activateButton.text.setText("GERADOR LIGADO");
-    cancelButton.text.setText("FECHANDO...");
-    activateButton.button.disableInteractive();
-    cancelButton.button.disableInteractive();
+    painel.start();
     activationCloseEvent = scene.time.delayedCall(1100, () => {
       isActivating = false;
       fecharModal();
     });
   };
-
-  /**
-   * Encaminha toques no modal para ativar ou cancelar, ignorando comandos durante a ativação.
-   */
-  const handleMenuPointerDown = (pointer) => {
-    if (!dialogOpen || isActivating) return;
-
-    if (
-      pointerDentroDoBotao(pointer, camera.width, camera.height, {
-        x: -95,
-        y: 119,
-        width: 220,
-        height: 44,
-      })
-    ) {
-      ativarGerador();
-    } else if (
-      pointerDentroDoBotao(pointer, camera.width, camera.height, {
-        x: 157,
-        y: 119,
-        width: 125,
-        height: 44,
-      })
-    ) {
-      fecharModal();
-    }
-  };
-
-  scene.input.on("pointerdown", handleMenuPointerDown);
-  scene.events.on(Phaser.Scenes.Events.PRE_RENDER, posicionarElementosFixos);
 
   /**
    * Atualiza a proximidade pela hitbox do jogador e permite fechar o menu com Esc.
@@ -422,13 +229,7 @@ function criarInteracaoGeradorFabrica(scene) {
     generatorSound.update(distance);
 
     if (dialogOpen) {
-      atualizarModal();
-      if (
-        !isActivating &&
-        Phaser.Input.Keyboard.JustDown(escapeKey)
-      ) {
-        fecharModal();
-      }
+      painel.refresh();
       return;
     }
 
@@ -438,21 +239,17 @@ function criarInteracaoGeradorFabrica(scene) {
       distance <= GENERATOR_INTERACTION_RANGE;
   };
 
-  posicionarElementosFixos();
-  atualizarModal();
-
   /**
    * Remove modal, temporizadores, teclas e listeners; libera os bloqueios ao encerrar a cena.
    */
   const cleanup = () => {
-    scene.events.off(
-      Phaser.Scenes.Events.PRE_RENDER,
-      posicionarElementosFixos,
-    );
-    scene.input.off("pointerdown", handleMenuPointerDown);
+    if (cleanedUp) return;
+    cleanedUp = true;
+    scene.events.off(Phaser.Scenes.Events.SHUTDOWN, cleanup);
     activationCloseEvent?.remove(false);
     generatorSound.destroy();
-    modal.destroy();
+    painel.destroy();
+    escapeKey.off("down", handleEscape);
     escapeKey.destroy();
     scene.generatorMenuOpen = false;
     scene.movimentoBloqueado = false;

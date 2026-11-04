@@ -8,7 +8,7 @@ import { GENERATOR_LOOP_START_SECONDS } from "../sounds/gerador.js";
 const ESCURIDAO_AMBIENTE_FABRICA = 0.75;
 const MULTIPLICADOR_ALCANCE_FABRICA = 1.5;
 const PADROES_LUZ_FABRICA = Object.freeze({
-  raio: 170, intensidade: 1, cor: "#FFD27A", piscando: false, pulsando: false, ligada: true,
+  raio: 170, intensidade: 1, cor: "#FFD27A", piscando: true, pulsando: false, ligada: true,
   orientacao: "horizontal",
 });
 const PARTIDA_GERADOR = [
@@ -87,12 +87,11 @@ function lerLuzesFabrica(map, avisar = console.warn) {
     }
     const raio = lerPropriedade(objeto, "Raio");
     const intensidade = lerPropriedade(objeto, "Intensidade");
-    const piscando = lerPropriedade(objeto, "Piscando");
     const pulsando = lerPropriedade(objeto, "Pulsando");
     const ligada = lerPropriedade(objeto, "Ligada");
     const orientacaoConfigurada = lerPropriedade(objeto, "Orientacao");
     const orientacao = typeof orientacaoConfigurada === "string"
-      ? orientacaoConfigurada.toLowerCase()
+      ? orientacaoConfigurada.trim().toLowerCase()
       : null;
     const cor = lerCorTiled(lerPropriedade(objeto, "Cor"));
     if (pulsando === true) {
@@ -107,12 +106,15 @@ function lerLuzesFabrica(map, avisar = console.warn) {
       intensidade: typeof intensidade === "number" && Number.isFinite(intensidade) && intensidade >= 0
         ? intensidade : PADROES_LUZ_FABRICA.intensidade,
       cor,
-      piscando: typeof piscando === "boolean" ? piscando : PADROES_LUZ_FABRICA.piscando,
+      // Falhas elétricas abrangem todas as fontes, inclusive as antigas com Piscando=false.
+      piscando: true,
       pulsando: typeof pulsando === "boolean" ? pulsando : PADROES_LUZ_FABRICA.pulsando,
       ligada: (typeof ligada === "boolean" ? ligada : PADROES_LUZ_FABRICA.ligada) &&
         camada.visible !== false && objeto.visible !== false,
-      orientacao: ["horizontal", "vertical"].includes(orientacao)
-        ? orientacao : PADROES_LUZ_FABRICA.orientacao,
+      // Exportações antigas do mapa usam "Vetical" para as luminárias verticais.
+      orientacao: orientacao === "vetical" ? "vertical"
+        : ["horizontal", "vertical"].includes(orientacao)
+          ? orientacao : PADROES_LUZ_FABRICA.orientacao,
     }];
   });
 }
@@ -160,11 +162,9 @@ class FactoryLighting {
     this.fontesVisiveis = [];
     this.revisao = 0;
     this.falhasIniciadas = [];
-    this.proximaFalha = null;
-    this.ultimaLuz = null;
     // Estados separados dos dados do mapa: nada é escrito nos objetos do Tiled.
     this.estados = this.lampadas.map((luz, indice) => ({
-      luz, indice, intensidade: 0, falha: null,
+      luz, indice, intensidade: 0, falha: null, proximaFalha: null,
     }));
   }
 
@@ -173,50 +173,70 @@ class FactoryLighting {
     this.progressoPartida = null;
     this.partida = this.energia && typeof obterProgresso === "function"
       ? { obterProgresso, inicio: agora } : null;
-    this.proximaFalha = null;
-    this.ultimaLuz = null;
     this.falhasIniciadas.length = 0;
     for (const estado of this.estados) {
       estado.falha = null;
+      estado.proximaFalha = null;
     }
   }
 
-  /** Uma única contagem escolhe uma luminária visível a cada 5–10 segundos. */
-  agendarFalhaVisivel(agora, camera) {
-    if (this.proximaFalha === null) {
-      this.proximaFalha = agora + 5000 + this.aleatorio() * 5000;
+  /** Sorteia uma sequência de mau contato uma vez; nunca sorteia brilho por quadro. */
+  criarFalha(agora) {
+    const duracao = 1200 + this.aleatorio() * 2200;
+    const piscadas = 3 + Math.min(3, Math.floor(this.aleatorio() * 4));
+    const pontos = [[0, 1]];
+    let tempo = 0;
+    const adicionar = (ms, intensidade) => { tempo += ms; pontos.push([tempo, intensidade]); };
+    for (let i = 0; i < piscadas; i++) {
+      const minimo = 0.03 + this.aleatorio() * 0.27;
+      adicionar(30 + this.aleatorio() * 35, minimo);
+      // Algumas quedas sustentam o apagão parcial por mais tempo.
+      adicionar(40 + this.aleatorio() * 170, minimo);
+      const recuperacao = 0.55 + this.aleatorio() * 0.43;
+      adicionar(60 + this.aleatorio() * 70, recuperacao);
+      adicionar(60 + this.aleatorio() * 120, recuperacao);
     }
-    if (agora < this.proximaFalha) return;
-    const visiveis = this.estados.filter(({ luz }) => luz.piscando && luz.ligada &&
-      luz.intensidade > 0 && luz.cor.alpha > 0 && luzDentroCampoVisao(luz, camera));
-    if (!visiveis.length) return;
-
-    // Prefere outra região da tela, sem atrasar a cadência se houver poucas luzes.
-    const distantes = this.ultimaLuz ? visiveis.filter(({ luz }) =>
-      Math.hypot(luz.x - this.ultimaLuz.x, luz.y - this.ultimaLuz.y) >= 450) : [];
-    const outras = visiveis.filter(({ luz }) => luz !== this.ultimaLuz);
-    const candidatas = distantes.length ? distantes : outras.length ? outras : visiveis;
-    const estado = candidatas[Math.min(candidatas.length - 1,
-      Math.floor(this.aleatorio() * candidatas.length))];
-    estado.falha = {
-      inicio: agora, duracao: 900 + this.aleatorio() * 300,
-      queda: 0.45 + this.aleatorio() * 0.35,
-    };
-    this.ultimaLuz = estado.luz;
-    this.falhasIniciadas.push(estado.luz);
-    this.proximaFalha = agora + 5000 + this.aleatorio() * 5000;
+    adicionar(240 + this.aleatorio() * 260, 1);
+    // Normaliza o tempo para 1,2–3,4 s, preservando as durações irregulares dos trechos.
+    for (const ponto of pontos) ponto[0] *= duracao / tempo;
+    return { inicio: agora, duracao, pontos };
   }
 
-  /** Recuperação suave da única piscada agendada. */
-  calcularFalha(estado, agora) {
-    const falha = estado.falha;
-    if (!falha) return 1;
-    const p = (agora - falha.inicio) / falha.duracao;
-    if (p >= 1) {
+  /** Cada fonte tem seu relógio, permitindo falhas simultâneas em qualquer região. */
+  atualizarFalha(estado, agora, camera) {
+    if (estado.falha) {
+      if (agora < estado.falha.inicio + estado.falha.duracao) return;
       estado.falha = null;
-      return 1;
+      estado.proximaFalha = agora + 8000 + this.aleatorio() * 16000;
+      return;
     }
-    return 1 - falha.queda * Math.sin(Math.PI * p) ** 2;
+    if (estado.proximaFalha === null) {
+      // Espalha também a primeira falha depois da estabilização do gerador.
+      estado.proximaFalha = agora + 4000 + this.aleatorio() * 12000;
+    }
+    if (agora < estado.proximaFalha) return;
+    if (agora - estado.proximaFalha > 1000) {
+      // Uma aba suspensa não acumula falhas para disparar todas ao retornar.
+      estado.proximaFalha = agora + 8000 + this.aleatorio() * 16000;
+      return;
+    }
+    estado.falha = this.criarFalha(agora);
+    estado.proximaFalha = null;
+    if (luzDentroCampoVisao(estado.luz, camera)) this.falhasIniciadas.push(estado.luz);
+  }
+
+  /** Quedas rápidas, recuperações parciais e retorno final suave à intensidade normal. */
+  calcularFalha(estado, agora) {
+    if (!estado.falha) return 1;
+    const tempo = agora - estado.falha.inicio;
+    const pontos = estado.falha.pontos;
+    for (let i = 1; i < pontos.length; i++) {
+      const [fim, intensidade] = pontos[i];
+      if (tempo > fim) continue;
+      const [inicio, anterior] = pontos[i - 1];
+      return anterior + (intensidade - anterior) * suavizar((tempo - inicio) / (fim - inicio));
+    }
+    return 1;
   }
 
   atualizar(agora, camera) {
@@ -232,17 +252,19 @@ class FactoryLighting {
       if (progresso >= 1) this.partida = null;
     }
     const energia = this.energia ? intensidadeLuzPartida(progresso) : 0;
-    if (this.energia && !this.partida) this.agendarFalhaVisivel(agora, camera);
     let quantidade = 0;
     let alteradas = false;
     for (const estado of this.estados) {
       const luz = estado.luz;
-      if (!energia || !luz.ligada || !luz.intensidade || !luz.cor.alpha || !luzAfetaCamera(luz, camera)) {
+      if (!energia || !luz.ligada || !luz.intensidade || !luz.cor.alpha) {
         continue;
       }
+      // Atualiza os relógios fora da tela também, sem gerar estalos fora do campo de visão.
+      if (!this.partida) this.atualizarFalha(estado, agora, camera);
+      if (!luzAfetaCamera(luz, camera)) continue;
       const oscilacao = this.partida
         ? 1 - (1 - progresso) * 0.12 * Math.sin(progresso * 15 + estado.indice) ** 2
-        : luz.piscando ? this.calcularFalha(estado, agora) : 1;
+        : this.calcularFalha(estado, agora);
       // Limita e quantiza em passos de alpha: evita saturação e uploads sem mudança visível.
       const pulso = luz.pulsando ? intensidadePulso(agora) : 1;
       const intensidade = Math.round(limitar(luz.intensidade * luz.cor.alpha) * energia * oscilacao * pulso * 255) / 255;
@@ -260,8 +282,6 @@ class FactoryLighting {
     this.partida = null;
     this.progressoPartida = null;
     this.energia = false;
-    this.proximaFalha = null;
-    this.ultimaLuz = null;
     this.fontesVisiveis.length = 0;
     this.estados.length = 0;
     this.falhasIniciadas.length = 0;

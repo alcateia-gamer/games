@@ -46,6 +46,7 @@ function criarSomGerador(scene) {
     update(distance) {
       if (!scene.luzFabricaAcesa) {
         sound.stop();
+        playStartup = true;
         return;
       }
 

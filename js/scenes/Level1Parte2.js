@@ -5,12 +5,15 @@
 
 import criarLevel1Parte2Map from "../map/MapaFabrica.js";
 import MiniMapManager from "../ui/MiniMapManager.js";
+import { configurarTrocaCamada } from "../map/TrocaCamada.js";
 
 import {
+  atualizarDepthAtores,
   atualizarDepthGarras,
   atualizarDepthObjetosProducaoEArmazem,
   atualizarDepthComputadoresPcAdm,
   atualizarDepthObjetosDepthPerso,
+  atualizarDepthParedePortaBoss,
 } from "../map/ProfundidadeMapa.js";
 
 import criarAnimacoesPlayer, {
@@ -68,14 +71,6 @@ import {
 } from "../interactions/FactoryGenerator.js";
 import { criarInteracaoPortaFabrica } from "../interactions/FactoryDoor.js";
 
-const CAMADAS_PISO_TROCA = new Set([
-  "chão",
-  "detalhes do chão",
-  "ListrasChão",
-  "Sujeira",
-  "ChãoProdução",
-]);
-
 class Level1Parte2 extends Phaser.Scene {
   /**
    * Registra a segunda parte da fase e define movimento e profundidade inicial do personagem.
@@ -98,6 +93,7 @@ class Level1Parte2 extends Phaser.Scene {
    * de transição.
    */
   init(data) {
+    this.developerMode = data.developerMode ?? this.developerMode;
     this.novoBossConfig = data.novoBossConfig ?? null;
     this.luzFabricaAcesa =
       this.game.registry.get(FACTORY_GENERATOR_STATE_KEY) === true;
@@ -132,8 +128,7 @@ class Level1Parte2 extends Phaser.Scene {
     this.teleporteRetornoLiberado = false;
     this.transicaoRetornoEmAndamento = false;
     this.regiaoTrocaCamada = null;
-    this.depthsOriginaisCamadasTroca = [];
-    this.trocadecamadaAtiva = false;
+    this.profundidadeRegiaoTroca = null;
   }
 
   // =====================================================
@@ -232,7 +227,7 @@ class Level1Parte2 extends Phaser.Scene {
     this.removerLanternaParte2 = criarIluminacaoTerror(this);
 
     if (!this.multiplayer) {
-      criarCompanionPet(this, 25.5);
+      criarCompanionPet(this);
     }
 
     this.criarTeleporteRetornoParte1();
@@ -246,8 +241,17 @@ class Level1Parte2 extends Phaser.Scene {
 
     criarSistemaProjeteis(this);
 
-    this.events.on(Phaser.Scenes.Events.POST_UPDATE, () => {
+    const atualizarPosFisica = () => {
       atualizarHitboxDanoPlayer(this);
+      atualizarDepthAtores(this);
+      atualizarDepthGarras(this);
+      atualizarDepthComputadoresPcAdm(this);
+      atualizarDepthObjetosDepthPerso(this);
+      atualizarDepthParedePortaBoss(this);
+    };
+    this.events.on(Phaser.Scenes.Events.POST_UPDATE, atualizarPosFisica);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.events.off(Phaser.Scenes.Events.POST_UPDATE, atualizarPosFisica);
     });
 
     criarStatusPlayer(this);
@@ -309,98 +313,23 @@ class Level1Parte2 extends Phaser.Scene {
     this.definirIluminacaoFabrica(true, obterProgressoPartida);
   }
 
-  /**
-   * Localiza a área trocadecamada01 e guarda a ordem original das camadas para restaurá-la ao
-   * sair.
-   */
+  /** Permite repetir o teste da fábrica sem energia pelo mesmo controle DEV. */
+  apagarLuzFabrica() {
+    if (!this.developerMode || !this.luzFabricaAcesa) return;
+
+    this.luzFabricaAcesa = false;
+    this.game.registry.set(FACTORY_GENERATOR_STATE_KEY, false);
+    this.definirIluminacaoFabrica(false);
+  }
+
+  /** Carrega o gatilho do Tiled sem alterar a ordem global do mapa. */
   inicializarTrocaCamada() {
-    const objetos = this.map.getObjectLayer("trocadecamada")?.objects;
-    const regiao = objetos?.find(
-      (objeto) =>
-        objeto.name === "trocadecamada01" &&
-        objeto.width > 0 &&
-        objeto.height > 0,
-    );
-
-    if (!regiao) return;
-
-    this.regiaoTrocaCamada = {
-      left: regiao.x,
-      top: regiao.y,
-      right: regiao.x + regiao.width,
-      bottom: regiao.y + regiao.height,
-    };
-
-    this.depthsOriginaisCamadasTroca = this.camadasMapaParte2
-      .filter((camada) => camada?.layer?.name)
-      .map((camada, indice) => ({
-        camada,
-        nome: camada.layer.name,
-        depth: camada.depth,
-        indice,
-      }));
-
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-      this.aplicarOrdemCamadasTroca(false);
-    });
+    configurarTrocaCamada(this);
   }
 
-  /**
-   * Detecta a entrada ou saída da hitbox do jogador na região que altera a ordem das camadas.
-   */
+  /** Cada ator usa sua própria hitbox para entrar e sair do gatilho. */
   atualizarTrocaCamada() {
-    const regiao = this.regiaoTrocaCamada;
-    const player = this.player;
-
-    if (!regiao || !player?.active) return;
-
-    const body = player.body;
-    const left = body?.width ? body.x : player.x;
-    const right = body?.width ? body.x + body.width : player.x;
-    const top = body?.height ? body.y : player.y;
-    const bottom = body?.height ? body.y + body.height : player.y;
-    const dentro =
-      right > regiao.left &&
-      left < regiao.right &&
-      bottom > regiao.top &&
-      top < regiao.bottom;
-
-    if (dentro === this.trocadecamadaAtiva) return;
-
-    this.aplicarOrdemCamadasTroca(dentro);
-  }
-
-  /**
-   * Coloca pisos abaixo do jogador e outras camadas acima dele ou restaura as profundidades
-   * originais.
-   */
-  aplicarOrdemCamadasTroca(ativar) {
-    if (ativar === this.trocadecamadaAtiva) return;
-
-    this.trocadecamadaAtiva = ativar;
-
-    if (!ativar) {
-      this.depthsOriginaisCamadasTroca.forEach(({ camada, depth }) => {
-        camada.setDepth(depth);
-      });
-      return;
-    }
-
-    const depthPlayer = this.player.depth;
-    const camadasPiso = this.depthsOriginaisCamadasTroca
-      .filter(({ nome }) => CAMADAS_PISO_TROCA.has(nome))
-      .sort((a, b) => a.depth - b.depth || a.indice - b.indice);
-    const camadasAcima = this.depthsOriginaisCamadasTroca
-      .filter(({ nome }) => !CAMADAS_PISO_TROCA.has(nome))
-      .sort((a, b) => a.depth - b.depth || a.indice - b.indice);
-
-    camadasPiso.forEach(({ camada }, indice) => {
-      camada.setDepth(depthPlayer - camadasPiso.length + indice);
-    });
-
-    camadasAcima.forEach(({ camada }, indice) => {
-      camada.setDepth(depthPlayer + (indice + 1) * 0.001);
-    });
+    atualizarDepthAtores(this);
   }
 
   // =====================================================
@@ -654,6 +583,7 @@ class Level1Parte2 extends Phaser.Scene {
       if (remote.texture.key !== texture && !remote.remoteAttackActive) {
         remote.setTexture(texture);
       }
+      remote.mapCharacter = player.character;
 
       const direction = player.direction || "down";
 
@@ -910,6 +840,7 @@ class Level1Parte2 extends Phaser.Scene {
         enemy.x = Phaser.Math.Linear(enemy.x, enemy.targetX ?? enemy.x, alpha);
 
         enemy.y = Phaser.Math.Linear(enemy.y, enemy.targetY ?? enemy.y, alpha);
+        enemy.body?.updateFromGameObject();
       });
   }
 
@@ -954,6 +885,7 @@ class Level1Parte2 extends Phaser.Scene {
 
     atualizarDepthPlayer(this);
     atualizarDepthObjetosDepthPerso(this);
+    atualizarDepthParedePortaBoss(this);
   }
 
   // =====================================================

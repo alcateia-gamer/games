@@ -84,7 +84,7 @@ export function criarAlvoIlusorio(scene, encontro, ponto, id, tipo = "ilusao") {
       hitbox.enable = visivel;
       // Cada corpo conserva a oclusão dos atores na sua própria posição do mapa.
       sprite.setDepth(Number.isFinite(scene.profundidadePersonagemParte2)
-        ? calcularDepthAtor(scene, hitbox.bottom) : visual.profundidade);
+        ? calcularDepthAtor(scene, hitbox.bottom, alvo) : visual.profundidade);
       // A pose acompanha toda a execução real, independentemente do efeito breve.
       aplicarPoseNovoBoss(scene, alvo,
         visivel && encontro.estado === "atacando" ? encontro.ataqueAtual : null);

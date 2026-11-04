@@ -194,23 +194,30 @@ function criarSomPiscadasAmbiente(scene) {
         else if (!agendado) som.setVolume(calcularVolumeContato(ativo, decorrido));
       }
       const player = scene.player;
-      if (!player?.active || duracao <= 0) return;
+      if (ativo || !player?.active || duracao <= 0) return;
       const posicao = player.body?.center ?? player;
+      let candidata = null;
+      let maiorVolume = 0;
       for (const luz of luzes) {
         if (!luzDentroCampoVisao(luz, scene.cameras?.main)) continue;
         const distancia = Math.hypot(luz.x - posicao.x, luz.y - posicao.y);
         const proximidade = Math.max(0, 1 - distancia / 900);
         const volume = 0.025 * proximidade * proximidade;
-        if (volume <= 0) continue;
-        stop();
-        const estalo = {
-          luz, tempo: scene.time.now, inicio: 0, inicioQueda: 0, duracaoQueda: duracao,
-          duracao, volume, perfil: PERFIS_CONTATO[2],
-        };
-        if (som.play("piscada-distante", { volume: 0, loop: false, rate: 1 })) {
-          ativo = estalo;
-          agendado = agendarDinamica(som, estalo, 0);
+        if (volume > maiorVolume) {
+          candidata = luz;
+          maiorVolume = volume;
         }
+      }
+      // Várias falhas no mesmo quadro produzem só o estalo mais próximo, sem reinícios.
+      if (!candidata) return;
+      stop();
+      const estalo = {
+        luz: candidata, tempo: scene.time.now, inicio: 0, inicioQueda: 0, duracaoQueda: duracao,
+        duracao, volume: maiorVolume, perfil: PERFIS_CONTATO[2],
+      };
+      if (som.play("piscada-distante", { volume: 0, loop: false, rate: 1 })) {
+        ativo = estalo;
+        agendado = agendarDinamica(som, estalo, 0);
       }
     },
     stop,

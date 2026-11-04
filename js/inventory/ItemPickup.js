@@ -229,7 +229,7 @@ function criarSistemaInventario(scene) {
    * ou porta selecionados.
    */
   const coletarItemProximo = () => {
-    if (scene.generatorMenuOpen) return false;
+    if (scene.generatorMenuOpen || scene.devItemMenuOpen) return false;
     if (interagirComMundo) {
       const interagiu = interagirComMundo();
       if (interagiu) {
@@ -268,7 +268,9 @@ function criarSistemaInventario(scene) {
    */
   scene.atualizarColetaItens = () => {
     interagirComMundo = null;
-    if (scene.generatorMenuOpen) {
+    if (scene.generatorMenuOpen || scene.devItemMenuOpen) {
+      // Descarta E durante o catálogo para não interagir com o mundo ao fechá-lo.
+      if (scene.devItemMenuOpen) Phaser.Input.Keyboard.JustDown(scene.teclaColetarItem);
       scene.itemColetavelProximo = null;
       definirVisibilidadeBotao(false);
       return;

@@ -7,6 +7,7 @@ import criarIluminacaoTerror, { calcularPerfilLuz, ESCURIDAO_MINIMA_FABRICA } fr
 import FactoryLighting, {
   ESCURIDAO_AMBIENTE_FABRICA, MULTIPLICADOR_ALCANCE_FABRICA, lerLuzesFabrica, lerCorTiled, intensidadeLuzPartida, luzAfetaCamera,
 } from "./FactoryLighting.js";
+import { atualizarPoseLanterna } from "./FlashlightPose.js";
 
 const bundle = readFileSync(new URL("../libs/phaser.min.js", import.meta.url), "utf8");
 const context = { module: { exports: {} }, exports: {}, importScripts() {}, window: {}, navigator: {} };
@@ -44,6 +45,37 @@ test("reads every real Tiled point through Phaser without changing the negative 
     layer.objects.map(({ id, x, y }) => ({ id, x, y })));
   assert.equal(lights[0].raio, 170);
   assert.deepEqual(lights[0].cor, { css: "#FFD27A", phaser: 0xFFD27A, alpha: 1 });
+  for (const object of layer.objects.filter(object => object.point)) {
+    const orientation = object.properties.find(property => property.name === "Orientacao").value;
+    assert.ok(["Horizontal", "Vertical", "Vetical"].includes(orientation), `lamp ${object.id} has a valid map orientation`);
+    assert.equal(lights.find(light => light.id === object.id).orientacao,
+      orientation === "Horizontal" ? "horizontal" : "vertical");
+  }
+  const verticalPoints = layer.objects.filter(object => object.properties?.some(property =>
+    property.name === "Orientacao" && ["Vetical", "Vertical"].includes(property.value)));
+  assert.ok(verticalPoints.length > 0);
+  assert.equal(lights.filter(light => light.orientacao === "vertical").length, verticalPoints.length);
+  assert.equal(JSON.stringify(layer), before);
+});
+
+test("100% das lâmpadas ligadas do mapa real participam das falhas sem editar o Tiled", () => {
+  const raw = JSON.parse(readFileSync(new URL("../../assets/map/parte2-fase1.json", import.meta.url)));
+  const layer = raw.layers.find(layer => layer.name === "LuzesFabrica");
+  const before = JSON.stringify(layer);
+  let seed = 321;
+  const lights = new FactoryLighting(mapa(...layer.objects.map(object => parseObject(object))), {
+    aleatorio: () => ((seed = seed * 16807 % 2147483647) - 1) / 2147483646,
+  });
+  assert.ok(lights.lampadas.every(light => light.piscando));
+  lights.definirEnergia(true);
+  const camera = criarCamera();
+  const failing = new Set();
+  for (let now = 0; now <= 20000; now += 25) {
+    lights.atualizar(now, camera);
+    for (const state of lights.estados) if (state.falha) failing.add(state.luz.id);
+  }
+  const expected = lights.lampadas.filter(light => light.ligada && light.intensidade > 0 && light.cor.alpha > 0);
+  assert.deepEqual([...failing].sort(), expected.map(light => light.id).sort());
   assert.equal(JSON.stringify(layer), before);
 });
 
@@ -103,8 +135,14 @@ class ContextoAmostrado {
   registrar(tipo, args) { this.operacoes.push({ ...this.estado, matriz: [...this.estado.matriz], tipo, args }); }
   fillRect(...args) { this.registrar("rect", args); }
   clearRect(...args) { this.registrar("clear", args); }
-  drawImage(image, x, y, width = image.width, height = image.height) {
-    this.registrar("image", [x, y, width, height, image]);
+  drawImage(image, ...args) {
+    if (args.length === 8) {
+      const [sx, sy, sw, sh, x, y, width, height] = args;
+      this.registrar("image", [x, y, width, height, image, sx, sy, sw, sh]);
+    } else {
+      const [x, y, width = image.width, height = image.height] = args;
+      this.registrar("image", [x, y, width, height, image]);
+    }
   }
   beginPath() {}
   arc(x, y, raio) { this.circulo = [x, y, raio]; }
@@ -118,13 +156,13 @@ class ContextoAmostrado {
     let destination = 0;
     for (const op of this.operacoes) {
       const [x, y] = inversoPonto(op.matriz, screenX, screenY);
-      const [left, top, width, height, image] = op.args;
+      const [left, top, width, height, image, sx = 0, sy = 0, sw = image?.width, sh = image?.height] = op.args;
       const inside = op.tipo === "circle" ? Math.hypot(x - left, y - top) < width
         : x >= left && y >= top && x < left + width && y < top + height;
       if (!inside) continue;
       if (op.tipo === "clear") { destination = 0; continue; }
       let source;
-      if (image) source = image.alphaEm((x - left) / width * image.width, (y - top) / height * image.height);
+      if (image) source = image.alphaEm(sx + (x - left) / width * sw, sy + (y - top) / height * sh);
       else if (typeof op.fillStyle === "string") source = alphaCor(op.fillStyle);
       else {
         const gradient = op.fillStyle;
@@ -159,11 +197,11 @@ class ContextoAmostrado {
     let destination = [0, 0, 0, 0];
     for (const op of this.operacoes) {
       const [x, y] = inversoPonto(op.matriz, screenX, screenY);
-      const [left, top, width, height, image] = op.args;
+      const [left, top, width, height, image, sx = 0, sy = 0, sw = image?.width, sh = image?.height] = op.args;
       if (!(x >= left && y >= top && x < left + width && y < top + height)) continue;
       if (op.tipo === "clear") { destination = [0, 0, 0, 0]; continue; }
       let source;
-      if (image) source = image.rgbaEm((x - left) / width * image.width, (y - top) / height * image.height);
+      if (image) source = image.rgbaEm(sx + (x - left) / width * sw, sy + (y - top) / height * sh);
       else if (op.fillStyle.startsWith("#")) source = [0, 2, 4].map(i => parseInt(op.fillStyle.slice(1 + i, 3 + i), 16) / 255).concat(alphaCor(op.fillStyle));
       else source = op.fillStyle.slice(5, -1).split(",").map(Number).map((v, i) => i < 3 ? v / 255 : v);
       source[3] *= op.globalAlpha;
@@ -381,7 +419,8 @@ test("flashlight rear halo fades smoothly before the texture boundary in all dir
   for (const [direction, dx, dy] of [["right", 1, 0], ["left", -1, 0], ["up", 0, -1], ["down", 0, 1]]) {
     scene.direcaoAtual = direction;
     render();
-    const alpha = distance => texture.canvas.alphaEm(400 - dx * distance, 225 - dy * distance);
+    const mao = atualizarPoseLanterna(scene, {});
+    const alpha = distance => texture.canvas.alphaEm(mao.x - dx * distance, mao.y - dy * distance);
     assertSombraAmbiente(alpha(100));
     assertSombraAmbiente(alpha(91));
     let previous = alpha(100);
@@ -392,6 +431,47 @@ test("flashlight rear halo fades smoothly before the texture boundary in all dir
     }
     assert.ok(alpha(10) < ESCURIDAO_AMBIENTE_FABRICA - 0.1);
   }
+});
+
+test("upward flashlight stays behind the animated silhouette, while downward light passes over the player", t => {
+  const { scene, render, texture } = cenaComMascara(t, []);
+  const sheet = document.createElement("canvas");
+  sheet.width = 256;
+  sheet.height = 128;
+  const spriteContext = sheet.getContext("2d");
+  spriteContext.fillStyle = "#FFFFFF";
+  spriteContext.fillRect(128 + 58, 38, 8, 58);
+  // Um buraco transparente confere que a oclusão segue alpha, sem um recorte retangular.
+  spriteContext.clearRect(128 + 63, 45, 2, 3);
+  scene.player = { active: true, visible: true, x: 400, y: 225,
+    displayOriginX: 64, displayOriginY: 64, scaleX: 1, scaleY: 1,
+    texture: { key: "walk" }, frame: { source: { image: sheet },
+      cutX: 128, cutY: 0, cutWidth: 128, cutHeight: 128, realWidth: 128, realHeight: 128 },
+    body: { velocity: { x: 0, y: -100 } } };
+  scene.direcaoAtual = "up";
+  render();
+  const sample = (x, y) => texture.canvas.alphaEm(x, y);
+  assertSombraAmbiente(sample(400, 203), "a cabeça opaca não recebe luz da lanterna por trás");
+  assert.ok(sample(400, 207) < 0.5, "pixels transparentes deixam o feixe passar");
+  assert.ok(sample(400, 150) < 0.5, "o cenário adiante continua iluminado");
+  assertSombraAmbiente(sample(395, 203));
+  assert.ok(sample(405, 203) < 0.6);
+  const stationaryUploads = texture.refreshes;
+  for (let i = 0; i < 10; i++) render();
+  assert.equal(texture.refreshes, stationaryUploads, "silhueta parada reutiliza a máscara");
+  scene.player.flipX = true;
+  render();
+  assert.ok(sample(395, 203) < 0.6, "a oclusão acompanha o espelhamento sem mudar a barriga");
+  assertSombraAmbiente(sample(405, 203));
+  scene.player.frame = { ...scene.player.frame, cutX: 0 };
+  render();
+  assert.ok(sample(400, 203) < 0.5, "trocar o frame atualiza a silhueta");
+  scene.player.frame = { ...scene.player.frame, cutX: 128 };
+  scene.player.flipX = false;
+  scene.player.body.velocity.y = 100;
+  scene.direcaoAtual = "down";
+  render();
+  assert.ok(sample(400, 250) < 0.5, "para baixo o feixe ilumina o jogador por cima");
 });
 
 test("capsule light varies continuously along and across its core without a uniform rectangular plateau", () => {
@@ -413,9 +493,27 @@ test("capsule light varies continuously along and across its core without a unif
   }
 });
 
+test("Vetical e Vertical do mapa real desenham o foco na vertical", async t => {
+  const raw = JSON.parse(readFileSync(new URL("../../assets/map/parte2-fase1.json", import.meta.url)));
+  const layer = raw.layers.find(layer => layer.name === "LuzesFabrica");
+  for (const orientation of ["Vetical", "Vertical"]) {
+    await t.test(orientation, t => {
+      const object = layer.objects.find(object => object.point && object.properties?.some(property =>
+        property.name === "Orientacao" && property.value === orientation));
+      assert.ok(object, `o mapa contém uma lâmpada com ${orientation}`);
+      const { scene, render, texture } = cenaComMascara(t, [parseObject(object)], true);
+      scene.cameras.main.setScroll(object.x - 400, object.y - 225);
+      render();
+      const sample = (x, y) => texture.canvas.alphaEm(x, y);
+      assert.ok(sample(400, 225) < sample(400, 235), "foco permanece no ponto da lâmpada");
+      assert.ok(sample(400, 235) < sample(410, 225), "foco se alonga no eixo vertical");
+    });
+  }
+});
+
 test("industrial light reveals an elongated capsule with smoothly diffused surroundings in both orientations", t => {
   const { render, texture } = cenaComMascara(t, [
-    ponto({}, 200, 225), ponto({ Orientacao: "vertical" }, 600, 225),
+    ponto({}, 200, 225), ponto({ Orientacao: "Vetical" }, 600, 225),
   ], true);
   render();
   const sample = (x, y) => texture.canvas.alphaEm(x, y);
@@ -576,7 +674,7 @@ test("validates types, uses defaults, and preserves explicit false and zero", ()
   assert.equal(defaults.raio, 170);
   assert.equal(defaults.intensidade, 1);
   assert.equal(defaults.ligada, true);
-  assert.equal(defaults.piscando, false);
+  assert.equal(defaults.piscando, true);
   assert.equal(defaults.orientacao, "horizontal");
   const [configured] = lerLuzesFabrica(mapa(ponto({
     Raio: 230, Intensidade: 0, Ligada: false, Piscando: true, Cor: "#80FFAA00",
@@ -599,10 +697,11 @@ test("Orientacao accepts horizontal or vertical in raw and Phaser properties and
     const [light] = lerLuzesFabrica(mapa(ponto({ Orientacao: value })));
     assert.equal(light.orientacao, "horizontal");
   }
-  for (const value of ["horizontal", "vertical", "Horizontal", "Vertical", "VERTICAL"]) {
+  for (const value of ["horizontal", "vertical", "Horizontal", "Vertical", "VERTICAL", " Horizontal ", " Vertical ", "Vetical", "vetical"]) {
     for (const properties of [{ Orientacao: value }, [{ name: "Orientacao", type: "string", value }]]) {
       const [light] = lerLuzesFabrica(mapa(ponto(properties)));
-      assert.equal(light.orientacao, value.toLowerCase());
+      const normalized = value.trim().toLowerCase();
+      assert.equal(light.orientacao, normalized === "vetical" ? "vertical" : normalized);
     }
   }
 });
@@ -612,6 +711,15 @@ test("Pulsando reads only booleans from raw Tiled and Phaser properties", () => 
     for (const properties of [{ Pulsando: value }, [{ name: "Pulsando", type: "bool", value }]]) {
       const [light] = lerLuzesFabrica(mapa(ponto(properties)));
       assert.equal(light.pulsando, value === true);
+    }
+  }
+});
+
+test("Piscando antigo, ausente ou false não exclui uma lâmpada das falhas globais", () => {
+  for (const value of [undefined, null, 0, 1, "true", "false", false, true]) {
+    for (const properties of [{ Piscando: value }, [{ name: "Piscando", type: "bool", value }]]) {
+      const [light] = lerLuzesFabrica(mapa(ponto(properties)));
+      assert.equal(light.piscando, true);
     }
   }
 });
@@ -713,29 +821,46 @@ test("startup follows audio progress even when paused and falls back to the exis
   assert.equal(intensidadeLuzPartida(1), 1);
 });
 
-test("blinking lamps dim visibly at irregular intervals while healthy lamps remain stable", () => {
+test("todas as lâmpadas falham com ritmos independentes e intervalos irregulares", () => {
   let seed = 12;
-  const lights = new FactoryLighting(mapa(ponto({ Piscando: true }), ponto()), {
+  const lights = new FactoryLighting(mapa(ponto({ Piscando: true }), ponto({ Piscando: false }), ponto()), {
     aleatorio: () => ((seed = seed * 16807 % 2147483647) - 1) / 2147483646,
   });
   lights.definirEnergia(true);
   const camera = criarCamera();
-  const values = [];
-  const starts = [];
-  let wasFailing = false;
-  for (let now = 0; now < 160000; now += 33) {
-    const [faulty, healthy] = lights.atualizar(now, camera);
-    assert.equal(healthy.intensidade, 1);
-    values.push(faulty.intensidade);
-    const failing = !!lights.estados[0].falha;
-    if (failing && !wasFailing) starts.push(now);
-    wasFailing = failing;
+  const starts = lights.estados.map(() => []);
+  const ends = lights.estados.map(() => []);
+  const values = lights.estados.map(() => []);
+  const previous = lights.estados.map(() => false);
+  let simultaneous = false;
+  for (let now = 0; now < 160000; now += 20) {
+    lights.atualizar(now, camera);
+    simultaneous ||= lights.estados.filter(state => state.falha).length > 1;
+    for (const [index, state] of lights.estados.entries()) {
+      values[index].push(state.intensidade);
+      const failing = !!state.falha;
+      if (failing && !previous[index]) starts[index].push(now);
+      if (!failing && previous[index]) ends[index].push(now);
+      previous[index] = failing;
+    }
   }
-  assert.ok(Math.min(...values) < 0.6);
-  assert.ok(Math.min(...values) >= 0.2);
-  for (let i = 1; i < values.length; i++) assert.ok(Math.abs(values[i] - values[i - 1]) < 0.1);
-  assert.ok(starts.length >= 3);
-  assert.ok(new Set(starts.slice(1).map((time, index) => time - starts[index])).size > 1);
+  assert.ok(simultaneous, "permite mais de uma luminária falhando ao mesmo tempo");
+  assert.notDeepEqual(starts[0], starts[1], "as luminárias não ficam sincronizadas");
+  for (const [index, times] of starts.entries()) {
+    assert.ok(Math.min(...values[index]) < 0.3);
+    assert.ok(values[index].every(value => value >= 0 && value <= 1));
+    assert.ok(times.length >= 3, "também falha com Piscando=false ou sem a propriedade");
+    assert.ok(times[0] >= 4000 && times[0] <= 16020);
+    assert.ok(new Set(times.slice(1).map((time, i) => time - times[i])).size > 1);
+    for (let i = 0; i < ends[index].length; i++) {
+      const duration = ends[index][i] - times[i];
+      assert.ok(duration >= 1200 && duration <= 3420);
+      if (times[i + 1] !== undefined) {
+        const rest = times[i + 1] - ends[index][i];
+        assert.ok(rest >= 8000 && rest <= 24020, "pausas estáveis entre sequências");
+      }
+    }
+  }
 });
 
 test("culling uses the configured world radius and current camera matrix at negative scroll and zoom", () => {
@@ -787,9 +912,9 @@ test("som da partida mantém os três estalos e não se repete na revisita", t =
   }
   assert.equal(reproducoes.length, 3);
   assert.equal(som.isPlaying, false, "o último quadro da partida encerra o som");
-  scene.time.now = 17000;
+  scene.time.now = 9000;
   render();
-  scene.time.now = 17450;
+  scene.time.now = 9450;
   render();
   assert.ok(scene.iluminacaoFabrica.estados[0].falha, "uma luz está piscando durante o jogo");
   assert.equal(reproducoes.length, 3, "essa piscada não produz som");
@@ -808,39 +933,70 @@ test("som da partida mantém os três estalos e não se repete na revisita", t =
 });
 
 
-test("falhas são raras e espaçadas, especialmente entre lâmpadas vizinhas", () => {
+test("uma falha faz várias quedas e recuperações parciais antes de estabilizar", () => {
   const lights = new FactoryLighting(mapa(
-    ponto({ Piscando: true }, 100, 225),
-    ponto({ Piscando: true }, 200, 225),
-    ponto({ Piscando: true }, 700, 225),
+    ponto({ Piscando: false }),
   ), { aleatorio: () => 0 });
   lights.definirEnergia(true);
   const camera = criarCamera();
-  const eventos = [];
-  for (let agora = 0; agora < 120000; agora += 100) {
+  const valores = [];
+  let eventos = 0;
+  for (let agora = 0; agora <= 6000; agora += 10) {
     lights.atualizar(agora, camera);
-    for (const luz of lights.falhasIniciadas) eventos.push({ agora, luz });
+    eventos += lights.falhasIniciadas.length;
+    if (agora >= 4000) valores.push(lights.fontesVisiveis[0].intensidade);
   }
-  assert.ok(eventos.length > 3);
-  assert.ok(eventos[0].agora >= 5000);
-  for (let i = 1; i < eventos.length; i++) {
-    const atual = eventos[i];
-    assert.equal(atual.agora - eventos[i - 1].agora, 5000);
-    assert.ok(Math.abs(atual.luz.x - eventos[i - 1].luz.x) >= 450);
-    for (const anterior of eventos.slice(0, i)) {
-      if (anterior.luz === atual.luz) assert.ok(atual.agora - anterior.agora >= 10000);
-      else if (Math.abs(atual.luz.x - anterior.luz.x) < 450) {
-        assert.ok(atual.agora - anterior.agora >= 8000);
-      }
-    }
+  let quedas = 0;
+  let recuperacoes = 0;
+  for (let i = 1; i < valores.length; i++) {
+    if (valores[i] < 0.15 && valores[i - 1] >= 0.15) quedas++;
+    if (valores[i] > 0.5 && valores[i - 1] <= 0.5) recuperacoes++;
   }
-  lights.definirEnergia(false);
-  lights.atualizar(130000, camera);
-  assert.equal(lights.falhasIniciadas.length, 0);
+  assert.equal(eventos, 1, "uma sequência dispara só um evento de áudio");
+  assert.ok(quedas >= 3 && recuperacoes >= 3, "mau contato em vez de uma única piscada");
+  assert.equal(valores.at(-1), 1);
+  assert.equal(lights.estados[0].falha, null);
+});
+
+test("a máscara acompanha as falhas e volta a reutilizar a textura quando estabiliza", t => {
+  const { scene, render, texture } = cenaComMascara(t, [ponto({ Piscando: false })], true);
+  scene.iluminacaoFabrica.aleatorio = () => 0;
+  render();
+  const acesa = texture.canvas.alphaEm(400, 225);
+  scene.time.now = 4000;
+  render();
+  const uploads = texture.refreshes;
+  scene.time.now = 4100;
+  render();
+  assert.ok(texture.canvas.alphaEm(400, 225) > acesa + 0.1, "o cenário escurece na queda");
+  assert.ok(texture.refreshes > uploads);
+  scene.time.now = 5200;
+  render();
+  assert.equal(texture.canvas.alphaEm(400, 225), acesa);
+  const stable = texture.refreshes;
+  scene.time.now = 5300;
+  render();
+  assert.equal(texture.refreshes, stable, "nenhum upload extra durante a pausa estável");
+});
+
+test("a partida do gerador termina antes de agendar as falhas independentes", () => {
+  let progress = 0.5;
+  const lights = new FactoryLighting(mapa(ponto()), { aleatorio: () => 0 });
+  const camera = criarCamera();
+  lights.definirEnergia(true, () => progress);
+  lights.atualizar(30000, camera);
+  assert.equal(lights.estados[0].proximaFalha, null);
+  assert.equal(lights.estados[0].falha, null);
+  progress = 1;
+  lights.atualizar(30000, camera);
+  lights.atualizar(33999, camera);
+  assert.equal(lights.estados[0].falha, null);
+  lights.atualizar(34000, camera);
+  assert.ok(lights.estados[0].falha);
 });
 
 
-test("uma única luz visível pisca a cada intervalo global de 5 a 10 segundos", () => {
+test("falhas simultâneas respeitam os limites de duração e desligar cancela todos os relógios", () => {
   for (const sorteio of [0, 0.5, 1]) {
     const lights = new FactoryLighting(mapa(
       ponto({ Piscando: true }, 100, 200),
@@ -849,38 +1005,48 @@ test("uma única luz visível pisca a cada intervalo global de 5 a 10 segundos",
     ), { aleatorio: () => sorteio });
     lights.definirEnergia(true);
     const camera = criarCamera();
-    const intervalo = 5000 + sorteio * 5000;
+    const intervalo = 4000 + sorteio * 12000;
     lights.atualizar(0, camera);
-    for (let evento = 1; evento <= 5; evento++) {
-      lights.atualizar(evento * intervalo - 1, camera);
-      assert.equal(lights.falhasIniciadas.length, 0);
-      lights.atualizar(evento * intervalo, camera);
-      assert.equal(lights.falhasIniciadas.length, 1);
-    }
+    lights.atualizar(intervalo - 1, camera);
+    assert.equal(lights.falhasIniciadas.length, 0);
+    lights.atualizar(intervalo, camera);
+    assert.equal(lights.falhasIniciadas.length, 3);
+    const duracao = 1200 + sorteio * 2200;
+    lights.atualizar(intervalo + duracao / 2, camera);
+    assert.ok(lights.estados.every(state => state.intensidade < 1));
+    lights.atualizar(intervalo + duracao, camera);
+    assert.ok(lights.estados.every(state => state.intensidade === 1 && !state.falha));
+    lights.definirEnergia(false);
+    assert.ok(lights.estados.every(state => !state.falha && state.proximaFalha === null));
+    assert.equal(lights.atualizar(100000, camera).length, 0);
+    assert.equal(lights.falhasIniciadas.length, 0);
+    lights.definirEnergia(true);
+    lights.atualizar(100000, camera);
+    assert.ok(lights.estados.every(state => state.intensidade === 1 && !state.falha));
   }
 });
 
-test("escolhe a luz no campo de visão atual e não acumula piscadas fora da tela", () => {
+test("falhas seguem fora da tela sem áudio e não acumulam ao suspender o jogo", () => {
   const lights = new FactoryLighting(mapa(
     ponto({ Piscando: true }, -50, 200),
     ponto({ Piscando: true }, 900, 200),
   ), { aleatorio: () => 0 });
   lights.definirEnergia(true);
   const camera = criarCamera();
-  for (const tempo of [0, 10000, 20000, 30000]) {
+  for (const tempo of [0, 4000]) {
     lights.atualizar(tempo, camera);
     assert.equal(lights.falhasIniciadas.length, 0, "o halo visível não basta");
   }
+  assert.ok(lights.estados.every(state => state.falha), "lâmpadas fora da tela também participam");
   camera.setScroll(500, 0);
   camera.preRender();
-  lights.atualizar(31000, camera);
-  assert.deepEqual(lights.falhasIniciadas.map(luz => luz.x), [900]);
-  lights.atualizar(31001, camera);
-  assert.equal(lights.falhasIniciadas.length, 0, "não dispara eventos acumulados");
-  camera.setScroll(-500, 0);
-  camera.preRender();
-  lights.atualizar(35999, camera);
+  lights.atualizar(4100, camera);
+  assert.ok(lights.fontesVisiveis.find(state => state.luz.x === 900).intensidade < 1);
   assert.equal(lights.falhasIniciadas.length, 0);
-  lights.atualizar(36000, camera);
-  assert.deepEqual(lights.falhasIniciadas.map(luz => luz.x), [-50]);
+  lights.atualizar(5200, camera);
+  lights.atualizar(60000, camera);
+  assert.ok(lights.estados.every(state => !state.falha));
+  assert.equal(lights.falhasIniciadas.length, 0, "não dispara uma fila de falhas vencidas");
+  lights.atualizar(68000, camera);
+  assert.deepEqual(lights.falhasIniciadas.map(luz => luz.x), [900]);
 });

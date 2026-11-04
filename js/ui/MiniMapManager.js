@@ -106,7 +106,7 @@ export default class MiniMapManager {
     const result = miniMapLayout(camera, this.scene.botaoDesenvolvedor,
       this.scene.botaoAtaque, this.scene.botaoColetarItem);
     this.devScreenY = result.devScreenY;
-    const visible = result.visible && !this.scene.generatorMenuOpen;
+    const visible = result.visible && !this.scene.generatorMenuOpen && !this.scene.devItemMenuOpen;
     this.root.setPosition(result.x, result.y).setScale(result.scaleX, result.scaleY)
       .setVisible(visible && !this.nativeView);
     this.nativeView?.object.setPosition(result.x, result.y)

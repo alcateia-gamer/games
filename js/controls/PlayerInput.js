@@ -6,6 +6,8 @@
 import { aplicarEstaminaInfinitaDev } from "../player/PlayerStatus.js";
 import { criarJoystick } from "./PlayerJoystick.js";
 import { criarBotaoHUDNitido } from "../ui/HudCanvas.js";
+import { criarTeleporteDevBoss } from "./DeveloperTeleport.js";
+import { criarMenuColetaveisDev } from "./DeveloperItemMenu.js";
 
 // =====================================================
 // FIXAR DEV E ANALÓGICO NA TELA
@@ -116,7 +118,7 @@ function configurarControlesFixos(scene) {
 // =====================================================
 
 /**
- * Registra teclas, joystick e botões de desenvolvedor, incluindo o comando que acende a
+ * Registra teclas, joystick e botões de desenvolvedor, incluindo o comando que alterna a
  * fábrica.
  */
 function criarControlesInput(scene) {
@@ -136,6 +138,8 @@ function criarControlesInput(scene) {
   );
 
   scene.developerMode = !!scene.developerMode;
+  criarTeleporteDevBoss(scene);
+  criarMenuColetaveisDev(scene);
 
   // BOTÃO DEV
   scene.botaoDesenvolvedor = scene.add
@@ -179,8 +183,13 @@ function criarControlesInput(scene) {
   /**
    * Atualiza cores, rótulos e visibilidade dos botões conforme o modo desenvolvedor.
    */
+  let ultimoEstadoDev = "";
   const atualizarEstadoBotaoDesenvolvedor = () => {
     const ligado = !!scene.developerMode;
+    const luzAcesa = !!scene.luzFabricaAcesa;
+    const estado = `${ligado}:${luzAcesa}`;
+    if (estado === ultimoEstadoDev) return;
+    ultimoEstadoDev = estado;
 
     scene.botaoDesenvolvedor.setFillStyle(ligado ? 0x166534 : 0x1f2937, 0.9);
 
@@ -189,23 +198,32 @@ function criarControlesInput(scene) {
     scene.textoBotaoDesenvolvedor.setText(ligado ? "DEV ON" : "DEV");
     scene.botaoLuzFabrica.setVisible(ligado);
     scene.textoBotaoLuzFabrica.setVisible(ligado);
+    scene.botaoLuzFabrica.setFillStyle(luzAcesa ? 0x166534 : 0x1f2937, 0.9);
+    scene.botaoLuzFabrica.setStrokeStyle(2, luzAcesa ? 0x86efac : 0xfbbf24, 1);
+    scene.textoBotaoLuzFabrica.setText(luzAcesa ? "FAB ON" : "FAB OFF");
   };
 
   scene.botaoDesenvolvedor.on("pointerdown", () => {
     scene.developerMode = !scene.developerMode;
+    if (!scene.developerMode) scene.fecharMenuColetaveisDev?.();
     aplicarEstaminaInfinitaDev(scene);
     atualizarEstadoBotaoDesenvolvedor();
   });
 
   scene.botaoLuzFabrica.on("pointerdown", () => {
-    scene.acenderLuzFabrica?.();
-    scene.botaoLuzFabrica.disableInteractive();
-    scene.botaoLuzFabrica.setFillStyle(0x166534, 0.9);
-    scene.botaoLuzFabrica.setStrokeStyle(2, 0x86efac, 1);
-    scene.textoBotaoLuzFabrica.setText("FAB ON");
+    if (!scene.developerMode || scene.generatorMenuOpen || scene.devItemMenuOpen ||
+        scene.morteEmAndamento) return;
+    if (scene.luzFabricaAcesa) scene.apagarLuzFabrica?.();
+    else scene.acenderLuzFabrica?.();
+    atualizarEstadoBotaoDesenvolvedor();
   });
 
   atualizarEstadoBotaoDesenvolvedor();
+  // A partida pelo gerador e o estado restaurado do mapa também atualizam o botão DEV.
+  scene.events.on(Phaser.Scenes.Events.PRE_RENDER, atualizarEstadoBotaoDesenvolvedor);
+  scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+    scene.events.off(Phaser.Scenes.Events.PRE_RENDER, atualizarEstadoBotaoDesenvolvedor);
+  });
 
   // ANALÓGICO
   criarJoystick(scene);

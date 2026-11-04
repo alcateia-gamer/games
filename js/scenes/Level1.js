@@ -4,6 +4,7 @@
  */
 
 import criarLevel1Map from "../map/MapaCidade.js";
+import { atualizarDepthAtores } from "../map/ProfundidadeMapa.js";
 
 import criarTransicaoParaParte2 from "../core/MapTransition.js";
 
@@ -160,6 +161,11 @@ class Level1 extends Phaser.Scene {
     // =====================================================
 
     criarPlayer(this);
+    const ordenarAtores = () => atualizarDepthAtores(this);
+    this.events.on(Phaser.Scenes.Events.POST_UPDATE, ordenarAtores);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.events.off(Phaser.Scenes.Events.POST_UPDATE, ordenarAtores);
+    });
     if (!this.multiplayer) {
       criarCompanionPet(this);
     }
@@ -627,6 +633,7 @@ class Level1 extends Phaser.Scene {
         this.remotePlayers.set(player.id, remote);
       }
       const projectileIds = new Set();
+      remote.mapCharacter = player.character;
       (player.projectiles || []).forEach((projectile) => {
         if (!projectile?.id) return;
         projectileIds.add(`${player.id}:${projectile.id}`);
@@ -769,6 +776,7 @@ class Level1 extends Phaser.Scene {
       .forEach((enemy) => {
         enemy.x = Phaser.Math.Linear(enemy.x, enemy.targetX ?? enemy.x, alpha);
         enemy.y = Phaser.Math.Linear(enemy.y, enemy.targetY ?? enemy.y, alpha);
+        enemy.body?.updateFromGameObject();
       });
   }
 

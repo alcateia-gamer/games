@@ -7,7 +7,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import { readFileSync } from "node:fs";
-import { FACTORY_DOOR_STATE_KEY, criarInteracaoPortaFabrica } from "./FactoryDoor.js";
+import { FACTORY_DOOR_STATE_KEY, chaveEstadoPorta, criarInteracaoPortaFabrica } from "./FactoryDoor.js";
 import { criarSistemaInventario } from "../inventory/ItemPickup.js";
 import { criarInteracaoGeradorFabrica, findGeneratorInteraction } from "./FactoryGenerator.js";
 
@@ -65,11 +65,27 @@ class DisplayObject extends EventEmitter {
   /**
    * Aceita atualizações de texto do modal sem renderização de fontes.
    */
-  setText() { return this; }
+  setText(text) { this.text = text; return this; }
   /**
    * Aceita mudanças de cor do texto no substituto usado pelo teste.
    */
   setColor() { return this; }
+  setName(name) { this.name = name; return this; }
+  setFontStyle() { return this; }
+  setFillStyle() { return this; }
+  setData() { return this; }
+  setTexture() { return this; }
+  clear() { return this; }
+  lineStyle() { return this; }
+  beginPath() { return this; }
+  moveTo() { return this; }
+  lineTo() { return this; }
+  strokePath() { return this; }
+  fillTriangle() { return this; }
+  strokeRect() { return this; }
+  lineBetween() { return this; }
+  fillStyle() { return this; }
+  fillRect() { return this; }
   /**
    * Mantém a interface de redimensionamento necessária aos elementos do modal.
    */
@@ -128,8 +144,9 @@ class DisplayObject extends EventEmitter {
  * Monta uma cena simulada com tiles reais da porta e inicializa inventário, gerador e
  * interação da porta.
  */
-function createScene(registry = new Map()) {
+function createScene(registry = new Map(), alterarMapa = () => {}) {
   const raw = JSON.parse(readFileSync(new URL("../../assets/map/parte2-fase1.json", import.meta.url)));
+  alterarMapa(raw);
   const doorLayer = raw.layers.find((layer) => layer.name === "Portas");
   const atlas = raw.tilesets.find((tileset) => tileset.name === "A5_SciFi_Industrial_Rasak");
   const texture = { key: "industrialA5", has: () => false,
@@ -144,16 +161,17 @@ function createScene(registry = new Map()) {
     for (let i = 0; i < chunk.width * chunk.height; i++) {
       const x = (chunk.x + i % chunk.width) * 48;
       const y = (chunk.y + Math.floor(i / chunk.width)) * 48;
-      if (x >= -1152 && x < -1008 && y >= -1584 && y < -1488) {
+      if (data.readUInt32LE(i * 4)) {
         tiles.push({ x, y, index: data.readUInt32LE(i * 4), tileset, alpha: 1 });
       }
     }
   }
-  const layer = { depth: 13, getTilesWithinWorldXY: () => tiles,
+  const layer = { depth: 13, getTilesWithinWorldXY: (x, y, width, height) =>
+    tiles.filter(tile => tile.x >= x && tile.x < x + width && tile.y >= y && tile.y < y + height),
     getTileAtWorldXY: (x, y) => tiles.find((tile) => tile.x === x && tile.y === y) };
   const bodies = new Set();
   const scene = {
-    events: new EventEmitter(), game: { registry },
+    events: new EventEmitter(), game: { registry, events: new EventEmitter(), domContainer: { style: { display: "block" } } },
     scene: { key: "Level1Parte2" },
     player: {
       active: true, x: -1076, y: -1445,
@@ -162,10 +180,15 @@ function createScene(registry = new Map()) {
     },
     map: { objects: raw.layers, getLayer: () => ({ tilemapLayer: layer }),
       getObjectLayer: (name) => raw.layers.find((item) => item.name === name) },
-    add: Object.fromEntries(["image", "text", "container", "rectangle"].map((type) =>
-      [type, (x, y) => new DisplayObject(x, y)])),
-    textures: { exists: () => true },
-    cameras: { main: { width: 800, height: 450, zoom: 1, originX: 0.5, originY: 0.5 } },
+    texts: [],
+    add: Object.fromEntries(["image", "text", "container", "rectangle", "graphics"].map((type) =>
+      [type, (x, y, text) => {
+        const visual = new DisplayObject(x, y);
+        if (type === "text") { visual.text = text; scene.texts.push(visual); }
+        return visual;
+      }])),
+    textures: { exists: () => true, getFrame: () => ({ cutWidth: 16, cutHeight: 16 }) },
+    cameras: { main: { x: 0, y: 0, width: 800, height: 450, zoom: 1, originX: 0.5, originY: 0.5 } },
     input: Object.assign(new EventEmitter(), {
       keyboard: { addKey: () => Object.assign(new DisplayObject(), { pressed: false }) },
     }),
@@ -180,12 +203,14 @@ function createScene(registry = new Map()) {
       body.on("destroy", () => bodies.delete(body));
       return body;
     } },
-    tweens: { add(config) { scene.animation = config; return { stop() {} }; } },
+    animations: [],
+    tweens: { add(config) { scene.animation = config; scene.animations.push(config); return { stop() {} }; },
+      killTweensOf() {} },
   };
   criarSistemaInventario(scene);
   criarInteracaoGeradorFabrica(scene);
   criarInteracaoPortaFabrica(scene);
-  return { scene, bodies, tiles, texture, layer };
+  return { scene, bodies, tiles: layer.getTilesWithinWorldXY(-1152, -1584, 144, 96), texture, layer };
 }
 
 test("the requested door blocks passage until its opening animation finishes", () => {
@@ -194,13 +219,13 @@ test("the requested door blocks passage until its opening animation finishes", (
   assert.deepEqual(texture.frame.slice(2), [240, 288, 144, 96]);
   assert.equal(scene.portaFabrica.estado, "fechada");
   assert.deepEqual(scene.portaFabrica.colisao.body, { width: 144, height: 96 });
-  assert.equal(bodies.size, 1);
+  assert.equal(bodies.size, 4);
 
   scene.atualizarColetaItens();
   assert.equal(scene.botaoColetarItem.visible, true);
   scene.botaoColetarItem.emit("pointerdown");
   assert.equal(scene.portaFabrica.estado, "abrindo");
-  assert.equal(bodies.size, 1);
+  assert.equal(bodies.size, 4);
   assert.equal(scene.botaoColetarItem.visible, false);
   scene.portaFabrica.progresso = 0.5;
   scene.animation.onUpdate();
@@ -211,7 +236,7 @@ test("the requested door blocks passage until its opening animation finishes", (
   scene.animation.onComplete();
   assert.equal(scene.portaFabrica.estado, "aberta");
   assert.equal(scene.portaFabrica.visual.visible, false);
-  assert.equal(bodies.size, 0);
+  assert.equal(bodies.size, 3);
   assert.equal(scene.game.registry.get(FACTORY_DOOR_STATE_KEY), true);
   scene.events.emit("shutdown");
   assert.ok(tiles.every((tile) => tile.alpha === 1));
@@ -233,6 +258,331 @@ test("E opens the door, while out-of-range interaction and generator menus canno
   scene.events.emit("shutdown");
 });
 
+test("as duas portas próximas ao atalho O usam seis tiles e preservam a coluna de parede", () => {
+  const { scene, layer } = createScene();
+  assert.deepEqual(scene.portasFabrica.map(porta => porta.nome), ["porta01", "porta02", "porta03", "porta04"]);
+  const novas = scene.portasFabrica.filter(porta => ["porta02", "porta03"].includes(porta.nome));
+  assert.deepEqual(novas.map(({ area }) => [area.x, area.y, area.width, area.height]), [
+    [-1248, -5328, 144, 96], [-1056, -5328, 144, 96],
+  ]);
+  for (const { area, colisao } of novas) {
+    assert.deepEqual(layer.getTilesWithinWorldXY(area.x, area.y, area.width, area.height)
+      .map(tile => tile.index), [678, 679, 680, 686, 687, 688]);
+    assert.deepEqual(colisao.body, { width: 144, height: 96 });
+  }
+  assert.equal(novas[1].area.x - (novas[0].area.x + novas[0].area.width), 48);
+  const parede = scene.map.getObjectLayer("ParedePortaBoss");
+  assert.equal(parede.objects.length, 2);
+  const colisoesNaParede = scene.map.getObjectLayer("collision").objects.filter(object =>
+    object.x < -1056 && object.x + object.width > -1104 &&
+    object.y < -5232 && object.y + object.height > -5328);
+  assert.deepEqual(colisoesNaParede.map(({ x, y, width, height }) => [x, y, width, height]),
+    [[-1104.5, -5240.75, 47.25, 8]], "preserva a colisão desenhada no Tiled, sem acrescentar outra à parede inteira");
+  scene.events.emit("shutdown");
+});
+
+function aproximarPorta(scene, porta) {
+  scene.player.x = porta.area.x + porta.area.width / 2;
+  scene.player.y = porta.area.y + porta.area.height + 30;
+  scene.atualizarInteracaoPortaFabrica();
+}
+
+function aproximarLeitor(scene) {
+  const area = scene.leitorCartaoFabrica.area;
+  scene.player.x = area.x + area.width / 2;
+  scene.player.y = area.y + area.height + 30;
+  scene.atualizarInteracaoPortaFabrica();
+}
+
+function abrirComE(scene) {
+  scene.teclaColetarItem.pressed = true;
+  scene.atualizarColetaItens();
+  return scene.animation;
+}
+
+function liberarAcesso(scene) {
+  scene.luzFabricaAcesa = true;
+  scene.inventory.addItem("card", 1);
+}
+
+test("a porta perto de X322/Y-1887 exige somente energia e usa a mesma animação das persianas", () => {
+  const { scene, bodies, layer } = createScene();
+  const porta = scene.portasFabrica.find(porta => porta.nome === "porta04");
+  assert.ok(porta);
+  assert.deepEqual([porta.area.x, porta.area.y, porta.area.width, porta.area.height], [240, -1920, 144, 96]);
+  const tiles = layer.getTilesWithinWorldXY(240, -1920, 144, 96);
+  assert.deepEqual(tiles.map(tile => tile.index), [678, 679, 680, 686, 687, 688]);
+  aproximarPorta(scene, porta);
+  const aviso = scene.texts.find(text => text.x === 312 && text.y === -1932);
+  assert.equal(aviso.visible, true);
+  assert.equal(aviso.text, "SEM ENERGIA");
+  const quantidadeAnimacoes = scene.animations.length;
+  abrirComE(scene);
+  assert.equal(porta.estado, "fechada");
+  assert.equal(scene.animations.length, quantidadeAnimacoes);
+  scene.inventory.addItem("card", 1);
+  abrirComE(scene);
+  assert.equal(porta.estado, "fechada", "cartão não substitui energia");
+  scene.inventory.removeItem("card", 1);
+  scene.acenderLuzFabrica();
+  scene.atualizarInteracaoPortaFabrica();
+  assert.equal(aviso.text, "E - ABRIR PORTA");
+  const animation = abrirComE(scene);
+  assert.equal(porta.estado, "abrindo");
+  assert.equal(scene.inventory.getQuantity("card"), 0, "abre sem precisar do cartão ou leitor");
+  assert.equal(animation.duration, 850);
+  assert.equal(animation.ease, "Sine.easeInOut");
+  assert.equal(bodies.size, 4);
+  porta.progresso = 0.5;
+  animation.onUpdate();
+  assert.equal(porta.visual.y, -1968);
+  assert.deepEqual(porta.visual.crop, [0, 48, 144, 48]);
+  assert.equal(bodies.size, 4, "mantém a colisão durante toda a animação");
+  porta.progresso = 1;
+  animation.onUpdate();
+  animation.onComplete();
+  assert.equal(porta.estado, "aberta");
+  assert.equal(porta.visual.visible, false);
+  assert.equal(porta.colisao, null);
+  assert.equal(bodies.size, 3);
+  const registry = scene.game.registry;
+  assert.equal(registry.get(chaveEstadoPorta("porta04")), true);
+  assert.ok(scene.portasFabrica.filter(item => item !== porta).every(item => item.estado === "fechada"));
+  scene.events.emit("shutdown");
+  assert.ok(tiles.every(tile => tile.alpha === 1));
+  const returned = createScene(registry);
+  assert.equal(returned.scene.portasFabrica.find(item => item.nome === "porta04").estado, "aberta");
+  assert.equal(returned.bodies.size, 3);
+  returned.scene.events.emit("shutdown");
+});
+
+test("a porta de energia revalida alcance, menus e energia ao pressionar E ou tocar", () => {
+  const { scene } = createScene();
+  const porta = scene.portasFabrica.find(porta => porta.nome === "porta04");
+  scene.luzFabricaAcesa = true;
+  aproximarPorta(scene, porta);
+  const interagir = scene.interacaoMundoProxima.interact;
+  scene.player.x += 300;
+  assert.equal(interagir(), false);
+  aproximarPorta(scene, porta);
+  for (const flag of ["morteEmAndamento", "generatorMenuOpen", "devItemMenuOpen"]) {
+    scene[flag] = true;
+    assert.equal(interagir(), false);
+    scene[flag] = false;
+  }
+  scene.atualizarColetaItens();
+  scene.luzFabricaAcesa = false;
+  scene.botaoColetarItem.emit("pointerdown");
+  assert.equal(porta.estado, "fechada");
+  scene.luzFabricaAcesa = true;
+  scene.botaoColetarItem.emit("pointerdown");
+  assert.equal(porta.estado, "abrindo");
+  assert.equal(interagir(), false, "não inicia duas animações para a mesma porta");
+  scene.events.emit("shutdown");
+});
+
+test("o leitor exige cartão e energia juntos para abrir as duas portas, inclusive no modo dev", () => {
+    for (const energia of [false, true]) {
+      for (const cartao of [false, true]) {
+        const { scene, bodies } = createScene();
+        scene.developerMode = true;
+        scene.luzFabricaAcesa = energia;
+        if (cartao) scene.inventory.addItem("card", 1);
+        const portas = scene.portasFabrica.filter(porta => ["porta02", "porta03"].includes(porta.nome));
+        aproximarLeitor(scene);
+        const prompt = scene.leitorCartaoFabrica.prompt;
+        assert.equal(prompt.visible, true);
+        assert.equal(prompt.text.includes("SEM ENERGIA"), !energia);
+        assert.equal(prompt.text.includes("REQUER CARTÃO"), !cartao);
+        const antes = scene.animations.length;
+        abrirComE(scene);
+        assert.ok(portas.every(porta => porta.estado === (energia && cartao ? "abrindo" : "fechada")));
+        assert.equal(scene.animations.length, antes + (energia && cartao ? 2 : 0));
+        assert.equal(bodies.size, 4, "a colisão permanece até a abertura terminar");
+        for (const porta of portas) assert.notEqual(scene.game.registry.get(chaveEstadoPorta(porta.nome)), true);
+        assert.equal(scene.inventory.getQuantity("card"), cartao ? 1 : 0);
+        scene.events.emit("shutdown");
+      }
+    }
+});
+
+test("o leitor usa os limites do objeto do mapa e revalida alcance, morte e menus", () => {
+  const { scene } = createScene();
+  liberarAcesso(scene);
+  const objeto = scene.map.getObjectLayer("Leitordecartão").objects[0];
+  const leitor = scene.leitorCartaoFabrica;
+  assert.deepEqual(leitor.area, { x: objeto.x, y: objeto.y - objeto.height,
+    width: objeto.width, height: objeto.height });
+  aproximarLeitor(scene);
+  const interagir = scene.interacaoMundoProxima.interact;
+  scene.player.x += 300;
+  assert.equal(interagir(), false);
+  aproximarLeitor(scene);
+  for (const flag of ["morteEmAndamento", "generatorMenuOpen", "devItemMenuOpen"]) {
+    scene[flag] = true;
+    assert.equal(interagir(), false);
+    scene[flag] = false;
+  }
+  assert.ok(scene.portasFabrica.every(porta => porta.estado === "fechada"));
+  // O leitor está ao alcance, mas a porta direita fica a mais de 64 px do jogador.
+  scene.player.x = leitor.area.x - 63;
+  scene.player.y = leitor.area.y + leitor.area.height / 2;
+  scene.atualizarInteracaoPortaFabrica();
+  scene.atualizarColetaItens();
+  scene.botaoColetarItem.emit("pointerdown");
+  assert.deepEqual(scene.portasFabrica.map(porta => porta.estado), ["fechada", "abrindo", "abrindo", "fechada"]);
+  scene.events.emit("shutdown");
+});
+
+test("sem o leitor as persianas continuam bloqueadas e não abrem diretamente por E", () => {
+  const { scene, bodies } = createScene(new Map(), raw => {
+    raw.layers = raw.layers.filter(layer => layer.name !== "Leitordecartão");
+  });
+  liberarAcesso(scene);
+  assert.equal(scene.leitorCartaoFabrica, null);
+  assert.equal(bodies.size, 4, "reconhece as portas no mapa mesmo sem áreas porta02/03");
+  aproximarPorta(scene, scene.portasFabrica.find(porta => porta.nome === "porta02"));
+  assert.equal(scene.interacaoMundoProxima, null);
+  abrirComE(scene);
+  assert.ok(scene.portasFabrica.every(porta => porta.estado === "fechada"));
+  scene.events.emit("shutdown");
+});
+
+test("o leitor abre apenas a porta restante quando a outra já está salva como aberta", () => {
+  const { scene, bodies } = createScene(new Map([[chaveEstadoPorta("porta02"), true]]));
+  liberarAcesso(scene);
+  aproximarLeitor(scene);
+  abrirComE(scene);
+  assert.deepEqual(scene.portasFabrica.map(porta => porta.estado), ["fechada", "aberta", "abrindo", "fechada"]);
+  assert.equal(bodies.size, 3);
+  assert.equal(scene.inventory.getQuantity("card"), 1);
+  scene.events.emit("shutdown");
+});
+
+test("o cartão real coletado no mapa libera o acesso após ligar a energia", () => {
+  const { scene } = createScene();
+  const cartao = scene.itensColetaveis.find(item => item.itemId === "card");
+  assert.ok(cartao);
+  scene.player.x = cartao.x;
+  scene.player.y = cartao.y;
+  scene.atualizarInteracaoPortaFabrica();
+  abrirComE(scene);
+  assert.equal(scene.inventory.getQuantity("card"), 1);
+  assert.ok(!scene.itensColetaveis.includes(cartao));
+  const porta = scene.portasFabrica.find(porta => porta.nome === "porta02");
+  aproximarLeitor(scene);
+  abrirComE(scene);
+  assert.equal(porta.estado, "fechada", "só o cartão não fornece energia à porta");
+  scene.acenderLuzFabrica();
+  scene.atualizarInteracaoPortaFabrica();
+  abrirComE(scene);
+  assert.equal(porta.estado, "abrindo");
+  assert.equal(scene.portasFabrica.find(porta => porta.nome === "porta03").estado, "abrindo");
+  assert.equal(scene.inventory.getQuantity("card"), 1);
+  scene.events.emit("shutdown");
+});
+
+test("E e o botão de interação revalidam cartão e energia no instante de abrir", () => {
+  const { scene } = createScene();
+  liberarAcesso(scene);
+  const porta = scene.portasFabrica.find(porta => porta.nome === "porta03");
+  aproximarLeitor(scene);
+  scene.atualizarColetaItens();
+  scene.inventory.removeItem("card", 1);
+  scene.botaoColetarItem.emit("pointerdown");
+  assert.equal(porta.estado, "fechada");
+  scene.inventory.addItem("card", 1);
+  scene.luzFabricaAcesa = false;
+  abrirComE(scene);
+  assert.equal(porta.estado, "fechada");
+  scene.luzFabricaAcesa = true;
+  scene.botaoColetarItem.emit("pointerdown");
+  assert.equal(porta.estado, "abrindo");
+  scene.events.emit("shutdown");
+});
+
+test("passar o cartão no leitor abre as duas portas com a animação original e colisão até o fim", () => {
+  const { scene, bodies } = createScene();
+  liberarAcesso(scene);
+  const [original, esquerda, direita] = scene.portasFabrica;
+  aproximarLeitor(scene);
+  abrirComE(scene);
+  const esquerdaTween = scene.animations.find(animation => animation.targets === esquerda);
+  const direitaTween = scene.animations.find(animation => animation.targets === direita);
+  assert.equal(esquerda.estado, "abrindo");
+  assert.equal(direita.estado, "abrindo");
+  assert.equal(original.estado, "fechada");
+  assert.equal(esquerdaTween.duration, 850);
+  assert.equal(esquerdaTween.ease, "Sine.easeInOut");
+  esquerda.progresso = 0.5;
+  esquerdaTween.onUpdate();
+  assert.equal(esquerda.visual.y, -5376);
+  assert.deepEqual(esquerda.visual.crop, [0, 48, 144, 48]);
+  assert.equal(bodies.size, 4);
+
+  assert.notEqual(direitaTween.targets, esquerdaTween.targets);
+  for (const [porta, animation] of [[esquerda, esquerdaTween], [direita, direitaTween]]) {
+    porta.progresso = 1;
+    animation.onUpdate();
+    animation.onComplete();
+    assert.equal(porta.estado, "aberta");
+    assert.equal(porta.visual.visible, false);
+    assert.equal(porta.colisao, null);
+  }
+  assert.equal(bodies.size, 2, "a porta original segue bloqueando passagem");
+  assert.equal(scene.game.registry.get(chaveEstadoPorta("porta02")), true);
+  assert.equal(scene.game.registry.get(chaveEstadoPorta("porta03")), true);
+  assert.notEqual(scene.game.registry.get(FACTORY_DOOR_STATE_KEY), true);
+  assert.equal(scene.inventory.getQuantity("card"), 1, "o mesmo crachá abre as duas portas sem ser consumido");
+  scene.events.emit("shutdown");
+});
+
+test("o acesso pelo leitor mantém as duas portas abertas ao voltar ao mapa", () => {
+  const { scene } = createScene();
+  liberarAcesso(scene);
+  aproximarLeitor(scene);
+  abrirComE(scene);
+  for (const porta of scene.portasFabrica.filter(porta => ["porta02", "porta03"].includes(porta.nome))) {
+    const animation = scene.animations.find(animation => animation.targets === porta);
+    porta.progresso = 1;
+    animation.onUpdate();
+    animation.onComplete();
+  }
+  const registry = scene.game.registry;
+  scene.events.emit("shutdown");
+  const returned = createScene(registry);
+  assert.deepEqual(returned.scene.portasFabrica.map(porta => porta.estado), ["fechada", "aberta", "aberta", "fechada"]);
+  assert.equal(returned.bodies.size, 2);
+  aproximarLeitor(returned.scene);
+  assert.equal(returned.scene.leitorCartaoFabrica.prompt.text, "ACESSO LIBERADO");
+  assert.equal(returned.scene.interacaoMundoProxima, null);
+  returned.scene.events.emit("shutdown");
+});
+
+test("as portas da arena só recebem interação pelo leitor e a limpeza restaura os tiles", () => {
+  const { scene, layer, bodies } = createScene();
+  liberarAcesso(scene);
+  const tiles = layer.getTilesWithinWorldXY(-1248, -5328, 336, 96);
+  assert.ok(tiles.every(tile => tile.alpha === 0));
+  scene.player.x = -1248;
+  scene.player.y = -5202;
+  scene.atualizarInteracaoPortaFabrica();
+  assert.equal(scene.interacaoMundoProxima, null, "estar perto da porta não substitui o leitor");
+  abrirComE(scene);
+  assert.deepEqual(scene.portasFabrica.map(porta => porta.estado), ["fechada", "fechada", "fechada", "fechada"]);
+  aproximarLeitor(scene);
+  abrirComE(scene);
+  assert.deepEqual(scene.portasFabrica.map(porta => porta.estado), ["fechada", "abrindo", "abrindo", "fechada"]);
+  const prompt = scene.leitorCartaoFabrica.prompt;
+  scene.events.emit("shutdown");
+  assert.ok(tiles.every(tile => tile.alpha === 1));
+  assert.equal(bodies.size, 0);
+  assert.equal(scene.interacaoMundoProxima, null);
+  assert.equal(scene.leitorCartaoFabrica, null);
+  assert.equal(prompt.destroyed, true);
+  assert.equal(scene.events.listenerCount("prerender"), 0);
+});
+
 test("nearby collectibles keep priority and opened doors stay open after returning", () => {
   const { scene } = createScene();
   scene.itensColetaveis.push({ uniqueId: "test:gasolina", itemId: "gasolina", quantity: 1,
@@ -250,7 +600,7 @@ test("nearby collectibles keep priority and opened doors stay open after returni
   scene.events.emit("shutdown");
   const returned = createScene(registry);
   assert.equal(returned.scene.portaFabrica.estado, "aberta");
-  assert.equal(returned.bodies.size, 0);
+  assert.equal(returned.bodies.size, 3);
   assert.equal(returned.scene.interacaoMundoProxima, null);
   returned.scene.events.emit("shutdown");
 });
@@ -267,6 +617,26 @@ function approachGenerator(scene) {
   scene.atualizarInteracaoPortaFabrica();
 }
 
+test("o menu de coletáveis DEV bloqueia coleta, portas e abertura do gerador", () => {
+  const { scene } = createScene();
+  scene.devItemMenuOpen = true;
+  scene.atualizarInteracaoPortaFabrica();
+  assert.equal(scene.interacaoMundoProxima, null);
+  const cartao = scene.itensColetaveis.find(item => item.itemId === "card");
+  scene.player.x = cartao.x;
+  scene.player.y = cartao.y;
+  scene.teclaColetarItem.pressed = true;
+  scene.atualizarColetaItens();
+  scene.botaoColetarItem.emit("pointerdown");
+  assert.equal(scene.inventory.getQuantity("card"), 0);
+  assert.equal(scene.teclaColetarItem.pressed, false, "E não fica pendente para depois do menu");
+  assert.ok(scene.itensColetaveis.includes(cartao));
+  approachGenerator(scene);
+  assert.equal(scene.interagirGerador(), false);
+  assert.notEqual(scene.generatorMenuOpen, true);
+  scene.events.emit("shutdown");
+});
+
 test("E opens the generator menu in the current map and activation consumes its resources", () => {
   const { scene } = createScene();
   approachGenerator(scene);
@@ -274,22 +644,34 @@ test("E opens the generator menu in the current map and activation consumes its 
   scene.atualizarColetaItens();
   assert.equal(scene.generatorMenuOpen, true);
   assert.equal(scene.movimentoBloqueado, true);
+  assert.equal(scene.game.domContainer.style.display, "none");
 
   /**
    * Simula um toque no botão de ativação do gerador dentro do modal.
    */
-  const activate = () => scene.input.emit("pointerdown", { x: 305, y: 344 });
+  const activate = () => clickGenerator(scene, 604, 356);
   activate();
   assert.notEqual(scene.luzFabricaAcesa, true);
   scene.inventory.addItem("gasolina", 2);
   scene.inventory.addItem("bateria", 1);
   activate();
+  assert.notEqual(scene.luzFabricaAcesa, true, "ter os itens não substitui arrastá-los");
+  dragGenerator(scene, 133, 200, 318, 205);
+  activate();
+  assert.notEqual(scene.luzFabricaAcesa, true, "precisa conectar as duas peças");
+  dragGenerator(scene, 133, 279, 318, 315);
+  assert.equal(scene.inventory.getQuantity("gasolina"), 2, "encaixar ainda não consome");
+  assert.notEqual(scene.luzFabricaAcesa, true, "encaixar não liga automaticamente");
+  activate();
   assert.equal(scene.luzFabricaAcesa, true);
   assert.equal(scene.inventory.getQuantity("gasolina"), 1);
   assert.equal(scene.inventory.getQuantity("bateria"), 0);
+  activate();
+  assert.equal(scene.inventory.getQuantity("gasolina"), 1, "cliques repetidos não consomem de novo");
   scene.finishActivation();
   assert.equal(scene.generatorMenuOpen, false);
   assert.equal(scene.movimentoBloqueado, false);
+  assert.equal(scene.game.domContainer.style.display, "block");
   scene.events.emit("shutdown");
 });
 
@@ -302,6 +684,7 @@ test("the shared touch button opens the generator and an open menu blocks collec
   assert.equal(scene.generatorMenuOpen, true);
   assert.equal(scene.coletarItemProximo(), false);
   scene.events.emit("shutdown");
+  assert.equal(scene.game.domContainer.style.display, "block");
 });
 
 test("collecting an item keeps priority over the nearby generator", () => {
@@ -319,4 +702,70 @@ test("collecting an item keeps priority over the nearby generator", () => {
   scene.atualizarColetaItens();
   assert.equal(scene.generatorMenuOpen, true);
   scene.events.emit("shutdown");
+});
+
+function clickGenerator(scene, x, y) {
+  scene.input.emit("pointerdown", { id: 0, x, y });
+  scene.input.emit("pointerup", { id: 0, x, y });
+}
+
+function dragGenerator(scene, x, y, targetX, targetY, id = 0) {
+  scene.input.emit("pointerdown", { id, x, y });
+  scene.input.emit("pointermove", { id, x: targetX, y: targetY });
+  scene.input.emit("pointerup", { id, x: targetX, y: targetY });
+}
+
+test("encaixes rejeitam peças trocadas, devolvem ao inventário e revalidam os recursos", () => {
+  const { scene } = createScene();
+  scene.inventory.addItem("bateria");
+  scene.inventory.addItem("gasolina");
+  approachGenerator(scene);
+  scene.interagirGerador();
+  dragGenerator(scene, 133, 200, 318, 315);
+  dragGenerator(scene, 133, 279, 318, 205);
+  clickGenerator(scene, 604, 356);
+  assert.notEqual(scene.luzFabricaAcesa, true);
+  dragGenerator(scene, 133, 200, 318, 205);
+  dragGenerator(scene, 133, 279, 318, 315);
+  dragGenerator(scene, 318, 205, 133, 200);
+  clickGenerator(scene, 604, 356);
+  assert.notEqual(scene.luzFabricaAcesa, true, "devolver uma peça interrompe o circuito");
+  dragGenerator(scene, 133, 200, 318, 205);
+  scene.inventory.removeItem("bateria");
+  clickGenerator(scene, 604, 356);
+  assert.notEqual(scene.luzFabricaAcesa, true, "revalida o inventário antes de consumir");
+  assert.equal(scene.inventory.getQuantity("gasolina"), 1);
+  scene.events.emit("shutdown");
+});
+
+test("fechar e reabrir limpa reservas; cancelar um arraste e outro dedo não encaixam a peça", () => {
+  const { scene } = createScene();
+  scene.inventory.addItem("bateria");
+  scene.inventory.addItem("gasolina");
+  approachGenerator(scene);
+  scene.interagirGerador();
+  dragGenerator(scene, 133, 200, 318, 205);
+  clickGenerator(scene, 743, 54);
+  assert.equal(scene.generatorMenuOpen, false);
+  assert.equal(scene.inventory.getQuantity("bateria"), 1);
+  approachGenerator(scene);
+  scene.interagirGerador();
+  dragGenerator(scene, 133, 279, 318, 315);
+  clickGenerator(scene, 604, 356);
+  assert.notEqual(scene.luzFabricaAcesa, true, "reabrir exige encaixar de novo");
+  scene.input.emit("pointerdown", { id: 1, x: 133, y: 200 });
+  scene.input.emit("pointerup", { id: 2, x: 318, y: 205 });
+  clickGenerator(scene, 604, 356);
+  assert.notEqual(scene.luzFabricaAcesa, true);
+  scene.input.emit("pointerupoutside", { id: 1 });
+  clickGenerator(scene, 604, 356);
+  assert.notEqual(scene.luzFabricaAcesa, true);
+  dragGenerator(scene, 133, 200, 318, 205);
+  clickGenerator(scene, 604, 356);
+  assert.equal(scene.luzFabricaAcesa, true);
+  scene.events.emit("shutdown");
+  for (const name of ["pointerdown", "pointermove", "pointerup", "pointerupoutside", "gameout"]) {
+    assert.equal(scene.input.listenerCount(name), 0, name);
+  }
+  assert.equal(scene.game.events.listenerCount("blur"), 0);
 });

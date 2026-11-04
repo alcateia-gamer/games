@@ -34,7 +34,7 @@ function atualizarProfundidade(scene, encontro) {
   const sprite = encontro.sprite;
   if (!sprite?.active) return;
   const profundidade = Number.isFinite(scene.profundidadePersonagemParte2)
-    ? calcularDepthAtor(scene, sprite.body.bottom)
+    ? calcularDepthAtor(scene, sprite.body.bottom, sprite)
     : encontro.config.visual.profundidade;
   sprite.setDepth(profundidade);
 }

@@ -171,7 +171,7 @@ function criarControlesAtaque(scene) {
    */
   const iniciarAtaqueComSom = () => {
     // Cliques no menu do gerador não podem disparar ataque, som ou consumir estamina.
-    if (scene.generatorMenuOpen) return;
+    if (scene.generatorMenuOpen || scene.devItemMenuOpen) return;
 
     const jaEstavaAtacando = scene.atacando;
 

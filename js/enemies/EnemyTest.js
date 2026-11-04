@@ -395,7 +395,7 @@ function atualizarDepthInimigo(inimigo, scene) {
   }
 
   const inimigoFootY = inimigo.body?.bottom ?? inimigo.getBounds().bottom;
-  inimigo.setDepth(calcularDepthAtor(scene, inimigoFootY));
+  inimigo.setDepth(calcularDepthAtor(scene, inimigoFootY, inimigo));
 }
 
 /**

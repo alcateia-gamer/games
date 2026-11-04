@@ -237,12 +237,12 @@ test("piscadas ambientes usam o mesmo áudio bem baixo, atenuam distância e nã
     sound: { add(chave) { assert.equal(chave, "luz-fabrica-oscilando"); return som; } },
   };
   const controle = criarSomPiscadasAmbiente(scene);
-  controle.update([{ x: 0, y: 0 }]);
+  controle.update([{ x: 450, y: 0 }, { x: 0, y: 0 }, { x: 200, y: 0 }]);
   scene.time.now = 30;
-  controle.update([]);
+  controle.update([{ x: 100, y: 0 }]);
   const perto = volumes.at(-1);
   assert.ok(perto > 0 && perto <= 0.025);
-  assert.equal(reproducoes.length, 1);
+  assert.equal(reproducoes.length, 1, "falhas simultâneas escolhem o estalo mais próximo sem interrompê-lo");
   scene.time.now = 3000;
   controle.update([{ x: 450, y: 0 }]);
   scene.time.now += 30;

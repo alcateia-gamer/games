@@ -13,8 +13,8 @@ const ICON_SIZE = SLOT_SIZE - 2;
  * Encontra os pixels visíveis do frame, preserva sua proporção e armazena um ícone no tamanho
  * final para reutilização.
  */
-function prepareInventoryIcon(scene, definition) {
-  const iconKey = `inventory-ui-icon:${definition.id}`;
+function prepareInventoryIcon(scene, definition, iconSize = ICON_SIZE) {
+  const iconKey = `inventory-ui-icon:${definition.id}${iconSize === ICON_SIZE ? "" : `:${iconSize}`}`;
   if (scene.textures.exists(iconKey)) return iconKey;
 
   const frame = scene.textures.getFrame(definition.image.key, definition.image.frame);
@@ -44,13 +44,13 @@ function prepareInventoryIcon(scene, definition) {
     }
   }
 
-  const texture = scene.textures.createCanvas(iconKey, ICON_SIZE, ICON_SIZE);
+  const texture = scene.textures.createCanvas(iconKey, iconSize, iconSize);
   const context = texture.getContext();
 
   if (right >= left && bottom >= top) {
     const cropWidth = right - left + 1;
     const cropHeight = bottom - top + 1;
-    const scale = ICON_SIZE / Math.max(cropWidth, cropHeight);
+    const scale = iconSize / Math.max(cropWidth, cropHeight);
     const width = cropWidth * scale;
     const height = cropHeight * scale;
 
@@ -59,7 +59,7 @@ function prepareInventoryIcon(scene, definition) {
     context.imageSmoothingQuality = "high";
     context.drawImage(
       canvas, left, top, cropWidth, cropHeight,
-      (ICON_SIZE - width) / 2, (ICON_SIZE - height) / 2,
+      (iconSize - width) / 2, (iconSize - height) / 2,
       width, height,
     );
   }
@@ -220,4 +220,4 @@ class InventoryUI {
   }
 }
 
-export { InventoryUI };
+export { InventoryUI, prepareInventoryIcon };

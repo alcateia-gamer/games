@@ -143,7 +143,7 @@ function atualizarDepthPlayer(scene) {
   }
 
   const footY = calcularFootYPlayer(scene);
-  const depth = calcularDepthAtor(scene, footY);
+  const depth = calcularDepthAtor(scene, footY, scene.player);
 
   scene.player.setDepth(depth);
 

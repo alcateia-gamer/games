@@ -3,6 +3,9 @@
  * relativa ao personagem.
  */
 
+import { obterConfiguracaoHitboxWalk, obterConfiguracaoHitboxAtaque } from "../player/colisoes/index.mjs";
+import { atorNaRegiaoTroca } from "./TrocaCamada.js";
+
 // Depth ordena o desenho; não muda posição nem colisões. Valores maiores ficam à frente.
 const DEPTHS = {
   worldBase: 12.5,
@@ -22,19 +25,47 @@ function depthFromWorldY(y) {
 /**
  * Usa a mesma ordenação pelos pés para personagens e robôs, respeitando a faixa da fábrica.
  */
-function calcularDepthAtor(scene, footY) {
+function calcularDepthAtor(scene, footY, ator = null) {
   if (Number.isFinite(scene.profundidadePersonagemParte2)) {
     const player = scene.player;
-    const playerFootY = player?.body?.bottom ?? player?.getBounds().bottom ?? footY;
+    const playerFootY = player?.body?.bottom ?? player?.getBounds?.().bottom ?? footY;
     // As camadas da fábrica podem ficar a apenas 0,001 do personagem.
     // Limita a variação a ±0,0005, mantendo a ordem dos pés sem atravessar essas camadas.
     const offset = Math.atan((footY - playerFootY) / 100) / Math.PI * 0.001;
-    return scene.profundidadePersonagemParte2 + offset;
+    const base = Number.isFinite(scene.profundidadeRegiaoTroca) && atorNaRegiaoTroca(scene, ator)
+      ? scene.profundidadeRegiaoTroca : scene.profundidadePersonagemParte2;
+    return base + offset;
   }
 
   return scene.calcularDepthMundo
     ? scene.calcularDepthMundo(footY)
     : depthFromWorldY(footY);
+}
+
+/** Usa o contato físico com o chão, inclusive nas representações recebidas pela rede. */
+function obterFootYAtor(ator) {
+  if (Number.isFinite(ator?.body?.bottom)) return ator.body.bottom;
+  if (ator?.mapCharacter && ator.getTopLeft) {
+    const config = ator.remoteAttackActive
+      ? obterConfiguracaoHitboxAtaque(ator.mapCharacter)
+      : obterConfiguracaoHitboxWalk(ator.mapCharacter);
+    return ator.getTopLeft().y + (config.offsetY + config.height) * Math.abs(ator.scaleY ?? 1);
+  }
+  return ator?.getBounds?.().bottom ?? ator?.y ?? 0;
+}
+
+/** Todos os atores móveis passam pela mesma ordenação, após a física e a interpolação. */
+function atualizarDepthAtores(scene) {
+  const atores = new Set([scene.player, scene.companionPet, ...(scene.inimigos ?? []),
+    ...(scene.remotePlayers?.values?.() ?? [])]);
+  for (const ator of atores) {
+    if (ator?.active) ator.setDepth(calcularDepthAtor(scene, obterFootYAtor(ator), ator));
+  }
+}
+
+// Em empate, quem está pisando na base aparece à frente do cenário.
+function depthCenario(scene, y) {
+  return calcularDepthAtor(scene, y) - 1e-9;
 }
 
 /**
@@ -85,75 +116,74 @@ function atualizarDepthObjetosProducaoEArmazem(scene) {
 }
 
 /**
- * Coloca cada garra acima ou abaixo do jogador conforme a posição de seus pés em relação ao
- * objeto.
+ * Usa a base de cada garra para a passagem de qualquer ator.
  */
 function atualizarDepthGarras(scene) {
-  const player = scene.player;
-  if (!player?.active || !Array.isArray(scene.objetosMapaParte2)) {
-    return;
-  }
-
-  const playerY = player.body?.bottom ?? player.getBounds().bottom;
-  const playerDepth = player.depth;
-
-  scene.objetosMapaParte2.forEach((visual) => {
-    if (!visual?.active || visual.getData("objectLayerName") !== "Garras") {
-      return;
-    }
-
-    const garraY = visual.getData("worldY");
-    const personagemAcima = playerY > garraY;
-    visual.setDepth(playerDepth + (personagemAcima ? -0.01 : 0.01));
-  });
+  atualizarDepthObjetosPelaBase(scene, "Garras");
 }
 
 /**
- * Ordena individualmente os objetos de uma camada pelo centro visual em relação ao jogador.
+ * Intercala cada objeto com os atores pela base, sem escolher um personagem como alvo.
  */
-function atualizarDepthObjetosPeloCentro(scene, nomeCamada) {
-  const player = scene.player;
-  if (!player?.active || !Array.isArray(scene.objetosMapaParte2)) {
-    return;
-  }
-
-  const centroPlayerY = player.getBounds().centerY;
-
+function atualizarDepthObjetosPelaBase(scene, nomeCamada) {
+  if (!Array.isArray(scene.objetosMapaParte2)) return;
   scene.objetosMapaParte2.forEach((visual) => {
     if (!visual?.active || visual.getData("objectLayerName") !== nomeCamada) {
       return;
     }
 
-    const centroObjetoY = visual.getBounds().centerY;
-    // Preserva o Y negativo do mapa: -1200 fica mais abaixo que -1300.
-    const personagemAbaixo = centroPlayerY > centroObjetoY;
-
-    visual.setDepth(player.depth + (personagemAbaixo ? -0.01 : 0.01));
+    const baseY = visual.getData("worldY") ?? visual.getBounds?.().bottom ?? visual.y;
+    if (Number.isFinite(baseY)) visual.setDepth(depthCenario(scene, baseY));
   });
 }
 
 /**
- * Compara os centros do jogador e dos computadores PcAdm durante a passagem.
+ * Ordena os computadores PcAdm pelo mesmo chão dos personagens.
  */
 function atualizarDepthComputadoresPcAdm(scene) {
-  atualizarDepthObjetosPeloCentro(scene, "PcAdm");
+  atualizarDepthObjetosPelaBase(scene, "PcAdm");
 }
 
 /**
- * Alterna a sobreposição de cada objeto da camada DepthPerso pelo centro de ambos.
+ * Ordena cada objeto DepthPerso entre os atores que estão atrás e à frente dele.
  */
 function atualizarDepthObjetosDepthPerso(scene) {
-  atualizarDepthObjetosPeloCentro(scene, "DepthPerso");
+  atualizarDepthObjetosPelaBase(scene, "DepthPerso");
+}
+
+/** Ordena a parede entre as portas como um conjunto pela base, sem separar seus blocos. */
+function atualizarDepthParedePortaBoss(scene) {
+  const objetos = scene.objetosMapaParte2;
+  if (!Array.isArray(objetos)) return;
+
+  let baseY = -Infinity;
+  for (const visual of objetos) {
+    if (visual?.active && visual.getData("objectLayerName") === "ParedePortaBoss") {
+      baseY = Math.max(baseY, visual.getData("worldY"));
+    }
+  }
+  if (!Number.isFinite(baseY)) return;
+  const depth = depthCenario(scene, baseY);
+  for (const visual of objetos) {
+    if (visual?.active && visual.getData("objectLayerName") === "ParedePortaBoss") {
+      visual.setDepth(depth);
+    } else if (visual?.active && visual.getData("objectLayerName") === "Leitordecartão") {
+      visual.setDepth(depth + 1e-10);
+    }
+  }
 }
 
 export {
   DEPTHS,
   depthFromWorldY,
   calcularDepthAtor,
+  obterFootYAtor,
+  atualizarDepthAtores,
   calcularDepthObjeto,
   PROFUNDIDADES_OBJETOS_PARTE2,
   atualizarDepthObjetosProducaoEArmazem,
   atualizarDepthGarras,
   atualizarDepthComputadoresPcAdm,
   atualizarDepthObjetosDepthPerso,
+  atualizarDepthParedePortaBoss,
 };

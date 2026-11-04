@@ -9,7 +9,10 @@ import { readFileSync } from "node:fs";
 import {
   atualizarDepthComputadoresPcAdm,
   atualizarDepthObjetosDepthPerso,
+  atualizarDepthParedePortaBoss,
+  atualizarDepthGarras, atualizarDepthAtores, obterFootYAtor,
 } from "./ProfundidadeMapa.js";
+import { atualizarDepthCompanionPet } from "../player/CompanionPet.js";
 import { atualizarDepthPlayer } from "../player/Player.js";
 import { atualizarInimigoTeste } from "../enemies/EnemyTest.js";
 
@@ -21,111 +24,123 @@ function criarVisual(layerName, centerY) {
   return {
     active: true,
     depth: 0,
-    getBounds: () => ({ centerY }),
-    getData: (key) => (key === "objectLayerName" ? layerName : undefined),
+    getBounds: () => ({ centerY, bottom: centerY }),
+    getData: (key) => ({ objectLayerName: layerName, worldY: centerY })[key],
     setDepth(depth) {
       this.depth = depth;
     },
   };
 }
 
-test("PcAdm depth uses inverted Y and the visual centers", () => {
-  const behind = criarVisual("PcAdm", 10);
-  const inFront = criarVisual("PcAdm", 20);
-  const otherLayer = criarVisual("ObjetosArmazem", 10);
-  const scene = {
-    player: {
-      active: true,
-      depth: 16.5,
-      getBounds: () => ({ centerY: 15 }),
-    },
-    objetosMapaParte2: [behind, inFront, otherLayer],
-  };
-
-  atualizarDepthComputadoresPcAdm(scene);
-
-  assert.equal(behind.depth, 16.49);
-  assert.equal(inFront.depth, 16.51);
-  assert.equal(otherLayer.depth, 0);
+test("objetos intercalam jogador, amigo e inimigos em lados opostos pela base", () => {
+  for (const layer of ["PcAdm", "DepthPerso", "Garras"]) {
+    const object = criarVisual(layer, -5250);
+    const scene = {
+      profundidadePersonagemParte2: 16.5,
+      player: criarAtor(-5300), companionPet: criarAtor(-5200),
+      inimigos: [criarAtor(-5270), criarAtor(-5230, "serra")],
+      objetosMapaParte2: [object],
+    };
+    atualizarDepthAtores(scene);
+    atualizarDepthComputadoresPcAdm(scene);
+    atualizarDepthObjetosDepthPerso(scene);
+    atualizarDepthGarras(scene);
+    assert.ok(scene.player.depth < object.depth);
+    assert.ok(scene.inimigos[0].depth < object.depth);
+    assert.ok(scene.companionPet.depth > object.depth);
+    assert.ok(scene.inimigos[1].depth > object.depth);
+    // Mover o jogador não pode inverter a relação de outro ator com o objeto.
+    scene.player.body.bottom = -5100;
+    atualizarDepthAtores(scene);
+    atualizarDepthComputadoresPcAdm(scene);
+    atualizarDepthObjetosDepthPerso(scene);
+    atualizarDepthGarras(scene);
+    assert.ok(scene.inimigos[0].depth < object.depth);
+    assert.ok(scene.inimigos[1].depth > object.depth);
+    assert.ok(scene.companionPet.depth > object.depth);
+  }
 });
 
-test("PcAdm depth update safely skips a missing player", () => {
-  assert.doesNotThrow(() =>
-    atualizarDepthComputadoresPcAdm({ objetosMapaParte2: [] }),
-  );
-});
-
-test("DepthPerso sorts every object from the map using negative visual centers", () => {
-  const map = JSON.parse(readFileSync(
-    new URL("../../assets/map/parte2-fase1.json", import.meta.url), "utf8",
-  ));
+test("DepthPerso usa as bases reais do mapa para atores de tamanhos diferentes", () => {
+  const map = JSON.parse(readFileSync(new URL("../../assets/map/parte2-fase1.json", import.meta.url)));
   const layer = map.layers.find(({ name }) => name === "DepthPerso");
   assert.ok(layer?.objects.length > 0);
-  const visuals = layer.objects.map(object =>
-    criarVisual(layer.name, object.y - object.height / 2),
-  );
-  let centerY;
-  const scene = {
-    player: {
-      active: true, depth: 16.5,
-      // Pés e origem diferentes do centro garantem que só o centro decide a ordem.
-      y: 0, body: { bottom: 100 },
-      getBounds: () => ({ centerY }),
-    },
-    objetosMapaParte2: visuals,
-  };
-
-  for (const visual of visuals) {
-    const objectCenterY = visual.getBounds().centerY;
-    assert.ok(objectCenterY < 0);
-    centerY = objectCenterY - 1;
+  for (const object of layer.objects) {
+    const visual = criarVisual(layer.name, object.y);
+    const scene = { profundidadePersonagemParte2: 16.5, player: criarAtor(object.y - 1),
+      companionPet: criarAtor(object.y + 1), objetosMapaParte2: [visual] };
+    atualizarDepthAtores(scene);
     atualizarDepthObjetosDepthPerso(scene);
-    assert.equal(visual.depth, 16.51, "objeto à frente quando jogador está acima");
-    centerY = objectCenterY + 1;
+    assert.ok(scene.player.depth < visual.depth);
+    assert.ok(scene.companionPet.depth > visual.depth);
+    scene.player.body.bottom = object.y;
+    atualizarDepthAtores(scene);
     atualizarDepthObjetosDepthPerso(scene);
-    assert.equal(visual.depth, 16.49, "objeto atrás quando jogador está abaixo");
-    centerY = objectCenterY;
-    atualizarDepthObjetosDepthPerso(scene);
-    assert.equal(visual.depth, 16.51, "empate mantém a ordem estável");
+    assert.ok(scene.player.depth > visual.depth, "empate usa a base do chão, sem depender da altura visual");
   }
-
-  scene.player.depth = 25.5;
-  centerY = 0;
-  atualizarDepthObjetosDepthPerso(scene);
-  for (const visual of visuals) assert.equal(visual.depth, 25.49);
 });
 
-test("DepthPerso updates objects independently and leaves other layers unchanged", () => {
-  const behind = criarVisual("DepthPerso", -1300);
-  const inFront = criarVisual("DepthPerso", -1200);
-  const inactive = criarVisual("DepthPerso", -1300);
+test("ordenação ignora visuais inativos, outras camadas e cenas incompletas", () => {
+  const inactive = criarVisual("DepthPerso", -5200);
   inactive.active = false;
-  const otherLayer = criarVisual("PcAdm", -1300);
-  const scene = {
-    player: {
-      active: true, depth: 16.5,
-      getBounds: () => ({ centerY: -1250 }),
-    },
-    objetosMapaParte2: [behind, inFront, inactive, otherLayer],
-  };
-
+  const other = criarVisual("ObjetosArmazem", -5200);
+  const scene = { profundidadePersonagemParte2: 16.5,
+    player: criarAtor(-5300), objetosMapaParte2: [inactive, other] };
   atualizarDepthObjetosDepthPerso(scene);
-
-  assert.equal(behind.depth, 16.49);
-  assert.equal(inFront.depth, 16.51);
   assert.equal(inactive.depth, 0);
-  assert.equal(otherLayer.depth, 0);
-  scene.player.active = false;
-  scene.player.depth = 25.5;
-  atualizarDepthObjetosDepthPerso(scene);
-  assert.equal(behind.depth, 16.49);
+  assert.equal(other.depth, 0);
+  for (const update of [atualizarDepthComputadoresPcAdm, atualizarDepthObjetosDepthPerso,
+    atualizarDepthGarras, atualizarDepthParedePortaBoss, atualizarDepthAtores]) {
+    assert.doesNotThrow(() => update({}));
+  }
 });
 
-test("DepthPerso safely skips a missing player or object list", () => {
-  assert.doesNotThrow(() => atualizarDepthObjetosDepthPerso({}));
-  assert.doesNotThrow(() => atualizarDepthObjetosDepthPerso({
-    player: { active: true },
+test("ParedePortaBoss mantém blocos e leitor juntos entre TODOS os atores, sem mover o mapa", () => {
+  const map = JSON.parse(readFileSync(new URL("../../assets/map/parte2-fase1.json", import.meta.url)));
+  const layer = map.layers.find(layer => layer.name === "ParedePortaBoss");
+  const visuais = layer.objects.map(object => ({
+    active: true, x: object.x, y: object.y, depth: 0,
+    getData: key => ({ objectLayerName: layer.name, worldY: object.y })[key],
+    setDepth(depth) { this.depth = depth; },
   }));
+  const leitor = criarVisual("Leitordecartão", -5268.875);
+  const scene = { profundidadePersonagemParte2: 16.5,
+    player: criarAtor(-5350), companionPet: criarAtor(-5180),
+    inimigos: [criarAtor(-5300), criarAtor(-5232), criarAtor(-5200, "serra")],
+    objetosMapaParte2: [...visuais, leitor] };
+  atualizarDepthAtores(scene);
+  atualizarDepthParedePortaBoss(scene);
+  assert.equal(visuais[0].depth, visuais[1].depth);
+  for (const actor of [scene.player, scene.inimigos[0]]) {
+    assert.ok(actor.depth < visuais[0].depth);
+    assert.ok(actor.depth < leitor.depth);
+  }
+  for (const actor of [scene.companionPet, ...scene.inimigos.slice(1)]) {
+    assert.ok(actor.depth > leitor.depth);
+  }
+  assert.ok(leitor.depth > visuais[0].depth);
+  scene.player.body.bottom = -5100;
+  atualizarDepthAtores(scene);
+  atualizarDepthParedePortaBoss(scene);
+  assert.ok(scene.inimigos[0].depth < visuais[0].depth, "andar com o jogador não traz o inimigo para cima da parede");
+  assert.ok(scene.companionPet.depth > leitor.depth);
+  assert.deepEqual(visuais.map(({ x, y }) => [x, y]), layer.objects.map(({ x, y }) => [x, y]));
+});
+
+test("companheiro, remotos e inimigos usam o mesmo chão; profundidade fixa antiga é ignorada", () => {
+  const scene = { profundidadePersonagemParte2: 16.5, player: criarAtor(-5300),
+    companionPet: { ...criarAtor(-5300), getData: () => 25.5 },
+    inimigos: [criarAtor(-5300)], remotePlayers: new Map([["ally", criarAtor(-5300)]]) };
+  atualizarDepthPlayer(scene);
+  atualizarDepthCompanionPet(scene);
+  atualizarDepthAtores(scene);
+  for (const actor of [scene.companionPet, ...scene.inimigos, ...scene.remotePlayers.values()]) {
+    assert.equal(actor.depth, scene.player.depth);
+  }
+  const remote = { mapCharacter: "kai-mercer", scaleY: 1, getTopLeft: () => ({ y: -5397 }) };
+  assert.equal(obterFootYAtor(remote), -5300, "margens transparentes do frame remoto não contam como pés");
+  remote.remoteAttackActive = true;
+  assert.equal(obterFootYAtor(remote), -5309);
 });
 
 function criarAtor(footY, tipoRobo = "padrao") {

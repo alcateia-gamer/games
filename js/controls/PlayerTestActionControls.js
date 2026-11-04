@@ -28,7 +28,8 @@ export function criarControlesAcaoTeste(scene) {
   let armaExibida = null;
 
   const atualizar = () => {
-    const ativo = !!scene.player?.active && !scene.morteEmAndamento && !scene.generatorMenuOpen;
+    const ativo = !!scene.player?.active && !scene.morteEmAndamento &&
+      !scene.generatorMenuOpen && !scene.devItemMenuOpen;
     const interagindo = ativo && !!scene.botaoColetarItemVisivel;
     scene.botaoAtaque?.setVisible(ativo && !interagindo);
     scene.iconeAtaque?.setVisible(ativo && !interagindo);

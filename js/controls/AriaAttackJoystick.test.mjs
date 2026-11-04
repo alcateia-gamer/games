@@ -208,6 +208,19 @@ for (const [emissor, evento] of [["events", "pause"], ["events", "sleep"], ["sca
   });
 }
 
+test("o menu de coletáveis DEV impede ataques e movimento por trás do catálogo", t => {
+  const scene = cena(t);
+  scene.devItemMenuOpen = true;
+  scene.movimentoBloqueado = true;
+  const pointer = pressionar(scene);
+  soltar(scene, pointer);
+  scene.teclasWASD.esquerda.isDown = true;
+  atualizarMovimento(scene);
+  assert.equal(flechas(scene).length, 0);
+  assert.equal(scene.player.body.velocity.x, 0);
+  assert.equal(scene.player.body.velocity.y, 0);
+});
+
 for (const flag of ["morteEmAndamento", "generatorMenuOpen", "movimentoBloqueado"]) {
   test(`H: ${flag} cancela mesmo se a soltura chegar antes do próximo frame`, t => {
     const scene = cena(t), pointer = pressionar(scene);
