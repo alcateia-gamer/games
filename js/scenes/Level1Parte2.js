@@ -70,6 +70,7 @@ import {
   criarInteracaoGeradorFabrica,
 } from "../interactions/FactoryGenerator.js";
 import { criarInteracaoPortaFabrica } from "../interactions/FactoryDoor.js";
+import { criarRoboBola, atualizarRoboBola } from "../enemies/RoboBola.js";
 
 class Level1Parte2 extends Phaser.Scene {
   /**
@@ -213,6 +214,9 @@ class Level1Parte2 extends Phaser.Scene {
 
     this.teclaSpawnRoboSerra = this.input.keyboard.addKey(
       Phaser.Input.Keyboard.KeyCodes.FIVE,
+    );
+    this.teclaSpawnRoboBola = this.input.keyboard.addKey(
+      Phaser.Input.Keyboard.KeyCodes.SIX,
     );
 
     this.map = criarLevel1Parte2Map(this);
@@ -390,8 +394,15 @@ class Level1Parte2 extends Phaser.Scene {
     if (Phaser.Input.Keyboard.JustDown(this.teclaSpawnRoboSerra)) {
       criarRoboSerra(this);
     }
+    if (
+      (!this.multiplayer || this.isMultiplayerHost) &&
+      Phaser.Input.Keyboard.JustDown(this.teclaSpawnRoboBola)
+    ) {
+      criarRoboBola(this);
+    }
 
     atualizarInimigoTeste(this, time);
+    atualizarRoboBola(this, time, delta);
     atualizarProjeteis(this, delta);
 
     if (!this.multiplayer) {

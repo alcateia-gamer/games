@@ -56,6 +56,7 @@ import {
   atualizarProjeteis,
 } from "../player/PlayerProjectiles.js";
 import EnemySpawnManager from "../enemies/EnemySpawnManager.js";
+import { criarRoboBola, atualizarRoboBola } from "../enemies/RoboBola.js";
 import WeatherShader from "../effects/WeatherShader.js";
 import MiniMapManager from "../ui/MiniMapManager.js";
 import {
@@ -296,6 +297,9 @@ class Level1 extends Phaser.Scene {
     this.teclaSpawnRoboSerra = this.input.keyboard.addKey(
       Phaser.Input.Keyboard.KeyCodes.FIVE,
     );
+    this.teclaSpawnRoboBola = this.input.keyboard.addKey(
+      Phaser.Input.Keyboard.KeyCodes.SIX,
+    );
 
     // =====================================================
     // CÂMERA
@@ -435,8 +439,15 @@ class Level1 extends Phaser.Scene {
     if (Phaser.Input.Keyboard.JustDown(this.teclaSpawnRoboSerra)) {
       criarRoboSerra(this);
     }
+    if (
+      (!this.multiplayer || this.isMultiplayerHost) &&
+      Phaser.Input.Keyboard.JustDown(this.teclaSpawnRoboBola)
+    ) {
+      criarRoboBola(this);
+    }
 
     atualizarInimigoTeste(this, time);
+    atualizarRoboBola(this, time, delta);
     this.enemySpawnManager?.update(time);
     atualizarProjeteis(this, delta);
     if (!this.multiplayer) {

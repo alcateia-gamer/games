@@ -350,7 +350,8 @@ function configurarHitboxPeInimigo(inimigo) {
  * cenário.
  */
 function atualizarHitboxDanoInimigo(inimigo) {
-  if (!inimigo || !inimigo.body) {
+  // O Robo Bola mantém uma hitbox própria, ajustada à escala do sprite.
+  if (!inimigo || !inimigo.body || inimigo.tipoRobo === "bola") {
     return;
   }
 
@@ -413,7 +414,9 @@ function atualizarInimigoTeste(scene, time) {
     }
 
     if (!inimigo.remoteOnly) {
-      atualizarIAInimigo(scene, time, inimigo);
+      if (inimigo.tipoRobo !== "bola") {
+        atualizarIAInimigo(scene, time, inimigo);
+      }
     }
     atualizarHitboxDanoInimigo(inimigo);
     atualizarDepthInimigo(inimigo, scene);

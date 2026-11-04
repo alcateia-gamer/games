@@ -459,7 +459,7 @@ function tocarSomMorteRobo(scene, inimigo) {
   inimigo.somMorteTocado = true;
 
   scene.sound.play("robo-explodindo", {
-    volume: VOLUME_MORTE_ROBO,
+    volume: inimigo.tipoRobo === "bola" ? VOLUME_MORTE_ROBO * 0.8 : VOLUME_MORTE_ROBO,
   });
 }
 

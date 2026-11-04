@@ -670,6 +670,22 @@ class Preloader extends Phaser.Scene {
     );
 
     // =====================================================
+    // ROBO BOLA
+    // =====================================================
+
+    this.load.spritesheet(
+      "robo-bola",
+      "PERSONAGENS/INIMIGOS PRINCIPAIS/ROBO_BOLA/ROBO_BOLA127x127.png",
+      { frameWidth: 127, frameHeight: 127 },
+    );
+
+    this.load.spritesheet(
+      "robo-bola-morte",
+      "PERSONAGENS/INIMIGOS PRINCIPAIS/ROBO_BOLA/ROBO_MORTE_127x127.png",
+      { frameWidth: 127, frameHeight: 127 },
+    );
+
+    // =====================================================
     // JOYSTICK
     // =====================================================
 

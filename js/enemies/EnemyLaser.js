@@ -242,10 +242,11 @@ function acertarPlayerComLaser(scene, laser) {
 
   laser.destroy();
 
-  const danoLaser =
+  const danoLaser = laser.danoLaser ?? (
     Array.isArray(scene.inimigos) && scene.inimigos.length > 0
       ? scene.inimigos[0].danoLaser
-      : (scene.inimigoTeste?.danoLaser ?? 5);
+      : (scene.inimigoTeste?.danoLaser ?? 5)
+  );
 
   causarDanoPlayer(scene, danoLaser, atacante);
 }

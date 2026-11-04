@@ -6,6 +6,7 @@
 import { notificarGrupo } from "./EnemyAI.js";
 import { tocarSomMorteRobo } from "../sounds/inimigos.js";
 import { playHitEffects } from "../combat/CombatEffects.js";
+import { obterPoseMorteRoboBola } from "./RoboBola.js";
 
 /**
  * Resolve o alvo, aplica dano ou o solicita ao host, alerta o grupo e inicia a morte quando a
@@ -101,6 +102,37 @@ function destruirInimigoTeste(scene, inimigo = scene.inimigoTeste) {
       duration: 180,
       onComplete: () => finalizarDestruicaoInimigo(scene, inimigo),
     });
+    return;
+  }
+
+  if (inimigo.tipoRobo === "bola") {
+    const poseMorte = obterPoseMorteRoboBola(inimigo);
+    inimigo.direcaoMorte = poseMorte.direcao;
+    inimigo.removerBrilhoOlho?.();
+    inimigo.morto = true;
+    inimigo.estado = "morto";
+    inimigo.setVelocity(0, 0);
+    inimigo.hitboxDano = null;
+    inimigo.body && (inimigo.body.enable = false);
+    if (Array.isArray(scene.inimigos)) {
+      scene.inimigos = scene.inimigos.filter((robo) => robo !== inimigo);
+    }
+    if (scene.inimigoTeste === inimigo) {
+      scene.inimigoTeste = scene.inimigos?.[0] ?? null;
+    }
+    for (const barra of [inimigo.fundoVida, inimigo.barraVida, inimigo.bordaVida]) {
+      barra?.destroy();
+    }
+    inimigo.fundoVida = null;
+    inimigo.barraVida = null;
+    inimigo.bordaVida = null;
+    inimigo.anims.stop();
+    inimigo.clearTint();
+    inimigo.setTexture("robo-bola-morte", poseMorte.frame);
+    inimigo.setFlipX(poseMorte.flipX);
+    inimigo.anims.play(`robo-bola-morte-${inimigo.direcaoMorte}`);
+    tocarSomMorteRobo(scene, inimigo);
+    inimigo.once("animationcomplete", () => finalizarDestruicaoInimigo(scene, inimigo));
     return;
   }
 
