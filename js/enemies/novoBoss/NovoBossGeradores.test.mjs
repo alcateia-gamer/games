@@ -3,6 +3,16 @@ import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import { prepararGeradoresNovoBoss } from "./NovoBossGeradores.js";
 import { novoBossConfig } from "./NovoBossConfig.js";
+import { readFileSync } from "node:fs";
+import { assetsNovoBoss } from "./NovoBossAssets.js";
+import { alvosAdicionaisCombate, causarDanoAlvoAdicional } from "../../combat/CombatTargets.js";
+import { atualizarDepthAtores } from "../../map/ProfundidadeMapa.js";
+
+globalThis.Phaser = { Geom: { Rectangle: class {
+  constructor(x, y, width, height) { Object.assign(this, { x, y, width, height }); }
+  get left() { return this.x; } get right() { return this.x + this.width; }
+  get top() { return this.y; } get bottom() { return this.y + this.height; }
+} } };
 
 function criarCena(opcoes = {}) {
   const criados = [];
@@ -14,6 +24,9 @@ function criarCena(opcoes = {}) {
       setDepth(depth) { this.depth = depth; return this; },
       setName(name) { this.name = name; return this; },
       setOrigin() { return this; },
+      setScale(scale) { this.scaleX = this.scaleY = scale; return this; },
+      setTexture(key, frame) { this.texture = key; this.frame = frame; return this; },
+      setFrame(frame) { this.frame = frame; return this; },
       setInteractive() { this.interactive = true; return this; },
       setVisible(visible) { this.visible = visible; return this; },
       setAlpha(alpha) { this.alpha = alpha; return this; },
@@ -44,6 +57,7 @@ function criarCena(opcoes = {}) {
     player: { active: true, x: -1080, y: -5520 }, vida: 100,
     add: {
       graphics: () => criarVisual(),
+      sprite: (x, y, key, frame) => criarVisual(x, y, 192, 258).setTexture(key, frame),
       rectangle: (x, y, width, height) => criarVisual(x, y, width, height),
       circle: (x, y, raio) => criarVisual(x, y, raio * 2, raio * 2),
       text: (x, y) => criarVisual(x, y),
@@ -296,4 +310,147 @@ test("colisão circular acompanha o escudo e desliga em teleporte, saída e qued
   for (const g of encontro.geradores) { aproximar(scene, g); assert.ok(sistema.interagir(g.id)); }
   assert.equal(escudo.body.enable, false);
   sistema.destruir(); assert.ok(escudo.destroyed);
+});
+
+function criarArenaTorres() {
+  const mapa = JSON.parse(readFileSync(new URL("../../../assets/map/parte2-fase1.json", import.meta.url)));
+  const camada = mapa.layers.find(l => l.name === "TorreBoss");
+  camada.visible = false; // Gatilhos ocultos no editor continuam funcionando.
+  const contexto = criarCena({
+    map: { getObjectLayer: nome => mapa.layers.find(l => l.name === nome) },
+    textures: { exists: key => key.startsWith("novo-boss-torre-") },
+  });
+  const { scene, encontro, objetosMapa } = contexto;
+  for (const o of mapa.layers.find(l => l.name === "collision").objects) {
+    if (o.width > 0 && o.height > 0 && !o.polygon && !o.ellipse && !o.polyline) {
+      objetosMapa.push({ body: { x: o.x, y: o.y, width: o.width, height: o.height, enable: true } });
+    }
+  }
+  Object.defineProperty(encontro, "active", { get: () => !encontro.encerrado &&
+    !encontro.morto && !encontro.suspenso && encontro.jogadorNaArena && !encontro.introducaoBloqueada });
+  scene.novoBoss = encontro;
+  return { ...contexto, camada };
+}
+
+test("torres usam colisões desenhadas no mapa, sem criar corpos ou colliders adicionais pelo sprite", () => {
+  const { scene, encontro, camada, colliders, objetosMapa, criados, obstaculoExtra } = criarArenaTorres();
+  const colisoesAntes = JSON.stringify(objetosMapa);
+  const sistema = prepararGeradoresNovoBoss(scene, encontro);
+  assert.ok(sistema);
+  assert.equal(encontro.geradores.length, 4);
+  assert.equal(colliders.length, 1, "somente o escudo tem collider próprio");
+  assert.equal(JSON.stringify(objetosMapa), colisoesAntes, "mantém as colisões do Tiled intactas");
+  assert.deepEqual(encontro.obstaculosTeleporte, [obstaculoExtra]);
+  assert.ok(criados.every(o => !o.name?.startsWith("novo-boss-torre-colisao-")));
+  scene.profundidadePersonagemParte2 = 16.5;
+  scene.player.setDepth = function (depth) { this.depth = depth; return this; };
+  const idsColisoes = { 1593: 1598, 1594: 1599, 1596: 1600, 1597: 1601 };
+  for (const [i, t] of encontro.geradores.entries()) {
+    const o = camada.objects[i];
+    assert.ok(t.torre);
+    assert.equal(t.x, o.x + o.width / 2);
+    assert.equal(t.visual.y, o.y + o.height);
+    assert.equal(t.visual.body, undefined, "o sprite não recebe corpo Arcade");
+    assert.equal(t.body, t.hitboxDano, "conserva o alvo de dano sem adicionar física");
+    assert.equal(t.body.x, t.visual.x - t.body.width / 2);
+    assert.equal(t.body.y, t.visual.y - t.body.height);
+    assert.equal(t.visual.texture, assetsNovoBoss.torreSummon.chave);
+    const colisao = scene.map.getObjectLayer("collision").objects.find(o => o.id === idsColisoes[t.id]);
+    const centroY = colisao.y + colisao.height / 2;
+    for (const deslocamento of [-10, 0, 10]) {
+      scene.player.body = { bottom: centroY + deslocamento };
+      scene.player.y = centroY - 1000; // A origem do sprite não pode substituir o pé físico.
+      sistema.atualizar(0);
+      atualizarDepthAtores(scene);
+      if (deslocamento < 0) assert.ok(scene.player.depth < t.visual.depth, "pé acima do centro: atrás da torre");
+      else assert.ok(scene.player.depth > t.visual.depth, "pé no centro ou abaixo: à frente da torre");
+    }
+  }
+  assert.equal(scene.input.keyboard.listenerCount("keydown-E"), 0);
+  aproximar(scene, encontro.geradores[0]);
+  assert.equal(sistema.interagir(), false);
+  assert.deepEqual(alvosAdicionaisCombate(scene), []);
+  sistema.atualizar(1600);
+  assert.equal(causarDanoAlvoAdicional(scene, encontro.geradores[0], 40), true);
+  assert.equal(JSON.stringify(objetosMapa), colisoesAntes, "receber dano não modifica colisões do mapa");
+});
+
+test("summon toca uma vez; idle repete respeitando o quadro original de 200 ms", () => {
+  const { scene, encontro } = criarArenaTorres();
+  const sistema = prepararGeradoresNovoBoss(scene, encontro), t = encontro.geradores[0];
+  sistema.atualizar(1599);
+  assert.equal(t.estado, "summon"); assert.equal(t.visual.frame, 15);
+  sistema.atualizar(1);
+  assert.equal(t.estado, "idle"); assert.equal(t.visual.frame, 0);
+  assert.equal(alvosAdicionaisCombate(scene).length, 4);
+  sistema.atualizar(700); assert.equal(t.visual.frame, 7);
+  sistema.atualizar(199); assert.equal(t.visual.frame, 7);
+  sistema.atualizar(1); assert.equal(t.visual.frame, 8);
+  sistema.atualizar(700); assert.equal(t.visual.frame, 0);
+  sistema.atualizar(16000); assert.equal(t.estado, "idle"); assert.equal(t.visual.frame, 0);
+});
+
+test("ataques usam vida própria e attacked temporário; último dano derruba o escudo imediatamente", () => {
+  const { scene, encontro, criados } = criarArenaTorres();
+  let quedas = 0, destruidas = 0;
+  scene.events.on("novo-boss:barreira-desativada", () => quedas++);
+  scene.events.on("novo-boss:gerador-desativado", () => destruidas++);
+  const sistema = prepararGeradoresNovoBoss(scene, encontro), t = encontro.geradores[0];
+  assert.equal(causarDanoAlvoAdicional(scene, t, 40), false);
+  sistema.atualizar(1600);
+  assert.equal(causarDanoAlvoAdicional(scene, t, 40, { x: 0, y: 0, width: 10, height: 10 }), false);
+  assert.equal(causarDanoAlvoAdicional(scene, t, 40), true);
+  assert.equal(t.vida, 80); assert.equal(t.estado, "attacked");
+  assert.equal(t.visual.texture, assetsNovoBoss.torreAttacked.chave);
+  sistema.atualizar(399); assert.equal(t.visual.frame, 3); assert.equal(t.estado, "attacked");
+  sistema.atualizar(1); assert.equal(t.estado, "idle");
+  assert.equal(causarDanoAlvoAdicional(scene, t, 10), true);
+  sistema.atualizar(100);
+  assert.equal(causarDanoAlvoAdicional(scene, t, 10), true);
+  assert.equal(t.visual.frame, 0); // Outro acerto reinicia a reação.
+  for (const [i, torre] of encontro.geradores.entries()) {
+    assert.equal(causarDanoAlvoAdicional(scene, torre, 1000), true);
+    assert.equal(torre.estado, "death");
+    assert.equal(torre.visual.texture, assetsNovoBoss.torreDeath.chave);
+    assert.equal(torre.body.enable, false);
+    assert.equal(encontro.barreiraAtiva, i < 3);
+    assert.equal(causarDanoAlvoAdicional(scene, torre, 1000), false);
+  }
+  assert.equal(quedas, 1); assert.equal(destruidas, 4);
+  assert.equal(criados.find(o => o.name === "novo-boss-barreira-colisao").body.enable, false);
+  assert.deepEqual(alvosAdicionaisCombate(scene), []);
+  sistema.atualizar(50000); assert.equal(t.estado, "death"); assert.equal(t.visual.frame, 0);
+});
+
+test("cinemática espera o início; sair pausa a animação e reentrar conserva o dano", () => {
+  const { scene, encontro } = criarArenaTorres();
+  encontro.introducaoBloqueada = true;
+  const sistema = prepararGeradoresNovoBoss(scene, encontro), t = encontro.geradores[0];
+  sistema.atualizar(8000); assert.equal(t.visual.visible, true); assert.equal(t.visual.frame, 0);
+  assert.equal(t.body.enable, false);
+  encontro.introducaoBloqueada = false;
+  sistema.atualizar(800); assert.equal(t.visual.frame, 8);
+  encontro.jogadorNaArena = false;
+  sistema.atualizar(5000); assert.equal(t.visual.frame, 8); assert.equal(t.visible, false);
+  encontro.jogadorNaArena = true;
+  sistema.atualizar(800); assert.equal(t.estado, "idle");
+  causarDanoAlvoAdicional(scene, t, 40);
+  encontro.suspenso = true;
+  sistema.atualizar(5000); assert.equal(t.estado, "attacked");
+  encontro.suspenso = false;
+  sistema.atualizar(400); assert.equal(t.estado, "idle"); assert.equal(t.vida, 80);
+});
+
+test("limpeza das torres é idempotente; configuração incompleta não cria proteção impossível", () => {
+  const { scene, encontro, criados, colliders, obstaculoExtra } = criarArenaTorres();
+  const sistema = prepararGeradoresNovoBoss(scene, encontro);
+  sistema.destruir(); sistema.destruir();
+  assert.ok(criados.every(o => o.destroyed)); assert.ok(colliders.every(o => o.destroyed));
+  assert.deepEqual(encontro.obstaculosTeleporte, [obstaculoExtra]);
+  assert.deepEqual(alvosAdicionaisCombate(scene), []);
+  const ausente = criarArenaTorres();
+  ausente.scene.textures.exists = () => false;
+  assert.equal(prepararGeradoresNovoBoss(ausente.scene, ausente.encontro), false);
+  assert.equal(ausente.encontro.pendencia, "assets-torres-indisponiveis");
+  assert.equal(ausente.criados.length, 0);
 });

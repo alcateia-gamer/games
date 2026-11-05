@@ -1,5 +1,6 @@
 /** Giroflex e neons fixos com alimentação de emergência, separados do gerador. */
 import { lerCorTiled, luzAfetaCamera } from "./FactoryLighting.js";
+import { padraoNeonFabrica } from "./FactoryNeonDefaults.js";
 
 const CAMADA_LUZ_EMERGENCIA = "Luzedeemergencia";
 const PADROES_GIROFLEX = Object.freeze({ raio: 160, intensidade: 0.85, periodo: 2000 });
@@ -14,6 +15,8 @@ function propriedade(objeto, nome) {
 
 export function lerLuzesEmergencia(map, avisar = console.warn) {
   const camada = map.getObjectLayer(CAMADA_LUZ_EMERGENCIA);
+  // O Phaser pode não manter o ID da camada; ZonaBoss identifica a fábrica nesse caso.
+  const fabrica = camada?.id === 53 || Boolean(map.getObjectLayer("ZonaBoss"));
   return (camada?.objects ?? []).flatMap(objeto => {
     if (objeto.point !== true || !Number.isFinite(objeto.x) || !Number.isFinite(objeto.y)) {
       avisar(`[Giroflex] Objeto ${objeto.id} ignorado: use Point com X/Y válidos em ${CAMADA_LUZ_EMERGENCIA}.`);
@@ -27,18 +30,28 @@ export function lerLuzesEmergencia(map, avisar = console.warn) {
     const lateral = propriedade(objeto, "Lateral") === true && propriedade(objeto, "Cima") !== true;
     const esquerda = propriedade(objeto, "Esquerda") === true;
     const direita = propriedade(objeto, "Direita") === true;
-    const neon = propriedade(objeto, "Neon") === true;
+    // A substituição do mapa pode apagar nomes e propriedades. Os LEDs já configurados
+    // também têm padrões externos ao JSON; propriedades explícitas prevalecem.
+    const padrao = fabrica ? padraoNeonFabrica(objeto.id) : null;
+    const nomeNeon = /^neon (vermelho|amarelo) (horizontal|vertical)$/i.exec(objeto.name?.trim() ?? "");
+    const neon = (propriedade(objeto, "Neon") ?? Boolean(nomeNeon || padrao)) === true;
+    const cor = propriedade(objeto, "Cor") ?? (nomeNeon
+      ? (nomeNeon[1].toLowerCase() === "amarelo" ? "#FFD35A" : "#FF101C")
+      : padrao?.cor ?? "#FF101C");
+    const orientacao = propriedade(objeto, "Orientacao") ??
+      (nomeNeon ? (nomeNeon[2].toLowerCase() === "vertical" ? "Vertical" : "Horizontal")
+        : padrao?.orientacao ?? "Horizontal");
     const parede = !neon && lateral && esquerda !== direita ? (esquerda ? "esquerda" : "direita") : null;
     return [{
       id: objeto.id, x: objeto.x, y: objeto.y,
       parede, neon,
-      cor: neon ? lerCorTiled(propriedade(objeto, "Cor") ?? "#FF101C") : null,
+      cor: neon ? lerCorTiled(cor) : null,
       raio: Number.isFinite(raio) && raio > 0 ? raio : neon ? 18 : PADROES_GIROFLEX.raio,
       intensidade: Number.isFinite(intensidade) && intensidade >= 0
         ? Math.min(1, intensidade) : PADROES_GIROFLEX.intensidade,
       periodo: Number.isFinite(periodo) && periodo >= 250 ? periodo : PADROES_GIROFLEX.periodo,
       fase: (Number.isFinite(objeto.rotation) ? objeto.rotation * Math.PI / 180 : 0) +
-        (neon && propriedade(objeto, "Orientacao") === "Vertical" ? Math.PI / 2 : 0),
+        (neon && orientacao === "Vertical" ? Math.PI / 2 : 0),
       // A camada contém marcações: ocultá-la no Tiled não desliga os efeitos no jogo.
       ligada: propriedade(objeto, "Ligada") !== false && objeto.visible !== false,
     }];

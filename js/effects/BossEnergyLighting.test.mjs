@@ -12,6 +12,17 @@ function cena() {
   return { scene, encontro, projetil, luzes: new BossEnergyLighting(scene) };
 }
 
+test("halo azul aumenta junto com a formação do escudo na introdução", () => {
+  const { encontro, luzes } = cena();
+  encontro.barreiraAtiva = true;
+  encontro.sprite.visible = true;
+  for (const carga of [0.1, 0.5, 1]) {
+    encontro.sistemaGeradores.cargaEscudo = carga;
+    const fonte = luzes.atualizar(camera).find(f => f.escudo);
+    assert.equal(fonte.intensidade, 0.85 * carga);
+  }
+});
+
 test("luz acompanha os disparos, sem duplicar sprites e sem denunciar cópias ilusórias", () => {
   const { scene, encontro, projetil, luzes } = cena();
   const fontes = luzes.atualizar(camera);
@@ -120,4 +131,35 @@ test("perfis azuis têm queda suave e a luz do escudo alcança além do seu cont
     assert.equal(calcularPerfilEnergiaBoss(1, 0, escudo), 0);
     assert.equal(calcularPerfilEnergiaBoss(0.4, 0, escudo), calcularPerfilEnergiaBoss(0, -0.4, escudo));
   }
+});
+
+test("o foco branco acompanha o personagem somente durante a batalha ativa", () => {
+  const { scene, encontro, luzes } = cena();
+  scene.player = { active: true, visible: true, x: 350, y: 225, alpha: 1 };
+  const foco = () => luzes.atualizar(camera).filter(f => f.branca);
+  assert.equal(foco().length, 0, "não acende antes do combate");
+  encontro.active = true;
+  let [fonte] = foco();
+  assert.equal(fonte.luz.x, 350);
+  assert.equal(fonte.luz.y, 217);
+  assert.equal(fonte.intensidade, 0.9);
+  scene.player.x = 450;
+  scene.player.y = 250;
+  [fonte] = foco();
+  assert.equal(fonte.luz.x, 450);
+  assert.equal(fonte.luz.y, 242);
+  const revisao = luzes.revisao;
+  foco();
+  assert.equal(luzes.revisao, revisao, "o foco parado reutiliza a composição");
+  encontro.active = false;
+  assert.equal(foco().length, 0);
+  encontro.active = true;
+  encontro.jogadorNaArena = false;
+  assert.equal(foco().length, 0, "sair da sala apaga o foco");
+  encontro.jogadorNaArena = true;
+  scene.player.morto = true;
+  assert.equal(foco().length, 0);
+  scene.player.morto = false;
+  encontro.morto = true;
+  assert.equal(foco().length, 0, "a derrota do boss encerra o foco");
 });

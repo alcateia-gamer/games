@@ -16,7 +16,11 @@ export const novoBossConfig = Object.freeze({
   cameraArena: Object.freeze({
     fatorZoom: 0.8, velocidade: 5, margemSaidaX: 70, margemSaidaY: 80,
   }),
-  cenaEntrada: Object.freeze({ ativo: true, idaMs: 900, pausaMs: 650, voltaMs: 900 }),
+  cenaEntrada: Object.freeze({
+    ativo: true, velocidade: 1.25, idaMs: 900, pausaMs: 650, voltaMs: 900,
+    viagemTorreMs: 650, enquadramentoMs: 1000, margemEnquadramento: 70,
+    cargaEscudoMs: 1500, dissipacaoRaiosMs: 350,
+  }),
   combate: Object.freeze({
     vidaMaxima: 1000,
     preparacaoMs: 1500,
@@ -28,6 +32,7 @@ export const novoBossConfig = Object.freeze({
     ativo: true,
     distanciaInteracao: 72,
     tamanho: 36,
+    vidaTorre: 120,
     raioBarreira: 95,
     pontos: Object.freeze([
       Object.freeze({ id: "superior-esquerdo", x: -1460, y: -5920 }),

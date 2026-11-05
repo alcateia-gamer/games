@@ -1,4 +1,4 @@
-/** Luzes móveis dos disparos, da barreira e do brilho vermelho do boss. */
+/** Luzes móveis do combate e foco branco do personagem durante a batalha. */
 import { luzAfetaCamera, MULTIPLICADOR_ALCANCE_FABRICA } from "./FactoryLighting.js";
 
 export function calcularPerfilEnergiaBoss(x, y, escudo = false) {
@@ -25,13 +25,13 @@ export default class BossEnergyLighting {
     const scene = this.scene, encontro = scene.novoBoss;
     let quantidade = 0, alteradas = false;
     this.quadro++;
-    const adicionar = (objeto, x, y, raio, intensidade, escudo = false, vermelha = false) => {
+    const adicionar = (objeto, x, y, raio, intensidade, escudo = false, vermelha = false, branca = false) => {
       if (objeto.active === false || objeto.visible === false || intensidade <= 0 ||
           !Number.isFinite(x) || !Number.isFinite(y)) return;
       const estados = vermelha ? this.auras : this.estados;
       let estado = estados.get(objeto);
       if (!estado) {
-        estado = { luz: {}, intensidade: 0, escudo, vermelha };
+        estado = { luz: {}, intensidade: 0, escudo, vermelha, branca };
         estados.set(objeto, estado);
       }
       if (estado.quadro === this.quadro) return;
@@ -54,6 +54,11 @@ export default class BossEnergyLighting {
       for (const objeto of scene.children?.list ?? []) {
         if (objeto.novoBossDisparoEnergia) projetil(objeto);
       }
+      const player = scene.player;
+      if (encontro.active && player?.active && !player.morto) {
+        adicionar(player, player.x, player.y - 8, 64,
+          Math.max(0, Math.min(1, player.alpha ?? 1)) * 0.9, false, false, true);
+      }
       const sprite = encontro.sprite;
       const aura = objeto => {
         if (objeto) adicionar(objeto, objeto.x, objeto.y + 16, 48,
@@ -67,7 +72,8 @@ export default class BossEnergyLighting {
           encontro.sistemaGeradores?.corpoBarreira?.enable !== false) {
         const raio = encontro.config?.geradores?.raioBarreira ?? 95;
         adicionar(sprite, sprite.x, sprite.y + 16, raio * 1.7 / MULTIPLICADOR_ALCANCE_FABRICA,
-          Math.max(0, Math.min(1, sprite.alpha ?? 1)) * 0.85, true);
+          Math.max(0, Math.min(1, sprite.alpha ?? 1)) * 0.85 *
+            (encontro.sistemaGeradores?.cargaEscudo ?? 1), true);
       }
     }
     if (quantidade !== this.fontesVisiveis.length) alteradas = true;

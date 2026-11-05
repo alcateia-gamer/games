@@ -5,14 +5,16 @@ export function alvosAdicionaisCombate(scene) {
   const encontro = scene?.novoBoss;
   if (encontro?.encerrado || encontro?.morto || encontro?.suspenso ||
       encontro?.jogadorNaArena === false) return [];
-  return [encontro, ...(encontro?.alvosIlusorios ?? [])].filter(alvo =>
+  return [encontro, ...(encontro?.alvosIlusorios ?? []),
+    ...(encontro?.geradores ?? []).filter(gerador => gerador.torre)].filter(alvo =>
     alvo?.active && alvo.visible !== false && !alvo.morto &&
     alvo.body?.enable !== false && alvo.vida > 0 && alvo.hitboxDano);
 }
 
 export function eAlvoAdicionalCombate(scene, alvo) {
   return !!alvo && (alvo === scene?.novoBoss ||
-    (scene?.novoBoss?.alvosIlusorios ?? []).includes(alvo));
+    (scene?.novoBoss?.alvosIlusorios ?? []).includes(alvo) ||
+    (alvo.torre === true && (scene?.novoBoss?.geradores ?? []).includes(alvo)));
 }
 
 /** O próprio encontro decide vulnerabilidade, vida e efeitos de um acerto. */

@@ -103,6 +103,27 @@ export const assetsNovoBoss = Object.freeze({
     larguraEfeito: 188, alturaEfeito: 123,
     duracoesMs: Object.freeze([70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70, 60, 70, 70]),
   }),
+  torreSummon: Object.freeze({
+    chave: "novo-boss-torre-summon",
+    arquivo: "PERSONAGENS/INIMIGOS PRINCIPAIS/Boss-test/derivados/torres/torre-summon.png",
+    larguraFrame: 192, alturaFrame: 258, ultimoFrame: 15, frameMs: 100,
+  }),
+  torreIdle: Object.freeze({
+    chave: "novo-boss-torre-idle",
+    arquivo: "PERSONAGENS/INIMIGOS PRINCIPAIS/Boss-test/derivados/torres/torre-idle.png",
+    larguraFrame: 192, alturaFrame: 258, ultimoFrame: 14,
+    duracoesMs: Object.freeze([100, 100, 100, 100, 100, 100, 100, 200, 100, 100, 100, 100, 100, 100, 100]),
+  }),
+  torreAttacked: Object.freeze({
+    chave: "novo-boss-torre-attacked",
+    arquivo: "PERSONAGENS/INIMIGOS PRINCIPAIS/Boss-test/derivados/torres/torre-attacked.png",
+    larguraFrame: 192, alturaFrame: 258, ultimoFrame: 3, frameMs: 100,
+  }),
+  torreDeath: Object.freeze({
+    chave: "novo-boss-torre-death",
+    arquivo: "PERSONAGENS/INIMIGOS PRINCIPAIS/Boss-test/derivados/torres/torre-death.png",
+    larguraFrame: 192, alturaFrame: 258, ultimoFrame: 0, frameMs: 100,
+  }),
 });
 
 /** Chamado pelo preloader após load.setPath("./assets/"). */

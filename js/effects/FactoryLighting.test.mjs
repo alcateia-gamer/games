@@ -910,6 +910,64 @@ test("giroflex lateral mantém a luz atrás dos pixels opacos das estátuas", t 
   assert.equal(texture.canvas.rgbaEm(370, 225)[0], 0, "o carimbo das estátuas preserva o recorte da parede");
 });
 
+test("personagem aparece acima dos brilhos, preservando transparência, animação e depth do mapa", async t => {
+  for (const tipo of ["neon vermelho", "neon amarelo", "arandela", "energia azul"]) {
+    await t.test(tipo, t => {
+      const map = { getObjectLayer: name => ({ objects: name === "Luzedeemergencia" && tipo.startsWith("neon")
+        ? [ponto({ Neon: true, ...(tipo === "neon amarelo" ? { Cor: "#ffffd35a" } : {}) })]
+        : name === "IluminaçãoBoss" && tipo === "arandela" ? [ponto({ Direita: true, Amarelo: true })] : [] }) };
+      const novoBoss = tipo === "energia azul" ? { jogadorNaArena: true,
+        projeteisBoss: [{ active: true, visible: true, x: 400, y: 225 }] } : null;
+      const { scene, render, texture, canvases } = cenaComMascara(t, [], true, { map, novoBoss });
+      const sheet = document.createElement("canvas");
+      sheet.width = 96; sheet.height = 48;
+      sheet.getContext("2d").fillRect(48, 0, 48, 48);
+      sheet.getContext("2d").clearRect(80, 20, 8, 8);
+      const frame = { source: { image: sheet }, cutX: 48, cutY: 0, cutWidth: 48, cutHeight: 48,
+        realWidth: 48, realHeight: 48 };
+      const player = scene.player = { active: true, visible: false, alpha: 1,
+        x: 400, y: 225, frame, displayOriginX: 24, displayOriginY: 24, depth: 16.5,
+        setDepth() { assert.fail("a luz não altera o depth do personagem"); } };
+      const camera = scene.cameras.main;
+      const brilho = (x, y) => {
+        const m = camera.matrix;
+        return texture.canvas.rgbaEm(m.a*x + m.c*y + m.e, m.b*x + m.d*y + m.f).slice(0, 3).reduce((a, b) => a + b, 0);
+      };
+      for (const [zoom, rotacao] of [[1, 0], [1.4, 0.15]]) {
+        camera.setZoom(zoom).setRotation(rotacao);
+        player.visible = false;
+        render();
+        const livre = brilho(406, 224);
+        assert.ok(livre > 0.01);
+        player.visible = true;
+        render();
+        assert.equal(brilho(406, 224), 0, "o brilho passa atrás da silhueta opaca");
+        assert.ok(brilho(410, 224) > 0.01, "a transparência do personagem revela a luz do chão");
+        player.alpha = 0.5;
+        render();
+        assert.ok(brilho(406, 224) > 0 && brilho(406, 224) < livre, "respeita a opacidade do personagem");
+        player.alpha = 1;
+        player.frame = { ...frame, cutX: 0 };
+        render();
+        assert.ok(brilho(406, 224) > 0.01, "a máscara acompanha a animação com a câmera parada");
+        player.frame = frame;
+      }
+      const quantidade = canvases.length;
+      if (tipo !== "arandela") {
+        player.flipX = true;
+        render();
+        assert.ok(brilho(390, 224) > 0.01, "o recorte acompanha o espelhamento");
+        assert.equal(brilho(410, 224), 0);
+      }
+      player.x = 600;
+      render();
+      assert.ok(brilho(406, 224) > 0.01, "mover o personagem revela a luz sem deixar um recorte antigo");
+      assert.equal(player.depth, 16.5);
+      assert.equal(canvases.length, quantidade, "reutiliza a composição de brilhos");
+    });
+  }
+});
+
 test("a sala do boss tem claridade ambiente local, sem acumular sobreposições nem revelar salas fechadas", t => {
   const porta = { estado: "fechada", area: { x: 200, y: 190, width: 50, height: 10 } };
   const zonas = [
@@ -975,6 +1033,7 @@ test("luzes fixas reutilizam os recortes durante o movimento do boss e invalidam
   const movimento = desenhos;
   t.diagnostic(`drawImage: primeira composição=${primeiraComposicao}; boss em movimento=${movimento}`);
   assert.ok(movimento < primeiraComposicao * 0.15, "movimento do boss não recalcula as máscaras das luzes fixas");
+  assert.ok(movimento <= 6, "a composição das luzes fixas não cresce com a quantidade de neons");
   desenhos = 0;
   scene.cameras.main.setZoom(1.1).setRotation(0.1);
   render();
@@ -1041,6 +1100,84 @@ test("energia azul dos projéteis e do escudo ilumina o cenário, acompanha o bo
       assert.ok(canvases.slice(1).every(canvas => canvas.width === 0 && canvas.height === 0));
     });
   }
+});
+
+test("foco branco ilumina o personagem durante o combate, acompanha movimento e respeita portas", t => {
+  const novoBoss = { active: true, jogadorNaArena: true,
+    sprite: { active: true, visible: true, x: -5000, y: 225 } };
+  const body = { x: 440, y: 50, width: 4, height: 350, enable: true };
+  const { scene, render, texture } = cenaComMascara(t, [], true,
+    { novoBoss, portasFabrica: [{ colisao: { body } }] });
+  scene.player = { active: true, visible: true, x: 400, y: 225 };
+  const camera = scene.cameras.main;
+  const rgba = (x, y) => {
+    const m = camera.matrix;
+    return texture.canvas.rgbaEm(m.a*x + m.c*y + m.e, m.b*x + m.d*y + m.f);
+  };
+  for (const [zoom, rotacao] of [[1, 0], [1.4, 0.15]]) {
+    camera.setZoom(zoom).setRotation(rotacao);
+    render();
+    const centro = rgba(400, 217);
+    assert.ok(centro[3] < 0.4, "o foco clareia bem o personagem");
+    assert.ok(centro[0] > 0.05);
+    assert.equal(centro[0], centro[1]);
+    assert.equal(centro[1], centro[2], "a luz é branca neutra");
+    assertSombraAmbiente(rgba(460, 217)[3], "a porta bloqueia o foco");
+    assert.equal(rgba(460, 217)[0], 0);
+  }
+  body.enable = false;
+  render();
+  assert.ok(rgba(460, 217)[0] > 0.001);
+  scene.player.x = 600;
+  render();
+  assertSombraAmbiente(rgba(400, 217)[3], "o foco não fica na posição anterior");
+  assert.ok(rgba(600, 217)[3] < 0.4);
+  novoBoss.active = false;
+  render();
+  assertSombraAmbiente(rgba(600, 217)[3], "encerrar o combate apaga o foco branco");
+});
+
+test("rajadas com cópias preservam todas as luzes, portas e a silhueta do personagem na composição reduzida", t => {
+  const projetil = () => ({ active: true, visible: true, alpha: 1, x: 400, y: 225 });
+  const reais = Array.from({ length: 55 }, projetil);
+  const copias = Array.from({ length: 495 }, () => ({ ...projetil(), novoBossDisparoEnergia: true,
+    novoBossAtaqueIlusorio: true }));
+  const novoBoss = { jogadorNaArena: true, projeteisBoss: reais };
+  const body = { x: 420, y: 50, width: 5, height: 350, enable: true };
+  const { scene, render, texture, canvases, cleanup } = cenaComMascara(t, [], true,
+    { novoBoss, children: { list: copias }, portasFabrica: [{ colisao: { body } }] });
+  const sheet = document.createElement("canvas");
+  sheet.width = sheet.height = 8;
+  sheet.getContext("2d").fillRect(0, 0, 8, 8);
+  scene.player = { active: true, visible: true, x: 410, y: 225, displayOriginX: 4, displayOriginY: 4,
+    frame: { source: { image: sheet }, cutX: 0, cutY: 0, cutWidth: 8, cutHeight: 8, realWidth: 8, realHeight: 8 } };
+  const camera = scene.cameras.main;
+  const rgba = (x, y) => {
+    const m = camera.matrix;
+    return texture.canvas.rgbaEm(m.a*x + m.c*y + m.e, m.b*x + m.d*y + m.f);
+  };
+  for (const [zoom, rotacao] of [[1, 0], [0.8, 0.15]]) {
+    camera.setZoom(zoom).setRotation(rotacao);
+    render();
+    assert.equal(scene.iluminacaoEnergiaBoss.fontesVisiveis.length, 550, "todas as fontes reais e ilusórias continuam iluminando");
+    assert.ok(rgba(400, 225)[2] > 0.5, "a rajada ilumina o cenário de azul");
+    assert.equal(rgba(410, 225)[2], 0, "o personagem continua acima do brilho em resolução normal");
+    assert.equal(rgba(440, 225)[2], 0, "a porta bloqueia os halos também sob carga");
+    assertSombraAmbiente(rgba(440, 225)[3]);
+  }
+  assert.equal(canvases.filter(canvas => canvas.width === 400 && canvas.height === 225).length, 2,
+    "os dois campos de energia usam um quarto dos pixels da tela");
+  const quantidade = canvases.length;
+  body.enable = false;
+  render();
+  assert.ok(rgba(440, 225)[2] > 0.01, "abrir a porta atualiza a composição reduzida");
+  for (const p of [...reais, ...copias]) p.active = false;
+  render();
+  assert.equal(rgba(400, 225)[2], 0, "a rajada encerrada não deixa luz residual");
+  assert.equal(canvases.length, quantidade, "reutiliza os buffers durante toda a rajada");
+  cleanup();
+  assert.ok(canvases.filter(canvas => canvas !== sheet).slice(1)
+    .every(canvas => canvas.width === 0 && canvas.height === 0));
 });
 
 test("neons do chão com camada oculta emitem sua cor local e fixa, acompanhando orientação, câmera e portas", async t => {
@@ -1147,7 +1284,9 @@ test("faixas Cima da IluminaçãoBoss e seu halo ficam atrás das bordas e pared
         gidMap: { 7: { tileWidth: 48, tileHeight: 48, tileOffset: { x: 0, y: 0 },
           getAnimatedTileId: (index, tempo) => tempo >= 1000 ? 8 : index,
           getTileTextureCoordinates: index => ({ x: index === 7 ? 48 : 0, y: 0 }),
-          image: { getSourceImage: () => sheet } } }, cull: () => [tile],
+          image: { getSourceImage: () => sheet } } },
+        getTilesWithinWorldXY() { return [tile]; },
+        cull() { assert.fail("a oclusão das arandelas consulta a região das luzes, não a câmera"); },
         setDepth() { assert.fail("a oclusão não altera o depth das paredes"); } };
       const map = { getObjectLayer: name => ({ objects: name === "IluminaçãoBoss"
         ? [ponto({ Cima: true, Amarelo: true })] : [] }) };

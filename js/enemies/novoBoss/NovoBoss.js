@@ -189,6 +189,9 @@ export function atualizarNovoBoss(scene, _time, _delta) {
   atualizarRestricaoNovoBoss(scene, _delta);
   tentarPosicionar(scene, encontro);
   atualizarSuspensao(scene, encontro);
+  if (encontro.sprite && !encontro.morto && !encontro.sistemaGeradores && encontro.config.geradores?.ativo) {
+    prepararGeradoresNovoBoss(scene, encontro);
+  }
   if (encontro.introducao?.atualizar(_delta)) {
     encontro.sistemaGeradores?.atualizar(0);
     atualizarProfundidade(scene, encontro);

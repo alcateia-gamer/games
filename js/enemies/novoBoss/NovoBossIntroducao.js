@@ -1,4 +1,7 @@
-/** Apresenta o boss, devolve a câmera e fecha as duas persianas antes de iniciar a luta. */
+/** Apresenta boss e torres, forma o escudo e fecha as duas persianas antes da luta. */
+import { criarRaiosEscudoNovoBoss } from "./NovoBossRaiosEscudo.js";
+import { ocultarHUDDuranteCena } from "../../ui/HudCinematic.js";
+
 const PORTAS_ENTRADA = new Set(["porta02", "porta03"]);
 const duracao = (valor, padrao) => Number.isFinite(valor) && valor >= 0 ? valor : padrao;
 const suavizar = p => p * p * (3 - 2 * p);
@@ -15,12 +18,18 @@ function jogadorNaPorta(player, porta) {
 
 export function prepararIntroducaoNovoBoss(scene, encontro) {
   const config = encontro.config.cenaEntrada;
+  const velocidade = Number.isFinite(config?.velocidade) && config.velocidade > 0 ? config.velocidade : 1;
   const principal = scene.cameras?.main;
   if (config?.ativo === false || !principal?.centerOn || !principal.stopFollow || !principal.startFollow) return null;
   let etapa = "aguardando", tempo = 0, concluida = false, destruida = false;
   let camera = null, anterior = null, portas = [];
   let origem = null, foco = null, retorno = null;
   let portasLiberadas = false;
+  let roteiro = [], indiceEtapa = 0, torres = [], raios = null;
+  let centroAtual = null, de = null, para = null, zoomDe = null, zoomPara = null;
+  let hud = null;
+
+  function limparRaios() { raios?.destruir(); raios = null; }
 
   function liberarPortas() {
     if (portasLiberadas) return;
@@ -29,8 +38,10 @@ export function prepararIntroducaoNovoBoss(scene, encontro) {
   }
 
   function restaurarControle(cancelada = false) {
+    hud?.restaurar(); hud = null;
     if (!anterior) return;
     if (camera?.scene !== null) {
+      camera.setZoom?.(anterior.zoomX, anterior.zoomY);
       if (anterior.alvo?.active !== false && anterior.alvo) {
         camera.startFollow(anterior.alvo, anterior.roundPixels, anterior.lerpX, anterior.lerpY,
           anterior.offsetX, anterior.offsetY);
@@ -49,6 +60,8 @@ export function prepararIntroducaoNovoBoss(scene, encontro) {
   }
 
   function cancelar() {
+    limparRaios();
+    encontro.sistemaGeradores?.cancelarApresentacao?.();
     restaurarControle(true);
     liberarPortas();
     etapa = "aguardando";
@@ -61,29 +74,109 @@ export function prepararIntroducaoNovoBoss(scene, encontro) {
     anterior = { alvo: camera._follow ?? scene.player, roundPixels: camera.roundPixels,
       lerpX: camera.lerp?.x ?? 1, lerpY: camera.lerp?.y ?? 1,
       offsetX: camera.followOffset?.x ?? 0, offsetY: camera.followOffset?.y ?? 0,
+      zoomX: camera.zoomX ?? camera.zoom ?? 1, zoomY: camera.zoomY ?? camera.zoom ?? 1,
       movimento: scene.movimentoBloqueado, cenaAtiva: scene.cenaEntradaBossAtiva,
       animacaoPausada: scene.player.anims?.isPaused,
       input: scene.input, inputEnabled: scene.input?.enabled,
       keyboard, keyboardEnabled: keyboard?.enabled };
     origem = { x: camera.midPoint?.x ?? scene.player.x, y: camera.midPoint?.y ?? scene.player.y };
+    centroAtual = { ...origem };
     foco = { x: encontro.sprite.x, y: encontro.sprite.y };
     retorno = { x: scene.player.x - anterior.offsetX, y: scene.player.y - anterior.offsetY };
     camera.stopFollow();
     scene.movimentoBloqueado = true;
     scene.cenaEntradaBossAtiva = true;
+    hud = ocultarHUDDuranteCena(scene, camera);
     scene.player.setVelocity?.(0, 0);
     scene.player.anims?.pause?.();
     keyboard?.resetKeys?.();
     if (scene.input) scene.input.enabled = false;
     if (keyboard) keyboard.enabled = false;
     portasLiberadas = false;
-    etapa = "indo";
-    tempo = 0;
+    torres = encontro.sistemaGeradores?.iniciarApresentacao?.() ?? [];
+    criarRoteiro();
+    entrarEtapa(0);
   }
 
   function deslocar(de, para, progresso) {
     const p = suavizar(progresso);
-    camera.centerOn(de.x + (para.x - de.x) * p, de.y + (para.y - de.y) * p);
+    centroAtual.x = de.x + (para.x - de.x) * p;
+    centroAtual.y = de.y + (para.y - de.y) * p;
+    camera.setZoom?.(zoomDe.x + (zoomPara.x - zoomDe.x) * p,
+      zoomDe.y + (zoomPara.y - zoomDe.y) * p);
+    camera.centerOn(centroAtual.x, centroAtual.y);
+  }
+
+  function zoomEnquadramento() {
+    const margem = duracao(config?.margemEnquadramento, 70);
+    let meiaLargura = 95, meiaAltura = 95;
+    for (const torre of torres) {
+      const a = torre.hitboxDano;
+      meiaLargura = Math.max(meiaLargura, Math.abs(a.x - foco.x), Math.abs(a.x + a.width - foco.x));
+      meiaAltura = Math.max(meiaAltura, Math.abs(a.y - foco.y), Math.abs(a.y + a.height - foco.y));
+    }
+    const fator = Math.min(1, camera.width / ((meiaLargura + margem) * 2 * anterior.zoomX),
+      camera.height / ((meiaAltura + margem) * 2 * anterior.zoomY));
+    return { x: anterior.zoomX * fator, y: anterior.zoomY * fator };
+  }
+
+  function criarRoteiro() {
+    roteiro = [
+      { nome: "indo", duracao: duracao(config?.idaMs, 900), alvo: foco },
+      { nome: "mostrando", duracao: duracao(config?.pausaMs, 650) },
+    ];
+    // Y cresce para baixo também nas coordenadas negativas: superior esquerda, seguindo horário.
+    torres = [...torres].sort((a, b) => Math.atan2(a.y - foco.y, a.x - foco.x) -
+      Math.atan2(b.y - foco.y, b.x - foco.x));
+    const canto = { x: Math.min(...torres.map(torre => torre.x)),
+      y: Math.min(...torres.map(torre => torre.y)) };
+    const primeira = torres.reduce((melhor, torre, indice) =>
+      Math.hypot(torre.x - canto.x, torre.y - canto.y) <
+      Math.hypot(torres[melhor].x - canto.x, torres[melhor].y - canto.y) ? indice : melhor, 0);
+    torres = [...torres.slice(primeira), ...torres.slice(0, primeira)];
+    for (const torre of torres) {
+      roteiro.push({ nome: "indo-torre", torre: torre.id,
+        duracao: duracao(config?.viagemTorreMs, 650),
+        alvo: { x: torre.hitboxDano.x + torre.hitboxDano.width / 2,
+          y: torre.hitboxDano.y + torre.hitboxDano.height / 2 } });
+      roteiro.push({ nome: "invocando-torre", torre: torre.id,
+        duracao: torre.duracaoInvocacaoMs,
+        iniciar: () => torre.invocar() });
+    }
+    if (torres.length) {
+      roteiro.push({ nome: "enquadrando", duracao: duracao(config?.enquadramentoMs, 1000),
+        alvo: foco, zoom: zoomEnquadramento });
+      roteiro.push({ nome: "carregando-escudo", velocidade: 1, duracao: duracao(config?.cargaEscudoMs, 1500),
+        iniciar: () => { raios = criarRaiosEscudoNovoBoss(scene, encontro, torres); },
+        atualizar: p => {
+          raios?.atualizar(tempo, Math.min(1, p / 0.3));
+          encontro.sistemaGeradores.definirCargaEscudo(Math.max(0, (p - 0.3) / 0.7));
+        } });
+      roteiro.push({ nome: "dissipando-raios", velocidade: 1, duracao: duracao(config?.dissipacaoRaiosMs, 350),
+        atualizar: p => raios?.atualizar(duracao(config?.cargaEscudoMs, 1500) + tempo, 1, 1 - p),
+        concluir: limparRaios });
+    }
+    roteiro.push({ nome: "voltando", duracao: duracao(config?.voltaMs, 900),
+      alvo: retorno, zoom: () => ({ x: anterior.zoomX, y: anterior.zoomY }) });
+  }
+
+  function entrarEtapa(indice) {
+    indiceEtapa = indice;
+    tempo = 0;
+    const atual = roteiro[indice];
+    if (!atual) {
+      etapa = "fechando";
+      for (const porta of portas) porta.fecharParaBoss?.();
+      return;
+    }
+    etapa = atual.nome;
+    de = { ...centroAtual };
+    para = atual.alvo ?? de;
+    zoomDe = { x: camera.zoomX ?? camera.zoom ?? 1, y: camera.zoomY ?? camera.zoom ?? 1 };
+    zoomPara = atual.zoom?.() ?? zoomDe;
+    atual.iniciar?.();
+    atual.atualizar?.(0);
+    encontro.sistemaGeradores?.atualizar(0);
   }
 
   const sistema = {
@@ -100,6 +193,8 @@ export function prepararIntroducaoNovoBoss(scene, encontro) {
       }
       if (concluida) return false;
       if (etapa === "aguardando") {
+        // Aguarda todos os recursos do encontro, inclusive os quatro sprites das torres.
+        if (encontro.pendencia) return true;
         portas = (scene.portasFabrica ?? []).filter(porta => PORTAS_ENTRADA.has(porta.nome));
         // O corpo inteiro precisa terminar a passagem antes de congelar o personagem.
         if (scene.movimentoBloqueado || scene.generatorMenuOpen || scene.devItemMenuOpen || scene.atacando ||
@@ -110,39 +205,42 @@ export function prepararIntroducaoNovoBoss(scene, encontro) {
       scene.player.setVelocity?.(0, 0);
       let restante = Number.isFinite(delta) ? Math.max(0, delta) : 0;
       while (etapa !== "fechando") {
-        const total = etapa === "indo" ? duracao(config?.idaMs, 900)
-          : etapa === "mostrando" ? duracao(config?.pausaMs, 650) : duracao(config?.voltaMs, 900);
-        const passo = Math.min(restante, Math.max(0, total - tempo));
+        const atual = roteiro[indiceEtapa];
+        const total = atual.duracao;
+        const ritmo = atual.velocidade ?? velocidade;
+        const passo = Math.min(restante * ritmo, Math.max(0, total - tempo));
         tempo += passo;
-        restante -= passo;
+        restante = Math.max(0, restante - passo / ritmo);
         const progresso = total > 0 ? Math.min(1, tempo / total) : 1;
-        if (etapa === "indo") deslocar(origem, foco, progresso);
-        else if (etapa === "voltando") deslocar(foco, retorno, progresso);
+        deslocar(de, para, progresso);
+        atual.atualizar?.(progresso);
+        // Consome só o tempo desta etapa: a próxima torre não nasce adiantada em frames longos.
+        encontro.sistemaGeradores?.atualizar(passo);
         if (tempo < total) return true;
-        tempo = 0;
-        if (etapa === "indo") etapa = "mostrando";
-        else if (etapa === "mostrando") etapa = "voltando";
-        else {
-          etapa = "fechando";
-          for (const porta of portas) porta.fecharParaBoss?.();
-        }
+        atual.concluir?.();
+        entrarEtapa(indiceEtapa + 1);
         if (restante <= 0 && etapa !== "fechando") return true;
       }
+      encontro.sistemaGeradores?.atualizar(restante * velocidade);
       if (portas.some(porta => porta.estado !== "fechada")) return true;
       etapa = "concluida";
       concluida = true;
+      encontro.sistemaGeradores?.concluirApresentacao?.();
       restaurarControle();
       // O frame que encerra a cena ainda não pertence ao relógio de combate.
       return true;
     },
     destruir() {
       if (destruida) return;
+      limparRaios();
+      if (!concluida) encontro.sistemaGeradores?.cancelarApresentacao?.();
       restaurarControle(true);
       liberarPortas();
       destruida = true;
       scene.events?.off("novo-boss:derrotada", derrotada);
     },
-    snapshot() { return { etapa, concluida, destruida }; },
+    snapshot() { return { etapa, concluida, destruida,
+      torre: roteiro[indiceEtapa]?.torre ?? null, zoomEnquadramento: etapa === "enquadrando" ? zoomPara : null }; },
   };
   const derrotada = evento => { if (evento.encontro === encontro) liberarPortas(); };
   scene.events?.on("novo-boss:derrotada", derrotada);

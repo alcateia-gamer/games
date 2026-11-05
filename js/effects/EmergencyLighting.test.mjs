@@ -47,6 +47,70 @@ test("Lateral, Esquerda, Direita e Cima aceitam booleanos raw e Phaser e prioriz
   }
 });
 
+test("mapa substituído sem nomes nem propriedades preserva os 182 neons fora do JSON, sem giroflex na arena", () => {
+  const raw = JSON.parse(readFileSync(new URL("../../assets/map/parte2-fase1.json", import.meta.url)));
+  const layer = raw.layers.find(l => l.name === CAMADA_LUZ_EMERGENCIA);
+  const map = { getObjectLayer: name => raw.layers.find(l => l.name === name) };
+  const originais = lerLuzesEmergencia(map);
+  const reexportados = layer.objects.map(({ properties: _properties, name: _name, ...objeto }) => objeto);
+  // O ObjectLayer do Phaser pode não incluir o ID da camada; preserva reconhecimento por ZonaBoss.
+  const luzes = new EmergencyLighting({ getObjectLayer: name => name === layer.name
+    ? { name, objects: reexportados, visible: false } : map.getObjectLayer(name) });
+  assert.deepEqual(luzes.luzes, originais, "cor, orientação, raio e tipo sobrevivem à troca do arquivo");
+  assert.equal(luzes.luzes.filter(l => l.neon).length, 182);
+  assert.equal(luzes.luzes.filter(l => !l.neon).length, 10);
+  const cam = camera();
+  cam.matrix.e = 1480; cam.matrix.f = 6100;
+  const fontes = luzes.atualizar(0, cam);
+  const angulos = new Map(fontes.filter(f => f.luz.neon).map(f => [f.luz.id, f.angulo]));
+  assert.ok(angulos.size > 100, "exercita a área com muitos neons na arena");
+  assert.ok(fontes.every(f => f.luz.neon), "a arena não ganha giroflex por falta de propriedades");
+  const revisao = luzes.revisao;
+  for (const tempo of [100, 500, 999, 1500, 2000]) {
+    for (const fonte of luzes.atualizar(tempo, cam)) {
+      assert.equal(fonte.angulo, angulos.get(fonte.luz.id));
+    }
+    assert.equal(luzes.revisao, revisao, "neons fixos não invalidam o cache a cada quadro");
+  }
+});
+
+test("padrões externos seguem os IDs movidos; propriedades explícitas e novos pontos continuam editáveis", () => {
+  const ler = objeto => lerLuzesEmergencia({ getObjectLayer: name => name === CAMADA_LUZ_EMERGENCIA
+    ? { id: 53, objects: [objeto] } : null })[0];
+  const objeto = { ...ponto(), id: 1454, x: -500, y: -400, name: "" };
+  let luz = ler(objeto);
+  assert.ok(luz.neon); assert.equal(luz.cor.phaser, 0xFFD35A); assert.equal(luz.fase, Math.PI / 2);
+  assert.equal(luz.x, -500); assert.equal(luz.y, -400);
+  for (const properties of [{ Neon: false }, [{ name: "Neon", value: false }]]) {
+    luz = ler({ ...objeto, properties });
+    assert.equal(luz.neon, false); assert.equal(luz.raio, PADROES_GIROFLEX.raio);
+  }
+  luz = ler({ ...objeto, properties: { Cor: "#00ff00", Orientacao: "Horizontal", Ligada: false, Raio: 25 } });
+  assert.equal(luz.cor.phaser, 0x00FF00); assert.equal(luz.fase, 0);
+  assert.equal(luz.ligada, false); assert.equal(luz.raio, 25);
+  assert.equal(ler({ ...objeto, visible: false }).ligada, false);
+  assert.equal(ler({ ...objeto, id: 2000 }).neon, false, "não converte giroflex ou pontos novos em neon");
+  assert.equal(lerLuzesEmergencia(mapa([objeto]))[0].neon, false, "não aplica estes IDs a outro mapa");
+});
+
+test("propriedades explícitas prevalecem sobre o nome de segurança do neon", () => {
+  const objeto = { ...ponto(), name: "Neon amarelo vertical" };
+  let luz = lerLuzesEmergencia(mapa([objeto]))[0];
+  assert.equal(luz.neon, true); assert.equal(luz.cor.phaser, 0xFFD35A);
+  assert.equal(luz.fase, Math.PI / 2);
+  for (const properties of [
+    { Cor: "#ff0000", Orientacao: "Horizontal" },
+    [{ name: "Cor", value: "#ff0000" }, { name: "Orientacao", value: "Horizontal" }],
+  ]) {
+    luz = lerLuzesEmergencia(mapa([{ ...objeto, properties }]))[0];
+    assert.equal(luz.cor.phaser, 0xFF0000); assert.equal(luz.fase, 0);
+  }
+  luz = lerLuzesEmergencia(mapa([{ ...objeto, properties: { Neon: false } }]))[0];
+  assert.equal(luz.neon, false); assert.equal(luz.raio, PADROES_GIROFLEX.raio);
+  luz = lerLuzesEmergencia(mapa([{ ...objeto, name: "outra luz" }]))[0];
+  assert.equal(luz.neon, false);
+});
+
 test("as paredes esquerda e direita varrem para cima e para baixo, sempre para o interior da sala", () => {
   const lights = new EmergencyLighting(mapa([
     ponto({ Lateral: true, Esquerda: true }), ponto({ Lateral: true, Direita: true }),

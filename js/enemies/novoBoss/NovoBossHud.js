@@ -64,7 +64,7 @@ export function atualizarHudNovoBoss(scene, encontro) {
     return;
   }
   hud.textoEstado.setText(encontro.barreiraAtiva
-    ? `BARREIRA · ${ligados}/${encontro.geradores.length} GERADORES ATIVOS`
+    ? `BARREIRA · ${ligados}/${encontro.geradores.length} ${encontro.geradores.some(g => g.torre) ? "TORRES ATIVAS" : "GERADORES ATIVOS"}`
     : `FASE ${encontro.fase ?? 1} · ${detalhe}`);
 }
 

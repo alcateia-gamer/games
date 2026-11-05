@@ -29,7 +29,7 @@ function tileNaRegiao(layer, tile, tileset, regiao) {
 }
 
 /** Retira do carimbo da lanterna os pixels da camada que deve aparecer sobre ela. */
-export function ocultarLanternaAtrasCamada(context, layer, camera, regiao = null) {
+export function ocultarLanternaAtrasCamada(context, layer, camera, regiao = null, tiles = null) {
   if (!layer || layer.visible === false || layer.alpha === 0) return;
   context.save();
   const rotacao = layer.rotation ?? 0;
@@ -38,7 +38,7 @@ export function ocultarLanternaAtrasCamada(context, layer, camera, regiao = null
   context.transform(cos * sx, sin * sx, -sin * sy, cos * sy, layer.x ?? 0, layer.y ?? 0);
   context.globalCompositeOperation = "destination-out";
   context.imageSmoothingEnabled = false;
-  for (const tile of layer.cull(camera)) {
+  for (const tile of tiles ?? layer.cull(camera)) {
     const tileset = layer.gidMap[tile.index];
     if (!tileset || tile.visible === false || tile.alpha === 0) continue;
     if (regiao && !tileNaRegiao(layer, tile, tileset, regiao)) continue;

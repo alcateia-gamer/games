@@ -191,6 +191,9 @@ function criarTilesetsCidade(map) {
     "tanqueCombustivel",
   );
 
+  const chaveCabine = "cabineTelefonica";
+  const cabineTelefonica = map.addTilesetImage("Cabine-Tele", chaveCabine);
+
   const vehiclesSpeederCivil5 = map.addTilesetImage(
     "Speeder_civil5",
     "VehiclesSpeederCivil5",
@@ -240,6 +243,7 @@ function criarTilesetsCidade(map) {
     wallBorder,
     shopDoor,
     tanqueCombustivel,
+    cabineTelefonica,
     vehiclesSpeederCivil5,
     speederCivil2,
     transporterPrivate,
@@ -277,6 +281,7 @@ function criarTilesetsCidade(map) {
     ["parede-borda", "wallBorder"],
     ["!ShopDoor", "shopDoor"],
     ["tanque_pixel_art_300x150_transparente", "tanqueCombustivel"],
+    ["Cabine-Tele", chaveCabine],
     ["Speeder_civil5", "VehiclesSpeederCivil5"],
     ["Speeder_civil2", "Speeder_civil2"],
     ["Transporter_Private", "Transporter_Private"],

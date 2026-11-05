@@ -977,6 +977,173 @@
          "y":0
         }, 
         {
+         "draworder":"topdown",
+         "id":51,
+         "name":"Cabine",
+         "objects":[
+                {
+                 "gid":12677,
+                 "height":25.3333333333333,
+                 "id":623,
+                 "name":"",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":25.3333333333333,
+                 "x":-1213.5,
+                 "y":358.333333333333
+                }, 
+                {
+                 "gid":12678,
+                 "height":25.3333333333333,
+                 "id":624,
+                 "name":"",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":25.3333333333333,
+                 "x":-1188.16666666667,
+                 "y":358.333333333333
+                }, 
+                {
+                 "gid":12679,
+                 "height":25.3333333333333,
+                 "id":625,
+                 "name":"",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":25.3333333333333,
+                 "x":-1162.83333333333,
+                 "y":358.333333333333
+                }, 
+                {
+                 "gid":12680,
+                 "height":25.3333333333333,
+                 "id":626,
+                 "name":"",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":25.3333333333333,
+                 "x":-1213.5,
+                 "y":383.666666666667
+                }, 
+                {
+                 "gid":12681,
+                 "height":25.3333333333333,
+                 "id":627,
+                 "name":"",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":25.3333333333333,
+                 "x":-1188.16666666667,
+                 "y":383.666666666667
+                }, 
+                {
+                 "gid":12682,
+                 "height":25.3333333333333,
+                 "id":628,
+                 "name":"",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":25.3333333333333,
+                 "x":-1162.83333333333,
+                 "y":383.666666666667
+                }, 
+                {
+                 "gid":12683,
+                 "height":25.3333333333333,
+                 "id":629,
+                 "name":"",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":25.3333333333333,
+                 "x":-1213.5,
+                 "y":409
+                }, 
+                {
+                 "gid":12684,
+                 "height":25.3333333333333,
+                 "id":630,
+                 "name":"",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":25.3333333333333,
+                 "x":-1188.16666666667,
+                 "y":409
+                }, 
+                {
+                 "gid":12685,
+                 "height":25.3333333333333,
+                 "id":631,
+                 "name":"",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":25.3333333333333,
+                 "x":-1162.83333333333,
+                 "y":409
+                }, 
+                {
+                 "gid":12686,
+                 "height":25.3333333333333,
+                 "id":632,
+                 "name":"",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":25.3333333333333,
+                 "x":-1213.5,
+                 "y":434.333333333333
+                }, 
+                {
+                 "gid":12687,
+                 "height":25.3333333333333,
+                 "id":633,
+                 "name":"",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":25.3333333333333,
+                 "x":-1188.16666666667,
+                 "y":434.333333333333
+                }, 
+                {
+                 "gid":12688,
+                 "height":25.3333333333333,
+                 "id":634,
+                 "name":"",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":25.3333333333333,
+                 "x":-1162.83333333333,
+                 "y":434.333333333333
+                }],
+         "opacity":1,
+         "type":"objectgroup",
+         "visible":true,
+         "x":0,
+         "y":0
+        }, 
+        {
          "chunks":[
                 {
                  "data":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAANAUAAA==",
@@ -1173,8 +1340,8 @@
                  "type":"",
                  "visible":true,
                  "width":0,
-                 "x":-1081,
-                 "y":407
+                 "x":-1079.08333333333,
+                 "y":412.083333333333
                 }, 
                 {
                  "height":0,
@@ -1197,8 +1364,8 @@
                  "type":"",
                  "visible":true,
                  "width":0,
-                 "x":-1049,
-                 "y":406
+                 "x":-1060.41666666667,
+                 "y":411.5
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -1295,7 +1462,8 @@
          "width":32,
          "x":0,
          "y":0
-        }, 
+        },
+    
         {
          "chunks":[
                 {
@@ -1459,8 +1627,7 @@
          "width":80,
          "x":0,
          "y":0
-        },
-    
+        }, 
         {
          "draworder":"topdown",
          "id":50,
@@ -5028,7 +5195,8 @@
          "width":96,
          "x":0,
          "y":0
-        }, 
+        },
+    
         {
          "chunks":[
                 {
@@ -5128,8 +5296,7 @@
          "width":96,
          "x":0,
          "y":0
-        },
-    
+        }, 
         {
          "chunks":[
                 {
@@ -9402,6 +9569,47 @@
                  "width":165.333333333333,
                  "x":-539,
                  "y":-2312.83333333333
+                }, 
+                {
+                 "height":38.5,
+                 "id":635,
+                 "name":"",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":51.9782608695652,
+                 "x":-1196.5,
+                 "y":382.5
+                }, 
+                {
+                 "height":0,
+                 "id":636,
+                 "name":"",
+                 "opacity":1,
+                 "polygon":[
+                        {
+                         "x":0,
+                         "y":0
+                        }, 
+                        {
+                         "x":10.5454545454545,
+                         "y":11.6363636363636
+                        }, 
+                        {
+                         "x":14.3636363636365,
+                         "y":11.8181818181818
+                        }, 
+                        {
+                         "x":14.3636363636365,
+                         "y":0.181818181818187
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":-1158.90909090909,
+                 "y":420.545454545455
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -9409,8 +9617,8 @@
          "x":0,
          "y":0
         }],
- "nextlayerid":51,
- "nextobjectid":609,
+ "nextlayerid":52,
+ "nextobjectid":637,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.12.2",
@@ -9817,6 +10025,19 @@
          "name":"tanque_pixel_art_300x150_transparente",
          "spacing":0,
          "tilecount":18,
+         "tileheight":48,
+         "tilewidth":48
+        }, 
+        {
+         "columns":3,
+         "firstgid":12677,
+         "image":"..\/..\/Tilesets\/extras\/Cabine-Tele.png",
+         "imageheight":200,
+         "imagewidth":150,
+         "margin":0,
+         "name":"Cabine-Tele",
+         "spacing":0,
+         "tilecount":12,
          "tileheight":48,
          "tilewidth":48
         }],

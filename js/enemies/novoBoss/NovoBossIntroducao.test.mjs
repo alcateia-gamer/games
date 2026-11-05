@@ -5,6 +5,8 @@ import { readFileSync } from "node:fs";
 import vm from "node:vm";
 import { prepararIntroducaoNovoBoss } from "./NovoBossIntroducao.js";
 import { novoBossConfig } from "./NovoBossConfig.js";
+import { prepararGeradoresNovoBoss } from "./NovoBossGeradores.js";
+import { causarDanoAlvoAdicional } from "../../combat/CombatTargets.js";
 
 // A câmera é a implementação real do Phaser usada pelo jogo.
 const bundle = readFileSync(new URL("../../libs/phaser.min.js", import.meta.url), "utf8");
@@ -12,7 +14,7 @@ const contexto = { module: { exports: {} }, exports: {}, importScripts() {}, win
 vm.runInNewContext(bundle.replace("i(85454)})());", "i})());"), contexto);
 const Camera = contexto.module.exports(38058);
 
-function fixture() {
+function fixture({ velocidade = 1 } = {}) {
   const player = { active: true, x: -1080, y: -5500,
     body: { x: -1090, y: -5530, width: 20, height: 50 },
     setVelocity(x, y) { this.velocidade = { x, y }; },
@@ -28,7 +30,8 @@ function fixture() {
     events: new EventEmitter(), movimentoBloqueado: false,
     input: { enabled: true, keyboard: { enabled: true, resetKeys() {} } } };
   c.scene = scene;
-  const encontro = { config: novoBossConfig, jogadorNaArena: true,
+  const encontro = { config: { ...novoBossConfig,
+    cenaEntrada: { ...novoBossConfig.cenaEntrada, velocidade } }, jogadorNaArena: true,
     sprite: { active: true, x: -1080, y: -5810 } };
   return { scene, encontro, c, portas, chamadas, sistema: prepararIntroducaoNovoBoss(scene, encontro) };
 }
@@ -43,6 +46,7 @@ test("câmera real vai ao boss, retorna ao jogador e só então fecha as duas pe
   assert.equal(scene.input.enabled, false);
   assert.equal(scene.input.keyboard.enabled, false);
   assert.equal(scene.player.anims.isPaused, true);
+  assert.equal(scene.events.listenerCount("prerender"), 1);
   assert.equal(c._follow, null);
   assert.deepEqual(scene.player.velocidade, { x: 0, y: 0 });
   sistema.atualizar(450);
@@ -71,6 +75,7 @@ test("câmera real vai ao boss, retorna ao jogador e só então fecha as duas pe
   assert.equal(scene.input.enabled, true);
   assert.equal(scene.input.keyboard.enabled, true);
   assert.equal(scene.player.anims.isPaused, false);
+  assert.equal(scene.events.listenerCount("prerender"), 0);
   assert.equal(c._follow, scene.player);
   perto(c.lerp.x, 0.3); perto(c.lerp.y, 0.4);
   perto(c.followOffset.x, 10); perto(c.followOffset.y, -20);
@@ -121,6 +126,7 @@ test("interrupção restaura câmera e controles e libera portas, inclusive no m
       assert.equal(f.scene.input.enabled, false, "preserva o bloqueio de entrada anterior");
       assert.equal(f.scene.input.keyboard.enabled, true);
       assert.equal(f.c._follow, f.scene.player);
+      assert.equal(f.scene.events.listenerCount("prerender"), 0);
       assert.ok(f.portas.every(porta => porta.estado === "aberta"));
       f.sistema.destruir();
     }
@@ -137,4 +143,218 @@ test("movimento da câmera independe do FPS e cenas sem suporte ou com opção d
   a.sistema.destruir(); b.sistema.destruir();
   assert.equal(prepararIntroducaoNovoBoss({}, { config: novoBossConfig }), null);
   assert.equal(prepararIntroducaoNovoBoss(a.scene, { config: { cenaEntrada: { ativo: false } } }), null);
+});
+
+function fixtureTorres(t, opcoes) {
+  const anterior = globalThis.Phaser;
+  globalThis.Phaser = { Geom: { Rectangle: class {
+    constructor(x, y, width, height) { Object.assign(this, { x, y, width, height }); }
+  } } };
+  t.after(() => { globalThis.Phaser = anterior; });
+  const f = fixture(opcoes), visuais = [];
+  f.scene.input.keyboard = Object.assign(new EventEmitter(), { enabled: true, resetKeys() {} });
+  const raw = JSON.parse(readFileSync(new URL("../../../assets/map/parte2-fase1.json", import.meta.url)));
+  f.scene.map = { getObjectLayer: nome => raw.layers.find(l => l.name === nome) };
+  function visual(x = 0, y = 0, key = null, frame = 0, width = 1, height = 1) {
+    const v = { x, y, width, height, key, frame, visible: true, active: true, alpha: 1,
+      paths: [],
+      setOrigin() { return this; }, setName(name) { this.name = name; return this; },
+      setScale(scale) { this.scale = scale; return this; },
+      setDepth(depth) { this.depth = depth; return this; },
+      setVisible(visible) { this.visible = visible; return this; },
+      setAlpha(alpha) { this.alpha = alpha; return this; },
+      setPosition(x, y) { Object.assign(this, { x, y }); return this; },
+      setTexture(key, frame) { Object.assign(this, { key, frame }); return this; },
+      setFrame(frame) { this.frame = frame; return this; },
+      clear() { this.paths = []; return this; },
+      lineStyle() { return this; }, beginPath() { this.path = []; return this; },
+      moveTo(x, y) { this.path.push({ x, y }); return this; },
+      lineTo(x, y) { this.path.push({ x, y }); return this; },
+      strokePath() { this.paths.push(this.path); return this; },
+      fillStyle() { return this; }, fillCircle() { return this; }, strokeCircle() { return this; },
+      destroy() { this.active = false; this.destruicoes = (this.destruicoes ?? 0) + 1; },
+    };
+    visuais.push(v); return v;
+  }
+  f.scene.add = { sprite: (x, y, key, frame) => visual(x, y, key, frame),
+    rectangle: (x, y, w, h) => visual(x, y, null, 0, w, h),
+    circle: (x, y, r) => visual(x, y, null, 0, r * 2, r * 2), graphics: () => visual() };
+  f.scene.textures = { exists: () => true };
+  f.scene.physics = { add: { existing(v) {
+    v.body = { enable: true, setCircle(r) { this.radius = r; }, updateFromGameObject() {} };
+  }, collider() { return { destroy() {} }; } } };
+  f.scene.novoBoss = f.encontro;
+  Object.assign(f.encontro.sprite, { visible: true, alpha: 1 });
+  f.encontro.introducao = f.sistema;
+  Object.defineProperty(f.encontro, "active", { get: () => !f.sistema.bloqueiaCombate &&
+    f.encontro.jogadorNaArena && !f.encontro.morto && !f.encontro.suspenso });
+  f.geradores = prepararGeradoresNovoBoss(f.scene, f.encontro);
+  f.visuais = visuais;
+  t.after(() => { f.sistema.destruir(); f.geradores.destruir(); });
+  return f;
+}
+
+function avancarAte(f, etapa) {
+  for (let i = 0; i < 1000 && f.sistema.snapshot().etapa !== etapa; i++) f.sistema.atualizar(50);
+  assert.equal(f.sistema.snapshot().etapa, etapa);
+}
+
+test("torres reais nascem uma por vez; quatro raios formam o escudo com a câmera enquadrando a sala", t => {
+  const f = fixtureTorres(t), { encontro, sistema, geradores, c } = f;
+  const escudo = f.visuais.find(v => v.name === "novo-boss-escudo-energia");
+  assert.equal(encontro.barreiraAtiva, false); assert.equal(escudo.visible, false);
+  assert.ok(encontro.geradores.every(torre => torre.visible && torre.visual.frame === 0 && !torre.body.enable));
+  sistema.atualizar(0); sistema.atualizar(1550);
+  assert.equal(sistema.snapshot().etapa, "indo-torre");
+  assert.equal(encontro.barreiraAtiva, false);
+  const reveladas = new Set();
+  for (let i = 0; i < 4; i++) {
+    const id = sistema.snapshot().torre;
+    assert.equal(id, [1597, 1594, 1593, 1596][i], "superior esquerda → superior direita → inferior direita → inferior esquerda");
+    const torre = encontro.geradores.find(torre => torre.id === id);
+    assert.equal(torre.visible, true, "o primeiro frame já está no chão");
+    assert.equal(torre.visual.frame, 0, "a animação espera a câmera chegar");
+    assert.equal(torre.body.enable, false);
+    sistema.atualizar(650);
+    assert.equal(sistema.snapshot().etapa, "invocando-torre");
+    reveladas.add(id);
+    assert.equal(torre.visible, true); assert.equal(torre.visual.frame, 0);
+    assert.ok(encontro.geradores.every(t => t.visible && (reveladas.has(t.id) || t.visual.frame === 0)));
+    sistema.atualizar(800); assert.equal(torre.visual.frame, 8);
+    assert.equal(torre.estado, "summon");
+    sistema.atualizar(800); assert.equal(torre.estado, "idle");
+    assert.equal(encontro.barreiraAtiva, false);
+    assert.equal(causarDanoAlvoAdicional(f.scene, torre, 1000), false, "combate bloqueado na apresentação");
+  }
+  assert.equal(reveladas.size, 4);
+  assert.equal(sistema.snapshot().etapa, "enquadrando");
+  sistema.atualizar(1000);
+  assert.equal(sistema.snapshot().etapa, "carregando-escudo");
+  c.preRender();
+  perto(centro(c).x, encontro.sprite.x); perto(centro(c).y, encontro.sprite.y);
+  assert.ok(c.zoom < 1.2);
+  for (const torre of encontro.geradores) {
+    const a = torre.hitboxDano;
+    assert.ok(a.x >= c.worldView.x && a.x + a.width <= c.worldView.right);
+    assert.ok(a.y >= c.worldView.y && a.y + a.height <= c.worldView.bottom);
+  }
+  sistema.atualizar(450);
+  const raios = f.visuais.find(v => v.name === "novo-boss-raios-torres");
+  assert.ok(raios.visible); assert.equal(raios.paths.length, 12);
+  for (const path of raios.paths) {
+    perto(path.at(-1).x, encontro.sprite.x); perto(path.at(-1).y, encontro.sprite.y + 16);
+    assert.ok(encontro.geradores.some(t => t.pontoEmissor.x === path[0].x && t.pontoEmissor.y === path[0].y));
+  }
+  assert.equal(escudo.visible, false, "primeiro os raios alcançam o boss");
+  sistema.atualizar(525);
+  perto(geradores.cargaEscudo, 0.5); assert.equal(escudo.visible, true);
+  perto(escudo.alpha, 0.35); assert.equal(encontro.barreiraAtiva, true);
+  const escalaParcial = escudo.scale;
+  sistema.atualizar(525);
+  perto(geradores.cargaEscudo, 1); assert.ok(escudo.scale > escalaParcial);
+  assert.equal(sistema.snapshot().etapa, "dissipando-raios");
+  sistema.atualizar(175); perto(raios.alpha, 0.5);
+  sistema.atualizar(175);
+  assert.equal(sistema.snapshot().etapa, "voltando"); assert.equal(raios.destruicoes, 1);
+  sistema.atualizar(900);
+  perto(c.zoom, 1.2); assert.equal(sistema.snapshot().etapa, "fechando");
+  assert.deepEqual(f.chamadas, ["fechar:porta02", "fechar:porta03"]);
+  f.portas[0].estado = f.portas[1].estado = "fechada";
+  sistema.atualizar(16);
+  assert.equal(sistema.snapshot().concluida, true); assert.equal(c._follow, f.scene.player);
+  assert.equal(geradores.snapshot().apresentando, false);
+  for (const torre of encontro.geradores) assert.equal(causarDanoAlvoAdicional(f.scene, torre, 1000), true);
+  assert.equal(encontro.barreiraAtiva, false, "destruir as quatro torres ainda remove o escudo");
+});
+
+test("cancelar o ritual restaura zoom/controle e reinicia torres e escudo sem deixar raios", t => {
+  for (const interromper of [f => { f.encontro.jogadorNaArena = false; },
+    f => { f.scene.morteEmAndamento = true; }, f => { f.scene.cameras.main = {}; },
+    f => f.sistema.destruir()]) {
+    const f = fixtureTorres(t);
+    avancarAte(f, "carregando-escudo"); f.sistema.atualizar(1000);
+    assert.ok(f.encontro.barreiraAtiva);
+    interromper(f); f.sistema.atualizar(16);
+    perto(f.c.zoom, 1.2); assert.equal(f.c._follow, f.scene.player);
+    assert.equal(f.scene.movimentoBloqueado, false); assert.equal(f.scene.input.enabled, true);
+    assert.ok(f.encontro.geradores.every(torre => torre.estado === "summon" && torre.visual.frame === 0 && !torre.body.enable));
+    assert.equal(f.encontro.barreiraAtiva, false);
+    const raios = f.visuais.find(v => v.name === "novo-boss-raios-torres");
+    assert.equal(raios.destruicoes, 1);
+    f.sistema.destruir(); assert.equal(raios.destruicoes, 1);
+  }
+});
+
+test("avanço do ritual independe do FPS e respeita as fronteiras de invocação em frames longos", t => {
+  for (const total of [1550 + 650, 5000, 11750, 13000, 15000]) {
+    const opcoes = { velocidade: novoBossConfig.cenaEntrada.velocidade };
+    const a = fixtureTorres(t, opcoes), b = fixtureTorres(t, opcoes);
+    a.sistema.atualizar(0); b.sistema.atualizar(0);
+    a.sistema.atualizar(total);
+    for (let ms = 0; ms < total; ms += 50) b.sistema.atualizar(Math.min(50, total - ms));
+    assert.deepEqual(a.sistema.snapshot(), b.sistema.snapshot());
+    perto(a.c.scrollX, b.c.scrollX); perto(a.c.scrollY, b.c.scrollY); perto(a.c.zoom, b.c.zoom);
+    perto(a.geradores.cargaEscudo, b.geradores.cargaEscudo);
+    assert.deepEqual(a.encontro.geradores.map(t => [t.visible, t.estado, t.visual.frame]),
+      b.encontro.geradores.map(t => [t.visible, t.estado, t.visual.frame]));
+  }
+});
+
+test("reentrada após interrupção reapresenta as torres; sem recursos prontos a câmera aguarda", t => {
+  const f = fixtureTorres(t);
+  f.encontro.pendencia = "assets-torres-indisponiveis";
+  f.sistema.atualizar(3000); assert.equal(f.sistema.snapshot().etapa, "aguardando");
+  assert.equal(f.scene.movimentoBloqueado, false);
+  f.encontro.pendencia = null;
+  avancarAte(f, "invocando-torre"); f.sistema.atualizar(800);
+  f.encontro.jogadorNaArena = false; f.sistema.atualizar(16);
+  f.encontro.jogadorNaArena = true;
+  avancarAte(f, "invocando-torre");
+  const torre = f.encontro.geradores.find(t => t.id === f.sistema.snapshot().torre);
+  assert.equal(torre.estado, "summon"); assert.equal(torre.visual.frame, 0);
+  assert.equal(f.encontro.barreiraAtiva, false);
+});
+
+test("enquadramento inclui as quatro torres em telas horizontais e verticais", t => {
+  for (const [largura, altura] of [[1280, 720], [360, 640], [640, 360]]) {
+    const f = fixtureTorres(t);
+    f.c.setSize(largura, altura);
+    avancarAte(f, "carregando-escudo");
+    f.c.preRender();
+    for (const torre of f.encontro.geradores) {
+      const a = torre.hitboxDano, vista = f.c.worldView;
+      assert.ok(a.x >= vista.x && a.x + a.width <= vista.right);
+      assert.ok(a.y >= vista.y && a.y + a.height <= vista.bottom);
+    }
+  }
+});
+
+test("invocação mantém ritmo acelerado, mas raios e formação do escudo usam os tempos originais", t => {
+  const velocidade = novoBossConfig.cenaEntrada.velocidade;
+  const f = fixtureTorres(t, { velocidade });
+  f.c.id = 1;
+  const botao = { depth: 100, scrollFactorX: 0, scrollFactorY: 0, cameraFilter: 0 };
+  const status = { style: { visibility: "" } };
+  f.scene.children = { list: [botao] }; f.scene.hudStatus = { elemento: status };
+  f.sistema.atualizar(0);
+  assert.equal(botao.cameraFilter, 1); assert.equal(status.style.visibility, "hidden");
+  f.sistema.atualizar((900 + 650 + 650) / velocidade);
+  assert.equal(f.sistema.snapshot().etapa, "invocando-torre");
+  const torre = f.encontro.geradores.find(t => t.id === f.sistema.snapshot().torre);
+  f.sistema.atualizar(800 / velocidade);
+  assert.equal(torre.visual.frame, 8);
+  f.sistema.atualizar((800 + 3 * (650 + 1600) + 1000) / velocidade);
+  assert.equal(f.sistema.snapshot().etapa, "carregando-escudo");
+  f.sistema.atualizar(450); perto(f.geradores.cargaEscudo, 0);
+  f.sistema.atualizar(525); perto(f.geradores.cargaEscudo, 0.5);
+  f.sistema.atualizar(525); perto(f.geradores.cargaEscudo, 1);
+  assert.equal(f.sistema.snapshot().etapa, "dissipando-raios");
+  f.sistema.atualizar(350);
+  assert.equal(f.sistema.snapshot().etapa, "voltando");
+  assert.equal(botao.cameraFilter, 1, "HUD permanece oculto durante o retorno");
+  f.sistema.atualizar(900 / velocidade);
+  f.portas[0].estado = f.portas[1].estado = "fechada";
+  f.sistema.atualizar(0);
+  assert.equal(f.sistema.snapshot().concluida, true);
+  assert.equal(botao.cameraFilter, 0); assert.equal(status.style.visibility, "");
 });

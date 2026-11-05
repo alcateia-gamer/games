@@ -17,10 +17,11 @@ export function criarEscudoEnergia(scene, raio) {
   let destruido = false;
   return {
     sprite,
-    atualizar(delta, x, y, visivel, alpha = 1) {
+    atualizar(delta, x, y, visivel, alpha = 1, formacao = 1) {
       if (destruido) return;
       if (visivel && Number.isFinite(delta) && delta >= 0) tempo += delta;
       sprite.setPosition(x, y).setVisible(visivel).setAlpha(Math.max(0, Math.min(1, alpha)) * 0.7);
+      sprite.setScale(raio * 2 / asset.diametro * (0.3 + Math.max(0, Math.min(1, formacao)) * 0.7));
       sprite.setFrame(Math.floor(tempo / asset.frameMs) % (asset.ultimoFrame + 1));
     },
     destruir() { if (!destruido) { destruido = true; sprite.destroy(); } },

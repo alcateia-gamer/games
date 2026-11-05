@@ -17,6 +17,7 @@ import BossEmitterOcclusion from "./BossEmitterOcclusion.js";
 import BossEnergyLighting, { calcularPerfilEnergiaBoss } from "./BossEnergyLighting.js";
 import FixedLightCache from "./FixedLightCache.js";
 import BossRoomLighting from "./BossRoomLighting.js";
+import BossEnergyLightBuffer from "./BossEnergyLightBuffer.js";
 export { intensidadeLuzPartida, QUEDAS_LUZ_FABRICA } from "./FactoryLighting.js";
 
 const TEXTURA_ESCURIDAO_PARTE2 = "level1-parte2-escuridao";
@@ -143,7 +144,7 @@ function criarPerfilParede(calcular) {
   return perfil;
 }
 
-function desenharFonteDirecional(context, canvas, fonte, paredes, estatuas, oclusaoEmissor = null, cache = null) {
+function desenharFonteDirecional(context, canvas, fonte, paredes, estatuas, oclusaoEmissor = null) {
   const { luz, angulo } = fonte;
   const cos = Math.cos(angulo), sin = Math.sin(angulo);
   const raio = luz.raio * MULTIPLICADOR_ALCANCE_FABRICA;
@@ -155,8 +156,7 @@ function desenharFonteDirecional(context, canvas, fonte, paredes, estatuas, oclu
     context.clip();
   }
   paredes.recortarFonte(context, luz, raio);
-  if (!cache?.desenhar(context, canvas, fonte, estatuas, oclusaoEmissor) &&
-      !oclusaoEmissor?.desenhar(context, canvas, fonte, estatuas) && !estatuas.desenhar(context, canvas, fonte)) {
+  if (!oclusaoEmissor?.desenhar(context, canvas, fonte, estatuas) && !estatuas.desenhar(context, canvas, fonte)) {
     context.transform(cos, sin, -sin, cos, luz.x, luz.y);
     context.drawImage(canvas, -raio, -raio, raio * 2, raio * 2);
   }
@@ -179,7 +179,12 @@ function ocultarLanterna(context, lanterna, scene, pose, atrasPlayer, regiao) {
     100 - cos * pose.x - sin * pose.y, 160 + sin * pose.x - cos * pose.y);
   ocultarLanternaAtrasCamada(context, scene.camadaParedeAcimaPerso, camera);
   ocultarLanternaAtrasSala(context, scene, camera, regiao);
-  if (!atrasPlayer) return;
+  if (atrasPlayer) ocultarBrilhoAtrasPersonagem(context, player);
+}
+
+/** Retira somente a silhueta opaca do personagem do brilho desenhado no chão. */
+function ocultarBrilhoAtrasPersonagem(context, player) {
+  context.save();
   const frame = player.frame;
   const escalaX = (player.scaleX ?? 1) * (player.flipX ? -1 : 1);
   const escalaY = (player.scaleY ?? 1) * (player.flipY ? -1 : 1);
@@ -197,6 +202,7 @@ function ocultarLanterna(context, lanterna, scene, pose, atrasPlayer, regiao) {
   context.imageSmoothingEnabled = false;
   context.drawImage(frame.source.image, frame.cutX, frame.cutY, frame.cutWidth, frame.cutHeight,
     (frame.x ?? 0) - ox, (frame.y ?? 0) - oy, frame.cutWidth, frame.cutHeight);
+  context.restore();
 }
 
 function desenharLuminaria(context, canvas, luz, limites) {
@@ -227,7 +233,7 @@ function criarIluminacaoTerror(scene) {
   let height = Math.ceil(camera.height);
   let invalidada = true;
   const ultimoQuadro = { width: 0, height: 0, a: 0, b: 0, c: 0, d: 0, e: 0, f: 0,
-    revisao: -1, revisaoEmergencia: -1, revisaoZonas: -1, revisaoBoss: -1, revisaoEnergiaBoss: -1 };
+    revisao: -1, revisaoEmergencia: -1, revisaoZonas: -1, revisaoBoss: -1, revisaoEnergiaBoss: -1, revisaoFixas: -1 };
   let encerrada = false;
   const iluminacao = new FactoryLighting(scene.map);
   const emergencia = new EmergencyLighting(scene.map);
@@ -281,10 +287,14 @@ function criarIluminacaoTerror(scene) {
   const perfilParede = arandelas.luzes.length ? criarPerfilParede(calcularPerfilLuzParede) : null;
   const perfilEmissorParede = arandelas.luzes.length ? criarPerfilParede(calcularEmissorLuzParede) : null;
   const paredeCanvas = perfilParede ? criarMascaraLuminaria(perfilParede) : null;
-  const perfisEnergiaBoss = [0x289DFF, 0x289DFF, 0xFF2438].map((cor, indice) => {
+  const perfisEnergiaBoss = [0x289DFF, 0x289DFF, 0xFF2438, 0xFFFFFF].map((cor, indice) => {
     const escudo = indice === 1;
     const perfilEnergia = criarPerfilParede((x, y) => calcularPerfilEnergiaBoss(x, y, escudo));
     return { mascara: criarMascaraLuminaria(perfilEnergia), cor: criarMascaraLuminaria(perfilEnergia, cor) };
+  });
+  const campoEnergiaBoss = new BossEnergyLightBuffer((c, fonte, colorido) => {
+    const perfil = perfisEnergiaBoss[fonte.branca ? 3 : fonte.vermelha ? 2 : Number(fonte.escudo)];
+    desenharLuminaria(c, colorido ? perfil.cor : perfil.mascara, fonte.luz, paredesLanterna);
   });
   const coresParedeCanvas = new Map();
   for (const luz of arandelas.luzes) {
@@ -296,7 +306,8 @@ function criarIluminacaoTerror(scene) {
   }
   const estatuasGiroflex = new EmergencyStatueOcclusion(scene, luzesIndependentes);
   const oclusaoEmissorBoss = new BossEmitterOcclusion(scene, arandelas.luzes);
-  const luzesFixas = new FixedLightCache();
+  const luzesFixas = new FixedLightCache((c, perfil, fonte) => desenharFonteDirecional(c, perfil, fonte,
+    paredesLanterna, estatuasGiroflex, fonte.luz.direcao ? oclusaoEmissorBoss : null));
   for (const luz of emergencia.luzes) {
     if (!luz.neon) continue;
     const cor = coresNeonCanvas.get(luz.cor.css);
@@ -311,6 +322,11 @@ function criarIluminacaoTerror(scene) {
   lanternaOclusaoCanvas.width = 460;
   lanternaOclusaoCanvas.height = 320;
   const oclusaoContext = lanternaOclusaoCanvas.getContext("2d");
+  // Uma composição compartilhada mantém todos os brilhos abaixo do personagem.
+  const brilhoCanvas = document.createElement("canvas");
+  brilhoCanvas.width = width; brilhoCanvas.height = height;
+  const brilhoContext = brilhoCanvas.getContext("2d");
+  const brilhoAnterior = { frame: null };
   const oclusaoAnterior = { frame: null };
   const camadasAnteriores = new Map();
   let paredeAnterior = null;
@@ -383,6 +399,7 @@ function criarIluminacaoTerror(scene) {
       width = Math.ceil(camera.width);
       height = Math.ceil(camera.height);
       texture.setSize(width, height);
+      brilhoCanvas.width = width; brilhoCanvas.height = height;
       overlay.setTexture(TEXTURA_ESCURIDAO_PARTE2);
       invalidada = true;
     }
@@ -395,6 +412,16 @@ function criarIluminacaoTerror(scene) {
     if (fontesParede.some(fonte => fonte.luz.direcao === "Cima") && oclusaoEmissorBoss.atualizar(camera)) invalidada = true;
     if ((giroflex.length || fontesParede.length) && estatuasGiroflex.atualizar()) invalidada = true;
     const player = scene.player;
+    const temBrilho = giroflex.length || fontesParede.length || fontesEnergiaBoss.length || fontes.some(fonte => fonte.luz.pulsando);
+    const personagemSobreBrilho = !!(temBrilho && player?.active !== false && player?.visible !== false &&
+      (player?.alpha ?? 1) > 0 && player?.frame?.source?.image && Number.isFinite(player.x) && Number.isFinite(player.y));
+    const frameBrilho = personagemSobreBrilho ? player.frame : null;
+    if (brilhoAnterior.frame !== frameBrilho) { brilhoAnterior.frame = frameBrilho; invalidada = true; }
+    if (personagemSobreBrilho) {
+      for (const campo of CAMPOS_OCLUSAO) {
+        if (brilhoAnterior[campo] !== player[campo]) { brilhoAnterior[campo] = player[campo]; invalidada = true; }
+      }
+    }
     const lanternaAtiva = !iluminacao.energia && player?.active !== false &&
       !!player && Number.isFinite(player.x) && Number.isFinite(player.y);
     let angulo = null;
@@ -405,6 +432,7 @@ function criarIluminacaoTerror(scene) {
         revisaoParedes = paredesLanterna.revisao;
       }
     }
+    luzesFixas.atualizar(scene.time.now, zonas, paredesLanterna, estatuasGiroflex, oclusaoEmissorBoss);
     if (lanternaAtiva) {
       atualizarPoseLanterna(scene, poseLanterna);
       angulo = poseLanterna.angulo;
@@ -455,7 +483,8 @@ function criarIluminacaoTerror(scene) {
       ultimoQuadro.a === m.a && ultimoQuadro.b === m.b && ultimoQuadro.c === m.c && ultimoQuadro.d === m.d &&
       ultimoQuadro.e === m.e && ultimoQuadro.f === m.f && ultimoQuadro.revisao === iluminacao.revisao &&
       ultimoQuadro.revisaoEmergencia === emergencia.revisao && ultimoQuadro.revisaoZonas === zonas.revisao &&
-      ultimoQuadro.revisaoBoss === arandelas.revisao && ultimoQuadro.revisaoEnergiaBoss === energiaBoss.revisao) return;
+      ultimoQuadro.revisaoBoss === arandelas.revisao && ultimoQuadro.revisaoEnergiaBoss === energiaBoss.revisao &&
+      ultimoQuadro.revisaoFixas === luzesFixas.revisao) return;
     invalidada = false;
     ultimoQuadro.width = width;
     ultimoQuadro.height = height;
@@ -470,6 +499,9 @@ function criarIluminacaoTerror(scene) {
     ultimoQuadro.revisaoZonas = zonas.revisao;
     ultimoQuadro.revisaoBoss = arandelas.revisao;
     ultimoQuadro.revisaoEnergiaBoss = energiaBoss.revisao;
+    ultimoQuadro.revisaoFixas = luzesFixas.revisao;
+    const energiaReduzida = fontesEnergiaBoss.length >= 32;
+    if (energiaReduzida) campoEnergiaBoss.preparar(fontesEnergiaBoss, camera, width, height);
 
     context.setTransform(1, 0, 0, 1, 0, 0);
     context.globalAlpha = 1;
@@ -486,17 +518,16 @@ function criarIluminacaoTerror(scene) {
       desenharLuminaria(context, areasCanvas.get(luz)?.mascara ?? (luz.pulsando ? luminariaPulsoCanvas : luminariaCanvas), luz, limitesLampadas);
     }
     for (const fonte of giroflex) {
+      if (fonte.luz.neon) continue;
       context.globalAlpha = fonte.intensidade;
-      desenharFonteDirecional(context, fonte.luz.neon ? neonCanvas : fonte.luz.parede ? giroflexLateralCanvas : giroflexCanvas,
-        fonte, paredesLanterna, estatuasGiroflex, null, luzesFixas);
+      desenharFonteDirecional(context, fonte.luz.parede ? giroflexLateralCanvas : giroflexCanvas,
+        fonte, paredesLanterna, estatuasGiroflex);
     }
-    for (const fonte of fontesParede) {
+    luzesFixas.desenhar(context, false, camera);
+    if (energiaReduzida) campoEnergiaBoss.desenhar(context, false, width, height);
+    else for (const fonte of fontesEnergiaBoss) {
       context.globalAlpha = fonte.intensidade;
-      desenharFonteDirecional(context, paredeCanvas, fonte, paredesLanterna, estatuasGiroflex, oclusaoEmissorBoss, luzesFixas);
-    }
-    for (const fonte of fontesEnergiaBoss) {
-      context.globalAlpha = fonte.intensidade;
-      desenharLuminaria(context, perfisEnergiaBoss[fonte.vermelha ? 2 : Number(fonte.escudo)].mascara, fonte.luz, paredesLanterna);
+      desenharLuminaria(context, perfisEnergiaBoss[fonte.branca ? 3 : fonte.vermelha ? 2 : Number(fonte.escudo)].mascara, fonte.luz, paredesLanterna);
     }
     if (lanternaAtiva) {
       const usarOclusao = lanternaAtras || !!camadaFrenteLanterna || !!regiaoFrenteLanterna;
@@ -530,36 +561,44 @@ function criarIluminacaoTerror(scene) {
       context.globalAlpha = intensidade * escalaCor;
       desenharLuminaria(context, areasCanvas.get(luz)?.cor ?? coresCanvas.get(luz.cor.css), luz, limitesLampadas);
     }
+    context.restore();
+    const corContext = personagemSobreBrilho ? brilhoContext : context;
+    if (personagemSobreBrilho) {
+      corContext.setTransform(1, 0, 0, 1, 0, 0);
+      corContext.clearRect(0, 0, width, height);
+    }
+    corContext.save();
+    corContext.setTransform(m.a, m.b, m.c, m.d, m.e, m.f);
     // Vermelho puro sobre o cenário: limitar a cor à sombra residual deixava o piso
     // claro dominar o pulso. O mesmo gradiente mantém as bordas suaves.
-    context.globalCompositeOperation = "source-over";
+    corContext.globalCompositeOperation = "source-over";
     for (const { luz, intensidade } of fontes) {
       if (!luz.pulsando) continue;
-      context.globalAlpha = intensidade * 0.45;
-      desenharLuminaria(context, areasCanvas.get(luz)?.cor ?? corPulsoCanvas, luz, limitesLampadas);
+      corContext.globalAlpha = intensidade * 0.45;
+      desenharLuminaria(corContext, areasCanvas.get(luz)?.cor ?? corPulsoCanvas, luz, limitesLampadas);
     }
     for (const fonte of giroflex) {
-      const corNeon = fonte.luz.neon ? coresNeonCanvas.get(fonte.luz.cor.css) : null;
-      context.globalAlpha = fonte.intensidade * 0.55;
-      desenharFonteDirecional(context, corNeon ? corNeon.halo : fonte.luz.parede ? giroflexLateralVermelhoCanvas : giroflexVermelhoCanvas,
-        fonte, paredesLanterna, estatuasGiroflex, null, luzesFixas);
-      if (fonte.luz.neon) {
-        context.globalAlpha = fonte.intensidade * 0.95;
-        desenharFonteDirecional(context, corNeon.emissor, fonte, paredesLanterna, estatuasGiroflex, null, luzesFixas);
-      }
+      if (fonte.luz.neon) continue;
+      corContext.globalAlpha = fonte.intensidade * 0.55;
+      desenharFonteDirecional(corContext, fonte.luz.parede ? giroflexLateralVermelhoCanvas : giroflexVermelhoCanvas,
+        fonte, paredesLanterna, estatuasGiroflex);
     }
-    for (const fonte of fontesParede) {
-      const cor = coresParedeCanvas.get(fonte.luz.cor.css);
-      context.globalAlpha = fonte.intensidade * 0.35;
-      desenharFonteDirecional(context, cor.halo, fonte, paredesLanterna, estatuasGiroflex, oclusaoEmissorBoss, luzesFixas);
-      context.globalAlpha = fonte.intensidade * 0.95;
-      desenharFonteDirecional(context, cor.emissor, fonte, paredesLanterna, estatuasGiroflex, oclusaoEmissorBoss, luzesFixas);
+    luzesFixas.desenhar(corContext, true, camera);
+    if (energiaReduzida) campoEnergiaBoss.desenhar(corContext, true, width, height);
+    else for (const fonte of fontesEnergiaBoss) {
+      corContext.globalAlpha = fonte.intensidade * (fonte.branca ? 0.08 : 0.45);
+      desenharLuminaria(corContext, perfisEnergiaBoss[fonte.branca ? 3 : fonte.vermelha ? 2 : Number(fonte.escudo)].cor, fonte.luz, paredesLanterna);
     }
-    for (const fonte of fontesEnergiaBoss) {
-      context.globalAlpha = fonte.intensidade * 0.45;
-      desenharLuminaria(context, perfisEnergiaBoss[fonte.vermelha ? 2 : Number(fonte.escudo)].cor, fonte.luz, paredesLanterna);
+    if (personagemSobreBrilho) ocultarBrilhoAtrasPersonagem(corContext, player);
+    corContext.restore();
+    if (personagemSobreBrilho) {
+      context.save();
+      context.setTransform(1, 0, 0, 1, 0, 0);
+      context.globalAlpha = 1;
+      context.globalCompositeOperation = "source-over";
+      context.drawImage(brilhoCanvas, 0, 0);
+      context.restore();
     }
-    context.restore();
     context.save();
     context.setTransform(m.a, m.b, m.c, m.d, m.e, m.f);
     zonas.desenharEscuridao(context);
@@ -585,6 +624,7 @@ function criarIluminacaoTerror(scene) {
     emergencia.destroy();
     arandelas.destroy();
     energiaBoss.destroy();
+    campoEnergiaBoss.destroy();
     salaBoss.destroy();
     luzesFixas.destroy();
     zonas.destroy();
@@ -595,7 +635,7 @@ function criarIluminacaoTerror(scene) {
     overlay.destroy();
     if (scene.textures.exists(TEXTURA_ESCURIDAO_PARTE2)) scene.textures.remove(TEXTURA_ESCURIDAO_PARTE2);
     for (const canvas of [luminariaCanvas, luminariaPulsoCanvas, corPulsoCanvas, lanternaCanvas,
-      lanternaOclusaoCanvas, giroflexCanvas, giroflexVermelhoCanvas,
+      lanternaOclusaoCanvas, brilhoCanvas, giroflexCanvas, giroflexVermelhoCanvas,
       giroflexLateralCanvas, giroflexLateralVermelhoCanvas, neonCanvas,
       paredeCanvas, ...coresCanvas.values()]) {
       if (!canvas) continue;

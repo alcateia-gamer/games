@@ -759,6 +759,11 @@ class Preloader extends Phaser.Scene {
       "../Tilesets/City/TorreTileset.png"
     );
 
+    this.load.image(
+      "cabineTelefonica",
+      "../Tilesets/extras/Cabine-Tele.png"
+    );
+
     // =====================================================
     // TILESETS - INTERIOR
     // =====================================================

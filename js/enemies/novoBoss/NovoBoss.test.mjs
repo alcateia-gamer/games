@@ -135,7 +135,7 @@ test("limites da arena são retangulares e não acionam acima, abaixo ou pelos l
 test("usa recursos separados e recortes exatos das folhas fornecidas", () => {
   const { scene, cargas } = criarCena({ assetDisponivel: false });
   carregarAssetsNovoBoss(scene);
-  assert.equal(cargas.length, 13);
+  assert.equal(cargas.length, Object.keys(assetsNovoBoss).length);
   assert.deepEqual(cargas[0], [
     "novo-boss-idle",
     "PERSONAGENS/INIMIGOS PRINCIPAIS/Boss-test/boss-test-idle.png",

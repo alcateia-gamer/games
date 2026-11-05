@@ -20,9 +20,18 @@ export default class BossEmitterOcclusion {
     this.anteriores = new WeakMap();
     this.tilesAnteriores = new WeakMap();
     this.revisao = 0;
+    this.tilesPorCamada = new Map();
     const paraCima = luzes.filter(luz => luz.direcao === "Cima");
     this.canvas = null;
     if (!paraCima.length) return;
+    this.area = { left: Infinity, top: Infinity, right: -Infinity, bottom: -Infinity };
+    for (const luz of paraCima) {
+      const raio = luz.raio * MULTIPLICADOR_ALCANCE_FABRICA;
+      this.area.left = Math.min(this.area.left, luz.x - raio);
+      this.area.top = Math.min(this.area.top, luz.y - raio);
+      this.area.right = Math.max(this.area.right, luz.x + raio);
+      this.area.bottom = Math.max(this.area.bottom, luz.y + raio);
+    }
     this.canvas = document.createElement("canvas");
     this.canvas.width = this.canvas.height = Math.ceil(Math.max(...paraCima.map(luz =>
       luz.raio * MULTIPLICADOR_ALCANCE_FABRICA))) * 2;
@@ -41,7 +50,24 @@ export default class BossEmitterOcclusion {
       let anterior = this.anteriores.get(layer);
       if (!anterior) { anterior = { tiles: [] }; this.anteriores.set(layer, anterior); alterado = true; }
       if (comparar(anterior, layer, CAMPOS_CAMADA)) alterado = true;
-      const tiles = layer.visible === false || layer.alpha === 0 ? [] : layer.cull(camera);
+      // Consulta a região das fontes, independente do movimento e do zoom da câmera.
+      let tiles = [];
+      if (layer.visible !== false && layer.alpha !== 0) {
+        if (layer.getTilesWithinWorldXY && !layer.rotation) {
+          if (anterior.margem === undefined) {
+            anterior.margem = 48;
+            for (const tileset of layer.tilesets ?? Object.values(layer.gidMap)) {
+              if (tileset) anterior.margem = Math.max(anterior.margem,
+                tileset.tileWidth + Math.abs(tileset.tileOffset?.x ?? 0),
+                tileset.tileHeight + Math.abs(tileset.tileOffset?.y ?? 0));
+            }
+          }
+          const a = this.area, m = anterior.margem * Math.max(Math.abs(layer.scaleX ?? 1), Math.abs(layer.scaleY ?? 1));
+          tiles = layer.getTilesWithinWorldXY(a.left - m, a.top - m,
+            a.right - a.left + m * 2, a.bottom - a.top + m * 2, { isNotEmpty: true }, camera);
+        } else tiles = layer.cull(camera);
+      }
+      this.tilesPorCamada.set(layer, tiles);
       if (tiles.length !== anterior.tiles.length) alterado = true;
       for (let i = 0; i < tiles.length; i++) {
         const tile = tiles[i];
@@ -80,7 +106,8 @@ export default class BossEmitterOcclusion {
       c.drawImage(perfil, -raio, -raio, raio * 2, raio * 2);
       c.restore();
     }
-    for (const layer of this.camadas) ocultarLanternaAtrasCamada(c, layer, this.scene.cameras.main);
+    for (const layer of this.camadas) ocultarLanternaAtrasCamada(c, layer, this.scene.cameras.main,
+      null, this.tilesPorCamada.get(layer));
     context.drawImage(this.canvas, luz.x - centro, luz.y - centro, tamanho, tamanho);
     return true;
   }
@@ -88,6 +115,7 @@ export default class BossEmitterOcclusion {
   destroy() {
     if (this.canvas) this.canvas.width = this.canvas.height = 0;
     this.camadas.length = 0;
+    this.tilesPorCamada.clear();
     this.anteriores = new WeakMap();
     this.tilesAnteriores = new WeakMap();
     this.scene = null;

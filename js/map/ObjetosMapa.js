@@ -170,6 +170,19 @@ function criarBasesPostes(scene, map, textureKeyByTilesetName) {
  * Cria as bases de postes e os objetos neon definidos no mapa da cidade.
  */
 function criarObjetosCidade(scene, map, textureKeyByTilesetName) {
+  const camadaCabine = map.getObjectLayer("Cabine");
+  scene.cabineObjects = (camadaCabine?.objects ?? [])
+    .filter(object => object.gid)
+    .map(object => criarBaseVisual(scene, map, object, textureKeyByTilesetName))
+    .filter(Boolean);
+  // As peças formam uma única cabine: todas usam a mesma base na ordenação por Y.
+  const baseCabine = Math.max(...scene.cabineObjects.map(visual => visual.y));
+  for (const visual of scene.cabineObjects) {
+    visual.setDepth(depthFromWorldY(baseCabine));
+    visual.setVisible(camadaCabine.visible !== false && visual.visible !== false);
+    visual.setAlpha((camadaCabine.opacity ?? 1) * (visual.alpha ?? 1));
+  }
+
   const camadaTanqueCombustivel = map.getObjectLayer("TanqueCombustivel");
   scene.tanqueCombustivelObjects = camadaTanqueCombustivel
     ? camadaTanqueCombustivel.objects
