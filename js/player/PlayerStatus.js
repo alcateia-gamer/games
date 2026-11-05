@@ -3,8 +3,6 @@
  * desenha a interface em canvas DOM na resolução da tela.
  */
 
-import { personagemTesteAtivo } from "./PersonagemTeste.js";
-import { prepararRecursosTeste } from "./RecursosPersonagemTeste.js";
 import { playPlayerHitEffects } from "../combat/CombatEffects.js";
 
 // =====================================================
@@ -566,11 +564,8 @@ function atualizarBarrasHUD(scene) {
   const estamina = Phaser.Math.Clamp(scene.estaminaMaxima > 0 ? scene.estamina / scene.estaminaMaxima : 0, 0, 1);
   const vidaPx = Math.round(vida * dados.vida.width * canvas.width / dados.largura);
   const estaminaPx = Math.round(estamina * dados.estamina.width * canvas.width / dados.largura);
-  const numeros = personagemTesteAtivo(scene)
-    ? `${Math.ceil(scene.vida)} / ${scene.vidaMaxima}|${Math.ceil(scene.estamina)} / ${scene.estaminaMaxima}` : "";
-  if (hud.ultimoDesenho?.vidaPx === vidaPx && hud.ultimoDesenho?.estaminaPx === estaminaPx &&
-      hud.ultimoDesenho?.numeros === numeros) return;
-  hud.ultimoDesenho = { vidaPx, estaminaPx, numeros };
+  if (hud.ultimoDesenho?.vidaPx === vidaPx && hud.ultimoDesenho?.estaminaPx === estaminaPx) return;
+  hud.ultimoDesenho = { vidaPx, estaminaPx };
 
   const ctx = canvas.getContext("2d");
 
@@ -629,24 +624,6 @@ function atualizarBarrasHUD(scene) {
     dados.estamina,
     estamina,
   );
-  if (numeros) {
-    const sx = canvas.width / dados.largura, sy = canvas.height / dados.altura;
-    const dpr = globalThis.window?.devicePixelRatio || 1;
-    ctx.save();
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillStyle = "#ffffff";
-    ctx.strokeStyle = "#061017";
-    ctx.lineWidth = 2 * dpr;
-    numeros.split("|").forEach((texto, indice) => {
-      const barra = indice ? dados.estamina : dados.vida;
-      ctx.font = `bold ${Math.max(9 * dpr, Math.min(12 * dpr, barra.height * sy * 0.8))}px monospace`;
-      const x = (barra.x + barra.width / 2) * sx, y = (barra.y + barra.height / 2) * sy;
-      ctx.strokeText(texto, x, y);
-      ctx.fillText(texto, x, y);
-    });
-    ctx.restore();
-  }
 }
 
 // =====================================================
@@ -956,7 +933,6 @@ function criarStatusPlayer(scene) {
   scene.custoAtaque = 20;
   scene.regeneracaoEstamina = 18;
 
-  prepararRecursosTeste(scene);
   iniciarHUD(scene);
 }
 
@@ -969,10 +945,6 @@ function criarStatusPlayer(scene) {
  * milissegundos para segundos.
  */
 function atualizarStatusPlayer(scene, delta) {
-  if (personagemTesteAtivo(scene)) {
-    atualizarBarrasHUD(scene);
-    return;
-  }
   // REGENERAÇÃO DA ESTAMINA.
   if (
     !aplicarEstaminaInfinitaDev(scene) &&
@@ -1079,7 +1051,6 @@ function recuperarVida(scene, quantidade) {
 export {
   criarStatusPlayer,
   atualizarStatusPlayer,
-  atualizarBarrasHUD,
   atualizarPosicaoHUD,
   aplicarEstaminaInfinitaDev,
   gastarEstamina,

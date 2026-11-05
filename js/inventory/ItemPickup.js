@@ -3,7 +3,6 @@
  * itens, porta e gerador, respeitando o menu aberto.
  */
 
-import { criarControlesRecuperacaoTeste } from "../controls/PlayerRecoveryControls.js";
 import { InventoryUI } from "./InventoryUI.js";
 import {
   createBuiltinInventoryTextures,
@@ -106,8 +105,13 @@ function criarSistemaInventario(scene) {
     listInventoryItems().map((item) => [item.id, item]),
   );
   scene.inventory = obterInventarioDoJogador(scene);
+  // Migra somente os consumíveis do pacote revertido, antes de desenhar o inventário.
+  // Os demais itens e o histórico de coleta permanecem intactos.
+  for (const id of ["toxina-de-cura", "comprimidos-de-desempenho"]) {
+    const quantidade = scene.inventory.getQuantity(id);
+    if (quantidade > 0) scene.inventory.removeItem(id, quantidade);
+  }
   scene.inventoryUI = new InventoryUI(scene, scene.inventory);
-  criarControlesRecuperacaoTeste(scene);
   scene.teclaColetarItem = scene.input.keyboard.addKey(
     Phaser.Input.Keyboard.KeyCodes.E,
   );

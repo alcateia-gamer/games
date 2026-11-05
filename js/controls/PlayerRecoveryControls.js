@@ -1,8 +1,9 @@
+// Pacote revertido: controles preservados, mas não criados por nenhuma cena.
 /** Atalhos de consumíveis exclusivos do protótipo; o estoque pertence ao inventário. */
 import { personagemTesteAtivo } from "../player/PersonagemTeste.js";
 import { ITENS_RECUPERACAO_TESTE, darItensIniciaisTeste,
   usarItemRecuperacaoTeste } from "../player/RecursosPersonagemTeste.js";
-import { atualizarBarrasHUD } from "../player/PlayerStatus.js";
+import { recuperarVida } from "../player/PlayerStatus.js";
 import { posicionarBotaoFixo } from "./FixedActionButton.js";
 import { prepareInventoryIcon } from "../inventory/InventoryUI.js";
 import { getInventoryItem } from "../inventory/InventoryItems.js";
@@ -23,7 +24,7 @@ export function criarControlesRecuperacaoTeste(scene) {
       fontSize: "10px", color: "#bde8eb" }).setOrigin(0.5).setDepth(232).setScrollFactor(0);
     botao.on("pointerdown", (_p, _x, _y, evento) => {
       evento?.stopPropagation();
-      if (usarItemRecuperacaoTeste(scene, item.id)) atualizarBarrasHUD(scene);
+      if (usarItemRecuperacaoTeste(scene, item.id)) recuperarVida(scene, 0);
       atualizar();
     });
     return { item, botao, icone, quantidade, percentual };

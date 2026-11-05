@@ -1,3 +1,4 @@
+// Pacote revertido: implementação preservada, sem integração ativa no jogo.
 /** Regras de recursos exclusivas dos personagens de teste. */
 import { personagemTesteAtivo } from "./PersonagemTeste.js";
 

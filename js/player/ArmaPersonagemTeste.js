@@ -1,5 +1,3 @@
-import { gastarEstamina } from "./PlayerStatus.js";
-import { custoEstaminaArmaTeste } from "./PersonagemTeste.js";
 /** Armas temporárias do sprite de teste: empunhadura, mira, lasers e integração da espada. */
 import { PERSONAGEM_TESTE, obterArmasPersonagemTeste, obterArmaPersonagemTeste,
   obterPersonagemTeste, personagemTesteAtivo } from "./PersonagemTeste.js";
@@ -173,7 +171,6 @@ export function dispararLaserPersonagemTeste(scene) {
   if (!estado || estado.config.tipo === "espada" || estado.config.tipo === "florete" || !podeDisparar(scene) ||
     scene.time.now < estado.proximoDisparo) return false;
   const config = estado.config;
-  if (!gastarEstamina(scene, custoEstaminaArmaTeste(scene, config))) return false;
   estado.proximoDisparo = scene.time.now + config.intervaloDisparos;
   estado.ultimoDisparo = scene.time.now;
   atualizarPose(scene, estado);
@@ -194,7 +191,6 @@ export function atacarComArmaPersonagemTeste(scene, golpe = null) {
   const estado = scene.armaPersonagemTeste;
   if (estado?.config.tipo === "florete") {
     if (golpe || !podeDisparar(scene) || estado.estocada || scene.time.now < estado.proximoDisparo) return false;
-    if (!gastarEstamina(scene, custoEstaminaArmaTeste(scene, estado.config))) return false;
     atualizarPose(scene, estado);
     estado.proximoDisparo = scene.time.now + estado.config.intervaloDisparos;
     iniciarEstocada(scene, estado);
@@ -215,15 +211,11 @@ export function atacarComArmaPersonagemTeste(scene, golpe = null) {
   }
   if (!combo && scene.time.now < estado.proximoDisparo) return false;
   if (combo && scene.time.now > estado.comboAte) estado.proximoGolpe = 0;
-  return iniciarAtaqueEspada(scene, estado, golpe);
+  iniciarAtaqueEspada(scene, estado, golpe);
+  return true;
 }
 
 function iniciarAtaqueEspada(scene, estado, golpe = null, anguloAnterior = null) {
-  if (!gastarEstamina(scene, custoEstaminaArmaTeste(scene, estado.config))) {
-    estado.comboPendente = false;
-    estado.proximoGolpe = 0;
-    return false;
-  }
   const combo = obterPersonagemTeste(scene).combo;
   const sequencia = estado.config.sequencia ?? estado.config.golpes;
   const g = golpe ?? (combo ? sequencia[estado.proximoGolpe] : estado.config.golpe);
@@ -235,7 +227,6 @@ function iniciarAtaqueEspada(scene, estado, golpe = null, anguloAnterior = null)
     estado.comboPendente = false;
   }
   atualizarPose(scene, estado);
-  return true;
 }
 
 export function atualizarArmaPersonagemTeste(scene, delta = 0) {

@@ -1,3 +1,8 @@
+> **Pacote revertido a pedido do usuário.** Regeneração, armas e interface voltaram
+> ao comportamento anterior. Este documento registra a implementação histórica;
+> os itens não são concedidos, carregados nem exibidos no jogo.
+> Imagens originais, derivados e módulos ficaram preservados, sem integração ativa.
+
 # Vida, stamina e consumíveis do personagem teste
 
 Aplicado às duas opções de teste existentes (`personagem-teste` e
@@ -78,3 +83,22 @@ existente prepara seus ícones proporcionais no tamanho de exibição.
 
 Nenhum arquivo foi excluído ou renomeado. As alterações anteriores do boss e
 os arquivos enviados pelo usuário foram preservados.
+
+## Reversão do pacote
+
+- [x] Restabelecidas a regeneração automática e as regras anteriores das armas.
+- [x] Restabelecidas as barras sem numeração extra, o botão de troca sem custo
+  sobreposto e a posição anterior do DEV.
+- [x] Retirados o cadastro, a concessão inicial e os botões dos consumíveis.
+  Estoques desses dois itens deixados pela versão anterior são removidos antes
+  de desenhar o inventário, preservando os demais itens e o histórico de coleta.
+- [x] Nove arquivos de código e testes foram conferidos como idênticos à versão
+  anterior ao pacote; a única adaptação do inventário é a migração acima.
+- [x] Os 41 arquivos Node selecionados passaram. No Chromium foram confirmados
+  regeneração, ataque sem os novos custos, dash custando 25, interface anterior,
+  migração dos estoques e reinício sem erros JavaScript, assets ou console.
+- [x] Nenhum arquivo do boss ou do dash foi alterado nesta reversão.
+
+`RecursosPersonagemTeste.js`, `PlayerRecoveryControls.js`, imagens originais e
+cópias transparentes permanecem arquivados, sem chamadas ou carregamento pelo
+jogo. Os dois roteiros de testes do pacote agora verificam a reversão.

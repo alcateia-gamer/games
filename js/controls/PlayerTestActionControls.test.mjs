@@ -30,8 +30,6 @@ function visual(scene, x = 0, y = 0, key = "", frame) {
         ? PERSONAGEM_TESTE.botaoTroca.recorte : { largura: 250, altura: 250 });
       this.width = r.largura; this.height = r.altura; return this;
     },
-    setText(text) { this.text = text; return this; },
-    setName(name) { this.name = name; return this; },
     setPosition(x, y) { Object.assign(this, { x, y }); return this; },
     setScale(x, y = x) { Object.assign(this, { scaleX: x, scaleY: y }); return this; },
     setDisplaySize(x, y) { return this.setScale(x / this.width, y / this.height); },
@@ -55,7 +53,7 @@ function visual(scene, x = 0, y = 0, key = "", frame) {
 
 function fixture(t, personagem = PERSONAGEM_TESTE.id) {
   const s = {
-    personagemSelecionada: personagem, direcaoAtual: "right", vida: 100, vidaMaxima: 100, estamina: 100, estaminaMaxima: 100, inimigos: [],
+    personagemSelecionada: personagem, direcaoAtual: "right", vida: 100, inimigos: [],
     events: new EventEmitter(), input: Object.assign(new EventEmitter(), {
       keyboard: Object.assign(new EventEmitter(), { addKey: () => ({}) }) }),
     game: { registry: new Map(), events: new EventEmitter() },
@@ -253,14 +251,4 @@ test("personagens originais mantêm ataque e mão separados e não recebem troca
   assert.equal(s.botaoAtaque.visible, true);
   assert.equal(s.botaoColetarItem.visible, true);
   near(s.botaoColetarItem.x, 730); near(s.botaoColetarItem.y, 260);
-});
-
-test("losango mostra o custo da arma equipada e acompanha a troca sem atacar", t => {
-  const s = fixture(t);
-  assert.equal(s.textoCustoArmaTeste.text, "3");
-  click(s, s.botaoTrocaArma); assert.equal(s.textoCustoArmaTeste.text, "1");
-  assert.equal(s.estamina, 100);
-  assert.equal(s.armaPersonagemTeste.golpeEspada, null);
-  assert.equal(s.inventory.getQuantity("toxina-de-cura"), 1);
-  assert.equal(s.inventory.getQuantity("comprimidos-de-desempenho"), 1);
 });
