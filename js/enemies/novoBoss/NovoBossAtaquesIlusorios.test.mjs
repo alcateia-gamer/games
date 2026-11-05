@@ -148,7 +148,7 @@ test("espiral emite cem projéteis por dez segundos sem corpos, parry ou registr
 test("tentáculos reproduzem a quantidade local de armadilhas e nunca capturam nem liberam o jogador", () => {
   const { sistema, avancar, semConsequencias } = preparar();
   sistema.iniciar("tentaculos", {}, [0.2, 0.3, 0.7, 0.6]);
-  assert.ok(sistema.snapshot().execucao.armadilhas.length >= 8 && sistema.snapshot().execucao.armadilhas.length <= 12);
+  assert.equal(sistema.snapshot().execucao.armadilhas.length, 5);
   avancar(1000);
   assert.ok(sistema.snapshot().execucao.armadilhas.every(a => a.ativa && !a.capturou && !a.segurando));
   avancar(17999);
@@ -212,13 +212,16 @@ test("controlador real inicia, avança e cancela cópias no mesmo relógio, sem 
   assert.equal(copia.encontro.ataqueAtual, null);
 });
 
-test("fim natural da verdadeira encerra os ataques das cópias no mesmo passo", () => {
+test("tentáculos das cópias têm ciclo próprio e encerram junto da janela real", () => {
   const { scene, encontro, sistema } = preparar();
   encontro.rng = () => 0.3;
   prepararAtaquesNovoBoss(scene, encontro);
   encontro.executarAtaque("tentaculos");
-  const resultado = encontro.avancarAtaque(19000);
-  assert.equal(resultado.terminou, true);
+  assert.equal(encontro.ataqueAtual, null);
+  assert.equal(sistema.snapshot().persistentes.length, 1);
+  encontro.avancarTentaculos(19000);
+  assert.equal(encontro.tentaculosAtivos, null);
+  assert.equal(sistema.snapshot().persistentes.length, 0);
   assert.equal(sistema.snapshot().ativo, false);
   assert.equal(sistema.snapshot().objetos, 0);
 });

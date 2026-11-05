@@ -47,12 +47,10 @@ export function atualizarHudNovoBoss(scene, encontro) {
     !encontro.suspenso && encontro.jogadorNaArena && !scene.multiplayer));
   const fracao = Math.max(0, Math.min(1, encontro.vida / encontro.vidaMaxima));
   const [rotulo, cor] = ESTADOS[encontro.estado] ?? ESTADOS.preparando;
-  const protegida = encontro.relogioCombate < (encontro.invulneravelClonesAte ?? 0);
-  hud.preenchimento.setSize(LARGURA_BARRA * fracao, 10).setFillStyle(protegida ? 0xb8a0ff : cor);
+  hud.preenchimento.setSize(LARGURA_BARRA * fracao, 10).setFillStyle(cor);
   hud.textoVida.setText(`${Math.ceil(encontro.vida)} / ${encontro.vidaMaxima}`);
   const ligados = encontro.geradores?.filter(gerador => gerador.ligado).length ?? 0;
-  let detalhe = protegida ? "CLONAGEM · PROTEGIDA"
-    : encontro.transicaoFase2Pendente && encontro.estado !== "vulneravel" ? "CLONES SE APROXIMAM" : rotulo;
+  let detalhe = encontro.transicaoFase2Pendente && encontro.estado !== "vulneravel" ? "CLONES SE APROXIMAM" : rotulo;
   if (encontro.sistemaIlusoes?.ativo) detalhe += " · NÚCLEO PULSANTE";
   else if (encontro.sistemaClones?.ativo) {
     const clones = encontro.sistemaClones.alvos.filter(alvo => alvo.active).length;

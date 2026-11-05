@@ -21,6 +21,7 @@ const snapshot = () => page.evaluate(() => {
     clones: boss?.sistemaClones?.snapshot() ?? null,
     ilusoes: boss?.sistemaIlusoes?.snapshot() ?? null,
     ataque: boss?.ataqueAtual?.snapshot() ?? null,
+    tentaculos: boss?.tentaculosAtivos?.snapshot() ?? null,
     lasers: boss?.projeteisBoss?.filter(obj => obj.active).length ?? 0,
     alvos: boss?.alvosIlusorios?.filter(alvo => alvo.active).length ?? 0,
     hud: boss?.hud ? { vida: boss.hud.textoVida.text, estado: boss.hud.textoEstado.text,
@@ -102,7 +103,7 @@ async function instalarDriver() {
     scene.events.on("novo-boss:clones-iniciados", ({ quantidade }) => {
       eventos.clones.push(quantidade);
       eventos.origensOndas.push({ x: boss.x, y: boss.y,
-        protecaoMs: boss.invulneravelClonesAte - boss.relogioCombate });
+        protecaoMs: Math.max(0, boss.invulneravelClonesAte - boss.relogioCombate) });
       origemClones = { x: boss.x, y: boss.y };
     });
     scene.events.on("novo-boss:ilusao-dissipada", () => fantasmaMorreu++);
@@ -137,14 +138,13 @@ async function instalarDriver() {
               boss.config.ataques.chuvaRaios.raio + 32));
           }
         }
-      } else if (ataque?.tipo === "tentaculos") {
-        for (const armadilha of ataque.armadilhas) {
-          if (armadilha.ativa) margem = Math.min(margem,
-            margemCirculo(ponto, armadilha.x, armadilha.y, 60));
-        }
       } else if (ataque?.tipo === "pulsoRepulsao") {
         margem = Math.min(margem, margemCirculo(ponto, ataque.origem.x, ataque.origem.y,
           boss.config.ataques.pulsoRepulsao.raio + 40));
+      }
+      for (const armadilha of boss.tentaculosAtivos?.snapshot().armadilhas ?? []) {
+        if (armadilha.ativa) margem = Math.min(margem,
+          margemCirculo(ponto, armadilha.x, armadilha.y, 60));
       }
       for (const laser of boss.projeteisBoss) {
         if (!laser.active || laser.especialRefletido) continue;
@@ -438,10 +438,11 @@ try {
   assert.ok(state.playerVida > 0 && state.playerVida <= state.playerVidaMaxima);
   assert.ok(state.eventos.clones.length >= 2, "A segunda fase precisa repetir as ondas no combate automático.");
   assert.ok(state.eventos.origensOndas.every(p => p.x === novoBossConfig.posicaoInicial.x &&
-    p.y === novoBossConfig.posicaoInicial.y && Math.abs(p.protecaoMs - 2000) < 0.001));
-  console.log(`PASS: ${state.eventos.clones.length} ondas automáticas nasceram no centro com dois segundos de proteção cada.`);
+    p.y === novoBossConfig.posicaoInicial.y && p.protecaoMs === 0));
+  console.log(`PASS: ${state.eventos.clones.length} ondas automáticas nasceram no centro sem invulnerabilidade adicional.`);
   assert.equal(state.developerMode, false);
   assert.equal(state.ataque, null);
+  assert.equal(state.tentaculos, null);
   assert.equal(state.alvos, 0);
   assert.equal(state.lasers, 0);
   assert.equal(state.captura, null);

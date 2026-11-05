@@ -434,19 +434,20 @@ test("controlador integra dano, viagem e derrota sem recriar a entidade", () => 
   const encontro = prepararNovoBoss(scene);
   const hitbox = encontro.hitboxDano;
   const origem = { x: encontro.x, y: encontro.y };
-  assert.equal(encontro.receberDano(25), false);
+  assert.equal(encontro.receberDano(25), true);
   atualizarNovoBoss(scene, 0, encontro.config.combate.preparacaoMs);
   assert.equal(encontro.estado, "vulneravel");
   assert.equal(encontro.receberDano(25), true);
-  assert.equal(encontro.vida, encontro.vidaMaxima - 25);
-  assert.equal(encontro.receberDano(25), false);
+  assert.equal(encontro.vida, encontro.vidaMaxima - 50);
   assert.equal(encontro.body.enable, true);
   for (let i = 0; i < 2; i++) {
     atualizarNovoBoss(scene, 0, encontro.config.combate.intervaloAcertosMs);
     assert.equal(encontro.receberDano(25), true);
   }
-  assert.equal(encontro.vida, encontro.vidaMaxima - 75);
-  assert.equal(encontro.body.enable, false);
+  assert.equal(encontro.vida, encontro.vidaMaxima - 100);
+  assert.equal(encontro.sprite.body.enable, false);
+  assert.equal(encontro.body, encontro.hitboxDano);
+  assert.equal(encontro.receberDano(25, { ...encontro.hitboxDano }), true);
   atualizarNovoBoss(scene, 0,
     encontro.config.teleporte.desaparecerMs + encontro.config.teleporte.reaparecerMs);
   assert.notDeepEqual({ x: encontro.x, y: encontro.y }, origem);

@@ -21,10 +21,10 @@ function preparar(config={},extras={}) {
   return {ataque,scene,encontro,avisos,capturas,liberacoes,danos,ativas,aproximar};
 }
 
-test('sorteia 8–12 tentáculos entre 120 e 300px do boss, separados e fixos',()=>{
+test('sorteia cinco tentáculos entre 120 e 300px do boss, separados e fixos',()=>{
   for(let i=0;i<5;i++){
     const c=preparar({}, {rng:()=>i/5});const a=c.ataque.snapshot().armadilhas;
-    assert.equal(a.length,8+i);
+    assert.equal(a.length,5);
     for(let j=0;j<a.length;j++){
       assert.ok(Math.hypot(a[j].x,a[j].y)>=119.999&&Math.hypot(a[j].x,a[j].y)<=300.001);
       for(let k=0;k<j;k++)assert.ok(Math.hypot(a[j].x-a[k].x,a[j].y-a[k].y)>=48);

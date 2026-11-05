@@ -1,6 +1,6 @@
 /** Botão contextual e troca de armas, exclusivos do personagem de teste. */
 import { PERSONAGEM_TESTE, personagemTesteAtivo, obterArmaPersonagemTeste,
-  obterArmasPersonagemTeste } from "../player/PersonagemTeste.js";
+  obterArmasPersonagemTeste, custoEstaminaArmaTeste } from "../player/PersonagemTeste.js";
 import { trocarArmaPersonagemTeste } from "../player/ArmaPersonagemTeste.js";
 import { posicionarBotaoFixo } from "./FixedActionButton.js";
 
@@ -22,6 +22,10 @@ export function criarControlesAcaoTeste(scene) {
     .setInteractive({ useHandCursor: true });
   const icone = scene.add.image(0, 0, obterArmaPersonagemTeste(scene).textura, "arma")
     .setOrigin(0.5).setScrollFactor(0).setDepth(231);
+  const custo = scene.add.text(0, 0, "", { fontFamily: "monospace", fontSize: "14px",
+    fontStyle: "bold", color: "#ffffff", stroke: "#075279", strokeThickness: 2 })
+    .setOrigin(0.5).setDepth(232).setScrollFactor(0);
+  scene.textoCustoArmaTeste = custo;
   scene.botaoTrocaArma = botao;
   scene.iconeTrocaArma = icone;
   let ponteiroTroca = null;
@@ -37,12 +41,14 @@ export function criarControlesAcaoTeste(scene) {
     const podeTrocar = ativo && obterArmasPersonagemTeste(scene).length > 1;
     botao.setVisible(podeTrocar);
     icone.setVisible(podeTrocar);
+    custo.setVisible(podeTrocar);
 
     const arma = obterArmaPersonagemTeste(scene);
     if (arma !== armaExibida) {
       icone.setTexture(arma.textura, "arma");
       armaExibida = arma;
     }
+    custo.setText(String(custoEstaminaArmaTeste(scene, arma)));
     const pressionado = ponteiroTroca === null ? 1 : 0.92;
     const camera = scene.cameras.main;
     posicionarBotaoFixo(camera, botao, POSICAO_TROCA.x, POSICAO_TROCA.y,
@@ -51,6 +57,9 @@ export function criarControlesAcaoTeste(scene) {
     const escalaIcone = Math.min(32 / arma.recorte.largura, 24 / arma.recorte.altura);
     posicionarBotaoFixo(camera, icone, POSICAO_TROCA.x, POSICAO_TROCA.y,
       escalaIcone * pressionado);
+    // Centro medido do losango azul (88,94) na imagem original 486×444.
+    posicionarBotaoFixo(camera, custo, POSICAO_TROCA.x + (88 - 243) * 60 / 486 * pressionado,
+      POSICAO_TROCA.y + (94 - 222) * 60 / 486 * pressionado, pressionado);
   };
   const soltar = (pointer) => {
     if (pointer && ponteiroTroca !== pointer.id) return;
@@ -82,6 +91,8 @@ export function criarControlesAcaoTeste(scene) {
     scene.input.off("pointerupoutside", soltar);
     botao.destroy();
     icone.destroy();
+    custo.destroy();
+    scene.textoCustoArmaTeste = null;
     scene.botaoTrocaArma = null;
     scene.iconeTrocaArma = null;
     scene.atualizarAcoesPersonagemTeste = null;

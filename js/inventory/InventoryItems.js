@@ -177,6 +177,14 @@ registerInventoryItem({
   showQuantity: false,
 });
 
+// Consumíveis do protótipo: imagens derivadas; os arquivos enviados permanecem intactos.
+for (const [id, name] of [["toxina-de-cura", "Toxina de cura"],
+  ["comprimidos-de-desempenho", "Comprimidos de desempenho"]]) {
+  registerInventoryItem({ id, name, category: "consumable", usable: true,
+    image: { key: `inventory-${id}-icon`,
+      path: `PERSONAGENS/personagens-teste/derivados/recuperacao/${id}-transparente.png` } });
+}
+
 export {
   createBuiltinInventoryTextures,
   getInventoryItem,

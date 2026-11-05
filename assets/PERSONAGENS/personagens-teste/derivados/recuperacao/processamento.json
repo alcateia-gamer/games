@@ -1,0 +1,37 @@
+{
+  "ferramenta": "image_gen.imagegen (built-in)",
+  "originais_preservados": true,
+  "transparencia": true,
+  "itens": [
+    {
+      "original": {
+        "arquivo": "assets/PERSONAGENS/personagens-teste/toxina-de-cura.png",
+        "sha256": "8b80522c1311a456e55123da0239679a6578920075b424dfceb5d63d1fd0f2fb",
+        "largura": 736,
+        "altura": 736
+      },
+      "derivado": {
+        "arquivo": "assets/PERSONAGENS/personagens-teste/derivados/recuperacao/toxina-de-cura-transparente.png",
+        "sha256": "bf81ec71ee3e949d82a4ff633c487e3dba61b797fd0307a5905d5f36f0f3a6d4",
+        "largura": 1254,
+        "altura": 1254
+      },
+      "prompt": "Use case: background-extraction. Edit target: the supplied purple syringe game item icon. Remove ONLY the plain white external background and white negative spaces in the syringe handle/rings and around needle, leaving true transparent alpha. Preserve the exact original pixel art syringe silhouette, original purple fill, grey outlines, and the white highlight pixels inside the purple barrel. Do not redesign, recolor, add glow, blur or add shadow. Keep the full syringe uncut, same diagonal pose, proportions, and framing. Output a transparent PNG asset for a 2D game HUD."
+    },
+    {
+      "original": {
+        "arquivo": "assets/PERSONAGENS/personagens-teste/comprimidos-de-desempenho.png",
+        "sha256": "379488f2453293a11e7ea3efca7a39b8df39d0999b57e4334c66524b40ff39d8",
+        "largura": 736,
+        "altura": 1308
+      },
+      "derivado": {
+        "arquivo": "assets/PERSONAGENS/personagens-teste/derivados/recuperacao/comprimidos-de-desempenho-transparente.png",
+        "sha256": "1fec6bec187e71d4e92996a9f53ecae0de475d06adbff183c26b0d1c79ba069d",
+        "largura": 941,
+        "altura": 1672
+      },
+      "prompt": "Use case: background-extraction. Edit target: supplied bright green medicine bottle pixel art game item. Remove ONLY the external pale grey/white rectangular background, making it truly transparent. Preserve the entire original bottle silhouette, chunky black pixel outline, neon green fill, light grey/white cap and paper label, all original details. The white and pale grey areas INSIDE the bottle, cap and label must remain fully opaque. Do not redraw, blur, soften, recolor, add glow or add shadow. Keep full bottle centered and uncut with its original proportions. Transparent PNG for a 2D game HUD."
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-/** Transição única e ondas recorrentes, preservando as aberturas de dano. */
+/** Transição única e ondas recorrentes, sem proteção extra contra dano. */
 import { jogadorNaArenaNovoBoss } from "./NovoBossConfig.js";
 import { destinoValidoNovoBoss, iniciarTeleporteNovoBoss, sincronizarCorpoNovoBoss } from "./NovoBossTeleporte.js";
 import { atualizarMovimentoNovoBoss } from "./NovoBossMovimento.js";
@@ -36,9 +36,9 @@ export function prepararFasesNovoBoss(scene, encontro) {
     if (!noCentro(encontro) || !destinoValidoNovoBoss(scene, encontro, centroDoEncontro(encontro))) return false;
     sincronizarCorpoNovoBoss(encontro, centroDoEncontro(encontro));
     const agora = encontro.relogioCombate;
-    // O evento de criação já observa o prazo correto da proteção e a origem.
+    // Clonar não protege a verdadeira; apenas a barreira pode bloquear dano.
     encontro.inicioOndaClonesEm = agora;
-    encontro.invulneravelClonesAte = agora + numero(encontro.config.fase2.invulneravelAoClonarMs, 2000);
+    encontro.invulneravelClonesAte = 0;
     encontro.ondasClonesFase2++;
     if (!encontro.iniciarClones?.()) {
       encontro.inicioOndaClonesEm = null;
@@ -90,7 +90,7 @@ export function prepararFasesNovoBoss(scene, encontro) {
     encontro.fase = 2;
     encontro.inicioFase2Em = encontro.relogioCombate;
     encontro.transicaoFase2Pendente = true;
-    encontro.cancelarAtaque?.();
+    encontro.cancelarAtaque?.({ preservarTentaculos: true });
     encontro.sistemaIlusoes?.encerrarQuatro();
     scene.events?.emit("novo-boss:fase-alterada", { encontro, anterior: 1, fase: 2 });
     return true;

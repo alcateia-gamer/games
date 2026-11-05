@@ -61,29 +61,19 @@ function corpoBloqueador(config, ponto) {
   return { body: { ...areaCorpoNovoBoss(config, ponto), enable: true } };
 }
 
-test("produção permite três acertos espaçados, sem fugir depois do primeiro", () => {
-  const c = criarEncontro({ combate: novoBossConfig.combate });
-  abrir(c);
-  const inicio = c.encontro.relogioCombate;
-  for (let i = 0; i < 3; i++) {
-    assert.equal(causarDanoNovoBoss(c.scene, c.encontro, 25), true);
-    assert.equal(c.encontro.vida, 1000 - 25 * (i + 1));
-    assert.equal(causarDanoNovoBoss(c.scene, c.encontro, 25), false, "Sem dano duplicado no mesmo instante.");
-    if (i < 2) {
-      assert.equal(c.encontro.estado, "vulneravel");
-      assert.equal(c.encontro.teleporte, null);
-      c.atualizar(249);
-      assert.equal(causarDanoNovoBoss(c.scene, c.encontro, 25), false);
-      c.atualizar(1);
-    }
+test("acertos consecutivos não ganham imunidade e não interrompem o ataque em curso", () => {
+  for (const estado of ["posicionada", "preparando", "atacando", "teletransportando", "vulneravel"]) {
+    const c = criarEncontro({ combate: novoBossConfig.combate });
+    const ataque = { tipo: "chuvaRaios" };
+    Object.assign(c.encontro, { estado, ataqueAtual: ataque, tempoAtaque: 123,
+      invulneravelClonesAte: Infinity, proximoAcertoEm: Infinity });
+    assert.equal(causarDanoNovoBoss(c.scene, c.encontro, 25), true, estado);
+    assert.equal(causarDanoNovoBoss(c.scene, c.encontro, 25), true, estado);
+    assert.equal(c.encontro.vida, 950);
+    assert.equal(c.encontro.estado, estado);
+    assert.equal(c.encontro.ataqueAtual, ataque);
+    assert.equal(c.encontro.tempoAtaque, 123);
   }
-  assert.equal(c.encontro.relogioCombate, inicio + 500);
-  assert.equal(c.encontro.teleporte.motivo, "reativo");
-  assert.equal(c.encontro.acertosNaAbertura, 3);
-  c.atualizar(500 + c.config.combate.preparacaoMs);
-  assert.equal(c.encontro.estado, "vulneravel");
-  assert.equal(c.encontro.acertosNaAbertura, 0);
-  assert.equal(causarDanoNovoBoss(c.scene, c.encontro, 25), true);
 });
 
 test("produção entrega quatro segundos e só reage ao acerto isolado quando a janela termina", () => {
@@ -99,22 +89,22 @@ test("produção entrega quatro segundos e só reage ao acerto isolado quando a 
   assert.equal(c.encontro.vida, 975);
 });
 
-test("retorno dos clones não consome abertura e proteção da clonagem continua bloqueando combos", () => {
+test("retorno dos clones e antigo prazo de clonagem não bloqueiam dano", () => {
   const c = criarEncontro({ combate: novoBossConfig.combate });
   abrir(c);
   c.encontro.teleportePendente = "retorno-clones";
   c.encontro.invulneravelClonesAte = c.encontro.relogioCombate + 2000;
   c.atualizar(1999);
   assert.equal(c.encontro.teleporte, null);
-  assert.equal(causarDanoNovoBoss(c.scene, c.encontro, 25), false);
-  assert.equal(c.encontro.acertosNaAbertura, 0);
+  assert.equal(causarDanoNovoBoss(c.scene, c.encontro, 25), true);
+  assert.equal(c.encontro.acertosNaAbertura, 1);
   c.atualizar(1);
   assert.equal(causarDanoNovoBoss(c.scene, c.encontro, 25), true);
   assert.equal(c.encontro.estado, "vulneravel");
-  assert.equal(c.encontro.acertosNaAbertura, 1);
+  assert.equal(c.encontro.acertosNaAbertura, 2);
 });
 
-test("barreira ou geradores ainda não preparados bloqueiam o dano sem consumir a abertura", () => {
+test("somente a barreira bloqueia dano; pendência dos geradores não cria proteção invisível", () => {
   const c = criarEncontro();
   abrir(c);
   c.encontro.barreiraAtiva = true;
@@ -123,17 +113,17 @@ test("barreira ou geradores ainda não preparados bloqueiam o dano sem consumir 
   assert.equal(c.encontro.estado, "vulneravel");
   c.encontro.barreiraAtiva = false;
   c.encontro.pendencia = "posicoes-geradores-bloqueadas";
-  assert.equal(causarDanoNovoBoss(c.scene, c.encontro, 25), false);
+  assert.equal(causarDanoNovoBoss(c.scene, c.encontro, 25), true);
   c.encontro.pendencia = null;
   assert.equal(causarDanoNovoBoss(c.scene, c.encontro, 25), true);
-  assert.equal(c.encontro.vida, 975);
+  assert.equal(c.encontro.vida, 950);
 });
 
 test("vida e estados têm abertura temporizada e não iniciam fase 2 abaixo de 50%", () => {
   const c = criarEncontro();
   assert.equal(c.encontro.vida, 1000);
   assert.equal(c.encontro.estado, "posicionada");
-  assert.equal(causarDanoNovoBoss(c.scene, c.encontro, 25), false);
+  assert.equal(causarDanoNovoBoss(c.scene, c.encontro, 25), true);
   c.atualizar(1499);
   assert.equal(c.encontro.estado, "preparando");
   c.atualizar(1);
@@ -144,11 +134,11 @@ test("vida e estados têm abertura temporizada e não iniciam fase 2 abaixo de 5
   assert.equal(c.encontro.estado, "preparando");
   c.atualizar(1500);
   assert.equal(causarDanoNovoBoss(c.scene, c.encontro, 501), true);
-  assert.equal(c.encontro.vida, 499);
+  assert.equal(c.encontro.vida, 474);
   assert.equal(c.encontro.fase, undefined);
   assert.equal(c.encontro.clones, undefined);
   assert.equal(c.encontro.estado, "teletransportando");
-  assert.equal(causarDanoNovoBoss(c.scene, c.encontro, 25), false);
+  assert.equal(causarDanoNovoBoss(c.scene, c.encontro, 25), true);
 });
 
 test("acerto reativo fecha a janela e respeita o intervalo mínimo antes da próxima viagem", () => {
@@ -164,13 +154,13 @@ test("acerto reativo fecha a janela e respeita o intervalo mínimo antes da pró
   assert.equal(causarDanoNovoBoss(c.scene, c.encontro, 25), true);
   assert.equal(c.encontro.estado, "preparando");
   assert.equal(c.encontro.teleportePendente, "reativo");
-  assert.equal(causarDanoNovoBoss(c.scene, c.encontro, 25), false);
+  assert.equal(causarDanoNovoBoss(c.scene, c.encontro, 25), true);
   c.atualizar(399);
   assert.equal(c.encontro.teleporte, null);
   c.atualizar(1);
   assert.equal(c.encontro.estado, "teletransportando");
   assert.equal(c.encontro.ultimoTeleporteEm, 3900);
-  assert.equal(c.encontro.vida, 950);
+  assert.equal(c.encontro.vida, 925);
 });
 
 test("teletransporte preventivo só ocorre após dez segundos sem aproximação", () => {

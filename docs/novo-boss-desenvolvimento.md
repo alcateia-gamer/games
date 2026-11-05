@@ -1816,3 +1816,71 @@ preservadas. Captura inspecionada: `/tmp/boss-aviso-libertacao/agarrado-7-de-8.p
   saída da arena também passaram, sem erros de JavaScript, assets ou console.
 
 Nenhum sprite ou arquivo original foi alterado nesta mudança.
+
+### Cinco tentáculos como obstáculos e dano contínuo sem escudo
+
+Esta revisão substitui as regras anteriores de 8–12 tentáculos, dano restrito às
+aberturas e proteção de dois segundos ao clonar.
+
+- [x] Invoca cinco tentáculos reais, em posições aleatórias próximas do boss,
+  conservando o aviso de um segundo e os 18 segundos de permanência após surgir.
+- [x] Os tentáculos possuem execução própria em `tentaculosAtivos`. Não ocupam
+  `ataqueAtual`; o seletor automático inicia o próximo ataque no mesmo turno.
+  Enquanto a onda existir, novas invocações não acumulam outras armadilhas.
+- [x] Armadilhas e capturas avançam pelo tempo efetivamente consumido pelo
+  combate, inclusive durante outros ataques e teletransportes. Não somem quando
+  o ataque ofensivo termina. A mudança para a fase 2 conserva os tentáculos reais.
+- [x] Cópias podem manter os seus tentáculos visuais enquanto reproduzem outro
+  ataque, no mesmo relógio da verdadeira, sem dano ou captura.
+- [x] A libertação mantém os oito apertos de ataque. Sair da arena, morrer,
+  encerrar o encontro ou cancelar integralmente limpa as armadilhas e a captura.
+- [x] Sem barreira, golpes válidos podem acertar na preparação, durante ataques,
+  movimento, clonagem e teleporte. Foram retirados o bloqueio por estado e os
+  períodos de imunidade da clonagem e de 250 ms entre acertos. A cadência e a
+  proteção contra repetir o mesmo golpe continuam sob controle das armas.
+- [x] O corpo Arcade continua desligado durante o teleporte para preservar a
+  segurança das colisões; o alvo de combate usa a hitbox sincronizada. O HUD
+  deixou de anunciar proteção por clonagem. A barreira dos geradores continua
+  bloqueando dano normalmente.
+
+Arquivos de implementação alterados, todos em `js/enemies/novoBoss/`:
+
+| Arquivo | Alteração |
+| --- | --- |
+| `NovoBossConfig.js`, `ataques/Tentaculos.js` | Quantidade fixa de cinco, mantendo duração e captura. |
+| `NovoBossAtaques.js` | Ciclo independente das armadilhas, seleção imediata de outro ataque e limpeza. |
+| `NovoBossAtaquesIlusorios.js` | Tentáculos visuais persistentes coexistindo com o ataque imitado. |
+| `NovoBossEstados.js` | Avanço das armadilhas pelo relógio do combate; dano sem janelas de imunidade. |
+| `NovoBoss.js` | Hitbox de combate disponível durante o teleporte. |
+| `NovoBossFases.js` | Clonagem sem proteção adicional e preservação das armadilhas na transição. |
+| `NovoBossHud.js` | Remoção da indicação de imunidade por clonagem. |
+
+Validação:
+
+- [x] Passaram os 24 arquivos Node de boss, captura, alvos adicionais e dano do
+  jogador. Quatro cenários novos em `NovoBossPulsoCentral.test.mjs` verificam
+  simultaneidade, duração exata, limite de uma onda, cópias e limpeza.
+- [x] `tests/novo-boss-tentaculo.browser.mjs`: animação, captura, oito apertos,
+  permanência de 18 segundos, cancelamento, cópias e saída da arena.
+- [x] `tests/novo-boss-aviso-libertacao.browser.mjs`: 20 ondas de cinco tentáculos
+  e entradas reais nos três personagens, com puxão sem retorno e sem gasto de
+  estamina ou disparos ao tentar se libertar.
+
+Os testes existentes afetados foram atualizados para consultar a execução
+persistente. Novo roteiro integrado: `tests/novo-boss-tentaculos-arena.browser.mjs`.
+Nenhum arquivo de arte, mapa, arma, multiplayer ou boss antigo foi modificado.
+- [x] `tests/novo-boss-ataques-ilusorios.browser.mjs`: todas as combinações dos
+  quatro recursos com três/nove cópias passaram, com vida e controles iguais à
+  execução sem cópias. Cancelar, sair, morrer, multiplayer e reiniciar limparam
+  os efeitos próprios.
+- [x] `tests/novo-boss-tentaculos-arena.browser.mjs`: invocação e chuva no mesmo
+  turno, libertação durante ataque, pulso coexistente, dano por alvo real em
+  preparação/ataque/teleporte/clonagem, escudo dos quatro geradores, expiração
+  exata e saída passaram. A composição foi inspecionada em
+  `/tmp/boss-tentaculos-arena/combate.png`.
+- [x] `tests/novo-boss-etapa8.browser.mjs`: luta completa de 1000 a zero com
+  quarenta impactos reais de flechas, todos os ataques, três ondas de clones,
+  limpeza das ameaças e tentáculos na derrota, corpo persistente, WASD,
+  reinício e portal de retorno passaram. Nenhum erro JavaScript, asset ou
+  console. O teste usa Chromium/SwiftShader e não mede desempenho em hardware
+  físico.

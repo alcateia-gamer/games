@@ -7,6 +7,7 @@ import { criarExplosaoEnergia } from "./NovoBossEfeitosEnergia.js";
 export function criarAtaquesIlusoriosNovoBoss(scene, encontro, alvo) {
   const objetos = new Set();
   const explosoes = new Set();
+  const persistentes = new Set();
   const geometria = criarServicosAtaques(scene, encontro);
   let execucao = null;
   let fonte = null;
@@ -51,6 +52,8 @@ export function criarAtaquesIlusoriosNovoBoss(scene, encontro, alvo) {
 
   function cancelar() {
     encerrarExecucao();
+    for (const item of persistentes) item.execucao.destruir();
+    persistentes.clear();
     for (const item of explosoes) item.efeito.destruir();
     explosoes.clear();
     for (const objeto of [...objetos]) objeto.destroy();
@@ -104,6 +107,23 @@ export function criarAtaquesIlusoriosNovoBoss(scene, encontro, alvo) {
       execucao = def[0](cenaVisual, alvo, ajustes, servicos);
       return true;
     },
+    destacar() {
+      if (!execucao || tipo !== "tentaculos") return false;
+      persistentes.add({ execucao, fonte });
+      execucao = null;
+      fonte = null;
+      tipo = null;
+      return true;
+    },
+    avancarPersistentes(delta) {
+      if (destruido || !Number.isFinite(delta) || delta < 0) return;
+      for (const item of persistentes) {
+        if (item.execucao.atualizar(delta)) {
+          item.execucao.destruir();
+          persistentes.delete(item);
+        }
+      }
+    },
     avancar(delta) {
       if (destruido || !fonte || !Number.isFinite(delta) || delta < 0) return;
       tempo += delta;
@@ -129,6 +149,7 @@ export function criarAtaquesIlusoriosNovoBoss(scene, encontro, alvo) {
     snapshot() {
       return { somenteVisual: true, tipo, tempo, ativo: fonte !== null,
         execucao: execucao?.snapshot() ?? null, objetos: objetos.size,
+        persistentes: [...persistentes].map(item => item.execucao.snapshot()),
         explosoes: explosoes.size, destruido };
     },
   };

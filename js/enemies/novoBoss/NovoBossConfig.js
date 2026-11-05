@@ -26,7 +26,7 @@ export const novoBossConfig = Object.freeze({
     preparacaoMs: 1500,
     janelaVulneravelMs: 4000,
     acertosPorAbertura: 3,
-    intervaloAcertosMs: 250,
+    intervaloAcertosMs: 0,
   }),
   geradores: Object.freeze({
     ativo: true,
@@ -44,7 +44,7 @@ export const novoBossConfig = Object.freeze({
   ilusoes: Object.freeze({ ativo: true, duracaoMs: 10000 }),
   clones: Object.freeze({ ativo: true, quantidade: 9, duracaoMs: 18000, velocidade: 55 }),
   fase2: Object.freeze({
-    ativo: true, limiarVida: 0.5, intervaloOndasMs: 10000, invulneravelAoClonarMs: 2000,
+    ativo: true, limiarVida: 0.5, intervaloOndasMs: 10000, invulneravelAoClonarMs: 0,
     movimento: Object.freeze({ ativo: true, velocidade: 250, distanciaPreferida: 180,
       alternarRumoMs: 1200, intervaloTeleporteMs: 6000 }),
   }),
@@ -55,7 +55,7 @@ export const novoBossConfig = Object.freeze({
     pulsoRepulsao: Object.freeze({ centralizar: true, raio: 310, avisoMs: 1500, expansaoMs: 450, dano: 14, empurrao: 230, duracaoEmpurrao: 180 }),
     chuvaRaios: Object.freeze({ mirarJogador: true, raio: 96, avisoMs: 1000, intervaloMs: 400, quantidade: 15, reutilizarPontos: true, ajustarEscalaAoRaio: true, dano: 16, perigoMs: 150, frameMs: 100, frameImpacto: 4 }),
     lasersEspiral: Object.freeze({ centralizar: true, duracaoDisparosMs: 10000, intercalar: true, velocidade: 145, quantidade: 100, intervaloMs: 100, avisoMs: 700, passoAngulo: 22.5, raio: 6, alcance: 650, dano: 10, vidaProjetilMs: 5500 }),
-    tentaculos: Object.freeze({ quantidadeMinima: 8, quantidadeMaxima: 12, distanciaMinima: 120, distanciaMaxima: 300, apertosParaLibertar: 8, raio: 18, avisoMs: 1000, ativoMs: 18000, agarrarMs: 2500 }),
+    tentaculos: Object.freeze({ quantidade: 5, distanciaMinima: 120, distanciaMaxima: 300, apertosParaLibertar: 8, raio: 18, avisoMs: 1000, ativoMs: 18000, agarrarMs: 2500 }),
   }),
   teleporte: Object.freeze({
     pontos: Object.freeze([

@@ -164,8 +164,6 @@ test("clones e movimento da fase 2 mantêm aberturas reais e dano continua poss�
   c.atualizar(50);
   assert.deepEqual(c.chamadas.mover, [], "A verdadeira permanece parada durante a abertura.");
   assert.equal(c.encontro.vida, vidaAntes, "movimentar os clones não cura a verdadeira");
-  assert.equal(causarDanoNovoBoss(c.scene, c.encontro, 25), false);
-  c.atualizarCombate(500);
   assert.equal(causarDanoNovoBoss(c.scene, c.encontro, 25), true);
   assert.equal(c.encontro.vida, vidaAntes - 25);
   assert.equal(c.encontro.teleporte?.motivo, "reativo");
@@ -305,22 +303,20 @@ test("deltas inválidos não são encaminhados ao movimento da verdadeira", () =
   assert.ok(c.chamadas.mover.every(delta => Number.isFinite(delta) && delta >= 0));
 });
 
-test("proteção da clonagem recusa dano em 1999 ms e libera exatamente em 2000 ms", () => {
+test("clonagem permite dano imediatamente e continua permitindo após dois segundos", () => {
   const c = preparar();
   c.encontro.vida = 499;
   c.atualizar(0);
   let eventosVida = 0;
   c.scene.events.on("novo-boss:vida", () => eventosVida++);
-  assert.equal(c.encontro.invulneravelClonesAte, 2000);
-  c.atualizarCombate(1999);
-  assert.equal(c.encontro.estado, "vulneravel");
-  assert.equal(causarDanoNovoBoss(c.scene, c.encontro, 25), false);
-  assert.equal(c.encontro.vida, 499);
-  assert.equal(eventosVida, 0);
-  c.atualizarCombate(1);
+  assert.equal(c.encontro.invulneravelClonesAte, 0);
   assert.equal(causarDanoNovoBoss(c.scene, c.encontro, 25), true);
   assert.equal(c.encontro.vida, 474);
   assert.equal(eventosVida, 1);
+  c.atualizarCombate(2000);
+  assert.equal(causarDanoNovoBoss(c.scene, c.encontro, 25), true);
+  assert.equal(c.encontro.vida, 449);
+  assert.equal(eventosVida, 2);
 });
 
 function expirarOnda(c) {
@@ -330,7 +326,7 @@ function expirarOnda(c) {
   c.atualizarCombate(500);
 }
 
-test("três ondas nascem no centro com proteção renovada e apenas uma transição de fase", () => {
+test("três ondas nascem no centro sem imunidade e apenas uma transição de fase", () => {
   const c = preparar();
   c.encontro.vida = 499;
   c.atualizar(0);
@@ -338,7 +334,7 @@ test("três ondas nascem no centro com proteção renovada e apenas uma transiç
     assert.equal(c.encontro.ondasClonesFase2, onda);
     assert.equal(c.chamadas.iniciar, onda);
     assert.deepEqual([c.encontro.x, c.encontro.y], [-1080, -5810]);
-    assert.equal(c.encontro.invulneravelClonesAte, c.encontro.inicioOndaClonesEm + 2000);
+    assert.equal(c.encontro.invulneravelClonesAte, 0);
     assert.equal(c.encontro.vida, 499);
     if (onda === 3) break;
     expirarOnda(c);
@@ -430,7 +426,7 @@ test("tentativa recusada não concede proteção nem conta uma onda que não nas
   assert.equal(c.encontro.invulneravelClonesAte, 0);
   c.permitirClones(true); c.atualizarCombate(500); c.atualizar(0);
   assert.equal(c.encontro.ondasClonesFase2, 1);
-  assert.equal(c.encontro.invulneravelClonesAte, 2500);
+  assert.equal(c.encontro.invulneravelClonesAte, 0);
 });
 
 test("golpe fatal limpa proteção e futuras ondas, sem repetir a fase", () => {

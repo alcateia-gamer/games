@@ -1,4 +1,4 @@
-/** Um ataque ofensivo por vez; cada execução tem seus próprios recursos. */
+/** Um ataque ofensivo por vez; os tentáculos têm ciclo próprio na arena. */
 import { definicaoAtaqueNovoBoss } from "./NovoBossFabricaAtaques.js";
 import { criarServicosAtaques } from "./NovoBossServicosAtaques.js";
 import { liberarJogadorNovoBoss } from "../../player/PlayerControlEffects.js";
@@ -26,6 +26,7 @@ export function prepararAtaquesNovoBoss(scene, encontro) {
   encontro.projeteisBoss = [];
   encontro.indiceAtaque = 0;
   encontro.ataqueAtual = null;
+  encontro.tentaculosAtivos = null;
   encontro.ataquePendente = null;
   encontro.concluirPosicionamentoAtaque = (resultado, origemViagem) => {
     if (resultado.motivo !== MOTIVO_CENTRAL) return false;
@@ -41,18 +42,26 @@ export function prepararAtaquesNovoBoss(scene, encontro) {
     return true;
   };
   encontro.executarAtaque = tipo => executarAtaqueNovoBoss(scene, encontro, tipo);
-  encontro.cancelarAtaque = () => cancelarAtaqueNovoBoss(scene, encontro);
+  encontro.cancelarAtaque = opcoes => cancelarAtaqueNovoBoss(scene, encontro, opcoes);
+  encontro.avancarTentaculos = delta => {
+    if (encontro.tentaculosAtivos?.atualizar(delta)) encontro.tentaculosAtivos = null;
+    for (const alvo of encontro.alvosIlusorios ?? []) alvo.ataquesIlusorios?.avancarPersistentes(delta);
+  };
   encontro.iniciarAtaqueAutomatico = () => {
     if (encontro.tentarIniciarOndaClones?.()) return true;
     if (!encontro.config.ataques?.ativo || encontro.config.ataques.automatico === false) return false;
     const sequencia = encontro.config.ataques.sequencia;
-    const previsto = sequencia[encontro.indiceAtaque++ % sequencia.length];
-    let tipo = previsto;
-    if (Math.hypot(scene.player.x - encontro.x, scene.player.y - encontro.y) < 155 &&
-        encontro.ultimoAtaque !== "pulso") tipo = "pulso";
-    if (encontro.executarAtaque(tipo)) return true;
-    // Um jogador sobre o centro não pode bloquear todos os outros ataques.
-    return tipo !== previsto && encontro.executarAtaque(previsto);
+    for (let i = 0; i < sequencia.length; i++) {
+      const previsto = sequencia[encontro.indiceAtaque++ % sequencia.length];
+      let tipo = previsto;
+      if (Math.hypot(scene.player.x - encontro.x, scene.player.y - encontro.y) < 155 &&
+          encontro.ultimoAtaque !== "pulso") tipo = "pulso";
+      const iniciou = encontro.executarAtaque(tipo) ||
+        (tipo !== previsto && encontro.executarAtaque(previsto));
+      // Invocar armadilhas não consome o turno ofensivo, nem sua permanência o bloqueia.
+      if (iniciou && (encontro.ataqueAtual || encontro.ataquePendente || encontro.teleporte)) return true;
+    }
+    return false;
   };
   encontro.avancarAtaque = delta => {
     const ataque = encontro.ataqueAtual;
@@ -78,6 +87,8 @@ export function executarAtaqueNovoBoss(scene, encontro, tipo) {
   if (!def || !encontro.config.ataques?.ativo || encontro.ataqueAtual || encontro.ataquePendente || encontro.teleporte ||
       encontro.morto || encontro.encerrado || encontro.suspenso || !encontro.sprite ||
       !encontro.jogadorNaArena || scene.multiplayer || scene.morteEmAndamento) return false;
+  // No máximo cinco armadilhas reais: não acumula outra onda enquanto a atual existir.
+  if (tipo === "tentaculos" && encontro.tentaculosAtivos) return false;
   if ((tipo === "pulso" || tipo === "lasers") && encontro.config.ataques[def[1]].centralizar !== false) {
     const preparacao = prepararAtaqueCentral(scene, encontro, tipo);
     if (preparacao !== "pronto") return preparacao === "aguardando";
@@ -88,24 +99,32 @@ export function executarAtaqueNovoBoss(scene, encontro, tipo) {
   const servicos = criarServicosAtaques(scene, encontro);
   const rng = servicos.rng;
   servicos.rng = () => { const valor = rng(); sorteios.push(valor); return valor; };
-  encontro.ataqueAtual = def[0](scene, encontro, encontro.config.ataques[def[1]], servicos);
+  const execucao = def[0](scene, encontro, encontro.config.ataques[def[1]], servicos);
+  const persistente = tipo === "tentaculos";
+  if (persistente) encontro.tentaculosAtivos = execucao;
+  else encontro.ataqueAtual = execucao;
   encontro.ultimoAtaque = tipo;
-  encontro.estado = "atacando";
-  encontro.tempoEstado = 0;
+  encontro.estado = persistente ? "preparando" : "atacando";
+  encontro.tempoEstado = persistente ? encontro.config.combate.preparacaoMs : 0;
   for (const alvo of encontro.alvosIlusorios ?? []) {
-    alvo.ataquesIlusorios?.iniciar(tipo, encontro.ataqueAtual, sorteios);
+    alvo.ataquesIlusorios?.iniciar(tipo, execucao, sorteios);
+    if (persistente) alvo.ataquesIlusorios?.destacar();
   }
   scene.events.emit("novo-boss:ataque-iniciado", { encontro, tipo });
   return true;
 }
 
-export function cancelarAtaqueNovoBoss(scene, encontro) {
+export function cancelarAtaqueNovoBoss(scene, encontro, { preservarTentaculos = false } = {}) {
   encontro.ataquePendente = null;
   for (const alvo of encontro.alvosIlusorios ?? []) alvo.ataquesIlusorios?.cancelar();
   encontro.ataqueAtual?.destruir();
   encontro.ataqueAtual = null;
+  if (!preservarTentaculos) {
+    encontro.tentaculosAtivos?.destruir();
+    encontro.tentaculosAtivos = null;
+  }
   encontro.apresentacao?.limparExplosoesPulso();
-  liberarJogadorNovoBoss(scene);
+  if (!preservarTentaculos) liberarJogadorNovoBoss(scene);
   if (encontro.estado === "atacando") {
     encontro.estado = "preparando";
     encontro.tempoEstado = 0;

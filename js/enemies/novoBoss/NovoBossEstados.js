@@ -1,4 +1,4 @@
-/** Vida, aberturas de dano e relógio local dos ataques e teletransportes. */
+/** Vida e relógio local; apenas a barreira protege contra golpes válidos. */
 import { jogadorNaArenaNovoBoss } from "./NovoBossConfig.js";
 import {
   areasSobrepostasNovoBoss,
@@ -90,6 +90,11 @@ function aproximado(scene, encontro) {
     encontro.config.teleporte.distanciaAproximacao;
 }
 
+function avancarRelogio(encontro, delta) {
+  encontro.relogioCombate += delta;
+  encontro.avancarTentaculos?.(delta);
+}
+
 /** Deltas só avançam dentro da arena e com o jogador vivo; sair não cura a boss. */
 export function atualizarCombateNovoBoss(scene, encontro, delta = 0) {
   if (!encontro?.combateInicializado || encontro.encerrado || encontro.morto) return encontro;
@@ -111,7 +116,7 @@ export function atualizarCombateNovoBoss(scene, encontro, delta = 0) {
 
     if (encontro.estado === "atacando" && encontro.ataqueAtual) {
       const resultado = encontro.avancarAtaque(restante);
-      encontro.relogioCombate += resultado.consumido;
+      avancarRelogio(encontro, resultado.consumido);
       if (!aproximado(scene, encontro)) encontro.tempoSemAproximacao += resultado.consumido;
       restante -= resultado.consumido;
       if (resultado.terminou) {
@@ -125,7 +130,7 @@ export function atualizarCombateNovoBoss(scene, encontro, delta = 0) {
     if (encontro.teleporte) {
       const origemViagem = encontro.teleporte.origem;
       const resultado = atualizarTeleporteNovoBoss(scene, encontro, restante);
-      encontro.relogioCombate += resultado.consumido;
+      avancarRelogio(encontro, resultado.consumido);
       restante -= resultado.consumido;
       if (resultado.terminou) {
         alterarEstado(scene, encontro, "preparando");
@@ -155,7 +160,7 @@ export function atualizarCombateNovoBoss(scene, encontro, delta = 0) {
         encontro.ultimoTeleporteEm + encontro.config.teleporte.intervaloMinimoMs) - encontro.relogioCombate)
       : Infinity;
     const passo = Math.min(restante, ateEstado, atePreventivo, ateTentativa);
-    encontro.relogioCombate += passo;
+    avancarRelogio(encontro, passo);
     encontro.tempoEstado += passo;
     if (!perto) encontro.tempoSemAproximacao += passo;
     restante -= passo;
@@ -178,24 +183,21 @@ export function atualizarCombateNovoBoss(scene, encontro, delta = 0) {
   return encontro;
 }
 
-/** Permite combos curtos; o teleporte reativo encerra o limite de acertos ou a janela. */
+/** Sem escudo, ataques, clonagem e teleporte não criam invulnerabilidade. */
 export function causarDanoNovoBoss(scene, encontro, quantidade, area = null) {
   if (!encontro?.combateInicializado || !podeAvancar(scene, encontro) ||
-      encontro.barreiraAtiva || encontro.pendencia === "posicoes-geradores-bloqueadas" ||
-      encontro.relogioCombate < (encontro.invulneravelClonesAte ?? 0) ||
-      encontro.relogioCombate < (encontro.proximoAcertoEm ?? 0) ||
-      encontro.estado !== "vulneravel" || !Number.isFinite(quantidade) || quantidade <= 0 ||
+      encontro.barreiraAtiva || !Number.isFinite(quantidade) || quantidade <= 0 ||
       (area && !areasSobrepostasNovoBoss(area, encontro.hitboxDano))) return false;
   const anterior = encontro.vida;
-  encontro.acertosNaAbertura = (encontro.acertosNaAbertura ?? 0) + 1;
-  encontro.proximoAcertoEm = encontro.relogioCombate + Math.max(0, encontro.config.combate.intervaloAcertosMs ?? 0);
+  if (encontro.estado === "vulneravel") encontro.acertosNaAbertura = (encontro.acertosNaAbertura ?? 0) + 1;
   encontro.vida = Math.max(0, encontro.vida - quantidade);
   scene.events?.emit("novo-boss:vida", { encontro, anterior, vida: encontro.vida, vidaMaxima: encontro.vidaMaxima });
   if (encontro.vida <= 0) {
     derrotar(scene, encontro);
   } else {
     encontro.verificarFase?.();
-    if (encontro.acertosNaAbertura >= Math.max(1, encontro.config.combate.acertosPorAbertura ?? 1)) {
+    if (encontro.estado === "vulneravel" &&
+        encontro.acertosNaAbertura >= Math.max(1, encontro.config.combate.acertosPorAbertura ?? 1)) {
       alterarEstado(scene, encontro, "preparando");
       encontro.teleportePendente = "reativo";
       encontro.proximaTentativaTeleporteEm = encontro.relogioCombate;

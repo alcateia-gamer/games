@@ -3,6 +3,7 @@
  * itens, porta e gerador, respeitando o menu aberto.
  */
 
+import { criarControlesRecuperacaoTeste } from "../controls/PlayerRecoveryControls.js";
 import { InventoryUI } from "./InventoryUI.js";
 import {
   createBuiltinInventoryTextures,
@@ -106,6 +107,7 @@ function criarSistemaInventario(scene) {
   );
   scene.inventory = obterInventarioDoJogador(scene);
   scene.inventoryUI = new InventoryUI(scene, scene.inventory);
+  criarControlesRecuperacaoTeste(scene);
   scene.teclaColetarItem = scene.input.keyboard.addKey(
     Phaser.Input.Keyboard.KeyCodes.E,
   );

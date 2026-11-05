@@ -140,7 +140,9 @@ export function prepararNovoBoss(scene, config = scene?.novoBossConfig ?? novoBo
     active: { get: () => !encontro.encerrado && !encontro.morto && !encontro.suspenso &&
       encontro.jogadorNaArena && !encontro.introducao?.bloqueiaCombate && Boolean(encontro.sprite?.active) },
     visible: { get: () => Boolean(encontro.sprite?.visible) },
-    body: { get: () => encontro.sprite?.body },
+    // O corpo Arcade fica desligado durante o teleporte para evitar colisões.
+    // O alvo de combate continua na hitbox sincronizada, sem imunidade adicional.
+    body: { get: () => encontro.teleporte ? encontro.hitboxDano : encontro.sprite?.body },
     x: { get: () => encontro.sprite?.x ?? config.posicaoInicial.x },
     y: { get: () => encontro.sprite?.y ?? config.posicaoInicial.y },
     alvosIlusorios: { get: () => [

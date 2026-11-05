@@ -13,7 +13,7 @@ const { page, avancar, posicionar } = sessao;
 const snapshot = () => page.evaluate(() => {
   const scene = window.__game.scene.getScene("Level1Parte2");
   return { vida: scene.vida, restricao: scene.restricaoControleNovoBoss ?? null,
-    ataque: scene.novoBoss.ataqueAtual?.snapshot() ?? null,
+    ataque: scene.novoBoss.tentaculosAtivos?.snapshot() ?? null,
     visuais: scene.children.list.filter(o => o.active && o.novoBossTentaculoVisual).map(o => ({
       visivel: o.visible, chave: o.texture.key, frame: o.frame.name,
       segurando: o.novoBossTentaculoSegurando, corpo: Boolean(o.body),
@@ -54,7 +54,7 @@ try {
   console.log("PASS: 140 poses, 40 ms por quadro, loop, resolução lógica 800×600 e base fixa; atlas preserva alfa parcial e não contém verde/roxo residual.");
 
   await posicionar(-1093, -5520); assert.ok(await iniciar());
-  const alvo=await page.evaluate(()=>window.__game.scene.getScene("Level1Parte2").novoBoss.ataqueAtual.snapshot().armadilhas[0]);
+  const alvo=await page.evaluate(()=>window.__game.scene.getScene("Level1Parte2").novoBoss.tentaculosAtivos.snapshot().armadilhas[0]);
   await posicionar(alvo.x,alvo.y-26);
   await avancar(999); let s = await snapshot();
   assert.equal(s.restricao, null); assert.ok(s.visuais.length > 0 && s.visuais.every(v => !v.visivel));

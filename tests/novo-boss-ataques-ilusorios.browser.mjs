@@ -72,7 +72,7 @@ async function executar(tipo, grupo) {
     const donos = new Set();
     if (!boss.executarAtaque(tipo)) throw new Error(`Não iniciou ${tipo}`);
     if (tipo === "tentaculos") {
-      const a=boss.ataqueAtual.snapshot().armadilhas[0];
+      const a=boss.tentaculosAtivos.snapshot().armadilhas[0];
       scene.player.setPosition(a.x,a.y-26);scene.player.body.reset(a.x,a.y-26);
       scene.player.body.updateFromGameObject();atualizarHitboxDanoPlayer(scene);
       Object.assign(inicial,{x:scene.player.x,y:scene.player.y});
@@ -83,12 +83,13 @@ async function executar(tipo, grupo) {
       scene.time.update(scene.time.now + 20, 20);
       atualizarNovoBoss(scene, scene.time.now, 20);
     }
-    if (!boss.ataqueAtual) throw new Error("Não iniciou o ataque após o posicionamento.");
+    if (!(boss.ataqueAtual || boss.tentaculosAtivos)) throw new Error("Não iniciou o ataque ou as armadilhas após o posicionamento.");
     for (const alvo of boss.alvosIlusorios) {
       const copia = alvo.ataquesIlusorios.snapshot();
-      if (!copia.ativo || copia.tipo !== tipo) throw new Error("Cópia não iniciou junto com a verdadeira.");
+      if (tipo === "tentaculos" ? copia.persistentes.length !== 1 : !copia.ativo || copia.tipo !== tipo)
+        throw new Error("Cópia não iniciou junto com a verdadeira.");
       marcas.push({ id: alvo.id, chuva: copia.execucao?.marcas?.length,
-        tentaculos: copia.execucao?.armadilhas?.length });
+        tentaculos: copia.persistentes[0]?.armadilhas?.length });
     }
     function observar() {
       const estado = { vida: scene.vida, invulneravel: Boolean(scene.player.invulneravel),
@@ -109,6 +110,10 @@ async function executar(tipo, grupo) {
       }
       for (const alvo of boss.alvosIlusorios.filter(a => a.active)) {
         const copia = alvo.ataquesIlusorios.snapshot();
+        for (const p of copia.persistentes) {
+          if (p.decorrido !== boss.tentaculosAtivos?.snapshot().decorrido) throw new Error("Relógio das armadilhas divergiu.");
+          if (p.armadilhas.some(a => a.capturou || a.segurando)) throw new Error("Cópia capturou.");
+        }
         if (copia.execucao) {
           if (copia.tempo !== boss.tempoAtaque) throw new Error("Relógio da cópia divergiu.");
           if (copia.execucao.armadilhas?.some(a => a.capturou || a.segurando)) throw new Error("Cópia capturou.");
@@ -123,7 +128,7 @@ async function executar(tipo, grupo) {
       }
     }
     observar();
-    while (boss.ataqueAtual && tempo < 20000) {
+    while ((tipo === "tentaculos" ? boss.tentaculosAtivos : boss.ataqueAtual) && tempo < 20000) {
       // Na chuva mirada, recebe o primeiro impacto e depois segue uma rota
       // determinística. Evita morrer parado e compara os mesmos deslocamentos
       // com/sem cópias, sem alterar vida, defesas ou parâmetros do ataque.
@@ -190,7 +195,7 @@ try {
       assert.ok(resultado.maxEfeitos > 0);
       if (tipo === "chuva") assert.ok(resultado.marcas.every(a => a.chuva === config.ataques.chuvaRaios.quantidade));
       if (tipo === "tentaculos") {
-        assert.ok(resultado.marcas.every(a => a.tentaculos >= 8 && a.tentaculos <= 12));
+        assert.ok(resultado.marcas.every(a => a.tentaculos === 5));
         assert.ok(resultado.dissipou);
       }
       if (tipo === "lasers") {

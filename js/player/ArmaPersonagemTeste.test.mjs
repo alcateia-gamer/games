@@ -129,13 +129,14 @@ test("mantém o foco e troca quando o inimigo sai do alcance ou morre", () => {
   assert.equal(obterAlvoArmaTeste(s, b), null);
 });
 
-test("botão de ataque dispara sem interromper o idle nem gastar estamina e respeita cadência", () => {
+test("botão de ataque dispara sem interromper o idle, gasta três de estamina e respeita cadência", () => {
   const s = cena();
   assert.equal(atacar(s), true);
   assert.equal(s.armaPersonagemTeste.lasers.length, 1);
   assert.equal(s.atacando, false);
-  assert.equal(s.estamina, 80);
+  assert.equal(s.estamina, 77);
   assert.equal(atacar(s), false);
+  assert.equal(s.estamina, 77);
   s.time.now = config.intervaloDisparos;
   assert.equal(atacar(s), true);
   assert.equal(s.armaPersonagemTeste.lasers.length, 2);
@@ -989,5 +990,43 @@ test("pausa, troca de arma e interrupção reiniciam a contagem do dash do flore
     assert.equal(atacar(s), true);
     assert.equal(s.armaPersonagemTeste.estocada.numero, 1);
     assert.equal(s.armaPersonagemTeste.estocada.dash, false);
+  }
+});
+
+test("saldo insuficiente bloqueia o tiro sem consumir recurso ou cadência", () => {
+  const s = cena(); s.estamina = 2;
+  assert.equal(atacar(s), false);
+  assert.equal(s.estamina, 2); assert.equal(s.armaPersonagemTeste.lasers.length, 0);
+  assert.equal(s.armaPersonagemTeste.proximoDisparo, 0);
+  s.estamina = 3; assert.equal(atacar(s), true); assert.equal(s.estamina, 0);
+  s.time.now += config.intervaloDisparos;
+  assert.equal(atacar(s), false); assert.equal(s.estamina, 0);
+});
+
+test("todas as armas corpo a corpo cobram um por golpe e recusam saldo zero", () => {
+  for (const criar of [cenaEspada, cenaFlorete, () => {
+    const s = cenaFlorete(); trocarArmaPersonagemTeste(s); trocarArmaPersonagemTeste(s); return s;
+  }]) {
+    const s = criar(); s.estamina = 0;
+    assert.equal(atacar(s), false);
+    assert.equal(s.armaPersonagemTeste.golpeEspada, null);
+    assert.equal(s.armaPersonagemTeste.estocada, null);
+    s.estamina = 1; assert.equal(atacar(s), true); assert.equal(s.estamina, 0);
+    assert.equal(atacar(s), false); assert.equal(s.estamina, 0);
+  }
+});
+
+test("combo só cobra quando começa a próxima etapa e encerra se o saldo acabar", () => {
+  for (const saldo of [1, 2]) {
+    const s = cenaNovaPersonagem(); s.estamina = saldo;
+    assert.equal(atacar(s), true); assert.equal(s.estamina, saldo - 1);
+    const atual = s.armaPersonagemTeste.golpeEspada, g = atual.config;
+    avancarAte(s, g.preparo + (g.quadros - 2) * g.msPorQuadro);
+    assert.equal(atacar(s), true);
+    assert.equal(s.estamina, saldo - 1, "Fila não é um golpe executado.");
+    avancarAte(s, g.preparo + g.quadros * g.msPorQuadro);
+    assert.equal(s.estamina, 0);
+    assert.equal(Boolean(s.armaPersonagemTeste.golpeEspada), saldo === 2);
+    assert.equal(s.armaPersonagemTeste.comboPendente, false);
   }
 });

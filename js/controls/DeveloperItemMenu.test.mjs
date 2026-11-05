@@ -72,13 +72,14 @@ test("I só abre o menu com DEV ativo, inventário disponível e jogador vivo", 
 });
 
 test("o catálogo permite pegar todos os coletáveis e atualiza as quantidades", () => {
-  const { scene, tecla, clicar, textos } = fixture();
+  const { scene, tecla, clicar, textos, botao } = fixture();
   tecla(73);
   assert.equal(scene.devItemMenuOpen, true);
   assert.equal(scene.movimentoBloqueado, true);
   assert.equal(scene.estadoDash.ativo, false);
   assert.deepEqual(scene.player.velocity, { x: 0, y: 0 });
   for (const item of listInventoryItems()) {
+    while (!botao(`dev-item:${item.id}:1`)) clicar("dev-items-next");
     clicar(`dev-item:${item.id}:1`);
     assert.equal(scene.inventory.getQuantity(item.id), 1);
     assert.ok(textos().includes(`No inventário: 1`));

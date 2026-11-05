@@ -118,7 +118,7 @@ try {
     const armadilha=await page.evaluate(()=>{
       const b=window.__game.scene.getScene('Level1Parte2').novoBoss;
       if(!b.executarAtaque('tentaculos'))throw Error('Tentáculos não iniciaram.');
-      return b.ataqueAtual.snapshot().armadilhas[0];
+      return b.tentaculosAtivos.snapshot().armadilhas[0];
     });
     await posicionar(armadilha.x+12,armadilha.y-20);await avancar(999);
     const ler=()=>page.evaluate(()=>{

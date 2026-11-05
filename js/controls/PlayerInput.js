@@ -3,6 +3,7 @@
  * fixos durante o zoom.
  */
 
+import { personagemTesteAtivo } from "../player/PersonagemTeste.js";
 import { aplicarEstaminaInfinitaDev } from "../player/PlayerStatus.js";
 import { criarJoystick } from "./PlayerJoystick.js";
 import { criarBotaoHUDNitido } from "../ui/HudCanvas.js";
@@ -55,8 +56,11 @@ function configurarControlesFixos(scene) {
     // BOTÃO DEV
     // =================================================
 
-    const devTelaX = camera.width - 40;
-    const devTelaY = scene.minimap?.devScreenY ?? 24;
+    const prototipo = personagemTesteAtivo(scene);
+    const minimapaX = scene.minimap?.root
+      ? origemX + (scene.minimap.root.x - origemX) * zoomX : camera.width - 102;
+    const devTelaX = prototipo ? minimapaX - 50 : camera.width - 40;
+    const devTelaY = prototipo ? 27 : scene.minimap?.devScreenY ?? 24;
 
     const devX = origemX + (devTelaX - origemX) / zoomX;
     const devY = origemY + (devTelaY - origemY) / zoomY;
@@ -67,7 +71,7 @@ function configurarControlesFixos(scene) {
     botaoDev.setScale(1 / zoomX, 1 / zoomY);
     textoDev.setScale(1 / zoomX, 1 / zoomY);
 
-    const luzTelaX = camera.width - 130;
+    const luzTelaX = prototipo ? devTelaX - 100 : camera.width - 130;
     const luzX = origemX + (luzTelaX - origemX) / zoomX;
     const luzY = origemY + (devTelaY - origemY) / zoomY;
 
@@ -77,7 +81,8 @@ function configurarControlesFixos(scene) {
     textoLuzFabrica.setScale(1 / zoomX, 1 / zoomY);
 
     if (scene.botaoFullscreen?.scene) {
-      const fullscreenTelaX = camera.width - (botaoLuzFabrica.visible ? 210 : 100);
+      const fullscreenTelaX = prototipo ? devTelaX - (botaoLuzFabrica.visible ? 190 : 70)
+        : camera.width - (botaoLuzFabrica.visible ? 210 : 100);
       const fullscreenX = origemX + (fullscreenTelaX - origemX) / zoomX;
       scene.botaoFullscreen.setPosition(fullscreenX, devY).setScale(1 / zoomX, 1 / zoomY);
       scene.textoBotaoFullscreen?.setPosition(fullscreenX, devY).setScale(1 / zoomX, 1 / zoomY);

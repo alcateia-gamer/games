@@ -10,7 +10,7 @@ const sessao=await abrirSessaoNovoBoss(config);
 const {page,posicionar,avancar}=sessao;
 const ler=()=>page.evaluate(()=>{
  const s=window.__game.scene.getScene('Level1Parte2'),b=s.novoBoss;
- return {captura:s.restricaoControleNovoBoss,ataque:b.ataqueAtual?.snapshot(),vida:s.vida,estamina:s.estamina,
+ return {captura:s.restricaoControleNovoBoss,ataque:b.tentaculosAtivos?.snapshot(),vida:s.vida,estamina:s.estamina,
   hud:b.hud.textoEstado.text,atacando:s.atacando,player:{x:s.player.x,y:s.player.y},
   tiros:s.armaPersonagemTeste?.lasers.length??s.projeteis?.getChildren?.().length??0};
 });
@@ -34,7 +34,7 @@ try{
  assert.equal(atlas.fora,0);assert.equal(atlas.opacos,109);
  for(const tipo of ['pulso','chuva','lasers','tentaculos']){
   const a=await page.evaluate(tipo=>{const b=window.__game.scene.getScene('Level1Parte2').novoBoss;
-   b.cancelarAtaque();if(!b.executarAtaque(tipo))throw Error('Falhou '+tipo);return b.ataqueAtual.snapshot();},tipo);
+   b.cancelarAtaque();if(!b.executarAtaque(tipo))throw Error('Falhou '+tipo);return (b.ataqueAtual ?? b.tentaculosAtivos).snapshot();},tipo);
   const avisos=await page.evaluate(()=>window.__game.scene.getScene('Level1Parte2').children.list.filter(o=>o.active&&o.texture?.key==='novo-boss-area-ataque').map(o=>({frame:o.frame.name,x:o.x,y:o.y})));
   assert.ok(avisos.length>0,tipo);assert.ok(avisos.every(o=>Number(o.frame)===0));
   await avancar(400);
@@ -51,18 +51,18 @@ try{
   for(const origem of b.config.teleporte.pontos)for(const n of [0,.2,.4,.6,.999]){
    b.cancelarAtaque();sincronizarCorpoNovoBoss(b,origem);b.rng=()=>n;
    if(!b.executarAtaque('tentaculos'))throw Error('Surgimento bloqueado');
-   const a=b.ataqueAtual.snapshot();resultados.push({n:a.armadilhas.length,esperado:a.quantidade,
+   const a=b.tentaculosAtivos.snapshot();resultados.push({n:a.armadilhas.length,esperado:a.quantidade,
     distancias:a.armadilhas.map(p=>Math.hypot(p.x-origem.x,p.y-origem.y))});
   }
   b.cancelarAtaque();sincronizarCorpoNovoBoss(b,b.config.posicaoInicial);
   return resultados;
  });
- for(const o of ondas){assert.equal(o.n,o.esperado);assert.ok(o.n>=8&&o.n<=12);assert.ok(o.distancias.every(d=>d>=119.99&&d<=300.01));}
- console.log('PASS surgimento: 20 ondas nas quatro posições, sempre 8–12 tentáculos a 120–300px.');
+ for(const o of ondas){assert.equal(o.n,o.esperado);assert.equal(o.n,5);assert.ok(o.distancias.every(d=>d>=119.99&&d<=300.01));}
+ console.log('PASS surgimento: 20 ondas nas quatro posições, sempre cinco tentáculos a 120–300px.');
  for(const personagem of ['kai-mercer','aria-kade','personagem-teste']){
   await sessao.reiniciar({personagem});
   const alvo=await page.evaluate(()=>{const b=window.__game.scene.getScene('Level1Parte2').novoBoss;b.rng=()=>.4;
-   b.executarAtaque('tentaculos');return b.ataqueAtual.snapshot().armadilhas[0];});
+   b.executarAtaque('tentaculos');return b.tentaculosAtivos.snapshot().armadilhas[0];});
   await posicionar(alvo.x+12,alvo.y-20);await avancar(900);
   await page.evaluate(alvo=>{
    const s=window.__game.scene.getScene('Level1Parte2');window.__trajetoTentaculo=[];

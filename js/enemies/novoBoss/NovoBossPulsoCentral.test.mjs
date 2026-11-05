@@ -277,3 +277,84 @@ test("segunda fase segura a verdadeira durante a espiral longa e preserva a aber
   assert.equal(movimentos, 0);
   assert.equal(c.encontro.projeteisBoss.length, 0);
 });
+
+test("invocar cinco tentáculos inicia outro ataque no mesmo turno e conserva os 18 segundos", () => {
+  const c = preparar();
+  c.encontro.config.ataques = { ...c.encontro.config.ataques,
+    automatico: true, sequencia: ["tentaculos", "chuva"] };
+  c.atualizar(1500);
+  const armadilhas = c.encontro.tentaculosAtivos;
+  assert.equal(armadilhas.snapshot().armadilhas.length, 5);
+  assert.equal(armadilhas.snapshot().decorrido, 0);
+  assert.equal(c.encontro.ataqueAtual.tipo, "chuvaRaios");
+  assert.deepEqual(c.inicios.map(e => e.tipo), ["tentaculos", "chuva"]);
+  c.encontro.config.ataques.automatico = false;
+  c.atualizar(1000);
+  assert.ok(armadilhas.snapshot().armadilhas.every(a => a.ativa));
+  assert.equal(c.encontro.tempoAtaque, 1000);
+  c.atualizar(17999);
+  assert.equal(c.encontro.tentaculosAtivos, armadilhas);
+  assert.equal(armadilhas.snapshot().decorrido, 18999);
+  c.atualizar(1);
+  assert.equal(c.encontro.tentaculosAtivos, null);
+  assert.equal(armadilhas.snapshot().terminado, true);
+});
+
+test("armadilhas não acumulam outra onda nem bloqueiam a seleção do próximo ataque", () => {
+  const c = preparar();
+  assert.equal(c.encontro.executarAtaque("tentaculos"), true);
+  const armadilhas = c.encontro.tentaculosAtivos;
+  assert.equal(c.encontro.ataqueAtual, null);
+  assert.equal(c.encontro.executarAtaque("tentaculos"), false);
+  c.encontro.config.ataques = { ...c.encontro.config.ataques,
+    automatico: true, sequencia: ["tentaculos", "chuva"] };
+  assert.equal(c.encontro.iniciarAtaqueAutomatico(), true);
+  assert.equal(c.encontro.ataqueAtual.tipo, "chuvaRaios");
+  assert.equal(c.encontro.tentaculosAtivos, armadilhas);
+  assert.equal(c.inicios.filter(e => e.tipo === "tentaculos").length, 1);
+});
+
+test("tentáculos reais e ilusórios continuam sincronizados durante e após outro ataque", () => {
+  const c = preparar();
+  sincronizarCorpoNovoBoss(c.encontro, novoBossConfig.posicaoInicial);
+  const ilusoes = c.encontro.sistemaIlusoes = prepararIlusoesNovoBoss(c.scene, c.encontro);
+  assert.equal(ilusoes.iniciarQuatro(), true);
+  assert.equal(c.encontro.executarAtaque("tentaculos"), true);
+  assert.equal(c.encontro.executarAtaque("chuva"), true);
+  c.atualizar(1000);
+  for (const alvo of ilusoes.alvos) {
+    const s = alvo.ataquesIlusorios.snapshot();
+    assert.equal(s.execucao.tipo, "chuvaRaios");
+    assert.equal(s.persistentes.length, 1);
+    assert.equal(s.persistentes[0].decorrido, c.encontro.tentaculosAtivos.snapshot().decorrido);
+    assert.equal(s.persistentes[0].armadilhas.length, 5);
+    assert.ok(s.persistentes[0].armadilhas.every(a => !a.capturou && !a.segurando));
+  }
+  c.atualizar(c.encontro.ataqueAtual.duracao - c.encontro.tempoAtaque);
+  assert.equal(c.encontro.ataqueAtual, null);
+  for (const alvo of ilusoes.alvos) {
+    const s = alvo.ataquesIlusorios.snapshot();
+    assert.equal(s.ativo, false);
+    assert.equal(s.persistentes[0].decorrido, c.encontro.tentaculosAtivos.snapshot().decorrido);
+  }
+  c.encontro.cancelarAtaque();
+  assert.equal(c.encontro.tentaculosAtivos, null);
+  assert.ok(ilusoes.alvos.every(a => a.ataquesIlusorios.snapshot().objetos === 0));
+});
+
+test("teleporte e transição preservam armadilhas; cancelamento final limpa seus recursos", () => {
+  const c = preparar();
+  c.encontro.executarAtaque("tentaculos");
+  const armadilhas = c.encontro.tentaculosAtivos;
+  c.encontro.executarAtaque("pulso");
+  assert.ok(c.encontro.teleporte);
+  c.atualizar(500);
+  assert.equal(armadilhas.snapshot().decorrido, 500);
+  c.encontro.cancelarAtaque({ preservarTentaculos: true });
+  assert.equal(c.encontro.tentaculosAtivos, armadilhas);
+  assert.equal(armadilhas.snapshot().terminado, false);
+  c.encontro.cancelarAtaque();
+  c.encontro.cancelarAtaque();
+  assert.equal(c.encontro.tentaculosAtivos, null);
+  assert.ok(c.objetos.every(o => o === c.sprite || !o.active));
+});

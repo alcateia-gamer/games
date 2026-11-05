@@ -4,8 +4,7 @@ import { criarVisualTentaculo } from "../NovoBossTentaculoVisual.js";
 let proximaExecucao = 0;
 
 const padrao = Object.freeze({
-  quantidadeMinima: 8,
-  quantidadeMaxima: 12,
+  quantidade: 5,
   distanciaMinima: 120,
   distanciaMaxima: 300,
   apertosParaLibertar: 8,
@@ -32,10 +31,7 @@ export function criarTentaculos(scene, encontro, config = {}, servicos = {}) {
   const execucao = ++proximaExecucao;
   const armadilhas = [];
   const rng = () => Math.max(0, Math.min(0.999999, numero(servicos.rng?.() ?? Math.random(), 0.5)));
-  const minimo = Math.max(8, Math.min(12, Math.floor(ajustes.quantidadeMinima)));
-  const maximo = Math.max(minimo, Math.min(12, Math.floor(ajustes.quantidadeMaxima)));
-  const quantidade = Number.isFinite(config.quantidade) ? Math.max(1, Math.floor(config.quantidade))
-    : minimo + Math.floor(rng() * (maximo - minimo + 1));
+  const quantidade = Math.max(1, Math.floor(ajustes.quantidade));
   const origem = { x: encontro.sprite?.x ?? encontro.x ?? 0, y: encontro.sprite?.y ?? encontro.y ?? 0 };
   const distanciaMinima = ajustes.distanciaMinima;
   const distanciaMaxima = Math.max(distanciaMinima, ajustes.distanciaMaxima);

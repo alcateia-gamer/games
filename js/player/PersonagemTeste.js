@@ -196,6 +196,11 @@ export function obterArmaPersonagemTeste(scene) {
   return armas.includes(equipada) ? equipada : armas.find(arma => arma.id === id) ?? armas[0];
 }
 
+/** Custo por ataque realmente iniciado, compartilhado pelo combate e pelo indicador. */
+export function custoEstaminaArmaTeste(scene, arma = obterArmaPersonagemTeste(scene)) {
+  return ["espada", "florete"].includes(arma.tipo) ? 1 : 3;
+}
+
 export function personagemTesteAtivo(scene) {
   return !!obterPersonagemTeste(scene);
 }
