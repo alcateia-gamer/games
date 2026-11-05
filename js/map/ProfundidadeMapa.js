@@ -17,6 +17,7 @@ const DEPTHS = {
 const Y_LIMITE_CERCA_FABRICA2 = -2204;
 const Y_LIMITE_PERSONAGEM_FRENTE_CERCA_FABRICA2 = -2177;
 const MARGEM_DEPTH_CERCA_FABRICA2 = 0.01;
+const SUPER_PC_REFERENCIA_SUPERIOR = new Set([1297, 1300]);
 
 /**
  * Converte a coordenada Y do mundo em uma profundidade crescente para ordenar objetos da
@@ -110,6 +111,7 @@ function calcularDepthObjeto(profundidadeCamada, y) {
 const PROFUNDIDADES_OBJETOS_PARTE2 = {
   ObjetosRobos: 4,
   ObjetosProdução: 10,
+  ObjetosSuperPC: 16.25,
   NeonArma: 17,
   ObjetosCozinha: 18,
   ObjetosArmazem: 19,
@@ -177,6 +179,22 @@ function atualizarDepthComputadoresPcAdm(scene) {
 }
 
 /**
+ * Os computadores cruzam os pés dos atores pela base; 1297 e 1300 usam a borda superior.
+ * Permanecem acima de Objetos1/Objetos2.
+ * Compara o Y assinado: -5800 fica abaixo (à frente) de -5900, mesmo no mapa negativo.
+ */
+function atualizarDepthObjetosSuperPC(scene) {
+  if (!Array.isArray(scene.objetosMapaParte2)) return;
+  for (const visual of scene.objetosMapaParte2) {
+    if (!visual?.active || visual.getData("objectLayerName") !== "ObjetosSuperPC") continue;
+    const referenciaY = SUPER_PC_REFERENCIA_SUPERIOR.has(visual.getData("tiledObjectId"))
+      ? visual.getBounds?.().top
+      : visual.getData("worldY") ?? visual.getBounds?.().bottom ?? visual.y;
+    if (Number.isFinite(referenciaY)) visual.setDepth(depthCenario(scene, referenciaY));
+  }
+}
+
+/**
  * Ordena cada objeto DepthPerso entre os atores que estão atrás e à frente dele.
  */
 function atualizarDepthObjetosDepthPerso(scene) {
@@ -217,6 +235,7 @@ export {
   atualizarDepthObjetosProducaoEArmazem,
   atualizarDepthGarras,
   atualizarDepthComputadoresPcAdm,
+  atualizarDepthObjetosSuperPC,
   atualizarDepthObjetosDepthPerso,
   atualizarDepthParedePortaBoss,
 };

@@ -8,6 +8,7 @@ import { readFileSync } from "node:fs";
 
 import {
   atualizarDepthComputadoresPcAdm,
+  atualizarDepthObjetosSuperPC,
   atualizarDepthObjetosDepthPerso,
   atualizarDepthParedePortaBoss,
   atualizarDepthGarras, atualizarDepthAtores, atualizarDepthCercaFabrica2,
@@ -32,6 +33,58 @@ function criarVisual(layerName, centerY) {
     },
   };
 }
+
+test("SuperPC usa o topo de 1297/1300 e a base dos demais contra os pés físicos com Y negativo", () => {
+  const map = JSON.parse(readFileSync(new URL("../../assets/map/parte2-fase1.json", import.meta.url)));
+  const objects = map.layers.find(layer => layer.name === "ObjetosSuperPC").objects;
+  assert.equal(objects.length, 7);
+  const visuais = objects.map(object => ({ ...criarVisual("ObjetosSuperPC", object.y),
+    x: object.x, y: object.y,
+    referenciaY: [1297, 1300].includes(object.id) ? object.y - object.height : object.y,
+    getData: key => ({ objectLayerName: "ObjetosSuperPC", worldY: object.y, tiledObjectId: object.id })[key],
+    getBounds: () => ({ top: object.y - object.height, centerY: object.y - object.height / 2, bottom: object.y }) }));
+  const scene = { profundidadePersonagemParte2: 16.5,
+    objetosMapaParte2: visuais, player: criarAtor(-5800) };
+  // A arte inclui margens: centro visual e base do frame não determinam o contato com o chão.
+  scene.player.getBounds = () => ({ centerY: -6200, bottom: -5600 });
+  const atualizar = footY => {
+    scene.player.body.bottom = footY;
+    atualizarDepthAtores(scene);
+    atualizarDepthObjetosSuperPC(scene);
+  };
+  for (const visual of visuais) {
+    const referencia = visual.referenciaY;
+    atualizar(referencia - 1);
+    assert.ok(scene.player.depth < visual.depth, "mais negativo: personagem atrás do computador");
+    atualizar(referencia + 1);
+    assert.ok(scene.player.depth > visual.depth, "menos negativo: personagem à frente do computador");
+    atualizar(referencia);
+    assert.ok(scene.player.depth > visual.depth, "empate mantém o personagem à frente");
+    assert.ok(visuais.every(visual => visual.depth > 16 && visual.depth < 17),
+      "todos os computadores ficam acima de Objetos1 (16) e Objetos2 (14), abaixo da camada superior (17)");
+    const ordem = [...visuais].sort((a, b) => a.referenciaY - b.referenciaY);
+    assert.ok(ordem.every((visual, i) => !i || visual.depth >= ordem[i - 1].depth),
+      "os próprios objetos também são ordenados entre si pelas referências escolhidas");
+  }
+  assert.deepEqual(visuais.map(({ x, y }) => [x, y]), objects.map(({ x, y }) => [x, y]));
+  scene.profundidadePersonagemParte2 = 25.5;
+  atualizar(visuais[0].referenciaY - 1);
+  assert.ok(visuais[0].depth > scene.player.depth && visuais[0].depth < 25.501);
+});
+
+test("ordenação pela base do SuperPC ignora outras camadas, visuais inativos e cenas incompletas", () => {
+  const outros = [criarVisual("ObjetosProdução", -5800), criarVisual("ObjetosArmazem", -5800),
+    criarVisual("PcAdm", -5800), criarVisual("DepthPerso", -5800)];
+  const inativo = criarVisual("ObjetosSuperPC", -5800);
+  inativo.active = false;
+  const scene = { profundidadePersonagemParte2: 16.5,
+    player: criarAtor(-5900), objetosMapaParte2: [...outros, inativo] };
+  scene.player.getBounds = () => ({ centerY: -5950 });
+  atualizarDepthObjetosSuperPC(scene);
+  assert.ok(scene.objetosMapaParte2.every(visual => visual.depth === 0));
+  assert.doesNotThrow(() => atualizarDepthObjetosSuperPC({}));
+  assert.doesNotThrow(() => atualizarDepthObjetosSuperPC({ player: { active: true }, objetosMapaParte2: [] }));
+});
 
 test("objetos intercalam jogador, amigo e inimigos em lados opostos pela base", () => {
   for (const layer of ["PcAdm", "DepthPerso", "Garras"]) {

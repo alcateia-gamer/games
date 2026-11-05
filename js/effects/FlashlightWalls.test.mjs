@@ -2,10 +2,11 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import FlashlightWalls, { distanciaAresta } from "./FlashlightWalls.js";
+import { criarColisoesFabrica } from "../map/ColisoesMapa.js";
 
-function cena(objects = [], layers = []) {
+function cena(objects = [], layers = [], limites = []) {
   return { map: { layers, getObjectLayer: name => name === "collision"
-    ? { objects: objects.map(objeto => ({ type: "parede", ...objeto })) } : null }, portasFabrica: [] };
+    ? { objects } : name === "LimitaLuz" ? { objects: limites } : null }, portasFabrica: [] };
 }
 function visivel(pontos, x, y) {
   if (!pontos.length) return true;
@@ -64,9 +65,13 @@ test("paredes de tiles usam coordenadas do mundo e só as camadas de paredes blo
   }
   const walls = new FlashlightWalls(cena([], [layer("chão", [1,1]), layer("ParedeAcimaPerso", [1,1,-1])]));
   const p = walls.obterPoligono(-220, -72);
-  assert.equal(visivel(p, -200, -72), true);
+  assert.equal(visivel(p, -200, -72), true, "o espaço antes da parede recebe luz");
+  assert.equal(visivel(p, -180, -72), true, "a oclusão visual da camada é aplicada no carimbo da lanterna");
   assert.equal(visivel(p, -80, -72), false);
   assert.equal(walls.proximas.length, 6, "a aresta interna de tiles vizinhos é removida");
+  const abaixo = new FlashlightWalls(cena([], [layer("ParedeAbaixoPerso", [1,1])]));
+  assert.equal(visivel(abaixo.obterPoligono(-220, -72), -180, -72), true,
+    "ParedeAbaixoPerso continua recebendo luz na superfície");
   const floor = new FlashlightWalls(cena([], [layer("chão", [1,1])]));
   assert.equal(floor.obterPoligono(-220, -72).length, 0);
   for (const name of ["BordaAlta", "BordaCurvas", "Borda", "CurvaBorda"]) {
@@ -75,7 +80,21 @@ test("paredes de tiles usam coordenadas do mundo e só as camadas de paredes blo
   }
 });
 
-test("colisões de objetos deixam a luz atingir os móveis sem atravessar a parede atrás", () => {
+test("a sobreposição visual de ParedeAcimaPerso conserva os contornos que bloqueiam o espaço atrás", () => {
+  const layer = { name: "ParedeAcimaPerso", tilemapLayer: {
+    forEachTile(callback) { callback({ index: 1, x: 0, y: 0, width: 48, height: 48 }); },
+    tileToWorldXY: () => ({ x: 0, y: 0 }),
+  } };
+  const walls = new FlashlightWalls(cena([{ x: -4, y: -4, width: 56, height: 56 }], [layer]));
+  for (const [x, y] of [[-50,24], [100,24], [24,-50], [24,100], [-50,-50], [100,100]]) {
+    const p = walls.obterPoligono(x, y);
+    assert.equal(visivel(p, 24, 24), true, "o contorno permite compor a silhueta real do tile depois");
+    assert.equal(visivel(p, 48 - x, 48 - y), false, `a parede bloqueia o espaço atrás visto de ${x},${y}`);
+    assert.equal(visivel(p, (x+24)/2, (y+24)/2), true, "o cenário antes da parede recebe luz");
+  }
+});
+
+test("colisões sem tipo iluminam o móvel atingido e bloqueiam a luz atrás dele", () => {
   const walls = new FlashlightWalls(cena([
     { type: "", x: 40, y: -30, width: 40, height: 60 },
     { type: "maquina", x: 90, y: -30,
@@ -84,8 +103,65 @@ test("colisões de objetos deixam a luz atingir os móveis sem atravessar a pare
   ]));
   const p = walls.obterPoligono(0,0);
   assert.equal(visivel(p, 60,0), true, "o móvel recebe o feixe sobre sua própria colisão");
-  assert.equal(visivel(p, 100,0), true, "a máquina também permanece iluminada");
+  assert.equal(visivel(p, 85,0), false, "a luz termina na colisão do primeiro móvel");
+  assert.equal(visivel(p, 100,0), false, "a máquina atrás do móvel fica na sombra");
   assert.equal(visivel(p, 180,0), false, "a parede continua bloqueando os objetos do outro lado");
+  const maquina = walls.obterPoligono(85,0);
+  assert.equal(visivel(maquina, 100,0), true, "a máquina recebe luz quando atingida diretamente");
+  assert.equal(visivel(maquina, 130,0), false, "o tipo maquina também bloqueia o feixe atrás");
+});
+
+test("pontos, textos e objetos sem área na camada collision não bloqueiam a lanterna", () => {
+  const walls = new FlashlightWalls(cena([
+    { x: 30, y: -20, width: 20, height: 40, point: true },
+    { x: 60, y: -20, width: 20, height: 40, text: { text: "Anotação" } },
+    { x: 90, y: -20, width: 0, height: 40 },
+  ]));
+  assert.equal(walls.obterPoligono(0, 0).length, 0);
+});
+
+test("Luzatravessa=true libera só a luz e a parede atrás continua bloqueando", () => {
+  for (const properties of [
+    [{ name: "Luzatravessa", type: "bool", value: true }],
+    { Luzatravessa: true },
+  ]) {
+    const scene = cena([
+      { x: 40, y: -30, width: 20, height: 60, properties },
+      { x: 120, y: -30, polygon: [{ x: 0, y: 0 }, { x: 10, y: 0 },
+        { x: 10, y: 60 }, { x: 0, y: 60 }] },
+    ]);
+    const corpos = [];
+    scene.physics = { add: { staticGroup: () => ({ create(x, y) {
+      const corpo = { x, y, setSize(width, height) { Object.assign(this, { width, height }); },
+        setVisible() {} };
+      corpos.push(corpo);
+      return corpo;
+    } }) } };
+    criarColisoesFabrica(scene, scene.map);
+    assert.ok(corpos.some(corpo => corpo.x === 50 && corpo.y === 0 && corpo.width === 20 && corpo.height === 60),
+      "o objeto marcado continua sólido para o jogador");
+    const walls = new FlashlightWalls(scene);
+    const p = walls.obterPoligono(0, 0);
+    assert.equal(visivel(p, 90, 0), true, "a lanterna atravessa a colisão marcada");
+    assert.equal(visivel(p, 150, 0), false, "a colisão não marcada atrás continua bloqueando");
+  }
+});
+
+test("somente o booleano true em Luzatravessa permite atravessar retângulos e polígonos", () => {
+  for (const valor of [undefined, false, "true", 1]) {
+    for (const properties of [
+      valor === undefined ? undefined : [{ name: "Luzatravessa", value: valor }],
+      { Luzatravessa: valor },
+    ]) {
+      const p = new FlashlightWalls(cena([{ x: 40, y: -30, width: 20, height: 60, properties }]))
+        .obterPoligono(0, 0);
+      assert.equal(visivel(p, 90, 0), false, `valor ${valor} mantém o bloqueio`);
+    }
+  }
+  const p = new FlashlightWalls(cena([{ x: 40, y: -30, properties: { Luzatravessa: true },
+    polygon: [{ x: 0, y: 0 }, { x: 20, y: 0 }, { x: 20, y: 60 }, { x: 0, y: 60 }] }]))
+    .obterPoligono(0, 0);
+  assert.equal(visivel(p, 90, 0), true, "a propriedade também libera polígonos");
 });
 
 test("bordas ficam fora do bloqueio enquanto a parede vizinha continua opaca", () => {
@@ -161,6 +237,106 @@ test("o índice filtra obstáculos distantes, reutiliza o polígono parado e lim
   assert.equal(walls.scene, null);
 });
 
+function contextoRecorte() {
+  return { pontos: [], beginPath() { this.pontos = []; },
+    moveTo(x, y) { this.pontos.push({ x, y }); }, lineTo(x, y) { this.moveTo(x, y); },
+    closePath() {}, clip() {} };
+}
+
+test("giroflex na parede emite do suporte e continua bloqueado pela próxima colisão", () => {
+  const walls = new FlashlightWalls(cena([
+    { x: -10, y: -10, width: 20, height: 20 },
+    { x: 60, y: -80, width: 4, height: 160 },
+  ]));
+  const context = contextoRecorte();
+  assert.equal(visivel(walls.obterPoligono(0, 0), 40, 0), false, "a regra de origem da lanterna é preservada");
+  walls.recortarFonte(context, { x: 0, y: 0 }, 240);
+  assert.equal(visivel(context.pontos, 40, 0), true, "o giroflex ilumina fora do próprio suporte");
+  assert.equal(visivel(context.pontos, 100, 0), false, "não atravessa a próxima parede");
+});
+
+test("fontes fixas guardam polígonos independentes e recalculam ao abrir portas", () => {
+  const scene = cena([{ x: 60, y: -80, width: 4, height: 160 }]);
+  const walls = new FlashlightWalls(scene);
+  const a = { x: 0, y: 0 }, b = { x: 100, y: 0 };
+  const context = contextoRecorte();
+  walls.recortarFonte(context, a, 240);
+  assert.equal(visivel(context.pontos, 100, 0), false);
+  walls.recortarFonte(context, b, 240);
+  assert.equal(visivel(context.pontos, 0, 0), false);
+  const consultas = walls.consulta;
+  walls.recortarFonte(context, a, 240);
+  assert.equal(walls.consulta, consultas, "o giro e a segunda passagem de cor reutilizam o recorte");
+  assert.equal(visivel(context.pontos, 50, 0), true, "o cache da outra fonte não substitui o primeiro");
+  scene.portasFabrica.push({ colisao: { body: { x: 20, y: -80, width: 4, height: 160, enable: true } } });
+  walls.atualizarPortas();
+  walls.recortarFonte(context, a, 240);
+  assert.equal(visivel(context.pontos, 50, 0), false, "fechar a porta invalida o polígono");
+  scene.portasFabrica[0].colisao.body.enable = false;
+  walls.atualizarPortas();
+  walls.recortarFonte(context, a, 240);
+  assert.equal(visivel(context.pontos, 50, 0), true, "abrir a porta devolve a iluminação");
+});
+
+test("o bloqueio acompanha o alcance de um giroflex maior que a lanterna", () => {
+  const walls = new FlashlightWalls(cena([{ x: 450, y: -100, width: 4, height: 200 }]));
+  const context = contextoRecorte();
+  walls.recortarFonte(context, { x: 0, y: 0 }, 600);
+  assert.equal(visivel(context.pontos, 400, 0), true);
+  assert.equal(visivel(context.pontos, 500, 0), false);
+});
+
+test("LimitaLuz corta já na borda mesmo com Luzatravessa=true ou a exceção da sala ativa", () => {
+  const scene = cena([{ x: 55, y: -80, width: 40, height: 160 }], [], [
+    { x: 60, y: -80, width: 20, height: 160, properties: { Luzatravessa: true } },
+  ]);
+  const walls = new FlashlightWalls(scene);
+  for (const regiao of [null, { left: 0, top: -100, right: 200, bottom: 100 }]) {
+    const p = walls.obterPoligono(0, 0, regiao);
+    assert.equal(visivel(p, 50, 0), true);
+    assert.equal(visivel(p, 65, 0), false, "o interior da barreira não recebe luz");
+    assert.equal(visivel(p, 100, 0), false, "a espessura de outras paredes não libera o limite");
+  }
+  const context = contextoRecorte();
+  walls.recortarFonte(context, { x: 0, y: 0 }, 240);
+  assert.equal(visivel(context.pontos, 65, 0), false, "giroflex respeita o mesmo limite");
+});
+
+test("LimitaLuz aceita polígonos, linhas e retângulos rotacionados", () => {
+  for (const limite of [
+    { x: 60, y: -20, width: 40, height: 4, rotation: 90 },
+    { x: 56, y: -20, polygon: [{ x: 0, y: 0 }, { x: 20, y: 20 }, { x: 0, y: 40 }] },
+    { x: 56, y: -20, polyline: [{ x: 0, y: 0 }, { x: 0, y: 40 }] },
+  ]) {
+    const walls = new FlashlightWalls(cena([], [], [limite]));
+    const p = walls.obterPoligono(0, 0);
+    assert.equal(visivel(p, 50, 0), true);
+    assert.equal(visivel(p, 58, 0), false);
+    assert.equal(visivel(p, 100, 0), false);
+  }
+});
+
+test("lâmpadas podem usar só LimitaLuz sem ganhar bloqueios de colisão novos", () => {
+  const scene = cena([{ x: 40, y: -80, width: 4, height: 160 }], [],
+    [{ x: 100, y: -80, width: 4, height: 160 }]);
+  const walls = new FlashlightWalls(scene, { somenteLimites: true });
+  const p = walls.obterPoligono(0, 0);
+  assert.equal(visivel(p, 60, 0), true, "o modo de limites preserva a iluminação prévia dos móveis");
+  assert.equal(visivel(p, 110, 0), false);
+});
+
+test("a barreira real LimitaLuz bloqueia o corredor mesmo com a propriedade Luzatravessa ligada", () => {
+  const raw = JSON.parse(readFileSync(new URL("../../assets/map/parte2-fase1.json", import.meta.url)));
+  const layer = raw.layers.find(l => l.name === "LimitaLuz");
+  const antes = JSON.stringify(layer);
+  const walls = new FlashlightWalls(cena([], [], layer.objects), { somenteLimites: true });
+  const p = walls.obterPoligono(-1080, -5290);
+  assert.equal(visivel(p, -1080, -5310), true);
+  assert.equal(visivel(p, -1080, -5330), false);
+  assert.equal(visivel(p, -1080, -5360), false);
+  assert.equal(JSON.stringify(layer), antes);
+});
+
 test("a parede fina real da fábrica bloqueia o corredor sem alterar o mapa", () => {
   const raw = JSON.parse(readFileSync(new URL("../../assets/map/parte2-fase1.json", import.meta.url)));
   const objects = raw.layers.find(l => l.name === "collision").objects;
@@ -179,14 +355,43 @@ test("a parede fina real da fábrica bloqueia o corredor sem alterar o mapa", ()
       },
     },
   }));
-  // Os tipos originais vazios continuam vazios: móveis reais não viram paredes.
-  const walls = new FlashlightWalls(cena(objects, layers));
+  // Usa os tipos originais vazios para verificar as colisões reais exportadas pelo Tiled.
+  const area = raw.layers.find(l => l.name === "trocadecamada").objects.find(o => o.name === "trocadecamada01");
+  const regiao = { left: area.x, top: area.y, right: area.x + area.width, bottom: area.y + area.height };
+  const scene = cena(objects, layers);
+  scene.regiaoTrocaCamada = regiao;
+  const walls = new FlashlightWalls(scene);
   const p = walls.obterPoligono(-840,-5110);
   assert.equal(visivel(p, -840,-5160), true);
   assert.equal(visivel(p, -840,-5230), true, "a face da parede real recebe luz");
   assert.equal(visivel(p, -840,-5310), false, "o espaço atrás da parede continua escuro");
+  const permiteLuz = id => objects.find(objeto => objeto.id === id)?.properties?.some(propriedade =>
+    propriedade.name === "Luzatravessa" && propriedade.value === true) ?? false;
   const border = walls.obterPoligono(-1000,-5290);
-  assert.equal(visivel(border, -840,-5290), true, "a faixa de BordaAlta não bloqueia a luz");
-  const object = walls.obterPoligono(-1370,-4940);
+  assert.equal(visivel(border, -930,-5290), true, "a luz chega até a colisão 282");
+  assert.equal(visivel(border, -905,-5290), true, "a superfície da colisão 282 permanece iluminada");
+  assert.equal(visivel(border, -840,-5290), permiteLuz(282), "a colisão 282 respeita a configuração atual de Luzatravessa");
+  const object = walls.obterPoligono(-1330,-4940);
   assert.equal(visivel(object, -1250,-4940), true, "a estrutura de produção real recebe luz");
+  assert.equal(visivel(object, -1180,-4940), permiteLuz(518), "a estrutura respeita a configuração atual de Luzatravessa");
+
+  for (const x of [-650, -430, -400]) {
+    assert.equal(visivel(walls.obterPoligono(x, -1350), x, -1430), false,
+      "o contorno normal reproduz a lanterna presa dentro da parede da fachada");
+    assert.equal(visivel(walls.obterPoligono(x, -1350, regiao), x, -1430), true,
+      "dentro do gatilho real a luz sai da fachada e alcança o interior da sala");
+    assert.equal(visivel(walls.obterPoligono(x, -1350), x, -1430), false,
+      "sair do gatilho restaura o bloqueio sem precisar mudar a origem da lanterna");
+  }
+
+  const atravessaveis = objects.filter(objeto => objeto.properties?.some(propriedade =>
+    propriedade.name === "Luzatravessa" && propriedade.value === true));
+  assert.ok(atravessaveis.length > 0, "o mapa real tem colisões que permitem passar luz");
+  for (const objeto of atravessaveis) {
+    // Isola cada exceção: paredes vizinhas continuam podendo obstruir o caminho no mapa.
+    const excecao = new FlashlightWalls(cena([objeto]));
+    assert.equal(excecao.obterPoligono(objeto.x - 10, objeto.y - 10).length, 0,
+      `a colisão ${objeto.id} marcada no mapa real não cria contornos de sombra`);
+    excecao.destroy();
+  }
 });

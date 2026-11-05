@@ -16,6 +16,7 @@ export const novoBossConfig = Object.freeze({
   cameraArena: Object.freeze({
     fatorZoom: 0.8, velocidade: 5, margemSaidaX: 70, margemSaidaY: 80,
   }),
+  cenaEntrada: Object.freeze({ ativo: true, idaMs: 900, pausaMs: 650, voltaMs: 900 }),
   combate: Object.freeze({
     vidaMaxima: 1000,
     preparacaoMs: 1500,
@@ -75,11 +76,34 @@ export const novoBossConfig = Object.freeze({
   }),
 });
 
+/** ZonaBoss define a área de ativação; os limites físicos da luta continuam na configuração. */
+export function configurarZonasNovoBoss(map, config = novoBossConfig) {
+  const camada = map?.getObjectLayer?.("ZonaBoss");
+  if (!camada) return config;
+  // Camadas de gatilhos podem ficar ocultas no editor sem desativar o encontro.
+  const zonas = (camada.objects ?? []).filter(objeto => objeto.visible !== false &&
+    !objeto.point && !objeto.ellipse && !objeto.polygon && !objeto.polyline && !objeto.gid && !objeto.text &&
+    [objeto.x, objeto.y, objeto.width, objeto.height, objeto.rotation ?? 0].every(Number.isFinite) &&
+    objeto.width > 0 && objeto.height > 0).map(objeto => {
+    const angulo = (objeto.rotation ?? 0) * Math.PI / 180;
+    return { x: objeto.x, y: objeto.y, width: objeto.width, height: objeto.height,
+      cos: Math.cos(angulo), sin: Math.sin(angulo) };
+  });
+  return { ...config, arena: { ...config.arena, zonas } };
+}
+
 export function jogadorNaArenaNovoBoss(player, arena = novoBossConfig.arena) {
+  if (!player?.active || player.morto || !Number.isFinite(player.x) || !Number.isFinite(player.y)) return false;
+  if (Array.isArray(arena.zonas)) {
+    return arena.zonas.some(zona => {
+      const dx = player.x - zona.x, dy = player.y - zona.y;
+      const x = dx * zona.cos + dy * zona.sin, y = -dx * zona.sin + dy * zona.cos;
+      // As bordas fracionárias exportadas pelo Tiled podem diferir após a subtração.
+      const margem = 1e-7;
+      return x >= -margem && x <= zona.width + margem && y >= -margem && y <= zona.height + margem;
+    });
+  }
   return Boolean(
-    player?.active &&
-    !player.morto &&
-    Number.isFinite(player.x) && Number.isFinite(player.y) &&
     player.x >= arena.xMin && player.x <= arena.xMax &&
     player.y >= arena.yMin && player.y <= arena.yMax &&
     player.y <= arena.entradaY,

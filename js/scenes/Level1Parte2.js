@@ -12,6 +12,7 @@ import {
   atualizarDepthGarras,
   atualizarDepthObjetosProducaoEArmazem,
   atualizarDepthComputadoresPcAdm,
+  atualizarDepthObjetosSuperPC,
   atualizarDepthObjetosDepthPerso,
   atualizarDepthParedePortaBoss,
 } from "../map/ProfundidadeMapa.js";
@@ -250,6 +251,7 @@ class Level1Parte2 extends Phaser.Scene {
       atualizarDepthAtores(this);
       atualizarDepthGarras(this);
       atualizarDepthComputadoresPcAdm(this);
+      atualizarDepthObjetosSuperPC(this);
       atualizarDepthObjetosDepthPerso(this);
       atualizarDepthParedePortaBoss(this);
     };
@@ -895,6 +897,7 @@ class Level1Parte2 extends Phaser.Scene {
     this.profundidadePersonagemParte2 = valor;
 
     atualizarDepthPlayer(this);
+    atualizarDepthObjetosSuperPC(this);
     atualizarDepthObjetosDepthPerso(this);
     atualizarDepthParedePortaBoss(this);
   }

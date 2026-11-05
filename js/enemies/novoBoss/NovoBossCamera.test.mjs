@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { novoBossConfig } from "./NovoBossConfig.js";
+import { novoBossConfig, configurarZonasNovoBoss } from "./NovoBossConfig.js";
 import { prepararCameraNovoBoss } from "./NovoBossCamera.js";
 
 const camera = (x = 1, y = x) => ({ zoomX: x, zoomY: y,
@@ -13,6 +13,24 @@ function fixture(x = 1, y = x) {
   return { c, scene, encontro, sistema: prepararCameraNovoBoss(scene, encontro) };
 }
 const near = (a, b) => assert.ok(Math.abs(a - b) < 1e-8, `${a} ≠ ${b}`);
+
+test("câmera acompanha os retângulos ZonaBoss sem manter o encontro ativo nos espaços entre eles", () => {
+  const { c, scene, encontro, sistema } = fixture();
+  encontro.config = configurarZonasNovoBoss({ getObjectLayer: () => ({ objects: [
+    { x: -1200, y: -5376, width: 300, height: 48 },
+    { x: -529, y: -5906, width: 49, height: 194 },
+  ] }) });
+  Object.assign(scene.player, { x: -1080, y: -5350 });
+  sistema.atualizar(2000);
+  near(c.zoomX, 0.8);
+  Object.assign(scene.player, { x: -505, y: -5800 });
+  sistema.atualizar(2000);
+  near(c.zoomX, 0.8);
+  Object.assign(scene.player, { x: -1080, y: -5377 });
+  sistema.atualizar(2000);
+  near(c.zoomX, 1);
+  assert.equal(sistema.snapshot().controlando, false);
+});
 
 test("entrada afasta gradualmente até 80% e fora da sala não toma controle da câmera", () => {
   const { c, scene, sistema } = fixture();

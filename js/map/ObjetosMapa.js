@@ -258,14 +258,16 @@ function criarObjetosFabrica(scene, map, textureKeyByTilesetName) {
 
         const width = Number(object.width || tileWidth);
         const height = Number(object.height || tileHeight);
+        const rotacao = Phaser.Math.DegToRad(Number(object.rotation || 0));
         const profundidade = calcularDepthObjeto(
           profundidadeTiled + 0.25,
           object.y,
         );
         const visual = scene.add
           .image(
-            Number(object.x) + width / 2,
-            Number(object.y),
+            // O Tiled gira o objeto pela base esquerda; a imagem usa a base central.
+            Number(object.x) + Math.cos(rotacao) * width / 2,
+            Number(object.y) + Math.sin(rotacao) * width / 2,
             textureKey,
             frameName,
           )
@@ -274,12 +276,13 @@ function criarObjetosFabrica(scene, map, textureKeyByTilesetName) {
           .setScale(width / tileWidth, height / tileHeight)
           .setDepth(profundidade);
 
-        visual.setRotation(Phaser.Math.DegToRad(Number(object.rotation || 0)));
+        visual.setRotation(rotacao);
         visual.setFlipX(Boolean(object.flippedHorizontal));
         visual.setFlipY(Boolean(object.flippedVertical));
         visual.setAlpha(Number.isFinite(object.opacity) ? object.opacity : 1);
         visual.setData("worldY", Number(object.y || 0));
         visual.setData("objectLayerName", layerData.name);
+        visual.setData("tiledObjectId", object.id);
         visual.setData("depthBase", profundidadeTiled + 0.25);
         scene.objetosMapaParte2.push(visual);
       });

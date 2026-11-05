@@ -1,6 +1,5 @@
 /**
- * @file Portas da fábrica abertas por interação. Substitui os tiles por um visual animado e
- * remove a colisão ao concluir a abertura.
+ * @file Portas da fábrica abertas por interação, com persianas animadas e portas instantâneas.
  */
 
 import { distanceToInteractionArea, findFactoryInteraction } from "./FactoryGenerator.js";
@@ -49,6 +48,13 @@ function completarAreasPortas(map, layer, areas) {
     }
     if (mesmosTiles) areas.push({ name, x, y, width: tw * 3, height: th * 2 });
   }
+  // Porta vertical da sala dos computadores: os três tiles não possuem animação.
+  if (!areas.some(area => area.name === "porta05")) {
+    const x = -480, y = -5904;
+    const completa = [0, 1, 2].every(row =>
+      (layer.getTileAtWorldXY(x, y + row * th)?.index & 0x1fffffff) === 2980);
+    if (completa) areas.push({ name: "porta05", x, y, width: tw, height: th * 3, semAnimacao: true });
+  }
 }
 
 /**
@@ -58,29 +64,31 @@ function chaveEstadoPorta(nome) {
   return nome === "porta01" ? FACTORY_DOOR_STATE_KEY : `${FACTORY_DOOR_STATE_KEY}:${nome}`;
 }
 
-/** Prepara uma persiana com a mesma animação e colisão da porta original. */
+/** Mantém os tiles de portas instantâneas e prepara o visual móvel apenas das persianas. */
 function criarPorta(scene, layer, area) {
   const tiles = layer.getTilesWithinWorldXY(
     area.x, area.y, area.width, area.height,
   );
   const firstTile = layer.getTileAtWorldXY(area.x, area.y);
   if (!firstTile?.tileset) return null;
-
-  // Os seis tiles da persiana ocupam um retângulo contínuo no atlas original.
-  const texture = firstTile.tileset.image;
-  const source = firstTile.tileset.getTileTextureCoordinates(firstTile.index);
-  const frameName = `factory-door-${area.name}`;
-  if (!texture.has(frameName)) {
-    texture.add(frameName, 0, source.x, source.y, area.width, area.height);
-  }
-
+  const animada = area.semAnimacao !== true;
   const originalAlphas = tiles.map((tile) => tile.alpha);
-  tiles.forEach((tile) => { tile.alpha = 0; });
-  const visual = scene.add.image(area.x, area.y, texture.key, frameName)
-    .setOrigin(0, 0).setDepth(layer.depth);
-  // A moldura superior permanece no lugar enquanto a folha sobe por trás dela.
-  const header = scene.add.image(area.x, area.y, texture.key, frameName)
-    .setOrigin(0, 0).setCrop(0, 0, area.width, 8).setDepth(layer.depth);
+  let visual = null, header = null;
+  if (animada) {
+    // Os seis tiles da persiana ocupam um retângulo contínuo no atlas original.
+    const texture = firstTile.tileset.image;
+    const source = firstTile.tileset.getTileTextureCoordinates(firstTile.index);
+    const frameName = `factory-door-${area.name}`;
+    if (!texture.has(frameName)) {
+      texture.add(frameName, 0, source.x, source.y, area.width, area.height);
+    }
+    tiles.forEach((tile) => { tile.alpha = 0; });
+    visual = scene.add.image(area.x, area.y, texture.key, frameName)
+      .setOrigin(0, 0).setDepth(layer.depth);
+    // A moldura superior permanece no lugar enquanto a folha sobe por trás dela.
+    header = scene.add.image(area.x, area.y, texture.key, frameName)
+      .setOrigin(0, 0).setCrop(0, 0, area.width, 8).setDepth(layer.depth);
+  }
   const prompt = scene.add.text(
     area.x + area.width / 2, area.y - 12, "E - ABRIR PORTA", {
       fontSize: "14px",
@@ -91,7 +99,7 @@ function criarPorta(scene, layer, area) {
 
   const stateKey = chaveEstadoPorta(area.name);
   const alreadyOpen = scene.game.registry.get(stateKey) === true;
-  const colisao = alreadyOpen ? null : scene.collisionGroup.create(
+  const criarColisao = () => scene.collisionGroup.create(
     area.x + area.width / 2, area.y + area.height / 2,
   ).setDisplaySize(area.width, area.height).setVisible(false).refreshBody();
   const porta = {
@@ -99,15 +107,22 @@ function criarPorta(scene, layer, area) {
     area,
     estado: alreadyOpen ? "aberta" : "fechada",
     visual,
-    colisao,
+    colisao: alreadyOpen ? null : criarColisao(),
+    bloqueadaPorBoss: false,
     progresso: alreadyOpen ? 1 : 0,
   };
   let tween;
+  let encerrada = false;
+  let abertaAntesDoBoss = false;
 
   /**
    * Move e recorta a folha conforme o progresso da abertura, mantendo a moldura no lugar.
    */
   const atualizarVisual = () => {
+    if (!animada) {
+      tiles.forEach((tile, index) => { tile.alpha = porta.estado === "aberta" ? 0 : originalAlphas[index]; });
+      return;
+    }
     const offset = Math.round(area.height * porta.progresso);
     visual.setY(area.y - offset);
     visual.setCrop(0, offset, area.width, area.height - offset);
@@ -118,6 +133,7 @@ function criarPorta(scene, layer, area) {
    * interação.
    */
   const podeInteragir = (alvo = area) =>
+    !encerrada && !porta.bloqueadaPorBoss && !scene.cenaEntradaBossAtiva &&
     porta.estado === "fechada" && scene.player?.active &&
     !scene.morteEmAndamento && !scene.generatorMenuOpen && !scene.devItemMenuOpen &&
     distanceToInteractionArea(scene.player.x, scene.player.y, alvo) <=
@@ -125,6 +141,7 @@ function criarPorta(scene, layer, area) {
 
   /** A porta04 usa só energia; o leitor da arena também exige o crachá reutilizável. */
   const motivoBloqueio = () => {
+    if (porta.bloqueadaPorBoss) return "COMBATE EM ANDAMENTO";
     const exigeCartao = PORTAS_COM_ACESSO.has(area.name);
     if (!exigeCartao && area.name !== "porta04") return null;
     const requisitos = [];
@@ -133,9 +150,17 @@ function criarPorta(scene, layer, area) {
     return requisitos.length ? requisitos.join(" | ") : null;
   };
 
-  /**
-   * Inicia a animação; ao concluir, remove a colisão e registra que a porta está aberta.
-   */
+  const concluirAbertura = () => {
+    porta.progresso = 1;
+    porta.estado = "aberta";
+    atualizarVisual();
+    // Remover o corpo do grupo também atualiza o índice de navegação dos robôs.
+    porta.colisao?.destroy();
+    porta.colisao = null;
+    scene.game.registry.set(stateKey, true);
+  };
+
+  /** Abre diretamente ou conclui a persiana antes de remover a colisão. */
   const abrir = (alvo = area) => {
     if (!podeInteragir(alvo)) return false;
     const bloqueio = motivoBloqueio();
@@ -146,20 +171,51 @@ function criarPorta(scene, layer, area) {
     porta.estado = "abrindo";
     scene.interacaoMundoProxima = null;
     prompt.setVisible(false);
+    if (!animada) {
+      concluirAbertura();
+      return true;
+    }
     tween = scene.tweens.add({
       targets: porta,
       progresso: 1,
       duration: OPEN_DURATION,
       ease: "Sine.easeInOut",
       onUpdate: atualizarVisual,
-      onComplete: () => {
-        porta.estado = "aberta";
-        // Remover o corpo do grupo também atualiza o índice de navegação dos robôs.
-        colisao.destroy();
-        porta.colisao = null;
-        scene.game.registry.set(stateKey, true);
-      },
+      onComplete: concluirAbertura,
     });
+    return true;
+  };
+
+  // O fechamento do encontro é temporário: preserva a abertura salva pelo leitor.
+  porta.fecharParaBoss = () => {
+    if (encerrada || porta.bloqueadaPorBoss) return false;
+    abertaAntesDoBoss = porta.estado !== "fechada";
+    porta.bloqueadaPorBoss = true;
+    prompt.setVisible(false);
+    tween?.stop();
+    if (porta.estado === "fechada") return true;
+    porta.estado = "fechando";
+    const concluir = () => {
+      porta.progresso = 0;
+      porta.estado = "fechada";
+      porta.colisao ??= criarColisao();
+      atualizarVisual();
+    };
+    if (!animada) concluir();
+    else tween = scene.tweens.add({ targets: porta, progresso: 0,
+      duration: OPEN_DURATION, ease: "Sine.easeInOut",
+      onUpdate: atualizarVisual, onComplete: concluir });
+    return true;
+  };
+  porta.liberarAposBoss = () => {
+    if (encerrada || !porta.bloqueadaPorBoss) return false;
+    tween?.stop();
+    porta.bloqueadaPorBoss = false;
+    porta.estado = abertaAntesDoBoss ? "aberta" : "fechada";
+    porta.progresso = abertaAntesDoBoss ? 1 : 0;
+    if (abertaAntesDoBoss) { porta.colisao?.destroy(); porta.colisao = null; }
+    else porta.colisao ??= criarColisao();
+    atualizarVisual();
     return true;
   };
 
@@ -174,16 +230,18 @@ function criarPorta(scene, layer, area) {
     const doorDepth = porta.estado === "aberta"
       ? Math.max(layer.depth, playerDepth + 0.01)
       : Math.min(layer.depth, playerDepth - 0.01);
-    visual.setDepth(doorDepth);
-    header.setDepth(doorDepth);
+    visual?.setDepth(doorDepth);
+    header?.setDepth(doorDepth);
     prompt.setText(motivoBloqueio() ?? "E - ABRIR PORTA");
   };
 
   const limpar = () => {
+    encerrada = true;
+    porta.bloqueadaPorBoss = false;
     tween?.stop();
     porta.colisao?.destroy();
-    visual.destroy();
-    header.destroy();
+    visual?.destroy();
+    header?.destroy();
     prompt.destroy();
     tiles.forEach((tile, index) => { tile.alpha = originalAlphas[index]; });
   };
@@ -222,6 +280,7 @@ function criarInteracaoPortaFabrica(scene) {
   ).setOrigin(0.5, 1).setDepth(200).setVisible(false) : null;
   scene.leitorCartaoFabrica = avisoLeitor ? { area: areaLeitor, prompt: avisoLeitor } : null;
   const leitorProximo = () => !!avisoLeitor && scene.player?.active &&
+    !scene.cenaEntradaBossAtiva &&
     !scene.morteEmAndamento && !scene.generatorMenuOpen && !scene.devItemMenuOpen &&
     distanceToInteractionArea(scene.player.x, scene.player.y, areaLeitor) <= INTERACTION_RANGE;
   const passarCartao = () => {
@@ -246,9 +305,10 @@ function criarInteracaoPortaFabrica(scene) {
     scene.interacaoMundoProxima = proxima ? { distance: distancia, interact: proxima.abrir } : null;
     if (avisoLeitor) {
       const perto = leitorProximo();
-      const fechadas = portasLeitor.filter(controle => controle.porta.estado === "fechada");
+      const fechadas = portasLeitor.filter(controle => controle.porta.estado === "fechada" && !controle.porta.bloqueadaPorBoss);
       const abrindo = portasLeitor.some(controle => controle.porta.estado === "abrindo");
-      avisoLeitor.setVisible(perto).setText(fechadas.length
+      const bloqueadas = portasLeitor.some(controle => controle.porta.bloqueadaPorBoss);
+      avisoLeitor.setVisible(perto).setText(bloqueadas ? "COMBATE EM ANDAMENTO" : fechadas.length
         ? fechadas[0].motivoBloqueio() ?? "E - PASSAR CARTÃO"
         : abrindo ? "ABRINDO PORTAS..." : "ACESSO LIBERADO");
       const distanciaLeitor = perto ? distanceToInteractionArea(scene.player.x, scene.player.y, areaLeitor) : Infinity;

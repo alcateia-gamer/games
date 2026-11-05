@@ -239,7 +239,7 @@ class FactoryLighting {
     return 1;
   }
 
-  atualizar(agora, camera) {
+  atualizar(agora, camera, zonas = null) {
     this.falhasIniciadas.length = 0;
     let progresso = 1;
     this.progressoPartida = null;
@@ -256,18 +256,19 @@ class FactoryLighting {
     let alteradas = false;
     for (const estado of this.estados) {
       const luz = estado.luz;
-      if (!energia || !luz.ligada || !luz.intensidade || !luz.cor.alpha) {
+      const fatorZona = zonas?.fatorLuz(luz, agora) ?? 1;
+      if (!energia || !luz.ligada || !luz.intensidade || !luz.cor.alpha || !fatorZona) {
         continue;
       }
       // Atualiza os relógios fora da tela também, sem gerar estalos fora do campo de visão.
-      if (!this.partida) this.atualizarFalha(estado, agora, camera);
+      if (!this.partida && fatorZona === 1) this.atualizarFalha(estado, agora, camera);
       if (!luzAfetaCamera(luz, camera)) continue;
       const oscilacao = this.partida
         ? 1 - (1 - progresso) * 0.12 * Math.sin(progresso * 15 + estado.indice) ** 2
-        : this.calcularFalha(estado, agora);
+        : fatorZona < 1 ? 1 : this.calcularFalha(estado, agora);
       // Limita e quantiza em passos de alpha: evita saturação e uploads sem mudança visível.
       const pulso = luz.pulsando ? intensidadePulso(agora) : 1;
-      const intensidade = Math.round(limitar(luz.intensidade * luz.cor.alpha) * energia * oscilacao * pulso * 255) / 255;
+      const intensidade = Math.round(limitar(luz.intensidade * luz.cor.alpha) * energia * oscilacao * pulso * fatorZona * 255) / 255;
       if (this.fontesVisiveis[quantidade] !== estado || estado.intensidade !== intensidade) alteradas = true;
       estado.intensidade = intensidade;
       this.fontesVisiveis[quantidade++] = estado;

@@ -109,6 +109,16 @@ function alphaCor(color) {
   if (color.startsWith("rgba")) return Number(color.slice(color.lastIndexOf(",") + 1, -1));
   return 1;
 }
+function dentroRecortes(op, x, y) {
+  return (op.recortes ?? []).every(pontos => {
+    let dentro = false;
+    for (let i = 0, j = pontos.length - 1; i < pontos.length; j = i++) {
+      const a = pontos[i], b = pontos[j];
+      if ((a.y > y) !== (b.y > y) && x < (b.x-a.x) * (y-a.y) / (b.y-a.y) + a.x) dentro = !dentro;
+    }
+    return dentro;
+  });
+}
 class ContextoAmostrado {
   constructor() {
     this.estado = { matriz: identidade(), globalAlpha: 1, globalCompositeOperation: "source-over", fillStyle: "#000000" };
@@ -136,6 +146,14 @@ class ContextoAmostrado {
   fillRect(...args) { this.registrar("rect", args); }
   clearRect(...args) { this.registrar("clear", args); }
   drawImage(image, ...args) {
+    // Canvas copia os pixels no momento do desenho, inclusive ao reutilizar um carimbo.
+    if (image instanceof CanvasAmostrado) {
+      const copia = new CanvasAmostrado();
+      copia.width = image.width; copia.height = image.height;
+      copia.context.bitmap = image.context.bitmap;
+      copia.context.operacoes = image.context.operacoes.slice();
+      image = copia;
+    }
     if (args.length === 8) {
       const [sx, sy, sw, sh, x, y, width, height] = args;
       this.registrar("image", [x, y, width, height, image, sx, sy, sw, sh]);
@@ -144,7 +162,18 @@ class ContextoAmostrado {
       this.registrar("image", [x, y, width, height, image]);
     }
   }
-  beginPath() {}
+  beginPath() { this.caminho = []; }
+  moveTo(x, y) {
+    const m = this.estado.matriz;
+    this.caminho.push({ x: m[0]*x + m[2]*y + m[4], y: m[1]*x + m[3]*y + m[5] });
+  }
+  lineTo(x, y) { this.moveTo(x, y); }
+  rect(x, y, width, height) {
+    this.moveTo(x, y); this.lineTo(x + width, y);
+    this.lineTo(x + width, y + height); this.lineTo(x, y + height);
+  }
+  closePath() {}
+  clip() { this.estado.recortes = [...(this.estado.recortes ?? []), this.caminho]; }
   arc(x, y, raio) { this.circulo = [x, y, raio]; }
   fill() { this.registrar("circle", this.circulo); }
   alphaEm(screenX, screenY) {
@@ -155,6 +184,7 @@ class ContextoAmostrado {
     }
     let destination = 0;
     for (const op of this.operacoes) {
+      if (!dentroRecortes(op, screenX, screenY)) continue;
       const [x, y] = inversoPonto(op.matriz, screenX, screenY);
       const [left, top, width, height, image, sx = 0, sy = 0, sw = image?.width, sh = image?.height] = op.args;
       const inside = op.tipo === "circle" ? Math.hypot(x - left, y - top) < width
@@ -196,6 +226,7 @@ class ContextoAmostrado {
     }
     let destination = [0, 0, 0, 0];
     for (const op of this.operacoes) {
+      if (!dentroRecortes(op, screenX, screenY)) continue;
       const [x, y] = inversoPonto(op.matriz, screenX, screenY);
       const [left, top, width, height, image, sx = 0, sy = 0, sw = image?.width, sh = image?.height] = op.args;
       if (!(x >= left && y >= top && x < left + width && y < top + height)) continue;
@@ -237,7 +268,7 @@ function cenaComMascara(t, objects = [ponto()], powered = false, audio = {}) {
   const images = [];
   const scene = {
     ...audio,
-    map: mapa(...objects), time: { now: 0 }, direcaoAtual: "right", luzFabricaAcesa: powered,
+    map: audio.map ?? mapa(...objects), time: { now: 0 }, direcaoAtual: "right", luzFabricaAcesa: powered,
     cameras: { main: criarCamera() }, events: new EventEmitter(),
     game: { renderer: new EventEmitter() },
     textures: {
@@ -474,6 +505,802 @@ test("upward flashlight stays behind the animated silhouette, while downward lig
   assert.ok(sample(400, 250) < 0.5, "para baixo o feixe ilumina o jogador por cima");
 });
 
+test("ParedeAcimaPerso aparece sobre a lanterna pelo alpha dos tiles sem alterar a ordem do mapa", t => {
+  const { scene, render, texture, canvases } = cenaComMascara(t, [ponto({}, 460, 235)]);
+  const sheet = document.createElement("canvas");
+  sheet.width = 96;
+  sheet.height = 48;
+  const context = sheet.getContext("2d");
+  context.fillRect(48, 0, 48, 48);
+  context.clearRect(48 + 8, 20, 8, 8);
+  const tile = { index: 7, pixelX: 440, pixelY: 211, alpha: 1 };
+  const layer = { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0, alpha: 1, visible: true,
+    depth: 26, gidMap: { 7: {
+      tileWidth: 48, tileHeight: 48, tileOffset: { x: 0, y: 0 },
+      getAnimatedTileId: index => index,
+      getTileTextureCoordinates: () => ({ x: 48, y: 0 }),
+      image: { getSourceImage: () => sheet },
+    } }, cull: () => [tile] };
+  scene.camadaParedeAcimaPerso = layer;
+  scene.player = { active: true, x: 400, y: 225 };
+  const camera = scene.cameras.main;
+  const alpha = (x, y) => {
+    const m = camera.matrix;
+    return texture.canvas.alphaEm(m.a*x + m.c*y + m.e, m.b*x + m.d*y + m.f);
+  };
+  for (const [zoom, rotacao] of [[1, 0], [1.7, 0.2]]) {
+    camera.setZoom(zoom).setRotation(rotacao);
+    render();
+    assertSombraAmbiente(alpha(466, 235), "o pixel opaco da parede fica acima da lanterna");
+    assert.ok(alpha(452, 235) < 0.5, "a transparência do tile deixa ver o cenário iluminado");
+    assert.ok(alpha(430, 235) < 0.5, "o cenário antes da parede continua iluminado");
+    assert.equal(layer.depth, 26, "a camada conserva sua ordem em relação ao mapa e ao jogador");
+  }
+  tile.flipX = true;
+  camera.setZoom(1).setRotation(0);
+  render();
+  assertSombraAmbiente(alpha(452, 235), "o pixel opaco acompanha o espelhamento do tile");
+  assert.ok(alpha(476, 235) < 0.5, "o buraco transparente acompanha o espelhamento do tile");
+  const quantidade = canvases.length;
+  const uploads = texture.refreshes;
+  render();
+  assert.equal(texture.refreshes, uploads, "a sobreposição parada reutiliza a máscara");
+  layer.visible = false;
+  render();
+  const semParede = alpha(466, 235);
+  assert.ok(semParede < 0.5, "ocultar a camada libera o feixe com o jogador parado");
+  layer.visible = true;
+  layer.alpha = 0.5;
+  render();
+  assert.ok(alpha(466, 235) > semParede && alpha(466, 235) < ESCURIDAO_AMBIENTE_FABRICA,
+    "a sobreposição respeita a transparência da camada");
+  layer.alpha = 1;
+  scene.definirIluminacaoFabrica(true);
+  render();
+  assert.ok(alpha(466, 235) < 0.5, "as lâmpadas da fábrica continuam iluminando normalmente");
+  assert.equal(canvases.length, quantidade, "a camada não cria novas máscaras a cada quadro");
+});
+
+test("a lanterna fica atrás da fachada da sala dentro ou acima do gatilho sem apagar o piso", t => {
+  const { scene, render, texture, canvases } = cenaComMascara(t, [ponto({}, 426, 235)]);
+  const sheet = document.createElement("canvas");
+  sheet.width = sheet.height = 48;
+  sheet.getContext("2d").fillRect(0, 0, 48, 48);
+  sheet.getContext("2d").clearRect(8, 20, 8, 8);
+  const tileset = { tileWidth: 48, tileHeight: 48, tileOffset: { x: 0, y: 0 },
+    getAnimatedTileId: index => index, getTileTextureCoordinates: () => ({ x: 0, y: 0 }),
+    image: { getSourceImage: () => sheet } };
+  const layer = (name, depth, positions) => ({ layer: { name }, depth, visible: true, alpha: 1,
+    gidMap: { 7: tileset },
+    cull: () => positions.map(pixelX => ({ index: 7, pixelX, pixelY: 211, alpha: 1 })),
+    setDepth() { assert.fail("a lanterna não deve reordenar nenhuma camada do mapa"); } });
+  scene.camadasMapaParte2 = [
+    ...["chão", "detalhes do chão", "ListrasChão", "Sujeira", "ChãoProdução"]
+      .map(name => layer(name, 1, [368])),
+    layer("ParedeAbaixoPerso", 8, [400]), layer("Portas", 13, [448]),
+    layer("Objetos1", 16, [496, 560]),
+  ];
+  scene.regiaoTrocaCamada = { left: 360, top: 200, right: 500, bottom: 300 };
+  scene.player = { active: true, x: 380, y: 225,
+    body: { x: 380, y: 225, width: 20, height: 10 } };
+  const camera = scene.cameras.main;
+  const alpha = (x, y) => {
+    const m = camera.matrix;
+    return texture.canvas.alphaEm(m.a*x + m.c*y + m.e, m.b*x + m.d*y + m.f);
+  };
+  for (const [zoom, rotacao] of [[1, 0], [1.4, -0.1]]) {
+    camera.setZoom(zoom).setRotation(rotacao);
+    render();
+    for (const x of [426, 474, 522]) assertSombraAmbiente(alpha(x, 235),
+      "paredes, portas e detalhes da fachada aparecem diante da lanterna");
+    assert.ok(alpha(388, 235) < 0.5, "todas as camadas de piso continuam iluminadas");
+    assert.ok(alpha(412, 235) < 0.5, "pixels transparentes da fachada revelam o interior");
+    assert.ok(alpha(586, 235) < ESCURIDAO_AMBIENTE_FABRICA - 0.05,
+      "tiles fora do retângulo na mesma camada conservam sua iluminação");
+  }
+  const uploads = texture.refreshes, quantidade = canvases.length;
+  render();
+  assert.equal(texture.refreshes, uploads, "a sala parada reutiliza a máscara");
+  scene.player.body.x = 340;
+  render();
+  assert.ok(alpha(426, 235) < 0.5, "sair pela lateral restaura o feixe mesmo sem mover a origem visual");
+  scene.player.body.x = 341;
+  render();
+  assertSombraAmbiente(alpha(426, 235), "entrar parcialmente recoloca a fachada na frente");
+  delete scene.player.body;
+  Object.assign(scene.player, { x: 426, y: 150 });
+  scene.direcaoAtual = "down";
+  render();
+  assertSombraAmbiente(alpha(426, 235), "acima do retângulo a luz também fica atrás da parede");
+  scene.player.y = 320;
+  scene.direcaoAtual = "up";
+  render();
+  assert.ok(alpha(426, 235) < 0.5, "abaixo do gatilho a lanterna volta à composição normal");
+  scene.player.y = 150;
+  scene.direcaoAtual = "down";
+  scene.definirIluminacaoFabrica(true);
+  render();
+  assert.ok(alpha(426, 235) < 0.5, "a sobreposição não interfere nas lâmpadas do gerador");
+  assert.equal(canvases.length, quantidade, "o movimento usa o mesmo carimbo de oclusão");
+});
+
+test("olhar para cima de dentro da fachada ilumina o interior sem mostrar a luz sobre seus tiles", t => {
+  let sheet;
+  const tile = { index: 7, x: 0, y: 0, pixelX: 400, pixelY: 211, width: 48, height: 48, alpha: 1 };
+  const layer = { layer: { name: "ParedeAbaixoPerso" }, visible: true, alpha: 1, depth: 8,
+    forEachTile(callback) { callback(tile); },
+    tileToWorldXY: () => ({ x: tile.pixelX, y: tile.pixelY }), cull: () => [tile],
+    gidMap: { 7: { tileWidth: 48, tileHeight: 48, tileOffset: { x: 0, y: 0 },
+      getAnimatedTileId: index => index, getTileTextureCoordinates: () => ({ x: 0, y: 0 }),
+      image: { getSourceImage: () => sheet } } } };
+  const regiao = { left: 360, top: 200, right: 500, bottom: 300 };
+  const map = { layers: [{ name: layer.layer.name, tilemapLayer: layer }],
+    getObjectLayer: name => name === "collision"
+      ? { objects: [{ x: 400, y: 110, width: 48, height: 6 }] } : { objects: [] } };
+  const { scene, render, texture } = cenaComMascara(t, [], false,
+    { map, regiaoTrocaCamada: regiao, camadasMapaParte2: [layer] });
+  sheet = document.createElement("canvas");
+  sheet.width = sheet.height = 48;
+  sheet.getContext("2d").fillRect(0, 0, 48, 48);
+  scene.player = { active: true, x: 426, y: 225,
+    body: { x: 416, y: 225, width: 20, height: 10 } };
+  scene.direcaoAtual = "up";
+  const camera = scene.cameras.main;
+  const alpha = (x, y) => {
+    const m = camera.matrix;
+    return texture.canvas.alphaEm(m.a*x + m.c*y + m.e, m.b*x + m.d*y + m.f);
+  };
+  for (const [zoom, rotacao] of [[1, 0], [1.7, 0.15]]) {
+    camera.setZoom(zoom).setRotation(rotacao);
+    render();
+    assertSombraAmbiente(alpha(426, 235), "os pixels da fachada ocultam a lanterna na origem");
+    assert.ok(alpha(426, 185) < 0.5, "o feixe continua iluminando acima da fachada");
+    assert.ok(alpha(426, 125) < ESCURIDAO_AMBIENTE_FABRICA - 0.1, "a luz alcança o interior adiante");
+    assertSombraAmbiente(alpha(426, 95), "a colisão física adiante continua bloqueando o feixe");
+  }
+  scene.player.body.x = 340;
+  render();
+  assertSombraAmbiente(alpha(426, 185), "fora do gatilho os tiles voltam a bloquear a propagação");
+  scene.player.body.x = 416;
+  render();
+  assert.ok(alpha(426, 185) < 0.5, "reentrar atualiza o recorte mesmo com a origem visual parada");
+});
+
+test("o giroflex vermelho gira com a câmera parada, funciona sem gerador e acompanha zoom e rotação", t => {
+  const point = { id: 1, point: true, x: 400, y: 225, properties: { Lateral: true, Cima: true } };
+  const map = { getObjectLayer: name => ({ objects: name === "Luzedeemergencia" ? [point] : [] }) };
+  const { scene, render, texture, canvases, cleanup } = cenaComMascara(t, [], false, { map });
+  scene.player = { active: true, x: 100, y: 330 };
+  const camera = scene.cameras.main;
+  const rgba = (x, y) => {
+    const m = camera.matrix;
+    return texture.canvas.rgbaEm(m.a*x + m.c*y + m.e, m.b*x + m.d*y + m.f);
+  };
+  const alpha = (x, y) => rgba(x, y)[3];
+  for (const [zoom, rotacao] of [[1, 0], [1.4, 0.15]]) {
+    camera.setZoom(zoom).setRotation(rotacao);
+    scene.time.now = 0;
+    render();
+    assert.ok(alpha(490, 225) < alpha(400, 315) - 0.08, "o feixe começa na horizontal");
+    assert.ok(alpha(200, 340) < 0.6, "a lanterna continua acesa junto do giroflex");
+    const red = rgba(490, 225);
+    assert.ok(red[0] > red[1] + 0.1 && red[0] > red[2] + 0.1, "o feixe tinge o cenário de vermelho");
+    const uploads = texture.refreshes;
+    scene.time.now = 500;
+    render();
+    assert.equal(texture.refreshes, uploads + 1, "o giro atualiza a luz sem mover jogador ou câmera");
+    assert.ok(alpha(400, 315) < alpha(490, 225) - 0.08, "um quarto de volta leva o feixe à vertical");
+  }
+  const uploads = texture.refreshes, quantidade = canvases.length;
+  render();
+  assert.equal(texture.refreshes, uploads, "o mesmo instante reutiliza a composição");
+  scene.definirIluminacaoFabrica(true);
+  render();
+  assert.ok(rgba(400, 225)[0] > 0.2, "ligar o gerador conserva a iluminação de emergência");
+  scene.time.now = 750;
+  render();
+  assert.ok(scene.iluminacaoEmergencia.fontesVisiveis[0].angulo > Math.PI / 2);
+  assert.equal(canvases.length, quantidade, "a rotação usa as mesmas texturas");
+  cleanup();
+  assert.equal(scene.iluminacaoEmergencia, null);
+  assert.ok(canvases.slice(1).every(canvas => canvas.width === 0 && canvas.height === 0));
+});
+
+test("giroflex lateral varre acima e abaixo sem projetar luz ou halo para fora da sala", async t => {
+  for (const lado of ["Esquerda", "Direita"]) {
+    await t.test(lado, t => {
+      const sentido = lado === "Esquerda" ? 1 : -1;
+      const body = { x: lado === "Esquerda" ? 460 : 334, y: 100, width: 6, height: 250, enable: false };
+      const map = { getObjectLayer: name => ({ objects: name === "Luzedeemergencia"
+        ? [ponto({ Lateral: true, [lado]: true }, 400, 225)] : [] }) };
+      const { scene, render, texture, canvases, cleanup } = cenaComMascara(t, [], false,
+        { map, portasFabrica: [{ colisao: { body } }] });
+      const camera = scene.cameras.main;
+      const rgba = (x, y) => {
+        const m = camera.matrix;
+        return texture.canvas.rgbaEm(m.a*x + m.c*y + m.e, m.b*x + m.d*y + m.f);
+      };
+      const quantidade = canvases.length;
+      for (const [zoom, rotacao] of [[1, 0], [1.4, 0.15]]) {
+        camera.setZoom(zoom).setRotation(rotacao);
+        scene.time.now = 0;
+        render();
+        assert.ok(rgba(400 + sentido * 90, 225)[0] > 0.1, "o facho aponta para o interior");
+        assertSombraAmbiente(rgba(400 - sentido * 90, 225)[3], "o exterior continua escuro");
+        assert.equal(rgba(400 - sentido * 90, 225)[0], 0, "nenhum vermelho sai pelo lado errado");
+        scene.time.now = 500;
+        render();
+        const cima = rgba(400 + sentido * 8, 145)[0], baixo = rgba(400 + sentido * 8, 305)[0];
+        assert.ok(cima > baixo + 0.08, "um quarto do ciclo aponta para cima");
+        scene.time.now = 1500;
+        render();
+        assert.ok(rgba(400 + sentido * 8, 305)[0] > rgba(400 + sentido * 8, 145)[0] + 0.08,
+          "três quartos do ciclo apontam para baixo");
+        for (const y of [145, 225, 305]) assert.equal(rgba(400 - sentido * 8, y)[0], 0);
+      }
+      const uploads = texture.refreshes;
+      render();
+      assert.equal(texture.refreshes, uploads);
+      scene.time.now = 0;
+      body.enable = true;
+      render();
+      assert.ok(rgba(400 + sentido * 40, 225)[0] > 0.1, "ilumina antes da porta fechada");
+      assertSombraAmbiente(rgba(400 + sentido * 90, 225)[3], "a porta também recorta o giro lateral");
+      assert.equal(rgba(400 + sentido * 90, 225)[0], 0);
+      body.enable = false;
+      render();
+      assert.ok(rgba(400 + sentido * 90, 225)[0] > 0.1);
+      assert.equal(canvases.length, quantidade, "os perfis laterais são reutilizados");
+      cleanup();
+      assert.ok(canvases.slice(1).every(canvas => canvas.width === 0 && canvas.height === 0));
+    });
+  }
+});
+
+test("colisões recortam o feixe e a cor vermelha do giroflex, respeitando Luzatravessa", async t => {
+  for (const atravessa of [false, true]) {
+    await t.test(`Luzatravessa=${atravessa}`, t => {
+      const source = { id: 1, point: true, x: 400, y: 225 };
+      const map = { getObjectLayer: name => ({ objects: name === "Luzedeemergencia" ? [source]
+        : name === "collision" ? [
+          { x: 390, y: 215, width: 20, height: 20 },
+          { x: 460, y: 100, width: 6, height: 250,
+            properties: [{ name: "Luzatravessa", type: "bool", value: atravessa }] },
+        ] : [] }) };
+      const { scene, render, texture } = cenaComMascara(t, [], false, { map });
+      const camera = scene.cameras.main;
+      const rgba = (x, y) => {
+        const m = camera.matrix;
+        return texture.canvas.rgbaEm(m.a*x + m.c*y + m.e, m.b*x + m.d*y + m.f);
+      };
+      for (const [zoom, rotacao] of [[1, 0], [1.5, 0.15]]) {
+        camera.setZoom(zoom).setRotation(rotacao);
+        scene.time.now = 0;
+        render();
+        assert.ok(rgba(440, 225)[0] > 0.1, "o giroflex na parede ilumina antes do obstáculo");
+        if (atravessa) assert.ok(rgba(490, 225)[0] > 0.1, "a exceção do Tiled deixa passar luz vermelha");
+        else {
+          assertSombraAmbiente(rgba(490, 225)[3], "não há claridade atrás da colisão");
+          assert.equal(rgba(490, 225)[0], 0, "a cor vermelha também fica bloqueada");
+        }
+        scene.time.now = 500;
+        render();
+        assert.ok(rgba(400, 145)[0] > 0.1, "o feixe continua girando nas direções livres");
+        if (!atravessa) assert.equal(rgba(490, 225)[0], 0, "o halo vermelho não vaza ao girar");
+      }
+    });
+  }
+});
+
+test("portas bloqueiam o giroflex mesmo com gerador ligado e a lanterna apagada", t => {
+  const map = { getObjectLayer: name => ({ objects: name === "Luzedeemergencia"
+    ? [{ id: 1, point: true, x: 400, y: 225 }] : [] }) };
+  const body = { x: 460, y: 100, width: 6, height: 250, enable: true };
+  const { scene, render, texture } = cenaComMascara(t, [], true,
+    { map, portasFabrica: [{ colisao: { body } }] });
+  render();
+  assertSombraAmbiente(texture.canvas.alphaEm(490, 225));
+  body.enable = false;
+  render();
+  assert.ok(texture.canvas.rgbaEm(490, 225)[0] > 0.1, "abrir a porta ilumina sem avançar o relógio");
+  body.enable = true;
+  render();
+  assertSombraAmbiente(texture.canvas.alphaEm(490, 225), "fechar bloqueia luz e cor novamente");
+});
+
+test("giroflex com Raio grande não é cortado pelo alcance da lanterna e respeita colisões distantes", t => {
+  const map = { getObjectLayer: name => ({ objects: name === "Luzedeemergencia"
+    ? [{ id: 1, point: true, x: 200, y: 225, properties: { Raio: 400 } }]
+    : name === "collision" ? [{ x: 600, y: 0, width: 6, height: 450 }] : [] }) };
+  const { render, texture } = cenaComMascara(t, [], false, { map });
+  render();
+  assert.ok(texture.canvas.rgbaEm(590, 225)[0] > 0.05, "a luz alcança além de 360 pixels");
+  assertSombraAmbiente(texture.canvas.alphaEm(650, 225), "a colisão distante bloqueia a claridade");
+  assert.equal(texture.canvas.rgbaEm(650, 225)[0], 0, "a colisão distante também bloqueia o vermelho");
+});
+
+test("giroflex passa atrás das estátuas pelo alpha do sprite sem apagar o cenário ou outras luzes", t => {
+  const estatua = { active: true, visible: true, alpha: 1, x: 462, y: 249, depth: 15,
+    scaleX: 1, scaleY: 1, displayOriginX: 24, displayOriginY: 48,
+    getData: name => name === "objectLayerName" ? "EstátuaRobos" : undefined,
+    setDepth() { assert.fail("a sobreposição da luz não deve reordenar as estátuas"); } };
+  const outro = { ...estatua, x: 532,
+    getData: name => name === "objectLayerName" ? "Objetos1" : undefined };
+  const map = { getObjectLayer: name => ({ objects: name === "Luzedeemergencia"
+    ? [{ id: 1, point: true, x: 400, y: 225 }]
+    : name === "LuzesFabrica" ? [ponto({}, 470, 225)] : [] }) };
+  const { scene, render, texture, canvases, cleanup } = cenaComMascara(t, [], false,
+    { map, objetosMapaParte2: [estatua, outro] });
+  const sheet = document.createElement("canvas");
+  sheet.width = 96;
+  sheet.height = 48;
+  sheet.getContext("2d").fillRect(48, 0, 48, 48);
+  sheet.getContext("2d").clearRect(48 + 8, 20, 8, 8);
+  estatua.frame = outro.frame = { source: { image: sheet }, cutX: 48, cutY: 0,
+    cutWidth: 48, cutHeight: 48, realWidth: 48, realHeight: 48 };
+  const camera = scene.cameras.main;
+  const rgba = (x, y) => {
+    const m = camera.matrix;
+    return texture.canvas.rgbaEm(m.a*x + m.c*y + m.e, m.b*x + m.d*y + m.f);
+  };
+  for (const [zoom, rotacao] of [[1, 0], [1.4, 0.15]]) {
+    camera.setZoom(zoom).setRotation(rotacao);
+    render();
+    assertSombraAmbiente(rgba(470, 225)[3], "o corpo opaco oculta a claridade do giroflex");
+    assert.equal(rgba(470, 225)[0], 0, "o brilho vermelho também passa atrás da estátua");
+    assert.ok(rgba(450, 225)[0] > 0.1, "a transparência do sprite deixa a luz passar");
+    assert.ok(rgba(430, 225)[0] > 0.1 && rgba(540, 225)[0] > 0.05,
+      "o cenário ao redor e os objetos de outras camadas continuam iluminados");
+    assert.equal(estatua.depth, 15);
+  }
+  const count = canvases.length, uploads = texture.refreshes;
+  render();
+  assert.equal(texture.refreshes, uploads, "a estátua parada reutiliza a composição");
+  estatua.flipX = true;
+  render();
+  assert.ok(rgba(474, 225)[0] > 0.1, "o recorte acompanha os sprites espelhados");
+  assert.equal(rgba(450, 225)[0], 0);
+  estatua.frame = { ...estatua.frame, cutX: 0 };
+  render();
+  assert.ok(rgba(470, 225)[0] > 0.1, "trocar o frame atualiza o recorte com o relógio parado");
+  estatua.frame = { ...estatua.frame, cutX: 48 };
+  Object.assign(estatua, { flipX: false, scaleX: 1.5, scaleY: 1.2, rotation: Math.PI / 2 });
+  render();
+  assert.ok(rgba(490.8, 231)[0] > 0.05, "a transparência acompanha escala, origem e rotação do objeto");
+  assert.equal(rgba(490.8, 261)[0], 0);
+  Object.assign(estatua, { scaleX: 1, scaleY: 1, rotation: 0, visible: false });
+  render();
+  const livre = rgba(470, 225)[0];
+  assert.ok(livre > 0.1, "uma estátua invisível não oculta o giroflex");
+  Object.assign(estatua, { visible: true, alpha: 0.5 });
+  render();
+  assert.ok(rgba(470, 225)[0] > 0 && rgba(470, 225)[0] < livre, "o recorte respeita a opacidade da estátua");
+  estatua.alpha = 1;
+  scene.player = { active: true, x: 400, y: 215 };
+  render();
+  assert.ok(rgba(470, 225)[3] < 0.5, "a lanterna conserva sua iluminação independente do giroflex");
+  scene.definirIluminacaoFabrica(true);
+  render();
+  assert.ok(rgba(470, 225)[3] < 0.5, "as lâmpadas normais continuam iluminando as estátuas");
+  assert.equal(canvases.length, count, "o giro usa um único carimbo reutilizável");
+  const carimbo = canvases.find(canvas => canvas.width === 480 && canvas.height === 480);
+  assert.ok(carimbo);
+  cleanup();
+  assert.equal(carimbo.width, 0);
+  assert.equal(sheet.width, 96, "encerrar a luz não destrói a textura das estátuas");
+});
+
+test("giroflex lateral mantém a luz atrás dos pixels opacos das estátuas", t => {
+  const estatua = { active: true, visible: true, alpha: 1, x: 470, y: 249,
+    scaleX: 1, scaleY: 1, displayOriginX: 24, displayOriginY: 48,
+    getData: name => name === "objectLayerName" ? "EstátuaRobos" : undefined };
+  const map = { getObjectLayer: name => ({ objects: name === "Luzedeemergencia"
+    ? [ponto({ Lateral: true, Esquerda: true }, 400, 225)] : [] }) };
+  const { render, texture } = cenaComMascara(t, [], false, { map, objetosMapaParte2: [estatua] });
+  const sheet = document.createElement("canvas");
+  sheet.width = sheet.height = 48;
+  sheet.getContext("2d").fillRect(0, 0, 48, 48);
+  estatua.frame = { source: { image: sheet }, cutX: 0, cutY: 0,
+    cutWidth: 48, cutHeight: 48, realWidth: 48, realHeight: 48 };
+  render();
+  assert.ok(texture.canvas.rgbaEm(430, 225)[0] > 0.1, "ilumina antes da estátua");
+  assertSombraAmbiente(texture.canvas.alphaEm(470, 225), "o corpo oculta a claridade lateral");
+  assert.equal(texture.canvas.rgbaEm(470, 225)[0], 0);
+  assert.ok(texture.canvas.rgbaEm(540, 225)[0] > 0.05, "continua iluminando o cenário ao redor");
+  assert.equal(texture.canvas.rgbaEm(370, 225)[0], 0, "o carimbo das estátuas preserva o recorte da parede");
+});
+
+test("a sala do boss tem claridade ambiente local, sem acumular sobreposições nem revelar salas fechadas", t => {
+  const porta = { estado: "fechada", area: { x: 200, y: 190, width: 50, height: 10 } };
+  const zonas = [
+    { x: 100, y: 100, width: 300, height: 200 },
+    { x: 350, y: 250, width: 150, height: 100 },
+    { x: 600, y: 100, width: 50, height: 100 },
+    { x: 620, y: 250, width: 100, height: 60, rotation: 90 },
+  ];
+  const map = { getObjectLayer: name => ({ visible: false, objects: name === "ZonaBoss" ? zonas
+    : name === "LuzApagada" ? [{ x: 200, y: 150, width: 50, height: 40 }] : [] }) };
+  const { scene, render, texture, cleanup, canvases } = cenaComMascara(t, [], false,
+    { map, portasFabrica: [porta] });
+  const camera = scene.cameras.main;
+  const alpha = (x, y) => {
+    const m = camera.matrix;
+    return texture.canvas.alphaEm(m.a*x + m.c*y + m.e, m.b*x + m.d*y + m.f);
+  };
+  for (const [zoom, rotacao] of [[1, 0], [0.8, 0.15]]) {
+    camera.setZoom(zoom).setRotation(rotacao);
+    render();
+    const sala = alpha(150, 150);
+    assert.ok(sala > 0.55 && sala < 0.65, "a sala fica moderadamente mais clara");
+    assert.equal(alpha(375, 275), sala, "retângulos sobrepostos não acumulam claridade");
+    assert.equal(alpha(610, 150), sala, "inclui todas as áreas da sala");
+    assert.equal(alpha(590, 300), sala, "acompanha retângulos rotacionados");
+    assertSombraAmbiente(alpha(550, 225), "não clareia o espaço entre os retângulos");
+    assertSombraAmbiente(alpha(50, 150), "preserva a escuridão no resto da fábrica");
+    assert.equal(alpha(225, 170), 1, "a porta fechada conserva a zona escura");
+  }
+  porta.estado = "aberta";
+  render();
+  scene.time.now = 200;
+  render();
+  assert.equal(alpha(225, 170), alpha(150, 150), "abrir a porta também revela a iluminação ambiente");
+  cleanup();
+  assert.ok(canvases.slice(1).every(canvas => canvas.width === 0 && canvas.height === 0));
+});
+
+test("luzes fixas reutilizam os recortes durante o movimento do boss e invalidam ao mover estátuas", t => {
+  const neons = Array.from({ length: 24 }, (_, i) => ({ ...ponto({ Neon: true }, 150 + i * 20, 225), id: i + 1 }));
+  const estatuas = Array.from({ length: 24 }, (_, i) => ({ active: true, visible: true, alpha: 1,
+    x: 160 + i * 20, y: 249, displayOriginX: 24, displayOriginY: 48,
+    getData: name => name === "objectLayerName" ? "EstátuaRobos" : undefined }));
+  const novoBoss = { jogadorNaArena: true, sprite: { active: true, visible: true, x: 400, y: 209, alpha: 1 } };
+  const map = { getObjectLayer: name => ({ objects: name === "Luzedeemergencia" ? neons : [] }) };
+  const { scene, render, canvases, cleanup } = cenaComMascara(t, [], false,
+    { map, novoBoss, objetosMapaParte2: estatuas });
+  const sheet = document.createElement("canvas");
+  sheet.width = sheet.height = 48;
+  sheet.getContext("2d").fillRect(0, 0, 48, 48);
+  for (const estatua of estatuas) estatua.frame = { source: { image: sheet }, cutX: 0, cutY: 0,
+    cutWidth: 48, cutHeight: 48, realWidth: 48, realHeight: 48 };
+  let desenhos = 0;
+  for (const canvas of canvases) {
+    const context = canvas.getContext("2d"), original = context.drawImage.bind(context);
+    context.drawImage = (...args) => { desenhos++; original(...args); };
+  }
+  render();
+  const primeiraComposicao = desenhos, quantidade = canvases.length;
+  desenhos = 0;
+  novoBoss.sprite.x++;
+  render();
+  const movimento = desenhos;
+  t.diagnostic(`drawImage: primeira composição=${primeiraComposicao}; boss em movimento=${movimento}`);
+  assert.ok(movimento < primeiraComposicao * 0.15, "movimento do boss não recalcula as máscaras das luzes fixas");
+  desenhos = 0;
+  scene.cameras.main.setZoom(1.1).setRotation(0.1);
+  render();
+  assert.ok(desenhos < primeiraComposicao * 0.15, "a câmera reutiliza os recortes em coordenadas do mundo");
+  desenhos = 0;
+  estatuas[0].x++;
+  render();
+  assert.ok(desenhos > movimento, "mover a estátua atualiza os recortes guardados");
+  assert.equal(canvases.length, quantidade, "não cria novos canvases durante a luta");
+  cleanup();
+  assert.ok(canvases.filter(canvas => canvas !== sheet).slice(1)
+    .every(canvas => canvas.width === 0 && canvas.height === 0));
+});
+
+test("energia azul dos projéteis e do escudo ilumina o cenário, acompanha o boss e respeita portas", async t => {
+  for (const escudo of [false, true]) {
+    await t.test(escudo ? "Escudo" : "Projétil", t => {
+      const projetil = { active: true, visible: true, alpha: 1, x: 400, y: 225,
+        novoBossDisparoEnergia: true };
+      const sprite = { active: true, visible: escudo, alpha: 1, x: 400, y: 209 };
+      const novoBoss = { jogadorNaArena: true, sprite, barreiraAtiva: escudo,
+        projeteisBoss: escudo ? [] : [projetil], config: { geradores: { raioBarreira: 95 } } };
+      const body = { x: escudo ? 510 : 418, y: 50, width: 4, height: 350, enable: false };
+      const { scene, render, texture, cleanup, canvases } = cenaComMascara(t, [], false,
+        { novoBoss, portasFabrica: [{ colisao: { body } }] });
+      const camera = scene.cameras.main;
+      const rgba = (x, y) => {
+        const m = camera.matrix;
+        return texture.canvas.rgbaEm(m.a*x + m.c*y + m.e, m.b*x + m.d*y + m.f);
+      };
+      const antes = escudo ? 480 : 410, depois = escudo ? 525 : 432;
+      for (const [zoom, rotacao] of [[1, 0], [1.4, 0.15]]) {
+        camera.setZoom(zoom).setRotation(rotacao);
+        render();
+        const halo = rgba(antes, 225);
+        assert.ok(halo[2] > 0.01 && halo[2] > halo[0] * 3, "o cenário recebe um halo azul");
+        assert.ok(halo[3] < ESCURIDAO_AMBIENTE_FABRICA, "a energia clareia o piso ao redor");
+        assert.ok(rgba(depois, 225)[2] > 0.005, "o halo também alcança além do contorno do efeito");
+        body.enable = true;
+        render();
+        assert.equal(rgba(depois, 225)[2], 0, "a coloração azul não atravessa a porta fechada");
+        assertSombraAmbiente(rgba(depois, 225)[3]);
+        assert.deepEqual(rgba(antes, 225), halo, "a luz continua antes da porta");
+        body.enable = false;
+        render();
+        assert.ok(rgba(depois, 225)[2] > 0.005, "abrir a porta revela a luz com o relógio parado");
+      }
+      const uploads = texture.refreshes;
+      render();
+      assert.equal(texture.refreshes, uploads, "a energia parada reutiliza a composição");
+      scene.definirIluminacaoFabrica(true);
+      render();
+      assert.ok(rgba(antes, 225)[2] > 0.01, "também funciona com o gerador ligado");
+      (escudo ? sprite : projetil).x = 600;
+      render();
+      assert.equal(rgba(400, 225)[2], 0, "mover a fonte não deixa luz na posição antiga");
+      assert.ok(rgba(escudo ? 680 : 610, 225)[2] > 0.01);
+      if (escudo) novoBoss.barreiraAtiva = false;
+      else projetil.active = false;
+      render();
+      assert.equal(rgba(escudo ? 680 : 610, 225)[2], 0, "o halo desaparece junto com a fonte");
+      cleanup();
+      assert.equal(scene.iluminacaoEnergiaBoss, null);
+      assert.ok(canvases.slice(1).every(canvas => canvas.width === 0 && canvas.height === 0));
+    });
+  }
+});
+
+test("neons do chão com camada oculta emitem sua cor local e fixa, acompanhando orientação, câmera e portas", async t => {
+  for (const [vertical, amarela] of [[false, false], [true, false], [false, true], [true, true]]) {
+    await t.test(`${amarela ? "Amarelo" : "Vermelho"} ${vertical ? "Vertical" : "Horizontal"}`, t => {
+      const body = { x: 406, y: 210, width: 2, height: 30, enable: false };
+      const map = { getObjectLayer: name => ({ visible: false, objects: name === "Luzedeemergencia"
+        ? [ponto({ Neon: true, Orientacao: vertical ? "Vertical" : "Horizontal",
+          ...(amarela ? { Cor: "#ffffd35a" } : {}) })] : [] }) };
+      const { scene, render, texture, cleanup, canvases } = cenaComMascara(t, [], false,
+        { map, portasFabrica: [{ colisao: { body } }] });
+      const camera = scene.cameras.main;
+      const rgba = (x, y) => {
+        const m = camera.matrix;
+        return texture.canvas.rgbaEm(m.a*x + m.c*y + m.e, m.b*x + m.d*y + m.f);
+      };
+      for (const [zoom, rotacao] of [[1, 0], [1.4, 0.15]]) {
+        camera.setZoom(zoom).setRotation(rotacao);
+        render();
+        const centro = rgba(400, 225), halo = rgba(400, 230);
+        assert.ok(centro[0] > 0.8 && centro[0] > centro[1], "núcleo luminoso");
+        assert.ok(halo[0] > 0.01, "halo visível junto ao ponto");
+        if (amarela) assert.ok(halo[1] > halo[2] * 2, "o halo amarelo ilumina as listras");
+        else assert.ok(halo[0] > halo[1] * 5, "os neons existentes continuam vermelhos");
+        assert.ok(halo[3] < ESCURIDAO_AMBIENTE_FABRICA, "ilumina o chão mesmo sem gerador");
+        const longitudinal = vertical ? rgba(400, 228) : rgba(403, 225);
+        const transversal = vertical ? rgba(403, 225) : rgba(400, 228);
+        assert.ok(longitudinal[1] > transversal[1] + 0.05, "a faixa acompanha a orientação da marca");
+        assert.ok(rgba(400, 241)[0] > 0.01, "o halo ilumina uma área maior ao redor do neon");
+        assert.ok(rgba(400, 241)[3] < ESCURIDAO_AMBIENTE_FABRICA);
+        assert.equal(rgba(400, 253)[0], 0, "o brilho mantém um alcance local");
+        assertSombraAmbiente(rgba(400, 253)[3]);
+      }
+      const uploads = texture.refreshes;
+      scene.time.now = 500;
+      render();
+      assert.equal(texture.refreshes, uploads, "permanece fixo sem pulsar ou girar");
+      assert.ok(rgba(409, 225)[0] > 0.01);
+      body.enable = true;
+      render();
+      assert.equal(rgba(409, 225)[0], 0, "a cor não atravessa a porta fechada");
+      assertSombraAmbiente(rgba(409, 225)[3]);
+      body.enable = false;
+      render();
+      assert.ok(rgba(409, 225)[0] > 0.01, "reabrir a porta restaura o halo");
+      cleanup();
+      assert.ok(canvases.slice(1).every(canvas => canvas.width === 0 && canvas.height === 0));
+    });
+  }
+});
+
+test("IluminaçãoBoss desenha faixas amarelas fixas nas quatro direções, respeitando portas e câmera", async t => {
+  for (const [direcao, dx, dy] of [["Direita", 1, 0], ["Esquerda", -1, 0], ["Cima", 0, -1], ["Baixo", 0, 1]]) {
+    await t.test(direcao, t => {
+      const body = { x: 400 + dx * 60 - (dx ? 3 : 125), y: 225 + dy * 60 - (dy ? 3 : 125),
+        width: dx ? 6 : 250, height: dy ? 6 : 250, enable: false };
+      const map = { getObjectLayer: name => ({ objects: name === "IluminaçãoBoss"
+        ? [ponto({ [direcao]: true, Amarelo: true })] : [] }) };
+      const { scene, render, texture, canvases, cleanup } = cenaComMascara(t, [], false,
+        { map, portasFabrica: [{ colisao: { body } }] });
+      const camera = scene.cameras.main;
+      const rgba = distancia => {
+        const m = camera.matrix, x = 400 + dx * distancia, y = 225 + dy * distancia;
+        return texture.canvas.rgbaEm(m.a*x + m.c*y + m.e, m.b*x + m.d*y + m.f);
+      };
+      const quantidade = canvases.length;
+      for (const [zoom, rotacao] of [[1, 0], [1.4, 0.15]]) {
+        camera.setZoom(zoom).setRotation(rotacao);
+        render();
+        const halo = rgba(40), emissor = rgba(1);
+        assert.ok(halo[3] < ESCURIDAO_AMBIENTE_FABRICA, "ilumina o interior");
+        assert.ok(halo[0] > 0.2 && halo[1] > halo[2] + 0.08, "o halo é amarelo");
+        assert.ok(emissor[0] > halo[0] + 0.2, "a faixa junto da parede é mais luminosa");
+        assertSombraAmbiente(rgba(-40)[3], "não emite atrás da parede");
+        assert.equal(rgba(-40)[0], 0);
+      }
+      const uploads = texture.refreshes;
+      scene.time.now = 60000;
+      render();
+      assert.equal(texture.refreshes, uploads, "a arandela fica estável e reutiliza a composição");
+      body.enable = true;
+      render();
+      assert.ok(rgba(30)[0] > 0.1);
+      assertSombraAmbiente(rgba(90)[3]);
+      assert.equal(rgba(90)[0], 0, "a porta recorta também a cor");
+      body.enable = false;
+      render();
+      assert.ok(rgba(90)[0] > 0.1, "abrir a porta atualiza a iluminação com o relógio parado");
+      assert.equal(canvases.length, quantidade);
+      cleanup();
+      assert.equal(scene.iluminacaoBoss, null);
+      assert.ok(canvases.slice(1).every(canvas => canvas.width === 0 && canvas.height === 0));
+    });
+  }
+});
+
+test("faixas Cima da IluminaçãoBoss e seu halo ficam atrás das bordas e paredes, iluminando a sala", async t => {
+  for (const nome of ["BordaAlta", "BordaCurvas", "ParedeAcimaPerso", "ParedeAbaixoPerso"]) {
+    await t.test(nome, t => {
+      let sheet;
+      const tile = { index: 7, pixelX: 376, pixelY: 200, alpha: 1 };
+      const layer = { layer: { name: nome }, x: 0, y: 0, scaleX: 1, scaleY: 1,
+        rotation: 0, alpha: 1, visible: true, depth: 26, timeElapsed: 0,
+        gidMap: { 7: { tileWidth: 48, tileHeight: 48, tileOffset: { x: 0, y: 0 },
+          getAnimatedTileId: (index, tempo) => tempo >= 1000 ? 8 : index,
+          getTileTextureCoordinates: index => ({ x: index === 7 ? 48 : 0, y: 0 }),
+          image: { getSourceImage: () => sheet } } }, cull: () => [tile],
+        setDepth() { assert.fail("a oclusão não altera o depth das paredes"); } };
+      const map = { getObjectLayer: name => ({ objects: name === "IluminaçãoBoss"
+        ? [ponto({ Cima: true, Amarelo: true })] : [] }) };
+      const { scene, render, texture, canvases, cleanup } = cenaComMascara(t, [], false,
+        { map, camadasMapaParte2: [layer] });
+      sheet = document.createElement("canvas");
+      sheet.width = 96; sheet.height = 48;
+      sheet.getContext("2d").fillRect(48, 0, 48, 48);
+      sheet.getContext("2d").clearRect(56, 20, 8, 8);
+      const camera = scene.cameras.main;
+      const rgba = (x, y) => {
+        const m = camera.matrix;
+        return texture.canvas.rgbaEm(m.a*x + m.c*y + m.e, m.b*x + m.d*y + m.f);
+      };
+      for (const [zoom, rotacao] of [[1, 0], [1.4, 0.15]]) {
+        camera.setZoom(zoom).setRotation(rotacao);
+        render();
+        assert.ok(rgba(390, 224)[0] > rgba(406, 224)[0] + 0.2,
+          "pixels transparentes deixam ver a faixa; pixels opacos escondem o emissor");
+        assert.equal(rgba(400, 210)[0], 0, "o halo amarelo não aparece por cima da parede");
+        assertSombraAmbiente(rgba(400, 210)[3], "a luz também não clareia a parede");
+        assert.ok(rgba(390, 221)[3] < ESCURIDAO_AMBIENTE_FABRICA,
+          "os pixels transparentes do tile deixam a iluminação passar");
+        assert.ok(rgba(400, 170)[0] > 0.1, "a luz continua saindo e alcança a sala");
+        const halo = rgba(400, 170);
+        layer.visible = false;
+        render();
+        assert.deepEqual(rgba(400, 170), halo, "a parede não muda o alcance do halo");
+        assert.ok(rgba(400, 210)[0] > 0.2, "ocultar a parede revela o halo que estava atrás dela");
+        assert.ok(rgba(400, 210)[3] < ESCURIDAO_AMBIENTE_FABRICA,
+          "ocultar a parede revela também a iluminação");
+        layer.visible = true;
+        render();
+        assert.equal(layer.depth, 26);
+      }
+      const quantidade = canvases.length, uploads = texture.refreshes;
+      render();
+      assert.equal(texture.refreshes, uploads, "o emissor parado reutiliza a máscara");
+      tile.flipX = true;
+      render();
+      assert.ok(rgba(410, 224)[0] > rgba(390, 224)[0] + 0.2, "o recorte acompanha o espelhamento do tile");
+      layer.visible = false;
+      render();
+      const livre = rgba(406, 224)[0];
+      layer.visible = true; layer.alpha = 0.5;
+      render();
+      const parcial = rgba(406, 224)[0];
+      layer.alpha = 1;
+      render();
+      assert.ok(parcial > rgba(406, 224)[0] && parcial < livre, "preserva a transparência parcial da camada");
+      layer.timeElapsed = 1000;
+      render();
+      assert.ok(rgba(406, 224)[0] > parcial, "trocar o frame do tile atualiza a oclusão com a câmera parada");
+      assert.equal(canvases.length, quantidade, "usa um único carimbo reutilizável");
+      cleanup();
+      assert.equal(sheet.width, 96, "preserva a textura dos tiles");
+      assert.ok(canvases.filter(canvas => canvas !== sheet).slice(1)
+        .every(canvas => canvas.width === 0 && canvas.height === 0));
+    });
+  }
+});
+
+test("LimitaLuz bloqueia lanterna, giroflex, luminárias, pulsos e áreas luminosas", async t => {
+  for (const tipo of ["lanterna", "giroflex", "luminaria", "pulso", "area"]) {
+    await t.test(tipo, t => {
+      const gerador = ["luminaria", "pulso", "area"].includes(tipo);
+      const objeto = tipo === "area"
+        ? { id: 1, x: 360, y: 185, width: 160, height: 80, properties: {} }
+        : ponto({ Pulsando: tipo === "pulso" }, 400, 225);
+      const map = { getObjectLayer: name => ({ objects:
+        name === "LimitaLuz" ? [{ x: 460, y: 100, width: 16, height: 250,
+          properties: [{ name: "Luzatravessa", type: "bool", value: true }] }]
+        : name === "LuzesFabrica" && gerador ? [objeto]
+        : name === "Luzedeemergencia" && tipo === "giroflex" ? [objeto]
+        : name === "collision" && gerador ? [{ x: 420, y: 100, width: 4, height: 250 }]
+        : [] }) };
+      const { scene, render, texture } = cenaComMascara(t, [], gerador, { map });
+      if (tipo === "lanterna") scene.player = { active: true, x: 400, y: 215 };
+      const camera = scene.cameras.main;
+      const rgba = (x, y) => {
+        const m = camera.matrix;
+        return texture.canvas.rgbaEm(m.a*x + m.c*y + m.e, m.b*x + m.d*y + m.f);
+      };
+      for (const [zoom, rotacao] of [[1, 0], [1.5, 0.15]]) {
+        camera.setZoom(zoom).setRotation(rotacao);
+        render();
+        assert.ok(rgba(430, 225)[3] < ESCURIDAO_AMBIENTE_FABRICA - 0.01,
+          "a fonte continua iluminando antes da barreira");
+        assertSombraAmbiente(rgba(465, 225)[3], "o bloqueio começa na borda do objeto");
+        assertSombraAmbiente(rgba(490, 225)[3], "a luz não passa para o outro lado");
+        assert.equal(rgba(490, 225)[0], 0, "a coloração da fonte também respeita o limite");
+      }
+    });
+  }
+});
+
+test("LuzApagada oculta no Tiled cobre todas as luzes e revela só a sala aberta com partida das lâmpadas", t => {
+  const areas = [
+    { id: 1, x: 100, y: 100, width: 160, height: 100 },
+    { id: 2, x: 500, y: 100, width: 160, height: 100 },
+  ];
+  const portas = areas.map(area => ({ estado: "fechada",
+    area: { ...area, y: 200, height: 30 } }));
+  const lampadas = [ponto({}, 200, 150), ponto({}, 580, 150), ponto({}, 400, 225)];
+  const map = { getObjectLayer: name => ({ visible: name !== "LuzApagada", objects: name === "LuzApagada" ? areas
+    : name === "LuzesFabrica" ? lampadas
+    : name === "Luzedeemergencia" ? [ponto({}, 320, 150)] : [] }) };
+  const { scene, render, texture, cleanup } = cenaComMascara(t, [], true, { map, portasFabrica: portas });
+  const camera = scene.cameras.main;
+  const rgba = (x, y) => {
+    const m = camera.matrix;
+    return texture.canvas.rgbaEm(m.a*x + m.c*y + m.e, m.b*x + m.d*y + m.f);
+  };
+  for (const [zoom, rotation] of [[1, 0], [1.3, 0.1]]) {
+    camera.setZoom(zoom).setRotation(rotation);
+    render();
+    assert.deepEqual(rgba(200, 150), [0, 0, 0, 1], "a sombra cobre inclusive o giroflex externo");
+    assert.deepEqual(rgba(580, 150), [0, 0, 0, 1]);
+    assert.ok(rgba(400, 225)[3] < ESCURIDAO_AMBIENTE_FABRICA, "as lâmpadas externas continuam ligadas");
+  }
+  const uploads = texture.refreshes;
+  render();
+  assert.equal(texture.refreshes, uploads, "zonas fechadas reutilizam a composição parada");
+  scene.definirIluminacaoFabrica(false);
+  scene.player = { active: true, x: 60, y: 140 };
+  render();
+  assert.deepEqual(rgba(200, 150), [0, 0, 0, 1], "a lanterna também fica coberta pela sombra");
+  delete scene.player;
+  scene.definirIluminacaoFabrica(true);
+  portas[0].estado = "abrindo";
+  render();
+  assert.equal(rgba(200, 150)[3], 1);
+  portas[0].estado = "aberta";
+  scene.time.now = 100;
+  render();
+  assert.equal(rgba(200, 150)[3], 1, "a revelação começa após terminar de abrir");
+  scene.time.now = 175;
+  render();
+  assert.ok(rgba(200, 150)[3] < 1 && rgba(200, 150)[3] > 0.5, "a zona escura desaparece suavemente");
+  scene.time.now = 350;
+  render();
+  assert.equal(scene.zonasLuzApagada.zonas[0].opacidade, 0);
+  const fonte = scene.iluminacaoFabrica.fontesVisiveis.find(f => f.luz.x === 200);
+  assert.ok(fonte.intensidade > 0 && fonte.intensidade < 1, "a lâmpada passa pela animação de partida");
+  scene.time.now = 850;
+  render();
+  assert.equal(fonte.intensidade, 1);
+  assert.ok(rgba(200, 150)[3] < ESCURIDAO_AMBIENTE_FABRICA);
+  assert.deepEqual(rgba(580, 150), [0, 0, 0, 1], "a outra sala permanece totalmente escura");
+  cleanup();
+  assert.equal(scene.zonasLuzApagada, null);
+});
+
 test("capsule light varies continuously along and across its core without a uniform rectangular plateau", () => {
   const center = calcularPerfilLuz(0, 0);
   assert.ok(center > 0.9 && center < 0.95);
@@ -565,7 +1392,7 @@ test("overlapping lamps retain residual shadow and only erase darkness, without 
   for (let i = 0; i < 3; i++) assert.ok(result[i] >= floor[i] * 0.79 && result[i] <= floor[i] * 0.84);
   for (const op of texture.getContext().operacoes.filter(op => op.tipo === "image")) {
     const source = op.args[4];
-    if (source === canvases[1]) assert.equal(op.globalCompositeOperation, "destination-out", "white alpha stamp is only used to remove darkness");
+    if (source.context.bitmap === canvases[1].context.bitmap) assert.equal(op.globalCompositeOperation, "destination-out", "white alpha stamp is only used to remove darkness");
     else assert.equal(op.globalCompositeOperation, "source-atop");
   }
 });

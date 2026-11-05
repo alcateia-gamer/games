@@ -28,7 +28,7 @@ export function prepararCameraNovoBoss(scene, encontro) {
         !encontro.suspenso && !scene.multiplayer && !scene.morteEmAndamento &&
         (scene.vida ?? 1) > 0 && p?.active && !p.morto;
       if (!podeEntrar) dentroArena = false;
-      else if (!dentroArena) dentroArena = jogadorNaArenaNovoBoss(p, arena);
+      else if (!dentroArena || Array.isArray(arena.zonas)) dentroArena = jogadorNaArenaNovoBoss(p, arena);
       else dentroArena = Number.isFinite(p.x) && Number.isFinite(p.y) &&
         p.x >= arena.xMin - config.margemSaidaX &&
         p.x <= arena.xMax + config.margemSaidaX &&

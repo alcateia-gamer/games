@@ -5,6 +5,7 @@ import { prepararLibertacaoNovoBoss } from "./NovoBossLibertacao.js";
  */
 import { calcularDepthAtor } from "../../map/ProfundidadeMapa.js";
 import { prepararCameraNovoBoss } from "./NovoBossCamera.js";
+import { prepararIntroducaoNovoBoss } from "./NovoBossIntroducao.js";
 import { assetsNovoBoss, criarAnimacoesNovoBoss } from "./NovoBossAssets.js";
 import { prepararAtaquesNovoBoss, cancelarAtaqueNovoBoss } from "./NovoBossAtaques.js";
 import { atualizarRestricaoNovoBoss } from "../../player/PlayerControlEffects.js";
@@ -26,6 +27,7 @@ import {
 } from "./NovoBossHud.js";
 import {
   novoBossConfig,
+  configurarZonasNovoBoss,
   jogadorNaArenaNovoBoss,
   areaCorpoNovoBoss,
 } from "./NovoBossConfig.js";
@@ -90,7 +92,7 @@ function tentarPosicionar(scene, encontro) {
 function atualizarSuspensao(scene, encontro) {
   const sprite = encontro.sprite;
   if (!sprite) return;
-  const suspender = Boolean(scene.multiplayer || scene.morteEmAndamento || !scene.player?.active ||
+  const suspender = Boolean(!encontro.jogadorNaArena || scene.multiplayer || scene.morteEmAndamento || !scene.player?.active ||
     (Number.isFinite(scene.vida) && scene.vida <= 0));
   if (suspender === encontro.suspenso) return;
   if (suspender) {
@@ -114,6 +116,7 @@ function atualizarSuspensao(scene, encontro) {
 export function prepararNovoBoss(scene, config = scene?.novoBossConfig ?? novoBossConfig) {
   if (!scene) return null;
   if (scene.novoBoss && !scene.novoBoss.encerrado) return scene.novoBoss;
+  config = configurarZonasNovoBoss(scene.map, config);
 
   const encontro = {
     config,
@@ -134,7 +137,8 @@ export function prepararNovoBoss(scene, config = scene?.novoBossConfig ?? novoBo
     limpar: null,
   };
   Object.defineProperties(encontro, {
-    active: { get: () => !encontro.encerrado && !encontro.morto && Boolean(encontro.sprite?.active) },
+    active: { get: () => !encontro.encerrado && !encontro.morto && !encontro.suspenso &&
+      encontro.jogadorNaArena && !encontro.introducao?.bloqueiaCombate && Boolean(encontro.sprite?.active) },
     visible: { get: () => Boolean(encontro.sprite?.visible) },
     body: { get: () => encontro.sprite?.body },
     x: { get: () => encontro.sprite?.x ?? config.posicaoInicial.x },
@@ -152,6 +156,7 @@ export function prepararNovoBoss(scene, config = scene?.novoBossConfig ?? novoBo
   scene.novoBoss = encontro;
   scene.restricaoControleNovoBoss ??= null;
   encontro.cameraArena = prepararCameraNovoBoss(scene, encontro);
+  encontro.introducao = prepararIntroducaoNovoBoss(scene, encontro);
   encontro.libertacao = prepararLibertacaoNovoBoss(scene, encontro);
   encontro.iniciarIlusoes = () => !encontro.teleporte && !encontro.ataqueAtual &&
     !encontro.sistemaClones?.ativo && Boolean(encontro.sistemaIlusoes?.iniciarQuatro());
@@ -184,6 +189,13 @@ export function atualizarNovoBoss(scene, _time, _delta) {
   atualizarRestricaoNovoBoss(scene, _delta);
   tentarPosicionar(scene, encontro);
   atualizarSuspensao(scene, encontro);
+  if (encontro.introducao?.atualizar(_delta)) {
+    encontro.sistemaGeradores?.atualizar(0);
+    atualizarProfundidade(scene, encontro);
+    encontro.apresentacao?.atualizar(0);
+    atualizarHudNovoBoss(scene, encontro);
+    return;
+  }
   if (encontro.sprite && !encontro.morto) {
     const geradores = encontro.sistemaGeradores ?? prepararGeradoresNovoBoss(scene, encontro);
     if (geradores !== false) atualizarCombateNovoBoss(scene, encontro, _delta);
@@ -208,6 +220,7 @@ export function destruirNovoBoss(scene) {
   const encontro = scene?.novoBoss;
   if (!encontro || encontro.encerrado) return;
   encontro.encerrado = true;
+  encontro.introducao?.destruir();
   encontro.cameraArena?.destruir();
   encontro.invulneravelClonesAte = 0;
   encontro.transicaoFase2Pendente = false;

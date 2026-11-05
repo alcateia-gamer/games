@@ -21,10 +21,12 @@ test("flashlight updates on movement and direction changes only while factory po
   }) }) };
   t.after(() => { globalThis.Phaser = previousPhaser; globalThis.document = previousDocument; });
   let uploads = 0;
+  let recortes = 0;
   let dimensions;
   const context = Object.fromEntries(["setTransform", "scale", "clearRect", "fillRect", "save", "restore",
-    "transform", "drawImage", "translate", "beginPath", "arc", "fill"]
+    "transform", "drawImage", "translate", "beginPath", "arc", "fill", "moveTo", "lineTo", "closePath"]
     .map(name => [name, () => {}]));
+  context.clip = () => { recortes++; };
   context.createRadialGradient = () => ({ addColorStop() {} });
   const texture = { getContext: () => context, setFilter() {}, refresh() { uploads++; } };
   const overlay = { visible: true };
@@ -35,7 +37,8 @@ test("flashlight updates on movement and direction changes only while factory po
   overlay.destroy = () => {};
   const scene = {
     game: { renderer: new EventEmitter() },
-    map: { getObjectLayer: () => ({ objects: [] }) },
+    map: { getObjectLayer: name => ({ objects: name === "collision"
+      ? [{ x: 200, y: 0, width: 10, height: 300, type: "" }] : [] }) },
     sys: { game: { device: { input: { touch: true } } } },
     cameras: { main: { width: 850, height: 405, originX: 0.5, originY: 0.5,
       zoom: 1, scrollX: 0, scrollY: 0,
@@ -53,15 +56,18 @@ test("flashlight updates on movement and direction changes only while factory po
   const render = () => scene.game.renderer.emit("render", scene, scene.cameras.main);
   assert.deepEqual(dimensions, [850, 405]);
   render();
+  assert.equal(recortes, 1, "o desenho da lanterna é recortado pelas colisões sem tipo do mapa");
   const stationaryUploads = uploads;
   for (let i = 0; i < 120; i++) render();
   assert.equal(uploads, stationaryUploads);
   scene.player.body.velocity.x = 100;
   render();
   assert.equal(uploads, stationaryUploads + 1, "mudar direção atualiza o cone");
+  const recortesSemEnergia = recortes;
   scene.definirIluminacaoFabrica(true);
   render();
   assert.equal(uploads, stationaryUploads + 2, "ligar a fábrica apaga a lanterna");
+  assert.equal(recortes, recortesSemEnergia, "o bloqueio da lanterna não recorta as lâmpadas da fábrica");
   scene.player.x += 40;
   scene.player.body.velocity.x = -100;
   render();

@@ -1,6 +1,10 @@
 /** A região troca a profundidade de cada ator; as camadas do mapa permanecem estáveis. */
 const FLOORS = new Set(["chão", "detalhes do chão", "ListrasChão", "Sujeira", "ChãoProdução"]);
 
+export function camadaEhPisoFabrica(nome) {
+  return FLOORS.has(nome);
+}
+
 export function configurarTrocaCamada(scene) {
   const area = scene.map.getObjectLayer("trocadecamada")?.objects?.find(object =>
     object.name === "trocadecamada01" && object.width > 0 && object.height > 0);
