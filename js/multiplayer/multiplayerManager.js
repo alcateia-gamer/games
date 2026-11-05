@@ -75,6 +75,11 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
       attackStartedAt: Number(player.attackStartedAt) || 0,
       serverTick: Number(player.serverTick) || 0,
       projectiles: Array.isArray(player.projectiles) ? player.projectiles : [],
+      nyxAura: player.character === "nyx" && player.nyxAura &&
+        typeof player.nyxAura.id === "string" && Number.isFinite(player.nyxAura.startedAt)
+        ? { id: player.nyxAura.id, startedAt: player.nyxAura.startedAt,
+          mapKey: String(player.nyxAura.mapKey || "") } : null,
+      nyxAuraCooldownUntil: Number(player.nyxAuraCooldownUntil) || 0,
       lastSeen: Number(player.lastSeen) || Date.now(),
     };
   }
@@ -265,6 +270,20 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
       this.room.status = "PLAYING";
       this.publishState();
       this.emit("gameStarted", this.room);
+    } else if (action.type === "nyx_aura" && player?.character === "nyx" &&
+      this.room.status === "PLAYING") {
+      if (action.stop) {
+        if (player.nyxAura?.id !== action.id) return;
+        player.nyxAura = null;
+      } else {
+        const now = Date.now();
+        if (now < (player.nyxAuraCooldownUntil || 0) ||
+          typeof action.id !== "string" || !action.id || action.id.length > 120 ||
+          !["Level1", "Level1Parte2"].includes(action.mapKey)) return;
+        player.nyxAuraCooldownUntil = now + 20000;
+        player.nyxAura = { id: action.id, startedAt: now, mapKey: action.mapKey };
+      }
+      this.publishState();
     } else if (action.type === "game_state" && player) {
       const previousAttackId = player.attackId;
       player.x = Number.isFinite(action.x) ? action.x : player.x;

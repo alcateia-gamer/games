@@ -12,6 +12,7 @@ import { carregarSomLuzFabrica } from "../sounds/luzFabrica.js";
 import { preloadInventoryItemImages } from "../inventory/InventoryItems.js";
 import { PERSONAGEM_TESTE, PERSONAGENS_TESTE, ARMAS_PERSONAGEM_TESTE, carregarPersonagemTeste } from "../player/PersonagemTeste.js";
 import { carregarAssetsNovoBoss } from "../enemies/novoBoss/NovoBossAssets.js";
+import { carregarEfeitosEspeciais } from "../combat/SpecialAbilityEffects.js";
 
 class Preloader extends Phaser.Scene {
   /**
@@ -420,6 +421,7 @@ class Preloader extends Phaser.Scene {
     this.load.setPath("./assets/");
     carregarPersonagemTeste(this);
     carregarAssetsNovoBoss(this);
+    carregarEfeitosEspeciais(this);
 
     preloadInventoryItemImages(this);
     this.load.image("hand_icon", "../Tilesets/extras/Hand_icon.png");

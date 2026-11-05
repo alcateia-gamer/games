@@ -1,0 +1,23 @@
+{
+  "quadros": 12,
+  "larguraFrame": 384,
+  "alturaFrame": 192,
+  "duracoesMs": [
+    100,
+    100,
+    100,
+    100,
+    100,
+    100,
+    100,
+    100,
+    100,
+    100,
+    100,
+    100
+  ],
+  "loop": 0,
+  "colunas": 4,
+  "sha256Original": "3fa289cfcd1bb2e1ebdddd59b0c18914e3b4a5a0d990e0a6e3d4262e2e7f9d33",
+  "origem": "Tilesets/mechanics/HolyNova_preview.gif"
+}

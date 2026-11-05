@@ -1,0 +1,24 @@
+{
+  "quadros": 13,
+  "larguraFrame": 192,
+  "alturaFrame": 192,
+  "duracoesMs": [
+    100,
+    100,
+    100,
+    100,
+    100,
+    100,
+    100,
+    100,
+    100,
+    100,
+    100,
+    100,
+    100
+  ],
+  "loop": 0,
+  "colunas": 4,
+  "sha256Original": "efb16405baea1eeff7d3a37ed8996a250a3cd214fd70f957054abfd00ef30827",
+  "origem": "Tilesets/mechanics/Heal_preview.gif"
+}

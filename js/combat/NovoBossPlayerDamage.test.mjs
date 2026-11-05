@@ -178,25 +178,39 @@ test("onda Magnus respeita obstáculo antes do boss", () => {
   assert.equal(scene.novoBoss.acertos.length, 0);
 });
 
-test("corte Nyx usa hitbox nova, dano 12 e termina após acerto aceito", () => {
+test("aura Nyx substitui o corte por cura sem causar dano ao boss", () => {
   const scene = cena("nyx", 70, 0);
+  scene.vida = 40; scene.vidaMaxima = 100;
   criarSistemaEspeciais(scene);
   scene.events.emit("player:especial");
-  for (let i = 0; i < 5; i++) atualizarSistemaEspeciais(scene, 50);
-  assert.equal(scene.novoBoss.vida, 988);
-  assert.equal(scene.novoBoss.acertos.length, 1);
+  scene.time.now = 1200;
+  atualizarSistemaEspeciais(scene);
+  scene.time.now = 2200;
+  atualizarSistemaEspeciais(scene);
+  atualizarSistemaEspeciais(scene);
+  assert.equal(scene.vida, 45);
+  assert.equal(scene.novoBoss.vida, 1000);
+  assert.equal(scene.novoBoss.acertos.length, 0);
   assert.equal(scene.estadoEspecial.cortes.size, 0);
 });
 
-test("corte Nyx continua quando encontro rejeita dano", () => {
+test("aura Nyx dura dez segundos e respeita vinte segundos de recarga", () => {
   const scene = cena("nyx", 70, 0);
-  scene.novoBoss.invulneravel = true;
+  scene.vida = 20; scene.vidaMaxima = 100;
   criarSistemaEspeciais(scene);
   scene.events.emit("player:especial");
-  atualizarSistemaEspeciais(scene, 16);
-  assert.ok(scene.novoBoss.acertos.length > 0);
-  assert.equal(scene.novoBoss.vida, 1000);
-  assert.equal(scene.estadoEspecial.cortes.size, 1);
+  scene.time.now = 1200;
+  atualizarSistemaEspeciais(scene);
+  for (let segundo=1;segundo<=10;segundo++) {
+    scene.time.now = 1200+segundo*1000;
+    atualizarSistemaEspeciais(scene);
+  }
+  assert.equal(scene.vida,70);
+  assert.equal(scene.estadoEspecial.auraNyx,null);
+  scene.time.now = 19999; scene.events.emit('player:especial');
+  assert.equal(scene.estadoEspecial.auraNyx,null);
+  scene.time.now = 20000; scene.events.emit('player:especial');
+  assert.ok(scene.estadoEspecial.auraNyx);
 });
 
 test("parry Kai direciona o laser para novo boss e devolve dano pelo contrato", () => {
@@ -212,6 +226,22 @@ test("parry Kai direciona o laser para novo boss e devolve dano pelo contrato", 
   assert.equal(laser.active, false);
   assert.equal(scene.novoBoss.vida, 970);
   assert.equal(scene.novoBoss.acertos.length, 1);
+});
+
+test('Kai mantém parry por 5,8s e respeita o raio reduzido em mais 20%',()=>{
+  const scene=cena('kai-mercer',100,0),laser=objeto(49.6,0);
+  criarSistemaEspeciais(scene);scene.events.emit('player:especial');
+  assert.equal(scene.estadoEspecial.parryAte,5800);
+  assert.equal(scene.estadoEspecial.proximoUso,8000);
+  assert.equal(scene.tentarInterceptarLaserEspecial(objeto(55,0)),false);
+  assert.equal(scene.tentarInterceptarLaserEspecial(laser),true);
+  scene.time.now=5799;assert.equal(scene.tentarBloquearDanoEspecial(null),true);
+  scene.time.now=5800;assert.equal(scene.tentarBloquearDanoEspecial(null),false);
+  atualizarSistemaEspeciais(scene);assert.equal(scene.estadoEspecial.parryGrafico,null);
+  scene.time.now=7999;scene.events.emit('player:especial');
+  assert.equal(scene.estadoEspecial.parryAte,5800);
+  scene.time.now=8000;scene.events.emit('player:especial');
+  assert.equal(scene.estadoEspecial.parryAte,13800);
 });
 
 test("rifle de teste mira no novo boss e só causa um acerto por laser", () => {

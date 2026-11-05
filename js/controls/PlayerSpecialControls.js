@@ -49,7 +49,7 @@ const ESPECIAIS_PERSONAGENS = Object.freeze({
   nyx: {
     frame: 3,
     cor: 0xa78bfa,
-    texto: "CRT",
+    texto: "CURA",
   },
 });
 

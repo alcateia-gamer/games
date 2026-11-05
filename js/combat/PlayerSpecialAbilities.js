@@ -1,17 +1,21 @@
 /**
  * Habilidades especiais de Kai, Magnus, Aria e Nyx.
- * Integração atual: somente modo solo.
+ * Habilidades solo e aura de cura da Nyx compartilhada no cooperativo.
  * Não modifica dash, ataques normais ou hitboxes originais.
  */
 
 import { causarDanoInimigo } from "../enemies/EnemyHealth.js";
 import { causarDanoBoss } from "../enemies/BossFinal.js";
 import { jogadorPresoNovoBoss } from "../player/PlayerControlEffects.js";
+import { criarColisaoDomoKai } from './KaiDomeCollision.js';
+import { NYX_AURA, prepararAuraNyx, iniciarAuraNyx, atualizarAuraNyx, limparAuraNyx } from './NyxHealingAura.js';
+import { criarEfeitoEspecial, atualizarEfeitoEspecial, deslocamentoChao, iniciarAnimacaoMarreta, desenharDomoKai } from './SpecialAbilityEffects.js';
 import { alvosAdicionaisCombate, eAlvoAdicionalCombate,
   causarDanoAlvoAdicional } from "./CombatTargets.js";
 
 import {
   caminhoDiretoBloqueado,
+  obterFilhosGrupoSeguro,
   retanguloLivreDoMapa,
 } from "../enemies/EnemyPathfinding.js";
 
@@ -21,7 +25,7 @@ import {
 
 const ESPECIAIS = Object.freeze({
   "kai-mercer": {
-    cooldown: 7000,
+    cooldown: 8000,
     cor: 0x38bdf8,
   },
 
@@ -36,14 +40,14 @@ const ESPECIAIS = Object.freeze({
   },
 
   nyx: {
-    cooldown: 5000,
+    cooldown: NYX_AURA.cooldown,
     cor: 0xa78bfa,
   },
 });
 
 const CONFIG = Object.freeze({
-  kaiDuracao: 1800,
-  kaiRaio: 57,
+  kaiDuracao: 5800,
+  kaiRaio: 49.6,
 
   ariaDuracao: 4500,
   ariaVelocidade: 145,
@@ -185,12 +189,15 @@ function iniciarParry(scene, estado, agora) {
   estado.parryAte = agora + CONFIG.kaiDuracao;
 
   estado.parryGrafico?.destroy();
+  estado.parryEfeito?.sprite.destroy();
+  estado.parryEfeito = criarEfeitoEspecial(scene,'kai',CONFIG.kaiRaio);
+  estado.parryColisao?.destruir();
+  estado.parryColisao = criarColisaoDomoKai(scene,estado,CONFIG.kaiRaio,CONFIG.kaiDuracao);
 
   estado.parryGrafico = scene.add
     .graphics()
     .setDepth((scene.player.depth ?? 50) + 0.15);
 
-  pulsoVisual(scene, scene.player.x, scene.player.y, 29, 0x38bdf8, 230);
 }
 
 // =====================================================
@@ -204,27 +211,25 @@ function atualizarParry(scene, estado, agora) {
     return;
   }
 
-  if (agora >= estado.parryAte || !scene.player?.active) {
+  if (agora >= estado.parryAte || !scene.player?.active || scene.morteEmAndamento) {
     g.destroy();
     estado.parryGrafico = null;
+    estado.parryEfeito?.sprite.destroy();
+    estado.parryEfeito = null;
+    estado.parryColisao?.destruir();
+    estado.parryColisao = null;
     return;
   }
 
   const player = scene.player;
 
-  const fase = Math.sin(agora * 0.015) * 0.08;
-
   const r = CONFIG.kaiRaio;
-
-  // A esfera acompanha a posição atual
-  // do jogador durante toda sua duração.
-  g.clear()
-    .fillStyle(0x38bdf8, 0.055 + fase * 0.2)
-    .fillCircle(player.x, player.y - 4, r)
-    .lineStyle(5, 0x006baa, 0.32)
-    .strokeCircle(player.x, player.y - 4, r + 3)
-    .lineStyle(2.5, 0x8de7ff, 0.8 + fase)
-    .strokeCircle(player.x, player.y - 4, r);
+  const decorrido = agora-(estado.parryAte-CONFIG.kaiDuracao);
+  atualizarEfeitoEspecial(estado.parryEfeito,player.x,player.y+deslocamentoChao(scene),decorrido,
+    (player.depth ?? 50)-.04,decorrido/CONFIG.kaiDuracao);
+  desenharDomoKai(g,estado.parryEfeito,player.x,player.y+deslocamentoChao(scene),
+    r,decorrido,player.depth ?? 50);
+  estado.parryColisao?.atualizar(player.x,player.y+deslocamentoChao(scene));
 }
 
 // =====================================================
@@ -313,7 +318,7 @@ function refletirLaser(scene, estado, laser) {
 // =====================================================
 
 function lasersEspeciais(scene) {
-  return [...(scene.lasersInimigo?.getChildren?.() || []), ...(scene.novoBoss?.projeteisBoss || [])];
+  return [...obterFilhosGrupoSeguro(scene.lasersInimigo), ...(scene.novoBoss?.projeteisBoss || [])];
 }
 
 function atualizarLasersRefletidos(scene) {
@@ -342,12 +347,17 @@ function atualizarLasersRefletidos(scene) {
 // =====================================================
 
 function iniciarOnda(scene, estado, agora) {
+  iniciarAnimacaoMarreta(scene);
+  estado.impactoMagnus?.sprite.destroy();
+  estado.impactoMagnus = criarEfeitoEspecial(scene,'magnus',110);
+  estado.impactoInicio = agora+70;
+  estado.impactoPosicao = { x:scene.player.x, y:scene.player.y+deslocamentoChao(scene) };
   estado.onda = {
     x: scene.player.x,
     y: scene.player.y,
 
-    inicio: agora,
-    duracao: 390,
+    inicio: agora + 200,
+    duracao: 260,
     raio: 110,
     raioAtual: 0,
 
@@ -362,6 +372,11 @@ function atualizarOnda(scene, estado, agora) {
 
   if (!onda) {
     return;
+  }
+  if (agora < onda.inicio) return;
+  if (!onda.impactou) {
+    onda.impactou = true;
+    scene.cameras?.main?.shake?.(180,.005);
   }
 
   const progresso = Phaser.Math.Clamp(
@@ -423,10 +438,10 @@ function atualizarOnda(scene, estado, agora) {
 
     const mag = Math.max(1, Math.hypot(dx, dy));
 
-    alvo.setVelocity((dx / mag) * 240, (dy / mag) * 240);
+    alvo.setVelocity((dx / mag) * 400, (dy / mag) * 400);
 
-    alvo.especialEmpurraoAte = agora + 200;
-    alvo.especialAtordoadoAte = agora + 650;
+    alvo.especialEmpurraoAte = agora + 280;
+    alvo.especialAtordoadoAte = agora + 1200;
   }
 
   // Destruir lasers que a onda alcançar.
@@ -936,6 +951,15 @@ function criarSistemaEspeciais(scene) {
   };
 
   scene.estadoEspecial = estado;
+  prepararAuraNyx(scene,estado);
+  // A física atualiza a posição do sprite no pós-update. Desenha a área depois
+  // disso para que ela e o domo acompanhem a caminhada no mesmo quadro.
+  const sincronizarDomo = () => {
+    if (!scene.multiplayer && estado.parryGrafico && scene.player?.active) {
+      atualizarParry(scene,estado,scene.time.now);
+    }
+  };
+  scene.events.on('postupdate',sincronizarDomo);
 
   // ===================================================
   // ATIVAR BOTÃO ESPECIAL
@@ -943,7 +967,7 @@ function criarSistemaEspeciais(scene) {
 
   const ativar = () => {
     if (
-      scene.multiplayer ||
+      (scene.multiplayer && scene.personagemSelecionada !== 'nyx') ||
       !scene.player?.active ||
       scene.morteEmAndamento ||
       scene.generatorMenuOpen ||
@@ -984,7 +1008,7 @@ function criarSistemaEspeciais(scene) {
 
     const agora = scene.time.now;
 
-    if (agora < estado.proximoUso) {
+    if (agora < estado.proximoUso || (scene.multiplayer && agora < estado.redeRecargaAte)) {
       return false;
     }
 
@@ -1003,7 +1027,7 @@ function criarSistemaEspeciais(scene) {
     }
 
     if (personagem === "nyx") {
-      dispararCorteNyx(scene, estado);
+      iniciarAuraNyx(scene, estado);
     }
 
     return true;
@@ -1041,10 +1065,15 @@ function criarSistemaEspeciais(scene) {
 
   const limpar = () => {
     scene.events.off("player:especial", ativar);
+    scene.events.off('postupdate',sincronizarDomo);
 
     scene.events.off(Phaser.Scenes.Events.SHUTDOWN, limpar);
 
     estado.parryGrafico?.destroy();
+    estado.parryEfeito?.sprite.destroy();
+    estado.parryColisao?.destruir();
+    estado.impactoMagnus?.sprite.destroy();
+    limparAuraNyx(scene,estado);
     estado.onda?.grafico?.destroy();
 
     destruirHolograma(scene, estado, false);
@@ -1079,32 +1108,33 @@ function criarSistemaEspeciais(scene) {
 function atualizarSistemaEspeciais(scene, delta = 16.67) {
   const estado = scene.estadoEspecial;
 
-  if (!estado || scene.multiplayer || !scene.player?.active) {
+  if (!estado) {
     return;
   }
+  atualizarAuraNyx(scene,estado);
+  if (!scene.player?.active) return;
 
   const agora = scene.time.now;
 
-  // KAI
-  atualizarParry(scene, estado, agora);
-
-  // MAGNUS
-  atualizarOnda(scene, estado, agora);
-
-  // ARIA
-  atualizarHolograma(scene, estado, delta, agora);
-
-  // NYX
-  atualizarCortesNyx(scene, estado, delta);
-
-  // Atualizar interceptação de lasers do Kai.
-  for (const laser of lasersEspeciais(scene)) {
-    if (laser?.active && !laser.especialRefletido) {
-      refletirLaser(scene, estado, laser);
+  if (!scene.multiplayer) {
+    atualizarParry(scene, estado, agora);
+    atualizarOnda(scene, estado, agora);
+    if (estado.impactoMagnus) {
+      const elapsed = agora-estado.impactoInicio;
+      if (elapsed >= 1500) {
+        estado.impactoMagnus.sprite.destroy();
+        estado.impactoMagnus = null;
+      } else atualizarEfeitoEspecial(estado.impactoMagnus,estado.impactoPosicao.x,
+        estado.impactoPosicao.y,Math.max(0,elapsed),(scene.player.depth ?? 50)-.03);
     }
-  }
 
-  atualizarLasersRefletidos(scene);
+    atualizarHolograma(scene, estado, delta, agora);
+    // O corte antigo da Nyx fica preservado, fora do fluxo da habilidade.
+    for (const laser of lasersEspeciais(scene)) {
+      if (laser?.active && !laser.especialRefletido) refletirLaser(scene, estado, laser);
+    }
+    atualizarLasersRefletidos(scene);
+  }
 
   // ===================================================
   // OPACIDADE DO BOTÃO DURANTE A RECARGA
@@ -1113,9 +1143,8 @@ function atualizarSistemaEspeciais(scene, delta = 16.67) {
   if (scene.botaoEspecial?.active) {
     const nome = scene.personagemSelecionada;
 
-    const recarga = ESPECIAIS[nome]?.cooldown || 1;
-
-    const esperando = agora < estado.proximoUso;
+    const esperando = agora < Math.max(estado.proximoUso,
+      scene.multiplayer ? estado.redeRecargaAte || 0 : 0);
 
     // A Aria pode utilizar a troca mesmo
     // que a habilidade esteja em recarga.
