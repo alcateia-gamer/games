@@ -3,6 +3,8 @@ import { intensidadeLuzPartida } from "./FactoryLighting.js";
 const DURACAO_REVELACAO = 150;
 const DURACAO_PARTIDA_ZONA = 700;
 const ATRASO_ENTRE_LAMPADAS = 40;
+// Retângulos desenhados no Tiled podem deixar pequenas frestas por arredondamento.
+const TOLERANCIA_CONEXAO_ZONAS = 1;
 const limitar = valor => Math.max(0, Math.min(1, valor));
 
 function centroLuz(luz) {
@@ -16,6 +18,13 @@ function contem(zona, ponto) {
   const dx = ponto.x - zona.x, dy = ponto.y - zona.y;
   const x = dx * zona.cos + dy * zona.sin, y = -dx * zona.sin + dy * zona.cos;
   return x >= 0 && x < zona.largura && y >= 0 && y < zona.altura;
+}
+
+function zonasConectadas(a, b) {
+  const x = Math.min(a.right, b.right) - Math.max(a.left, b.left);
+  const y = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
+  return (x > 0 && y >= -TOLERANCIA_CONEXAO_ZONAS) ||
+    (y > 0 && x >= -TOLERANCIA_CONEXAO_ZONAS);
 }
 
 export function lerZonasLuzApagada(map) {
@@ -73,6 +82,10 @@ export default class DoorLightingZones {
       }
     }
     if (!candidata) return;
+    this.vincularPorta(zona, candidata);
+  }
+
+  vincularPorta(zona, candidata) {
     zona.porta = candidata;
     // Uma porta já aberta ao entrar no mapa restaura a sala sem repetir a animação.
     zona.restaurada = candidata.estado === "aberta";
@@ -90,6 +103,21 @@ export default class DoorLightingZones {
   atualizar(agora, portas, energia) {
     for (const zona of this.zonas) {
       if (!zona.porta) this.associarPorta(zona, portas);
+    }
+    // Uma sala pode ser desenhada em vários retângulos; só o da entrada precisa
+    // estar perto da porta. Associa primeiro as portas diretas para preservar salas vizinhas.
+    let vinculada;
+    do {
+      vinculada = false;
+      for (const zona of this.zonas) {
+        if (zona.porta) continue;
+        const vizinha = this.zonas.find(outra => outra.porta && zonasConectadas(zona.bounds, outra.bounds));
+        if (!vizinha) continue;
+        this.vincularPorta(zona, vizinha.porta);
+        vinculada = true;
+      }
+    } while (vinculada);
+    for (const zona of this.zonas) {
       if (!zona.liberada && zona.porta?.estado === "aberta") {
         zona.liberada = true;
         zona.inicioRevelacao = agora;
@@ -103,6 +131,16 @@ export default class DoorLightingZones {
         ? limitar((agora - zona.inicioRevelacao) / DURACAO_REVELACAO) : 0;
       const opacidade = Math.round((1 - p * p * (3 - 2 * p)) * 255) / 255;
       if (zona.opacidade !== opacidade) { zona.opacidade = opacidade; this.revisao++; }
+    }
+  }
+
+  revelarPortas(portas, agora = 0) {
+    this.atualizar(agora, portas, false);
+    for (const zona of this.zonas) {
+      if (!portas.includes(zona.porta)) continue;
+      zona.liberada = zona.restaurada = true;
+      zona.opacidade = 0;
+      this.revisao++;
     }
   }
 

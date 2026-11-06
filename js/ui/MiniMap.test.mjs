@@ -777,3 +777,48 @@ test("the generator hides its lightning icon when the lights turn on and stays w
   radar.update(4);
   assert.equal(itemCommands.length, 0);
 });
+
+test("as duas persianas têm ícones com lâminas cinza fixos no radar, respeitando seus limites", () => {
+  const { radar, itemCommands } = enemyRadarFixture([]);
+  const persiana = (x, marcador = {}) => ({ marcador,
+    area: { x: x - 20, y: -10, width: 40, height: 20 } });
+  radar.scene.portasFabrica = [persiana(-100), persiana(100), persiana(0, null),
+    persiana(NaN), persiana(350), persiana(-305)];
+  radar.update();
+  assert.equal(itemCommands.length, 16);
+  assert.deepEqual(itemCommands[0], [0x1b242a, 25, 38, 16, 14]);
+  assert.deepEqual(itemCommands[1], [0x89969d, 27, 40, 12, 10]);
+  assert.deepEqual(itemCommands.slice(2, 6).map(c => [c[0], c[3], c[4]]),
+    Array.from({ length: 4 }, () => [0x39454c, 12, 1]));
+  assert.equal(itemCommands[6][0], COLLECTIBLE_MARKER_COLOR);
+  assert.deepEqual(itemCommands[8], [0x1b242a, 49, 38, 16, 14]);
+  const original = structuredClone(itemCommands);
+  radar.scene.luzFabricaAcesa = true;
+  radar.scene.portasFabrica[0].marcador.y = -100;
+  radar.scene.portasFabrica[0].estado = "aberta";
+  radar.update();
+  assert.deepEqual(itemCommands, original, "a localização da persiana continua marcada após abrir");
+});
+
+test("o leitor da arena tem um cartão fixo no radar, independente de energia e inventário", () => {
+  const { radar, itemCommands } = enemyRadarFixture([]);
+  radar.scene.leitorCartaoFabrica = { area: { x: 80, y: -10, width: 40, height: 20 } };
+  radar.update();
+  assert.equal(itemCommands.length, 5);
+  assert.deepEqual(itemCommands[0], [0x30250a, 49, 39, 16, 12]);
+  assert.equal(itemCommands[1][0], COLLECTIBLE_MARKER_COLOR);
+  const original = structuredClone(itemCommands);
+  radar.scene.luzFabricaAcesa = true;
+  radar.scene.inventory = { getQuantity: () => 1 };
+  radar.update();
+  assert.deepEqual(itemCommands, original);
+  radar.scene.leitorCartaoFabrica.area.x = 350;
+  radar.update();
+  assert.equal(itemCommands.length, 0, "o cartão não sai dos limites do radar");
+  radar.scene.leitorCartaoFabrica.area.x = NaN;
+  radar.update();
+  assert.equal(itemCommands.length, 0);
+  radar.scene.leitorCartaoFabrica = null;
+  radar.update();
+  assert.equal(itemCommands.length, 0);
+});

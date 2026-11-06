@@ -1,21 +1,26 @@
-/** Pressão da fase 2 entre ataques; não desloca as aberturas nem os ataques centrais. */
+/** Caminhada pesada nas duas fases; preserva aberturas e ataques de origem fixa. */
 import { destinoValidoNovoBoss, sincronizarCorpoNovoBoss } from "./NovoBossTeleporte.js";
 
 const positivo = (valor, padrao) => Number.isFinite(valor) && valor > 0 ? valor : padrao;
+const configuracaoMovimento = encontro => encontro.fase === 2
+  ? encontro.config.fase2?.movimento : encontro.config.movimento;
 
 function movimentoPermitido(scene, encontro, delta) {
-  const config = encontro.config.fase2?.movimento;
-  if (!config?.ativo || encontro.fase !== 2 || !Number.isFinite(delta) || delta <= 0 ||
+  const config = configuracaoMovimento(encontro);
+  if (!config?.ativo || !Number.isFinite(delta) || delta <= 0 ||
       encontro.teleporte || encontro.teleportePendente || encontro.transicaoFase2Pendente ||
       encontro.morto || encontro.encerrado || encontro.suspenso || !encontro.sprite?.active ||
+      encontro.active === false || (encontro.vida ?? 1) <= 0 ||
       !encontro.jogadorNaArena || scene.multiplayer || scene.morteEmAndamento || (scene.vida ?? 1) <= 0 ||
+      !scene.player?.active || scene.player.morto || !Number.isFinite(scene.player.x) || !Number.isFinite(scene.player.y) ||
       !["preparando", "atacando"].includes(encontro.estado) ||
-      ["pulsoRepulsao", "lasers"].includes(encontro.ataqueAtual?.tipo) ||
+      ["pulso", "pulsoRepulsao", "lasers", "lasersEspiral"].includes(encontro.ataqueAtual?.tipo) ||
       encontro.sistemaIlusoes?.ativo) return false;
   return true;
 }
 
 function teleporteVencido(encontro) {
+  if (encontro.fase !== 2) return false;
   const agora = encontro.relogioCombate;
   return encontro.estado === "preparando" && agora >=
     Math.max(encontro.inicioFase2Em ?? agora, encontro.ultimoTeleporteEm) +
@@ -36,9 +41,9 @@ export function tempoMovimentoNovoBoss(scene, encontro, delta) {
 }
 
 export function moverCorpoEmPressaoNovoBoss(scene, encontro, entidade, tempo, desvioRumo = 0) {
-  const config = encontro.config.fase2.movimento;
+  const config = configuracaoMovimento(encontro);
   const agora = encontro.relogioCombate;
-  let restante = positivo(config.velocidade, 250) * tempo / 1000;
+  let restante = positivo(config.velocidade, encontro.fase === 2 ? 60 : 28) * tempo / 1000;
   let moveu = false;
   const distanciaPreferida = positivo(config.distanciaPreferida, 180);
   const sentido = Math.floor(agora / positivo(config.alternarRumoMs, 1200)) % 2 ? -1 : 1;
@@ -68,6 +73,8 @@ export function moverCorpoEmPressaoNovoBoss(scene, encontro, entidade, tempo, de
 }
 
 export function atualizarMovimentoNovoBoss(scene, encontro, delta = 0) {
+  // Preserva o impulso do acerto até o último quadro, como a IA dos demais inimigos.
+  if (encontro.apresentacao?.recuouNesteQuadro) return false;
   if (!movimentoPermitido(scene, encontro, delta)) return false;
   if (teleporteVencido(encontro)) {
     encontro.teleportePendente = "pressao-fase2";

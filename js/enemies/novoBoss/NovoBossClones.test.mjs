@@ -207,16 +207,16 @@ test("desativado, multiplayer ou origem bloqueada não geram clones", () => {
   assert.equal(bloqueado.sistema.iniciar(), false);
 });
 
-test("na fase 2 todos caminham a 250 px/s e param nas mesmas aberturas e ataques centrais", () => {
+test("na fase 2 todos caminham a 60 px/s e param nas mesmas aberturas e ataques centrais", () => {
   const { encontro, sistema } = preparar();
   Object.assign(encontro, { fase: 2, estado: "preparando", tempoEstado: 1000,
     relogioCombate: 1000, inicioFase2Em: 0, inicioOndaClonesEm: 0, ultimoTeleporteEm: 0 });
   sistema.iniciar();
   sistema.atualizar(100);
-  assert.equal(sistema.snapshot().velocidade, 250);
+  assert.equal(sistema.snapshot().velocidade, 60);
   assert.ok(sistema.alvos.every(a => a.sprite.alpha === 1));
   for (const alvo of sistema.alvos) {
-    assert.ok(Math.abs(Math.hypot(alvo.x - encontro.x, alvo.y - encontro.y) - 25) < 0.1);
+    assert.ok(Math.abs(Math.hypot(alvo.x - encontro.x, alvo.y - encontro.y) - 6) < 0.1);
   }
   for (const bloquear of [
     () => { encontro.estado = "vulneravel"; },
@@ -233,5 +233,5 @@ test("na fase 2 todos caminham a 250 px/s e param nas mesmas aberturas e ataques
   const antes = sistema.alvos.map(a => [a.x,a.y]);
   sistema.atualizar(1000);
   for (const [i,a] of sistema.alvos.entries())
-    assert.ok(Math.abs(Math.hypot(a.x-antes[i][0],a.y-antes[i][1])-5)<0.1);
+    assert.ok(Math.abs(Math.hypot(a.x-antes[i][0],a.y-antes[i][1])-1.2)<0.1);
 });

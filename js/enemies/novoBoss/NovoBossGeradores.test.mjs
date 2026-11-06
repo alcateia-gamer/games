@@ -7,6 +7,7 @@ import { readFileSync } from "node:fs";
 import { assetsNovoBoss } from "./NovoBossAssets.js";
 import { alvosAdicionaisCombate, causarDanoAlvoAdicional } from "../../combat/CombatTargets.js";
 import { atualizarDepthAtores } from "../../map/ProfundidadeMapa.js";
+import BossEnergyLighting from "../../effects/BossEnergyLighting.js";
 
 globalThis.Phaser = { Geom: { Rectangle: class {
   constructor(x, y, width, height) { Object.assign(this, { x, y, width, height }); }
@@ -388,6 +389,58 @@ test("summon toca uma vez; idle repete respeitando o quadro original de 200 ms",
   sistema.atualizar(1); assert.equal(t.visual.frame, 8);
   sistema.atualizar(700); assert.equal(t.visual.frame, 0);
   sistema.atualizar(16000); assert.equal(t.estado, "idle"); assert.equal(t.visual.frame, 0);
+});
+
+test("luz azul segue as faíscas do idle, a pausa de 200 ms e o ciclo de vida da torre", () => {
+  const { scene, encontro } = criarArenaTorres();
+  const sistema = prepararGeradoresNovoBoss(scene, encontro), torre = encontro.geradores[0];
+  const luzes = new BossEnergyLighting(scene);
+  const camera = { width: 2000, height: 1600, matrix: { a: 1, b: 0, c: 0, d: 1, e: 2000, f: 6500 } };
+  const choques = () => luzes.atualizar(camera).filter(fonte => fonte.choqueTorre);
+  sistema.atualizar(1599);
+  assert.equal(choques().length, 0, "a invocação não emite o choque de idle");
+  sistema.atualizar(1);
+  assert.equal(torre.visual.frame, 0);
+  assert.equal(choques().length, 0, "quadro sem faísca fica apagado");
+  sistema.atualizar(100);
+  let fontes = choques();
+  assert.equal(fontes.length, 4);
+  assert.equal(torre.visual.frame, 1);
+  assert.ok(Math.abs(fontes[0].luz.x - torre.visual.x) < 10);
+  assert.ok(fontes[0].luz.y < torre.visual.y - 90, "a luz nasce entre as bobinas, acima da base");
+  const fraca = fontes[0].intensidade, revisao = luzes.revisao;
+  sistema.atualizar(99); choques();
+  assert.equal(luzes.revisao, revisao, "reutiliza a composição enquanto o quadro é o mesmo");
+  sistema.atualizar(1);
+  assert.equal(torre.visual.frame, 2);
+  assert.ok(choques()[0].intensidade > fraca, "o choque maior ilumina mais");
+  sistema.atualizar(500);
+  assert.equal(torre.visual.frame, 7);
+  assert.equal(choques().length, 0);
+  sistema.atualizar(199);
+  assert.equal(torre.visual.frame, 7);
+  assert.equal(choques().length, 0, "a pausa original de 200 ms permanece apagada");
+  sistema.atualizar(1);
+  assert.equal(torre.visual.frame, 8);
+  assert.equal(choques().length, 4);
+  encontro.suspenso = true;
+  sistema.atualizar(5000);
+  assert.equal(choques().length, 0);
+  assert.equal(torre.visual.frame, 8, "suspender não avança o relógio das faíscas");
+  encontro.suspenso = false;
+  sistema.atualizar(0);
+  assert.equal(choques().length, 4);
+  assert.ok(causarDanoAlvoAdicional(scene, torre, 1));
+  assert.equal(choques().length, 3, "receber dano apaga o choque imediatamente");
+  sistema.atualizar(400);
+  assert.equal(torre.estado, "idle");
+  sistema.atualizar(100);
+  assert.equal(choques().length, 4, "o idle retoma a luz pelo quadro atual");
+  assert.ok(causarDanoAlvoAdicional(scene, torre, 1000));
+  assert.equal(choques().length, 3, "torres destruídas deixam de emitir luz");
+  sistema.destruir();
+  assert.equal(choques().length, 0);
+  luzes.destroy();
 });
 
 test("ataques usam vida própria e attacked temporário; último dano derruba o escudo imediatamente", () => {

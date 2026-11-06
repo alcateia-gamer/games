@@ -1,11 +1,13 @@
-/** Poses e efeitos próprios. Nenhum relógio visual altera dano, estados ou captura. */
+/** Poses, reação aos golpes e efeitos próprios do encontro. */
 import { assetsNovoBoss } from "./NovoBossAssets.js";
 import { areaCorpoNovoBoss } from "./NovoBossConfig.js";
 import { criarTeleporteVisualNovoBoss } from "./NovoBossTeleporteVisual.js";
 import { criarExplosaoEnergia } from "./NovoBossEfeitosEnergia.js";
+import { COMBAT_FEEL } from "../../combat/CombatEffects.js";
+import { destinoValidoNovoBoss, sincronizarCorpoNovoBoss } from "./NovoBossTeleporte.js";
 
 const poses = new WeakMap();
-const FLASH_MS = 180;
+const FLASH_MS = COMBAT_FEEL.hitFlashDuration;
 const BURST_MS = 900;
 const DERROTA_MS = 900;
 
@@ -90,6 +92,9 @@ export function prepararApresentacaoNovoBoss(scene, encontro) {
   let destruido = false;
   let grafico = null;
   let flashRestante = 0;
+  let recuoRestante = 0;
+  let recuouNesteQuadro = false;
+  let recuoX = 0, recuoY = 0;
   let burstRestante = 0;
   let origemBurst = null;
   let derrotaDecorrido = null;
@@ -106,7 +111,16 @@ export function prepararApresentacaoNovoBoss(scene, encontro) {
   const dano = payload => {
     if (!destruido && doEncontro(payload) && payload.anterior > payload.vida && !encontro.morto) {
       flashRestante = FLASH_MS;
-      encontro.sprite?.setTint?.(0xffe8cf);
+      const sprite = encontro.sprite;
+      sprite?.setTint?.(0xffffff);
+      sprite?.setTintMode?.(globalThis.Phaser?.TintModes?.FILL);
+      const dx = sprite?.x - scene.player?.x, dy = sprite?.y - scene.player?.y;
+      if ([dx, dy].every(Number.isFinite)) {
+        const distancia = Math.hypot(dx, dy);
+        recuoX = distancia > 0 ? dx / distancia : sprite.flipX ? 1 : -1;
+        recuoY = distancia > 0 ? dy / distancia : 0;
+        recuoRestante = COMBAT_FEEL.knockbackDuration;
+      }
     }
   };
   const fase = payload => {
@@ -130,6 +144,8 @@ export function prepararApresentacaoNovoBoss(scene, encontro) {
       encontro.sprite?.setAlpha?.(1);
       encontro.sprite?.setVisible?.(true);
       flashRestante = 0;
+      recuoRestante = 0;
+      recuouNesteQuadro = false;
       encontro.sprite?.clearTint?.();
       limparExplosoesPulso();
     }
@@ -149,6 +165,34 @@ export function prepararApresentacaoNovoBoss(scene, encontro) {
   }
 
   const sistema = {
+    get recuouNesteQuadro() { return recuouNesteQuadro; },
+    atualizarRecuo(delta = 0) {
+      recuouNesteQuadro = false;
+      if (destruido || recuoRestante <= 0 || !Number.isFinite(delta) || delta < 0) return;
+      if (!encontro.sprite?.active || encontro.morto || encontro.encerrado || encontro.suspenso ||
+          !encontro.jogadorNaArena || encontro.teleporte || scene.multiplayer ||
+          scene.morteEmAndamento || (scene.vida ?? 1) <= 0) {
+        recuoRestante = 0;
+        return;
+      }
+      const passoMs = Math.min(delta, recuoRestante);
+      recuouNesteQuadro = passoMs > 0;
+      recuoRestante -= passoMs;
+      const fatorRecuo = encontro.config.combate?.fatorRecuo ?? 0.2;
+      let restante = COMBAT_FEEL.knockback * Math.max(0, fatorRecuo) * passoMs / 1000;
+      // O corpo é imóvel na física Arcade: aplica o mesmo impulso em passos seguros.
+      while (restante > 0) {
+        const passo = Math.min(2, restante);
+        const ponto = { x: encontro.sprite.x + recuoX * passo,
+          y: encontro.sprite.y + recuoY * passo };
+        if (!destinoValidoNovoBoss(scene, encontro, ponto)) {
+          recuoRestante = 0;
+          break;
+        }
+        sincronizarCorpoNovoBoss(encontro, ponto);
+        restante -= passo;
+      }
+    },
     criarExplosaoPulso(origem, raio, inicio = encontro.relogioCombate) {
       if (destruido || encontro.morto || encontro.encerrado || encontro.suspenso ||
           !encontro.jogadorNaArena || scene.multiplayer || scene.morteEmAndamento ||
@@ -243,12 +287,14 @@ export function prepararApresentacaoNovoBoss(scene, encontro) {
       limparExplosoesPulso();
       grafico = null;
       flashRestante = 0;
+      recuoRestante = 0;
+      recuouNesteQuadro = false;
       burstRestante = 0;
       poses.delete(encontro);
       if (encontro.apresentacao === sistema) encontro.apresentacao = null;
     },
     snapshot() {
-      return { destruido, pose: poses.get(encontro)?.tipo ?? null, flashRestante,
+      return { destruido, pose: poses.get(encontro)?.tipo ?? null, flashRestante, recuoRestante,
         explosoesPulso: explosoes.size,
         burstRestante, derrotaDecorrido, poseMorte, graficoVisivel: Boolean(grafico?.visible),
         nucleo: encontro.sprite ? pontoNucleoNovoBoss(encontro) : null };

@@ -113,7 +113,8 @@ export function prepararClonesNovoBoss(scene, encontro) {
     },
     /** Etapa 6 controla quando a verdadeira deve se mover entre os clones. */
     moverVerdadeira(delta = 0) {
-      if (!ativo || destruido || encontro.teleporte || !encontroIlusorioVisivel(scene, encontro) ||
+      if (!ativo || destruido || encontro.teleporte || encontro.apresentacao?.recuouNesteQuadro ||
+          !encontroIlusorioVisivel(scene, encontro) ||
           !Number.isFinite(delta) || delta <= 0) return false;
       const antes = { x: encontro.sprite.x, y: encontro.sprite.y };
       rumoReal = mover(encontro.sprite, rumoReal, Math.min(delta, duracaoMs), true);

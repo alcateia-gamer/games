@@ -8,7 +8,7 @@ import { GENERATOR_LOOP_START_SECONDS } from "../sounds/gerador.js";
 const ESCURIDAO_AMBIENTE_FABRICA = 0.75;
 const MULTIPLICADOR_ALCANCE_FABRICA = 1.5;
 const PADROES_LUZ_FABRICA = Object.freeze({
-  raio: 170, intensidade: 1, cor: "#FFD27A", piscando: true, pulsando: false, ligada: true,
+  raio: 170, intensidade: 1, cor: "#FFD27A", piscando: false, pulsando: false, ligada: true,
   orientacao: "horizontal",
 });
 const PARTIDA_GERADOR = [
@@ -87,6 +87,7 @@ function lerLuzesFabrica(map, avisar = console.warn) {
     }
     const raio = lerPropriedade(objeto, "Raio");
     const intensidade = lerPropriedade(objeto, "Intensidade");
+    const piscando = lerPropriedade(objeto, "Piscando");
     const pulsando = lerPropriedade(objeto, "Pulsando");
     const ligada = lerPropriedade(objeto, "Ligada");
     const orientacaoConfigurada = lerPropriedade(objeto, "Orientacao");
@@ -106,8 +107,7 @@ function lerLuzesFabrica(map, avisar = console.warn) {
       intensidade: typeof intensidade === "number" && Number.isFinite(intensidade) && intensidade >= 0
         ? intensidade : PADROES_LUZ_FABRICA.intensidade,
       cor,
-      // Falhas elétricas abrangem todas as fontes, inclusive as antigas com Piscando=false.
-      piscando: true,
+      piscando: typeof piscando === "boolean" ? piscando : PADROES_LUZ_FABRICA.piscando,
       pulsando: typeof pulsando === "boolean" ? pulsando : PADROES_LUZ_FABRICA.pulsando,
       ligada: (typeof ligada === "boolean" ? ligada : PADROES_LUZ_FABRICA.ligada) &&
         camada.visible !== false && objeto.visible !== false,
@@ -164,7 +164,7 @@ class FactoryLighting {
     this.falhasIniciadas = [];
     // Estados separados dos dados do mapa: nada é escrito nos objetos do Tiled.
     this.estados = this.lampadas.map((luz, indice) => ({
-      luz, indice, intensidade: 0, falha: null, proximaFalha: null,
+      luz, indice, intensidade: 0, falha: null, proximaFalha: null, perfilContinuo: null,
     }));
   }
 
@@ -181,51 +181,91 @@ class FactoryLighting {
   }
 
   /** Sorteia uma sequência de mau contato uma vez; nunca sorteia brilho por quadro. */
-  criarFalha(agora) {
-    const duracao = 1200 + this.aleatorio() * 2200;
-    const piscadas = 3 + Math.min(3, Math.floor(this.aleatorio() * 4));
+  criarFalha(agora, continua = false) {
+    const piscadas = continua
+      ? 2 + Math.min(1, Math.floor(this.aleatorio() * 2))
+      : 1 + Math.min(1, Math.floor(this.aleatorio() * 2));
     const pontos = [[0, 1]];
+    const estalos = [];
     let tempo = 0;
     const adicionar = (ms, intensidade) => { tempo += ms; pontos.push([tempo, intensidade]); };
     for (let i = 0; i < piscadas; i++) {
-      const minimo = 0.03 + this.aleatorio() * 0.27;
-      adicionar(30 + this.aleatorio() * 35, minimo);
-      // Algumas quedas sustentam o apagão parcial por mais tempo.
-      adicionar(40 + this.aleatorio() * 170, minimo);
-      const recuperacao = 0.55 + this.aleatorio() * 0.43;
-      adicionar(60 + this.aleatorio() * 70, recuperacao);
-      adicionar(60 + this.aleatorio() * 120, recuperacao);
+      // Espaça as falhas; cada estalo acompanha um corte seco com repique de contato.
+      adicionar(850 + this.aleatorio() * 1250, 1);
+      const minimo = this.aleatorio() * 0.06;
+      const queda = 16 + this.aleatorio() * 16;
+      // Um estalo para toda a falhada, incluindo a tentativa frustrada de reacender.
+      estalos.push({ tempo: tempo + queda * 0.6, inicio: 0, luz: null, duracaoQueda: queda / 1000 });
+      adicionar(queda, minimo);
+      adicionar(100 + this.aleatorio() * 80, minimo);
+      adicionar(32 + this.aleatorio() * 20, 0.65 + this.aleatorio() * 0.25);
+      adicionar(45 + this.aleatorio() * 45, pontos.at(-1)[1]);
+      adicionar(12 + this.aleatorio() * 12, minimo * 0.5);
+      adicionar(90 + this.aleatorio() * 80, minimo * 0.5);
+      adicionar(40 + this.aleatorio() * 35, 1);
     }
-    adicionar(240 + this.aleatorio() * 260, 1);
-    // Normaliza o tempo para 1,2–3,4 s, preservando as durações irregulares dos trechos.
-    for (const ponto of pontos) ponto[0] *= duracao / tempo;
-    return { inicio: agora, duracao, pontos };
+    return { inicio: agora, duracao: tempo, pontos, estalos, proximoEstalo: 0 };
+  }
+
+  registrarEstalos(estado, agora, camera) {
+    const perfil = estado.falha;
+    while (perfil.proximoEstalo < perfil.estalos.length) {
+      const estalo = perfil.estalos[perfil.proximoEstalo];
+      const inicioEstalo = perfil.inicio + estalo.tempo;
+      if (agora < inicioEstalo) break;
+      perfil.proximoEstalo++;
+      // Eventos fora da tela ou vencidos não formam uma fila ao retornar.
+      if (agora - inicioEstalo > 100 || !luzDentroCampoVisao(estado.luz, camera)) continue;
+      estalo.luz = estado.luz;
+      estalo.inicio = inicioEstalo;
+      this.falhasIniciadas.push(estalo);
+    }
   }
 
   /** Cada fonte tem seu relógio, permitindo falhas simultâneas em qualquer região. */
   atualizarFalha(estado, agora, camera) {
+    if (estado.luz.piscando) {
+      // Um único perfil por luminária, repetido sem pausas nem novas alocações.
+      if (!estado.perfilContinuo) estado.perfilContinuo = this.criarFalha(agora, true);
+      const perfil = estado.perfilContinuo;
+      const iniciou = !estado.falha;
+      if (iniciou) {
+        perfil.inicio = agora;
+        perfil.proximoEstalo = 0;
+      }
+      const decorrido = agora - perfil.inicio;
+      if (decorrido >= perfil.duracao) {
+        perfil.inicio += Math.floor(decorrido / perfil.duracao) * perfil.duracao;
+        perfil.proximoEstalo = 0;
+      }
+      estado.falha = perfil;
+      this.registrarEstalos(estado, agora, camera);
+      return;
+    }
     if (estado.falha) {
-      if (agora < estado.falha.inicio + estado.falha.duracao) return;
+      if (agora < estado.falha.inicio + estado.falha.duracao) {
+        this.registrarEstalos(estado, agora, camera);
+        return;
+      }
       estado.falha = null;
-      estado.proximaFalha = agora + 8000 + this.aleatorio() * 16000;
+      estado.proximaFalha = agora + 30000 + this.aleatorio() * 60000;
       return;
     }
     if (estado.proximaFalha === null) {
       // Espalha também a primeira falha depois da estabilização do gerador.
-      estado.proximaFalha = agora + 4000 + this.aleatorio() * 12000;
+      estado.proximaFalha = agora + 20000 + this.aleatorio() * 40000;
     }
     if (agora < estado.proximaFalha) return;
     if (agora - estado.proximaFalha > 1000) {
       // Uma aba suspensa não acumula falhas para disparar todas ao retornar.
-      estado.proximaFalha = agora + 8000 + this.aleatorio() * 16000;
+      estado.proximaFalha = agora + 30000 + this.aleatorio() * 60000;
       return;
     }
     estado.falha = this.criarFalha(agora);
     estado.proximaFalha = null;
-    if (luzDentroCampoVisao(estado.luz, camera)) this.falhasIniciadas.push(estado.luz);
   }
 
-  /** Quedas rápidas, recuperações parciais e retorno final suave à intensidade normal. */
+  /** Cortes bruscos e repiques curtos, com respiros irregulares entre falhadas. */
   calcularFalha(estado, agora) {
     if (!estado.falha) return 1;
     const tempo = agora - estado.falha.inicio;

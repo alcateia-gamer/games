@@ -6,6 +6,7 @@ import { prepararLibertacaoNovoBoss } from "./NovoBossLibertacao.js";
 import { calcularDepthAtor } from "../../map/ProfundidadeMapa.js";
 import { prepararCameraNovoBoss } from "./NovoBossCamera.js";
 import { prepararIntroducaoNovoBoss } from "./NovoBossIntroducao.js";
+import { prepararSupercomputadorNovoBoss } from "./NovoBossSupercomputador.js";
 import { assetsNovoBoss, criarAnimacoesNovoBoss } from "./NovoBossAssets.js";
 import { prepararAtaquesNovoBoss, cancelarAtaqueNovoBoss } from "./NovoBossAtaques.js";
 import { atualizarRestricaoNovoBoss } from "../../player/PlayerControlEffects.js";
@@ -159,6 +160,7 @@ export function prepararNovoBoss(scene, config = scene?.novoBossConfig ?? novoBo
   scene.restricaoControleNovoBoss ??= null;
   encontro.cameraArena = prepararCameraNovoBoss(scene, encontro);
   encontro.introducao = prepararIntroducaoNovoBoss(scene, encontro);
+  encontro.supercomputador = prepararSupercomputadorNovoBoss(scene, encontro);
   encontro.libertacao = prepararLibertacaoNovoBoss(scene, encontro);
   encontro.iniciarIlusoes = () => !encontro.teleporte && !encontro.ataqueAtual &&
     !encontro.sistemaClones?.ativo && Boolean(encontro.sistemaIlusoes?.iniciarQuatro());
@@ -199,18 +201,23 @@ export function atualizarNovoBoss(scene, _time, _delta) {
     atualizarProfundidade(scene, encontro);
     encontro.apresentacao?.atualizar(0);
     atualizarHudNovoBoss(scene, encontro);
+    encontro.supercomputador?.atualizar(_delta);
     return;
   }
+  // Move corpo e hitbox antes de atualizar escudo, ataques, profundidade e câmera.
+  encontro.apresentacao?.atualizarRecuo(_delta);
+  let geradores = null;
   if (encontro.sprite && !encontro.morto) {
-    const geradores = encontro.sistemaGeradores ?? prepararGeradoresNovoBoss(scene, encontro);
+    geradores = encontro.sistemaGeradores ?? prepararGeradoresNovoBoss(scene, encontro);
     if (geradores !== false) atualizarCombateNovoBoss(scene, encontro, _delta);
-    geradores?.atualizar?.(_delta);
   }
   const desdeOnda = encontro.relogioCombate - (encontro.inicioOndaClonesEm ?? -Infinity);
   const deltaClones = Number.isFinite(_delta) && _delta >= 0
     ? Math.min(_delta, Math.max(0, desdeOnda)) : _delta;
   encontro.sistemaClones?.atualizar(deltaClones);
   atualizarFasesNovoBoss(scene, encontro, _delta);
+  // O escudo acompanha a posição final da caminhada no mesmo quadro.
+  geradores?.atualizar?.(_delta);
   atualizarProfundidade(scene, encontro);
   encontro.apresentacao?.atualizar(_delta);
   // A pista do núcleo usa a pose e a direção já atualizadas neste quadro.
@@ -218,6 +225,7 @@ export function atualizarNovoBoss(scene, _time, _delta) {
   sincronizarAnimacoesAtaqueNovoBoss(scene, encontro);
   encontro.cameraArena.atualizar(_delta);
   atualizarHudNovoBoss(scene, encontro);
+  encontro.supercomputador?.atualizar(_delta);
 }
 
 /** Libera apenas os recursos desta entidade; pode ser chamada várias vezes. */
@@ -225,6 +233,7 @@ export function destruirNovoBoss(scene) {
   const encontro = scene?.novoBoss;
   if (!encontro || encontro.encerrado) return;
   encontro.encerrado = true;
+  encontro.supercomputador?.destruir();
   encontro.introducao?.destruir();
   encontro.cameraArena?.destruir();
   encontro.invulneravelClonesAte = 0;

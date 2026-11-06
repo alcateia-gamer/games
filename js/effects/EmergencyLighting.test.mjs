@@ -179,6 +179,20 @@ test("o giro avança pelo tempo, completa a volta e reutiliza o estado quando o 
   assert.equal(lights.fontesVisiveis, fontes);
 });
 
+test("30 atualizações por segundo no celular conservam a velocidade e reagem imediatamente às zonas", () => {
+  const lights = new EmergencyLighting(mapa([ponto()]), { quadrosPorSegundo: 30 });
+  const cam = camera();
+  lights.atualizar(0, cam);
+  const inicio = lights.revisao;
+  for (let tempo = 1; tempo < 1000; tempo++) lights.atualizar(tempo, cam);
+  assert.equal(lights.revisao - inicio, 29, "no máximo 30 orientações por segundo");
+  assert.equal(lights.atualizar(500, cam)[0].angulo, Math.PI / 2, "a volta continua com o mesmo período");
+  assert.equal(lights.atualizar(2000, cam)[0].angulo, 0);
+  lights.atualizar(2001, cam, { fatorLuz: () => 0 });
+  assert.equal(lights.fontesVisiveis.length, 0, "uma sala apagada não espera o próximo quadro do giro");
+  assert.equal(lights.atualizar(2002, cam).length, 1);
+});
+
 test("fora da câmera não redesenha; voltar retoma a fase atual e destroy limpa referências", () => {
   const lights = new EmergencyLighting(mapa([ponto(), { ...ponto(), id: 2, x: -5000 }]));
   const cam = camera();

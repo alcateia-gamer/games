@@ -1,5 +1,13 @@
-/** Luzes móveis do combate e foco branco do personagem durante a batalha. */
+/** Luzes móveis dos ataques, do escudo e da aura emitida pelo boss. */
 import { luzAfetaCamera, MULTIPLICADOR_ALCANCE_FABRICA } from "./FactoryLighting.js";
+import { CAMPOS_POSE_AURA } from "./BossAuraLightCache.js";
+
+export function calcularPerfilAuraBoss(x, y) {
+  const r = Math.hypot(x / 0.82, y);
+  if (r >= 1) return 0;
+  return (0.65 * Math.exp(-0.5 * (r / 0.38) ** 2) +
+    0.35 * Math.exp(-0.5 * (r / 0.72) ** 2)) * (1 - r * r) ** 2;
+}
 
 export function calcularPerfilEnergiaBoss(x, y, escudo = false) {
   const r = Math.hypot(x, y);
@@ -25,20 +33,26 @@ export default class BossEnergyLighting {
     const scene = this.scene, encontro = scene.novoBoss;
     let quantidade = 0, alteradas = false;
     this.quadro++;
-    const adicionar = (objeto, x, y, raio, intensidade, escudo = false, vermelha = false, branca = false) => {
+    const adicionar = (objeto, x, y, raio, intensidade, escudo = false, vermelha = false, choqueTorre = false) => {
       if (objeto.active === false || objeto.visible === false || intensidade <= 0 ||
           !Number.isFinite(x) || !Number.isFinite(y)) return;
       const estados = vermelha ? this.auras : this.estados;
       let estado = estados.get(objeto);
       if (!estado) {
-        estado = { luz: {}, intensidade: 0, escudo, vermelha, branca };
+        estado = { luz: {}, intensidade: 0, escudo, vermelha, choqueTorre, emissor: vermelha ? objeto : null };
         estados.set(objeto, estado);
       }
       if (estado.quadro === this.quadro) return;
       estado.quadro = this.quadro;
       const luz = estado.luz;
-      const mudou = luz.x !== x || luz.y !== y || luz.raio !== raio || estado.intensidade !== intensidade;
-      Object.assign(luz, { x, y, raio });
+      let mudou = luz.x !== x || luz.y !== y || luz.raio !== raio || estado.intensidade !== intensidade;
+      if (vermelha) for (const campo of CAMPOS_POSE_AURA) {
+        if (estado[campo] !== objeto[campo]) mudou = true;
+        estado[campo] = objeto[campo];
+      }
+      luz.x = x;
+      luz.y = y;
+      luz.raio = raio;
       estado.intensidade = intensidade;
       if (!luzAfetaCamera(luz, camera)) return;
       if (mudou || this.fontesVisiveis[quantidade] !== estado) alteradas = true;
@@ -54,15 +68,19 @@ export default class BossEnergyLighting {
       for (const objeto of scene.children?.list ?? []) {
         if (objeto.novoBossDisparoEnergia) projetil(objeto);
       }
-      const player = scene.player;
-      if (encontro.active && player?.active && !player.morto) {
-        adicionar(player, player.x, player.y - 8, 64,
-          Math.max(0, Math.min(1, player.alpha ?? 1)) * 0.9, false, false, true);
+      // Usa o mesmo quadro que a torre já desenha, sem temporizador ou leitura de pixels em jogo.
+      for (const torre of encontro.geradores ?? []) {
+        const choque = torre.luzChoqueIdle;
+        if (!torre.torre || torre.morto || torre.ligado === false || torre.estado !== "idle" || !choque) continue;
+        adicionar(torre.visual, choque.x, choque.y, choque.raio,
+          choque.intensidade * Math.max(0, Math.min(1, torre.visual.alpha ?? 1)) * 0.95,
+          false, false, true);
       }
       const sprite = encontro.sprite;
+      const fatorAura = encontro.introducao?.iluminacao?.aura ?? 1;
       const aura = objeto => {
-        if (objeto) adicionar(objeto, objeto.x, objeto.y + 16, 48,
-          Math.max(0, Math.min(1, objeto.alpha ?? 1)) * 0.45, false, true);
+        if (objeto) adicionar(objeto, objeto.x, objeto.y - 8, 156,
+          Math.max(0, Math.min(1, objeto.alpha ?? 1)) * 0.9 * fatorAura, false, true);
       };
       aura(sprite);
       for (const alvo of encontro.alvosIlusorios ?? []) {

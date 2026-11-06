@@ -1,6 +1,8 @@
 import { assetsNovoBoss } from "./NovoBossAssets.js";
 import { calcularDepthAtor } from "../../map/ProfundidadeMapa.js";
 import { areasSobrepostasNovoBoss } from "./NovoBossTeleporte.js";
+import { quadrosChoqueTorreIdle } from "./NovoBossTorreChoque.js";
+import { prepararPisoTorre } from "./NovoBossTorrePiso.js";
 
 const POSES = {
   summon: assetsNovoBoss.torreSummon, idle: assetsNovoBoss.torreIdle,
@@ -41,14 +43,16 @@ export function assetsTorresDisponiveis(scene) {
 
 /** Um sprite por torre; troca de quadros apenas quando o relógio muda de quadro. */
 export function criarTorreNovoBoss(scene, encontro, ponto, aoDestruir) {
+  const poses = prepararPisoTorre(scene, ponto, POSES);
   const escala = Math.min(ponto.width, ponto.height) / 192;
   const peY = ponto.y + ponto.height / 2;
   const referenciaDepthY = ponto.referenciaDepthY ?? peY;
-  const visual = scene.add.sprite(ponto.x, peY, POSES.summon.chave, 0)
+  const visual = scene.add.sprite(ponto.x, peY, poses.summon.chave, 0)
     .setOrigin(0.5, 1).setScale(escala).setName(`novo-boss-torre-${ponto.id}`);
   const vidaMaxima = encontro.config.geradores.vidaTorre ?? 120;
   let estado = "summon", tempo = 0, iniciada = false, destruida = false;
   let ultimoFrame = 0;
+  const luzChoqueIdle = { x: ponto.x, y: peY - 208 * escala, raio: 96 * escala, intensidade: 0 };
   const hitbox = new Phaser.Geom.Rectangle(ponto.x - 96 * escala, peY - 258 * escala,
     192 * escala, 258 * escala);
   // Somente alvo de dano: as colisões de movimento pertencem à camada collision do Tiled.
@@ -58,14 +62,16 @@ export function criarTorreNovoBoss(scene, encontro, ponto, aoDestruir) {
     estado = pose;
     tempo = 0;
     ultimoFrame = 0;
-    visual.setTexture(POSES[pose].chave, 0);
+    luzChoqueIdle.intensidade = 0;
+    visual.setTexture(poses[pose].chave, 0);
   }
 
   const torre = {
     id: ponto.id, x: ponto.x, y: ponto.y, torre: true, ligado: true,
-    visual, body: hitbox, vida: vidaMaxima, vidaMaxima, morto: false,
+    visual, luzChoqueIdle, body: hitbox, vida: vidaMaxima, vidaMaxima, morto: false,
     hitboxDano: hitbox,
     duracaoInvocacaoMs: DURACOES.summon,
+    duracaoIdleMs: DURACOES.idle,
     pontoEmissor: { x: ponto.x, y: peY - 208 * escala },
     get estado() { return estado; },
     invocar() { if (!destruida && !torre.morto) iniciada = true; },
@@ -95,6 +101,7 @@ export function criarTorreNovoBoss(scene, encontro, ponto, aoDestruir) {
     },
     atualizar(delta, visivel, apresentando = false) {
       if (destruida) return;
+      luzChoqueIdle.intensidade = 0;
       const combate = Boolean(encontro.active);
       if (combate && !apresentando) iniciada = true;
       // A base já aparece no chão; o relógio só avança quando a câmera invoca a torre.
@@ -110,7 +117,7 @@ export function criarTorreNovoBoss(scene, encontro, ponto, aoDestruir) {
         mudarPose("idle");
         tempo = restante;
       }
-      const asset = POSES[estado];
+      const asset = poses[estado];
       let ms = estado === "idle" ? tempo % DURACOES.idle : Math.min(tempo, DURACOES[estado] - 1);
       let frame = 0;
       if (asset.duracoesMs) {
@@ -119,10 +126,17 @@ export function criarTorreNovoBoss(scene, encontro, ponto, aoDestruir) {
         }
       } else frame = Math.floor(ms / asset.frameMs);
       if (frame !== ultimoFrame) { visual.setFrame(frame); ultimoFrame = frame; }
+      const choque = estado === "idle" ? quadrosChoqueTorreIdle[frame] : null;
+      if (choque) {
+        luzChoqueIdle.x = visual.x + (choque.x - 96) * escala;
+        luzChoqueIdle.y = visual.y + (choque.y - 258) * escala;
+        luzChoqueIdle.intensidade = choque.intensidade;
+      }
     },
     destruir() {
       if (destruida) return;
       destruida = true;
+      luzChoqueIdle.intensidade = 0;
       visual.destroy();
     },
   };

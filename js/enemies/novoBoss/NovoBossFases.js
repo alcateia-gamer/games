@@ -98,9 +98,14 @@ export function prepararFasesNovoBoss(scene, encontro) {
 }
 
 export function atualizarFasesNovoBoss(scene, encontro, delta = 0) {
-  if (!podeAtualizar(scene, encontro) || !Number.isFinite(delta) || delta < 0) return;
-  encontro.verificarFase?.();
-  if (encontro.fase !== 2) return;
+  if (!Number.isFinite(delta) || delta < 0) return;
+  const atualizarFase2 = podeAtualizar(scene, encontro);
+  if (atualizarFase2) encontro.verificarFase?.();
+  if (encontro.fase !== 2) {
+    atualizarMovimentoNovoBoss(scene, encontro, delta);
+    return;
+  }
+  if (!atualizarFase2) return;
   encontro.tentarIniciarOndaClones?.();
   if (encontro.sistemaClones?.ativo) {
     encontro.clonesFase2EmCurso = true;

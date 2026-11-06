@@ -3,11 +3,45 @@
  */
 
 import { distanceToInteractionArea, findFactoryInteraction } from "./FactoryGenerator.js";
+import { criarInteracaoLeitorCartao } from "./FactoryCardReader.js";
+import { drawCollectibleMarker } from "../ui/CollectibleMarker.js";
+import { criarFalaFlutuante } from "../ui/PlayerSpeechBubble.js";
 
 const FACTORY_DOOR_STATE_KEY = "factoryDoorOpen";
 const INTERACTION_RANGE = 64;
 const OPEN_DURATION = 850;
 const PORTAS_COM_ACESSO = new Set(["porta02", "porta03"]);
+const PORTAS_COM_ENERGIA = new Set(["porta01", "porta04"]);
+const FALAS_SEM_ENERGIA = Object.freeze([
+  "Preciso ligar a energia antes.",
+  "Sem energia... melhor ligar o gerador.",
+  "Primeiro preciso ativar o gerador.",
+  "Essa porta está sem energia. Preciso ligar o gerador.",
+  "Sem energia, essa porta não vai abrir.",
+  "O gerador desligado está travando a passagem.",
+  "Preciso de energia para abrir essa porta.",
+  "Essa porta só funciona com a energia ligada.",
+]);
+const FALAS_SEM_CARTAO = Object.freeze([
+  "Preciso encontrar o cartão de acesso.",
+  "Sem o cartão, essa porta não abre.",
+  "Esse leitor precisa de um cartão de acesso.",
+  "Tenho que achar o cartão para continuar.",
+  "Não estou com o cartão. Melhor procurar.",
+  "Preciso do cartão para liberar a passagem.",
+  "Ainda falta encontrar o cartão de acesso.",
+  "Vou ter que encontrar esse cartão primeiro.",
+]);
+
+function criarMarcadorPorta(scene, area, nome) {
+  const marcador = scene.add.graphics()
+    .setPosition(area.x + area.width / 2, area.y - 18)
+    .setDepth(200).setName(nome).setVisible(false);
+  drawCollectibleMarker(marcador, 0, 0, 18);
+  scene.tweens.add({ targets: marcador, y: marcador.y - 5,
+    duration: 700, ease: "Sine.easeInOut", yoyo: true, repeat: -1 });
+  return marcador;
+}
 
 /** Objetos de tile do leitor usam Y na base, diferente das áreas retangulares de interação. */
 function localizarLeitorCartao(map) {
@@ -65,7 +99,7 @@ function chaveEstadoPorta(nome) {
 }
 
 /** Mantém os tiles de portas instantâneas e prepara o visual móvel apenas das persianas. */
-function criarPorta(scene, layer, area) {
+function criarPorta(scene, layer, area, fala) {
   const tiles = layer.getTilesWithinWorldXY(
     area.x, area.y, area.width, area.height,
   );
@@ -89,7 +123,9 @@ function criarPorta(scene, layer, area) {
     header = scene.add.image(area.x, area.y, texture.key, frameName)
       .setOrigin(0, 0).setCrop(0, 0, area.width, 8).setDepth(layer.depth);
   }
-  const prompt = scene.add.text(
+  const marcador = PORTAS_COM_ENERGIA.has(area.name)
+    ? criarMarcadorPorta(scene, area, `door-marker-${area.name}`) : null;
+  const prompt = marcador ? null : scene.add.text(
     area.x + area.width / 2, area.y - 12, "E - ABRIR PORTA", {
       fontSize: "14px",
       backgroundColor: "#000000",
@@ -107,6 +143,7 @@ function criarPorta(scene, layer, area) {
     area,
     estado: alreadyOpen ? "aberta" : "fechada",
     visual,
+    marcador,
     colisao: alreadyOpen ? null : criarColisao(),
     bloqueadaPorBoss: false,
     progresso: alreadyOpen ? 1 : 0,
@@ -139,11 +176,11 @@ function criarPorta(scene, layer, area) {
     distanceToInteractionArea(scene.player.x, scene.player.y, alvo) <=
       INTERACTION_RANGE;
 
-  /** A porta04 usa só energia; o leitor da arena também exige o crachá reutilizável. */
+  /** As duas portas iniciais usam energia; o leitor da arena também exige o crachá. */
   const motivoBloqueio = () => {
     if (porta.bloqueadaPorBoss) return "COMBATE EM ANDAMENTO";
     const exigeCartao = PORTAS_COM_ACESSO.has(area.name);
-    if (!exigeCartao && area.name !== "porta04") return null;
+    if (!exigeCartao && !PORTAS_COM_ENERGIA.has(area.name)) return null;
     const requisitos = [];
     if (scene.luzFabricaAcesa !== true) requisitos.push("SEM ENERGIA");
     if (exigeCartao && !(scene.inventory?.getQuantity("card") > 0)) requisitos.push("REQUER CARTÃO DE ACESSO");
@@ -165,12 +202,18 @@ function criarPorta(scene, layer, area) {
     if (!podeInteragir(alvo)) return false;
     const bloqueio = motivoBloqueio();
     if (bloqueio) {
-      prompt.setText(bloqueio);
+      if (PORTAS_COM_ENERGIA.has(area.name) && scene.luzFabricaAcesa !== true) {
+        fala.mostrar(FALAS_SEM_ENERGIA);
+        return false;
+      }
+      prompt?.setText(bloqueio);
       return false;
     }
+    fala.ocultar();
     porta.estado = "abrindo";
     scene.interacaoMundoProxima = null;
-    prompt.setVisible(false);
+    prompt?.setVisible(false);
+    marcador?.setVisible(false);
     if (!animada) {
       concluirAbertura();
       return true;
@@ -191,7 +234,8 @@ function criarPorta(scene, layer, area) {
     if (encerrada || porta.bloqueadaPorBoss) return false;
     abertaAntesDoBoss = porta.estado !== "fechada";
     porta.bloqueadaPorBoss = true;
-    prompt.setVisible(false);
+    prompt?.setVisible(false);
+    marcador?.setVisible(false);
     tween?.stop();
     if (porta.estado === "fechada") return true;
     porta.estado = "fechando";
@@ -232,7 +276,10 @@ function criarPorta(scene, layer, area) {
       : Math.min(layer.depth, playerDepth - 0.01);
     visual?.setDepth(doorDepth);
     header?.setDepth(doorDepth);
-    prompt.setText(motivoBloqueio() ?? "E - ABRIR PORTA");
+    prompt?.setText(motivoBloqueio() ?? "E - ABRIR PORTA");
+    marcador?.setVisible(porta.estado === "fechada" && !porta.bloqueadaPorBoss &&
+      !scene.cenaEntradaBossAtiva && !scene.morteEmAndamento &&
+      !scene.generatorMenuOpen && !scene.devItemMenuOpen);
   };
 
   const limpar = () => {
@@ -242,7 +289,8 @@ function criarPorta(scene, layer, area) {
     porta.colisao?.destroy();
     visual?.destroy();
     header?.destroy();
-    prompt.destroy();
+    prompt?.destroy();
+    if (marcador) { scene.tweens.killTweensOf(marcador); marcador.destroy(); }
     tiles.forEach((tile, index) => { tile.alpha = originalAlphas[index]; });
   };
   atualizarVisual();
@@ -263,35 +311,51 @@ function criarInteracaoPortaFabrica(scene) {
     if (result.status === "ok") areas.push(result.object);
   }
   completarAreasPortas(scene.map, layer, areas);
+  if (!areas.length) return;
+  const fala = criarFalaFlutuante(scene);
   for (const area of areas) {
-    const controle = criarPorta(scene, layer, area);
+    const controle = criarPorta(scene, layer, area, fala);
     if (controle) portas.push(controle);
   }
-  if (!portas.length) return;
+  if (!portas.length) { fala.destroy(); return; }
   scene.portasFabrica = portas.map(({ porta }) => porta);
   // Preserva a referência usada pela primeira porta e por integrações existentes.
   scene.portaFabrica = scene.portasFabrica.find(porta => porta.nome === "porta01") ?? null;
   const portasLeitor = portas.filter(controle => PORTAS_COM_ACESSO.has(controle.porta.nome));
   const areaLeitor = localizarLeitorCartao(scene.map);
-  const avisoLeitor = areaLeitor && portasLeitor.length ? scene.add.text(
-    areaLeitor.x + areaLeitor.width / 2, areaLeitor.y - 12, "E - PASSAR CARTÃO", {
-      fontSize: "14px", backgroundColor: "#000000", padding: { x: 6, y: 4 },
-    },
-  ).setOrigin(0.5, 1).setDepth(200).setVisible(false) : null;
-  scene.leitorCartaoFabrica = avisoLeitor ? { area: areaLeitor, prompt: avisoLeitor } : null;
-  const leitorProximo = () => !!avisoLeitor && scene.player?.active &&
+  const marcadorLeitor = areaLeitor && portasLeitor.length
+    ? criarMarcadorPorta(scene, areaLeitor, "card-reader-marker") : null;
+  const leitorProximo = (comPainel = false) => !!marcadorLeitor && scene.player?.active &&
     !scene.cenaEntradaBossAtiva &&
-    !scene.morteEmAndamento && !scene.generatorMenuOpen && !scene.devItemMenuOpen &&
+    !scene.morteEmAndamento && (!scene.generatorMenuOpen || (comPainel && scene.cardReaderMenuOpen)) &&
+    !scene.devItemMenuOpen &&
     distanceToInteractionArea(scene.player.x, scene.player.y, areaLeitor) <= INTERACTION_RANGE;
+  const terminal = marcadorLeitor ? criarInteracaoLeitorCartao(scene, {
+    podeUsar: comPainel => leitorProximo(comPainel) &&
+      portasLeitor.some(controle => controle.porta.estado === "fechada") &&
+      portasLeitor.every(controle => !controle.porta.bloqueadaPorBoss && !controle.motivoBloqueio()),
+    abrirPortas: () => {
+      for (const controle of portasLeitor) controle.abrir(areaLeitor);
+    },
+  }) : null;
+  scene.leitorCartaoFabrica = marcadorLeitor ? { area: areaLeitor, marcador: marcadorLeitor, terminal, fala } : null;
   const passarCartao = () => {
-    if (!leitorProximo()) return false;
-    let abriu = false;
-    for (const controle of portasLeitor) {
-      if (controle.abrir(areaLeitor)) abriu = true;
+    if (!leitorProximo() || !portasLeitor.some(controle =>
+      controle.porta.estado === "fechada" && !controle.porta.bloqueadaPorBoss)) return false;
+    if (!(scene.inventory?.getQuantity("card") > 0)) {
+      fala.mostrar(FALAS_SEM_CARTAO); return true;
     }
-    return abriu;
+    fala.ocultar();
+    return terminal.open();
   };
   const atualizar = () => {
+    fala?.atualizar();
+    if (terminal?.aberto) {
+      for (const controle of portas) { controle.atualizar(); controle.prompt?.setVisible(false); }
+      marcadorLeitor.setVisible(false);
+      scene.interacaoMundoProxima = null;
+      return;
+    }
     let proxima = null;
     let distancia = Infinity;
     for (const controle of portas) {
@@ -301,20 +365,17 @@ function criarInteracaoPortaFabrica(scene) {
       const atual = distanceToInteractionArea(scene.player.x, scene.player.y, area);
       if (atual < distancia) { proxima = controle; distancia = atual; }
     }
-    for (const controle of portas) controle.prompt.setVisible(controle === proxima);
+    for (const controle of portas) controle.prompt?.setVisible(controle === proxima);
     scene.interacaoMundoProxima = proxima ? { distance: distancia, interact: proxima.abrir } : null;
-    if (avisoLeitor) {
+    if (marcadorLeitor) {
       const perto = leitorProximo();
       const fechadas = portasLeitor.filter(controle => controle.porta.estado === "fechada" && !controle.porta.bloqueadaPorBoss);
-      const abrindo = portasLeitor.some(controle => controle.porta.estado === "abrindo");
-      const bloqueadas = portasLeitor.some(controle => controle.porta.bloqueadaPorBoss);
-      avisoLeitor.setVisible(perto).setText(bloqueadas ? "COMBATE EM ANDAMENTO" : fechadas.length
-        ? fechadas[0].motivoBloqueio() ?? "E - PASSAR CARTÃO"
-        : abrindo ? "ABRINDO PORTAS..." : "ACESSO LIBERADO");
+      marcadorLeitor.setVisible(fechadas.length > 0 && !scene.morteEmAndamento &&
+        !scene.generatorMenuOpen && !scene.devItemMenuOpen && !scene.cenaEntradaBossAtiva);
       const distanciaLeitor = perto ? distanceToInteractionArea(scene.player.x, scene.player.y, areaLeitor) : Infinity;
       if (fechadas.length && distanciaLeitor < distancia) {
         scene.interacaoMundoProxima = { distance: distanciaLeitor, interact: passarCartao };
-        proxima?.prompt.setVisible(false);
+        proxima?.prompt?.setVisible(false);
       }
     }
   };
@@ -322,8 +383,11 @@ function criarInteracaoPortaFabrica(scene) {
   scene.events.on(Phaser.Scenes.Events.PRE_RENDER, atualizar);
   scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
     scene.events.off(Phaser.Scenes.Events.PRE_RENDER, atualizar);
+    terminal?.destroy();
     portas.forEach(controle => controle.limpar());
-    avisoLeitor?.destroy();
+    fala?.destroy();
+    if (marcadorLeitor) scene.tweens.killTweensOf(marcadorLeitor);
+    marcadorLeitor?.destroy();
     scene.leitorCartaoFabrica = null;
     scene.portasFabrica = [];
     scene.portaFabrica = null;

@@ -187,7 +187,7 @@ function criarSomPiscadasAmbiente(scene) {
     ativo = null;
   };
   return {
-    update(luzes) {
+    update(estalos) {
       if (ativo) {
         const decorrido = (scene.time.now - ativo.tempo) / 1000;
         if (decorrido >= duracao || !luzDentroCampoVisao(ativo.luz, scene.cameras?.main)) stop();
@@ -198,26 +198,33 @@ function criarSomPiscadasAmbiente(scene) {
       const posicao = player.body?.center ?? player;
       let candidata = null;
       let maiorVolume = 0;
-      for (const luz of luzes) {
+      for (const evento of estalos) {
+        const luz = evento.luz;
+        const decorrido = (scene.time.now - evento.inicio) / 1000;
+        if (decorrido < 0 || decorrido >= duracao) continue;
         if (!luzDentroCampoVisao(luz, scene.cameras?.main)) continue;
         const distancia = Math.hypot(luz.x - posicao.x, luz.y - posicao.y);
         const proximidade = Math.max(0, 1 - distancia / 900);
         const volume = 0.025 * proximidade * proximidade;
         if (volume > maiorVolume) {
-          candidata = luz;
+          candidata = evento;
           maiorVolume = volume;
         }
       }
       // Várias falhas no mesmo quadro produzem só o estalo mais próximo, sem reinícios.
       if (!candidata) return;
       stop();
+      const decorrido = (scene.time.now - candidata.inicio) / 1000;
       const estalo = {
-        luz: candidata, tempo: scene.time.now, inicio: 0, inicioQueda: 0, duracaoQueda: duracao,
+        luz: candidata.luz, tempo: candidata.inicio, inicio: 0,
+        inicioQueda: -candidata.duracaoQueda * FRACAO_QUEDA_ANTES_DO_SOM,
+        duracaoQueda: candidata.duracaoQueda,
         duracao, volume: maiorVolume, perfil: PERFIS_CONTATO[2],
       };
-      if (som.play("piscada-distante", { volume: 0, loop: false, rate: 1 })) {
+      const volume = calcularVolumeContato(estalo, decorrido);
+      if (som.play("piscada-distante", { volume, seek: decorrido, loop: false, rate: 1 })) {
         ativo = estalo;
-        agendado = agendarDinamica(som, estalo, 0);
+        agendado = agendarDinamica(som, estalo, decorrido);
       }
     },
     stop,

@@ -275,8 +275,8 @@ function criarSistemaInventario(scene) {
   scene.atualizarColetaItens = () => {
     interagirComMundo = null;
     if (scene.generatorMenuOpen || scene.devItemMenuOpen) {
-      // Descarta E durante o catálogo para não interagir com o mundo ao fechá-lo.
-      if (scene.devItemMenuOpen) Phaser.Input.Keyboard.JustDown(scene.teclaColetarItem);
+      // Descarta E durante os menus para não interagir com o mundo ao fechá-los.
+      Phaser.Input.Keyboard.JustDown(scene.teclaColetarItem);
       scene.itemColetavelProximo = null;
       definirVisibilidadeBotao(false);
       return;

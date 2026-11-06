@@ -3,6 +3,9 @@ import { EventEmitter } from "node:events";
 import test from "node:test";
 import { assetsNovoBoss, criarAnimacoesNovoBoss } from "./NovoBossAssets.js";
 import { novoBossConfig, areaCorpoNovoBoss } from "./NovoBossConfig.js";
+import { COMBAT_FEEL } from "../../combat/CombatEffects.js";
+import { causarDanoNovoBoss, inicializarCombateNovoBoss } from "./NovoBossEstados.js";
+import { destinoValidoNovoBoss } from "./NovoBossTeleporte.js";
 import {
   prepararApresentacaoNovoBoss,
   aplicarPoseNovoBoss,
@@ -52,6 +55,7 @@ function preparar({ ataque = true } = {}) {
     setOrigin(x, y) { this.originX = x; this.originY = y; return this; },
     setFlipX(valor) { this.flipX = valor; return this; },
     setTint(cor) { this.tint = cor; return this; },
+    setTintMode(modo) { this.tintMode = modo; return this; },
     clearTint() { this.tint = null; this.limpezasTint++; return this; },
     setAlpha(alpha) { this.alpha = alpha; return this; },
     setVisible(visible) { this.visible = visible; return this; },
@@ -270,22 +274,97 @@ test("ausência da folha ou da animação de ataque mantém idle funcional", () 
   assert.equal(criarAnimacoesNovoBoss(scene), false);
 });
 
-test("flash de dano aceita só perda de vida deste encontro e dura 180 ms", () => {
+test("flash de dano preenche de branco pelo mesmo tempo dos outros inimigos", t => {
+  const anterior = globalThis.Phaser;
+  globalThis.Phaser = { TintModes: { FILL: 1 } };
+  t.after(() => { globalThis.Phaser = anterior; });
   const { scene, encontro, sprite, sistema } = preparar();
   scene.events.emit("novo-boss:vida", { encontro: {}, anterior: 1000, vida: 900 });
   scene.events.emit("novo-boss:vida", { encontro, anterior: 900, vida: 1000 });
   assert.equal(sistema.snapshot().flashRestante, 0);
   scene.events.emit("novo-boss:vida", { encontro, anterior: 1000, vida: 900 });
-  assert.equal(sprite.tint, 0xffe8cf);
-  sistema.atualizar(179);
+  assert.equal(sprite.tint, 0xffffff);
+  assert.equal(sprite.tintMode, globalThis.Phaser.TintModes.FILL);
+  sistema.atualizar(COMBAT_FEEL.hitFlashDuration - 1);
   assert.equal(sistema.snapshot().flashRestante, 1);
-  assert.equal(sprite.tint, 0xffe8cf);
+  assert.equal(sprite.tint, 0xffffff);
   sistema.atualizar(1);
   assert.equal(sistema.snapshot().flashRestante, 0);
   assert.equal(sprite.tint, null);
   encontro.morto = true;
   scene.events.emit("novo-boss:vida", { encontro, anterior: 900, vida: 0 });
   assert.equal(sistema.snapshot().flashRestante, 0);
+});
+
+test("golpe aceito recua para longe do jogador e mantém corpo e hitbox sincronizados", () => {
+  for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    const { scene, encontro, sprite, sistema } = preparar();
+    scene.player = { active: true, x: sprite.x - dx * 200, y: sprite.y - dy * 200 };
+    aplicarPoseNovoBoss(scene, encontro);
+    inicializarCombateNovoBoss(scene, encontro);
+    const origem = { x: sprite.x, y: sprite.y }, hitbox = encontro.hitboxDano;
+    encontro.barreiraAtiva = true;
+    assert.equal(causarDanoNovoBoss(scene, encontro, 25), false);
+    assert.equal(sistema.snapshot().recuoRestante, 0, "o escudo não provoca reação de dano");
+    encontro.barreiraAtiva = false;
+    assert.equal(causarDanoNovoBoss(scene, encontro, 25), true);
+    assert.equal(encontro.vida, 975);
+    sistema.atualizarRecuo(30);
+    sistema.atualizarRecuo(30);
+    sistema.atualizarRecuo(1000);
+    const distancia = COMBAT_FEEL.knockback * COMBAT_FEEL.knockbackDuration / 1000 * encontro.config.combate.fatorRecuo;
+    assert.ok(distancia < 2, "o peso do boss limita o recuo a menos de dois pixels");
+    assert.ok(Math.abs(sprite.x - origem.x - dx * distancia) < 1e-8);
+    assert.ok(Math.abs(sprite.y - origem.y - dy * distancia) < 1e-8);
+    assert.equal(sistema.snapshot().recuoRestante, 0);
+    assert.equal(sistema.recuouNesteQuadro, true, "a caminhada não anula o último quadro do impulso");
+    sistema.atualizarRecuo(30);
+    assert.equal(sistema.recuouNesteQuadro, false);
+    assert.equal(encontro.hitboxDano, hitbox);
+    assert.deepEqual(retangulo(sprite.body), retangulo(hitbox));
+    assert.equal(encontro.estado, "preparando", "o recuo não troca o estado do combate");
+  }
+});
+
+test("recuo curto respeita paredes finas, geradores e a borda da arena", () => {
+  for (const obstaculo of ["parede", "gerador", "borda"]) {
+    const { scene, encontro, sprite, sistema } = preparar();
+    if (obstaculo === "borda") sprite.x = encontro.config.arena.xMax - 31.8;
+    scene.player = { active: true, x: sprite.x - 200, y: sprite.y };
+    aplicarPoseNovoBoss(scene, encontro);
+    const area = areaCorpoNovoBoss(encontro.config, sprite);
+    const bloqueio = { body: { x: area.x + area.width + 0.75, y: area.y - 10,
+      width: 1, height: area.height + 20, enable: true } };
+    if (obstaculo === "parede") scene.collisionGroup = { getChildren: () => [bloqueio] };
+    if (obstaculo === "gerador") encontro.obstaculosTeleporte = [bloqueio];
+    const origemX = sprite.x;
+    scene.events.emit("novo-boss:vida", { encontro, anterior: 1000, vida: 975 });
+    sistema.atualizarRecuo(1000);
+    assert.ok(sprite.x - origemX <= 0.75, "para antes do obstáculo mesmo com delta alto");
+    assert.equal(destinoValidoNovoBoss(scene, encontro, sprite), true);
+    assert.deepEqual(retangulo(sprite.body), retangulo(encontro.hitboxDano));
+  }
+});
+
+test("teleporte, morte, suspensão e limpeza cancelam o impulso sem deslocamentos tardios", () => {
+  for (const cancelar of [
+    c => { c.encontro.teleporte = {}; },
+    c => { c.encontro.suspenso = true; },
+    c => { c.encontro.jogadorNaArena = false; },
+    c => { c.scene.morteEmAndamento = true; },
+    c => { c.encontro.morto = true; c.scene.events.emit("novo-boss:derrotada", { encontro: c.encontro }); },
+    c => c.sistema.destruir(),
+  ]) {
+    const c = preparar();
+    c.scene.player = { active: true, x: c.sprite.x - 200, y: c.sprite.y };
+    c.scene.events.emit("novo-boss:vida", { encontro: c.encontro, anterior: 1000, vida: 975 });
+    assert.equal(c.sistema.snapshot().recuoRestante, COMBAT_FEEL.knockbackDuration);
+    const origem = { x: c.sprite.x, y: c.sprite.y };
+    cancelar(c);
+    c.sistema.atualizarRecuo(1000);
+    assert.deepEqual({ x: c.sprite.x, y: c.sprite.y }, origem);
+    assert.equal(c.sistema.snapshot().recuoRestante, 0);
+  }
 });
 
 test("entrada na fase 2 desenha explosão por 900 ms sem mudar o estado de combate", () => {
@@ -427,10 +506,10 @@ test("deltas inválidos e sprite inativo não avançam os relógios visuais", ()
   const { scene, encontro, sprite, sistema } = preparar();
   scene.events.emit("novo-boss:vida", { encontro, anterior: 1000, vida: 900 });
   for (const delta of [NaN, Infinity, -1]) sistema.atualizar(delta);
-  assert.equal(sistema.snapshot().flashRestante, 180);
+  assert.equal(sistema.snapshot().flashRestante, COMBAT_FEEL.hitFlashDuration);
   sprite.active = false;
   sistema.atualizar(180);
-  assert.equal(sistema.snapshot().flashRestante, 180);
+  assert.equal(sistema.snapshot().flashRestante, COMBAT_FEEL.hitFlashDuration);
 });
 
 test("preparo e limpeza são idempotentes e removem somente recursos e listeners próprios", () => {

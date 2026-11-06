@@ -31,10 +31,10 @@ export default class BossRoomLighting {
       largura: this.canvas.width, altura: this.canvas.height };
   }
 
-  desenhar(context, camera) {
-    if (!this.canvas || !luzAfetaCamera(this.area, camera)) return;
+  desenhar(context, camera, fator = 1) {
+    if (!fator || !this.canvas || !luzAfetaCamera(this.area, camera)) return;
     context.save();
-    context.globalAlpha = CLARIDADE_SALA_BOSS;
+    context.globalAlpha = CLARIDADE_SALA_BOSS * fator;
     context.drawImage(this.canvas, this.x, this.y);
     context.restore();
   }

@@ -1,10 +1,10 @@
 /** Desenha o painel na densidade da tela; os objetos Phaser mantêm a interação. */
-export function criarDisplayGerador(scene, width, height) {
+export function criarDisplayGerador(scene, width, height, dataset = "generatorDisplay") {
   const gameCanvas = scene.game.canvas;
   if (!gameCanvas?.parentElement) return null;
 
   const canvas = document.createElement("canvas");
-  canvas.dataset.generatorDisplay = "";
+  canvas.dataset[dataset] = "";
   canvas.setAttribute("aria-hidden", "true");
   Object.assign(canvas.style, {
     position: "absolute", display: "none", pointerEvents: "none", zIndex: "101",

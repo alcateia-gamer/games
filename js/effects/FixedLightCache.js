@@ -16,18 +16,23 @@ export default class FixedLightCache {
     this.sujo = true;
     this.areaSuja = true;
     this.versoes = [];
+    this.refazerTudo = true;
+    this.regiaoSuja = null;
   }
 
   adicionar(luz, perfis) {
     this.fontes.push({ luz, perfis, intensidade: -1, angulo: null });
     this.areaSuja = this.sujo = true;
+    this.refazerTudo = true;
   }
 
   atualizar(agora, zonas, paredes, estatuas, oclusao) {
     let mudou = false;
     const versoes = [paredes.revisao, estatuas.revisao, oclusao.revisao];
     for (let i = 0; i < versoes.length; i++) {
-      if (this.versoes[i] !== versoes[i]) { this.versoes[i] = versoes[i]; mudou = true; }
+      if (this.versoes[i] !== versoes[i]) {
+        this.versoes[i] = versoes[i]; mudou = this.refazerTudo = true;
+      }
     }
     for (const fonte of this.fontes) {
       const luz = fonte.luz;
@@ -35,9 +40,20 @@ export default class FixedLightCache {
       const angulo = luz.neon ? luz.fase : luz.angulo;
       if (fonte.x !== luz.x || fonte.y !== luz.y || fonte.raio !== luz.raio) {
         fonte.x = luz.x; fonte.y = luz.y; fonte.raio = luz.raio;
-        this.areaSuja = mudou = true;
+        this.areaSuja = mudou = this.refazerTudo = true;
       }
-      if (fonte.intensidade !== intensidade || fonte.angulo !== angulo) mudou = true;
+      if (fonte.intensidade !== intensidade || fonte.angulo !== angulo) {
+        mudou = true;
+        const r = luz.raio * MULTIPLICADOR_ALCANCE_FABRICA;
+        if (!this.regiaoSuja) this.regiaoSuja = { left: Math.floor(luz.x - r), right: Math.ceil(luz.x + r),
+          top: Math.floor(luz.y - r), bottom: Math.ceil(luz.y + r) };
+        else {
+          this.regiaoSuja.left = Math.min(this.regiaoSuja.left, Math.floor(luz.x - r));
+          this.regiaoSuja.right = Math.max(this.regiaoSuja.right, Math.ceil(luz.x + r));
+          this.regiaoSuja.top = Math.min(this.regiaoSuja.top, Math.floor(luz.y - r));
+          this.regiaoSuja.bottom = Math.max(this.regiaoSuja.bottom, Math.ceil(luz.y + r));
+        }
+      }
       fonte.intensidade = intensidade;
       fonte.angulo = angulo;
     }
@@ -63,9 +79,14 @@ export default class FixedLightCache {
     }
   }
 
-  pintarFontes(context, cor, camera = null) {
+  pintarFontes(context, cor, camera = null, regiao = null) {
     for (const fonte of this.fontes) {
       if (fonte.intensidade <= 0 || (camera && !luzAfetaCamera(fonte.luz, camera))) continue;
+      if (regiao) {
+        const luz = fonte.luz, r = luz.raio * MULTIPLICADOR_ALCANCE_FABRICA;
+        if (luz.x + r < regiao.left || luz.x - r > regiao.right ||
+            luz.y + r < regiao.top || luz.y - r > regiao.bottom) continue;
+      }
       if (!cor) {
         context.globalAlpha = fonte.intensidade;
         this.pintar(context, fonte.perfis[0], fonte);
@@ -88,14 +109,27 @@ export default class FixedLightCache {
       return;
     }
     if (this.sujo) {
+      // Recompõe só a faixa alterada, preservando a ordem e a mistura das cores.
+      // Durante a entrada, acender uma fileira não redesenha todos os LEDs da arena.
+      const regiao = this.refazerTudo ? null : this.regiaoSuja;
       for (const [c, colorido] of [[this.contextMascara, false], [this.contextCor, true]]) {
         c.setTransform(1, 0, 0, 1, 0, 0);
-        c.clearRect(0, 0, this.area.largura, this.area.altura);
+        if (regiao) c.clearRect(regiao.left - this.area.x, regiao.top - this.area.y,
+          regiao.right - regiao.left, regiao.bottom - regiao.top);
+        else c.clearRect(0, 0, this.area.largura, this.area.altura);
+        c.save();
         c.setTransform(1, 0, 0, 1, -this.area.x, -this.area.y);
+        if (regiao) {
+          c.beginPath(); c.rect(regiao.left, regiao.top, regiao.right - regiao.left,
+            regiao.bottom - regiao.top); c.clip();
+        }
         c.globalCompositeOperation = "source-over";
-        this.pintarFontes(c, colorido);
+        this.pintarFontes(c, colorido, null, regiao);
+        c.restore();
       }
       this.sujo = false;
+      this.refazerTudo = false;
+      this.regiaoSuja = null;
     }
     context.save();
     context.globalAlpha = 1;

@@ -10,7 +10,7 @@ const zona = (id = 1, x = 0) => ({ id, x, y: 0, width: 100, height: 100 });
 const porta = (nome = "a", x = 0, estado = "fechada") => ({ nome, estado,
   area: { x, y: 100, width: 100, height: 20 } });
 
-test("as quatro zonas reais associam suas lâmpadas às portas, incluindo duas zonas para a porta05", () => {
+test("as seis zonas reais associam suas portas, incluindo os dois trechos novos do boss", () => {
   const raw = JSON.parse(readFileSync(new URL("../../assets/map/parte2-fase1.json", import.meta.url)));
   const map = { tileWidth: raw.tilewidth, getObjectLayer: name => raw.layers.find(l => l.name === name) };
   const antes = JSON.stringify(raw);
@@ -20,16 +20,52 @@ test("as quatro zonas reais associam suas lâmpadas às portas, incluindo duas z
     { nome: "porta01", estado: "fechada", area: original },
     { nome: "porta04", estado: "fechada", area: { x: 240, y: -1920, width: 144, height: 96 } },
     { nome: "porta05", estado: "fechada", area: { x: -480, y: -5904, width: 48, height: 144 } },
+    { nome: "porta02", estado: "fechada", area: { x: -1248, y: -5328, width: 144, height: 96 } },
+    { nome: "porta03", estado: "fechada", area: { x: -1056, y: -5328, width: 144, height: 96 } },
   ];
   const zonas = new DoorLightingZones(map, lampadas);
   zonas.atualizar(0, portas, true);
-  assert.deepEqual(zonas.zonas.map(z => z.porta.nome), ["porta01", "porta04", "porta05", "porta05"]);
+  assert.deepEqual(zonas.zonas.map(z => z.porta.nome), ["porta01", "porta04", "porta05", "porta05", "porta03", "porta03"]);
   assert.deepEqual(zonas.zonas.map(z => [...z.indices.keys()].map(l => l.id).sort()), [
     [1139, 1164], [1181],
-    [1314, 1315, 1316, 1319, 1320, 1321, 1322, 1323, 1324, 1325, 1326, 1327, 1328, 1329, 1330, 1331], [],
+    [1314, 1315, 1316, 1319, 1320, 1321, 1322, 1323, 1324, 1325, 1326, 1327, 1328, 1329, 1330, 1331], [], [], [],
   ]);
   assert.ok(zonas.zonas.every(z => z.opacidade === 1));
   assert.equal(JSON.stringify(raw), antes);
+  portas.filter(p => ["porta02", "porta03"].includes(p.nome)).forEach(p => { p.estado = "abrindo"; });
+  zonas.atualizar(850, portas, true);
+  assert.ok(zonas.zonas.every(z => z.opacidade === 1), "a sombra espera a persiana terminar de abrir");
+  portas.filter(p => ["porta02", "porta03"].includes(p.nome)).forEach(p => { p.estado = "aberta"; });
+  zonas.atualizar(900, portas, true);
+  zonas.atualizar(1050, portas, true);
+  assert.ok(zonas.zonas.filter(z => [1602, 1603].includes(z.id)).every(z => z.opacidade === 0));
+  assert.ok(zonas.zonas.filter(z => ![1602, 1603].includes(z.id)).every(z => z.opacidade === 1));
+  const restauradas = new DoorLightingZones(map, lampadas);
+  restauradas.atualizar(0, portas, true);
+  assert.ok(restauradas.zonas.filter(z => [1602, 1603].includes(z.id)).every(z => z.opacidade === 0),
+    "voltar ao mapa com a porta aberta mantém todos os trechos da sala revelados");
+});
+
+test("trechos conectados herdam a porta em cadeia, sem unir outras salas ou depender da ordem", () => {
+  const objetos = [
+    { ...zona(3), y: -200.5 }, { ...zona(2), y: -100.25 }, zona(),
+    { ...zona(4), x: 100, y: -300.5 }, // Só o canto encosta na terceira zona.
+    { ...zona(5), x: 300 },
+  ];
+  const a = porta(), b = porta("b", 300);
+  const luz = { x: 50, y: -150 };
+  const zonas = new DoorLightingZones(mapa(objetos), [luz]);
+  zonas.atualizar(0, [a, b], true);
+  assert.deepEqual(zonas.zonas.map(z => z.porta?.nome), ["a", "a", "a", undefined, "b"]);
+  assert.equal(zonas.fatorLuz(luz, 0), 0);
+  a.estado = "aberta";
+  zonas.atualizar(100, [a, b], true);
+  zonas.atualizar(1000, [a, b], true);
+  assert.deepEqual(zonas.zonas.map(z => z.opacidade), [0, 0, 0, 1, 1]);
+  assert.equal(zonas.fatorLuz(luz, 1000), 1);
+  a.estado = "fechada";
+  zonas.atualizar(1100, [a, b], true);
+  assert.equal(zonas.zonas[0].opacidade, 0, "o fechamento do boss não volta a esconder a sala");
 });
 
 test("cada porta revela só sua zona após terminar de abrir, com partida escalonada das lâmpadas", () => {

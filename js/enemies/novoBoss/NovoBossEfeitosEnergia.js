@@ -8,6 +8,10 @@ function criarSprite(scene, asset, x, y, raio, nome) {
     .setScale(raio * 2 / asset.diametro).setDepth(52);
 }
 
+export function calcularRaioEscudoEnergia(raio, formacao = 1) {
+  return raio * (0.3 + Math.max(0, Math.min(1, formacao)) * 0.7);
+}
+
 /** A proteção acompanha a boss e repete os cinco quadros a cada 500 ms. */
 export function criarEscudoEnergia(scene, raio) {
   const asset = assetsNovoBoss.escudoEnergia;
@@ -21,7 +25,7 @@ export function criarEscudoEnergia(scene, raio) {
       if (destruido) return;
       if (visivel && Number.isFinite(delta) && delta >= 0) tempo += delta;
       sprite.setPosition(x, y).setVisible(visivel).setAlpha(Math.max(0, Math.min(1, alpha)) * 0.7);
-      sprite.setScale(raio * 2 / asset.diametro * (0.3 + Math.max(0, Math.min(1, formacao)) * 0.7));
+      sprite.setScale(calcularRaioEscudoEnergia(raio, formacao) * 2 / asset.diametro);
       sprite.setFrame(Math.floor(tempo / asset.frameMs) % (asset.ultimoFrame + 1));
     },
     destruir() { if (!destruido) { destruido = true; sprite.destroy(); } },

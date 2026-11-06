@@ -21,7 +21,7 @@ export default class BossEnergyLightBuffer {
       c.globalCompositeOperation = "source-over";
       c.setTransform(m.a * sx, m.b * sy, m.c * sx, m.d * sy, m.e * sx, m.f * sy);
       for (const fonte of fontes) {
-        c.globalAlpha = fonte.intensidade * (colorido ? fonte.branca ? 0.08 : 0.45 : 1);
+        c.globalAlpha = fonte.intensidade * (colorido ? 0.45 : 1);
         this.pintar(c, fonte, colorido);
       }
     }

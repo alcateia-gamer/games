@@ -89,6 +89,28 @@ def salvar_png(caminho, largura, altura, pixels):
         bloco(b"IDAT", zlib.compress(linhas, 9)) + bloco(b"IEND", b""))
 
 
+def salvar_luz_choque(largura, frames):
+    """Analisa só o azul elétrico das faíscas; as bobinas douradas não emitem flashes."""
+    amostras = []
+    for pixels, _ in frames:
+        pontos = [(i // 4 % largura, i // 4 // largura)
+                  for i in range(0, len(pixels), 4)
+                  if pixels[i] <= 80 and 140 <= pixels[i + 1] <= 200
+                  and pixels[i + 2] >= 220 and pixels[i + 3] > 128]
+        amostras.append(pontos)
+    pico = max((len(pontos) for pontos in amostras), default=1) or 1
+    quadros_luz = [dict(x=round(sum(x for x, _ in pontos) / len(pontos), 2),
+                       y=round(sum(y for _, y in pontos) / len(pontos), 2),
+                       intensidade=round((len(pontos) / pico) ** 0.5, 3))
+                   if pontos else None for pontos in amostras]
+    modulo = Path(__file__).resolve().parents[1] / "js/enemies/novoBoss/NovoBossTorreChoque.js"
+    linhas = ",\n".join("  " + json.dumps(quadro) for quadro in quadros_luz)
+    modulo.write_text(
+        "/** Gerado por scripts/preparar-torres-boss.py a partir das faíscas do idle original. */\n"
+        "export const quadrosChoqueTorreIdle = Object.freeze([\n" + linhas +
+        "\n].map(quadro => quadro && Object.freeze(quadro)));\n")
+
+
 def main():
     SAIDA.mkdir(parents=True, exist_ok=True)
     metadados = {}
@@ -105,6 +127,8 @@ def main():
         salvar_png(SAIDA / f"torre-{estado}.png", largura * colunas, altura * linhas, sheet)
         metadados[estado] = {"largura": largura, "altura": altura,
                             "duracoesMs": [duracao for _, duracao in frames]}
+        if estado == "idle":
+            salvar_luz_choque(largura, frames)
         print(estado, len(frames), f"{largura}x{altura}")
     (SAIDA / "quadros.json").write_text(json.dumps(metadados, indent=2) + "\n")
 

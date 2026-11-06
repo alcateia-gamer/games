@@ -161,7 +161,7 @@ function criarInteracaoGeradorFabrica(scene) {
    * Abre o menu do gerador e bloqueia o movimento enquanto o jogador escolhe uma ação.
    */
   const abrirModal = () => {
-    if (dialogOpen || scene.luzFabricaAcesa || scene.devItemMenuOpen) return;
+    if (dialogOpen || scene.luzFabricaAcesa || scene.generatorMenuOpen || scene.devItemMenuOpen) return;
     dialogOpen = true;
     scene.generatorMenuOpen = true;
     scene.geradorInteracaoDisponivel = false;

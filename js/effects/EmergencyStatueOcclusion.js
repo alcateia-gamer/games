@@ -1,4 +1,5 @@
 import { MULTIPLICADOR_ALCANCE_FABRICA } from "./FactoryLighting.js";
+import { ocultarBrilhoAtrasSprite } from "./SpriteLightOcclusion.js";
 
 const CAMPOS = ["x", "y", "scaleX", "scaleY", "rotation", "flipX", "flipY",
   "displayOriginX", "displayOriginY", "alpha", "visible", "active", "frame"];
@@ -52,28 +53,25 @@ export default class EmergencyStatueOcclusion {
     c.imageSmoothingEnabled = true;
     c.drawImage(perfil, -raio, -raio, raio * 2, raio * 2);
     c.setTransform(1, 0, 0, 1, centro - luz.x, centro - luz.y);
-    c.globalCompositeOperation = "destination-out";
-    c.imageSmoothingEnabled = false;
+    this.recortar(c, luz, raio);
+    context.drawImage(this.canvas, luz.x - centro, luz.y - centro, tamanho, tamanho);
+    return true;
+  }
+
+  /** A silhueta é estática enquanto a luz gira; também atende ao cache do giroflex. */
+  recortar(context, luz, raio) {
     for (const estatua of this.estatuas) {
       const frame = estatua.frame;
       if (estatua.active === false || estatua.visible === false || estatua.alpha === 0 || !frame?.source?.image) continue;
-      c.save();
-      const r = estatua.rotation ?? 0;
-      const cr = Math.cos(r), sr = Math.sin(r);
-      const sx = (estatua.scaleX ?? 1) * (estatua.flipX ? -1 : 1);
-      const sy = (estatua.scaleY ?? 1) * (estatua.flipY ? -1 : 1);
       const w = frame.realWidth ?? estatua.width ?? frame.cutWidth;
       const h = frame.realHeight ?? estatua.height ?? frame.cutHeight;
       const ox = estatua.displayOriginX ?? w / 2, oy = estatua.displayOriginY ?? h / 2;
-      c.transform(cr * sx, sr * sx, -sr * sy, cr * sy, estatua.x, estatua.y);
-      c.globalAlpha = estatua.alpha ?? 1;
-      c.drawImage(frame.source.image, frame.cutX, frame.cutY, frame.cutWidth, frame.cutHeight,
-        (frame.x ?? 0) - (estatua.flipX ? w - ox : ox),
-        (frame.y ?? 0) - (estatua.flipY ? h - oy : oy), frame.cutWidth, frame.cutHeight);
-      c.restore();
+      // Limite conservador inclui escala, rotação, espelhamento e origem fora do sprite.
+      const alcance = Math.hypot(Math.max(Math.abs(ox), Math.abs(w - ox)) * Math.abs(estatua.scaleX ?? 1),
+        Math.max(Math.abs(oy), Math.abs(h - oy)) * Math.abs(estatua.scaleY ?? 1));
+      if (Math.abs(estatua.x - luz.x) > raio + alcance || Math.abs(estatua.y - luz.y) > raio + alcance) continue;
+      ocultarBrilhoAtrasSprite(context, estatua);
     }
-    context.drawImage(this.canvas, luz.x - centro, luz.y - centro, tamanho, tamanho);
-    return true;
   }
 
   destroy() {

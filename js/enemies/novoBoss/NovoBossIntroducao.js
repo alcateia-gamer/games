@@ -1,6 +1,7 @@
 /** Apresenta boss e torres, forma o escudo e fecha as duas persianas antes da luta. */
 import { criarRaiosEscudoNovoBoss } from "./NovoBossRaiosEscudo.js";
 import { ocultarHUDDuranteCena } from "../../ui/HudCinematic.js";
+import BossIntroLighting from "../../effects/BossIntroLighting.js";
 
 const PORTAS_ENTRADA = new Set(["porta02", "porta03"]);
 const duracao = (valor, padrao) => Number.isFinite(valor) && valor >= 0 ? valor : padrao;
@@ -19,6 +20,8 @@ function jogadorNaPorta(player, porta) {
 export function prepararIntroducaoNovoBoss(scene, encontro) {
   const config = encontro.config.cenaEntrada;
   const velocidade = Number.isFinite(config?.velocidade) && config.velocidade > 0 ? config.velocidade : 1;
+  const velocidadeTorres = Number.isFinite(config?.velocidadeTorres) && config.velocidadeTorres > 0
+    ? config.velocidadeTorres : velocidade;
   const principal = scene.cameras?.main;
   if (config?.ativo === false || !principal?.centerOn || !principal.stopFollow || !principal.startFollow) return null;
   let etapa = "aguardando", tempo = 0, concluida = false, destruida = false;
@@ -28,6 +31,7 @@ export function prepararIntroducaoNovoBoss(scene, encontro) {
   let roteiro = [], indiceEtapa = 0, torres = [], raios = null;
   let centroAtual = null, de = null, para = null, zoomDe = null, zoomPara = null;
   let hud = null;
+  const iluminacao = new BossIntroLighting(encontro.config.arena);
 
   function limparRaios() { raios?.destruir(); raios = null; }
 
@@ -63,6 +67,7 @@ export function prepararIntroducaoNovoBoss(scene, encontro) {
     limparRaios();
     encontro.sistemaGeradores?.cancelarApresentacao?.();
     restaurarControle(true);
+    iluminacao.iniciar(scene.iluminacaoEmergencia?.luzes);
     liberarPortas();
     etapa = "aguardando";
     tempo = 0;
@@ -94,6 +99,8 @@ export function prepararIntroducaoNovoBoss(scene, encontro) {
     if (keyboard) keyboard.enabled = false;
     portasLiberadas = false;
     torres = encontro.sistemaGeradores?.iniciarApresentacao?.() ?? [];
+    scene.zonasLuzApagada?.revelarPortas(portas, scene.time?.now ?? 0);
+    iluminacao.iniciar(scene.iluminacaoEmergencia?.luzes);
     criarRoteiro();
     entrarEtapa(0);
   }
@@ -122,8 +129,10 @@ export function prepararIntroducaoNovoBoss(scene, encontro) {
 
   function criarRoteiro() {
     roteiro = [
-      { nome: "indo", duracao: duracao(config?.idaMs, 900), alvo: foco },
-      { nome: "mostrando", duracao: duracao(config?.pausaMs, 650) },
+      { nome: "indo", velocidade: 1, duracao: duracao(config?.idaMs, 3200), alvo: foco,
+        atualizar: p => { if (p > 0) iluminacao.avancar(suavizar(p)); } },
+      { nome: "mostrando", velocidade: 1, duracao: duracao(config?.pausaMs, 900),
+        atualizar: p => iluminacao.perceber(p) },
     ];
     // Y cresce para baixo também nas coordenadas negativas: superior esquerda, seguindo horário.
     torres = [...torres].sort((a, b) => Math.atan2(a.y - foco.y, a.x - foco.x) -
@@ -135,13 +144,15 @@ export function prepararIntroducaoNovoBoss(scene, encontro) {
       Math.hypot(torres[melhor].x - canto.x, torres[melhor].y - canto.y) ? indice : melhor, 0);
     torres = [...torres.slice(primeira), ...torres.slice(0, primeira)];
     for (const torre of torres) {
-      roteiro.push({ nome: "indo-torre", torre: torre.id,
+      roteiro.push({ nome: "indo-torre", torre: torre.id, velocidade: velocidadeTorres,
         duracao: duracao(config?.viagemTorreMs, 650),
         alvo: { x: torre.hitboxDano.x + torre.hitboxDano.width / 2,
           y: torre.hitboxDano.y + torre.hitboxDano.height / 2 } });
-      roteiro.push({ nome: "invocando-torre", torre: torre.id,
+      roteiro.push({ nome: "invocando-torre", torre: torre.id, velocidade: velocidadeTorres,
         duracao: torre.duracaoInvocacaoMs,
         iniciar: () => torre.invocar() });
+      roteiro.push({ nome: "mostrando-choque-torre", torre: torre.id, velocidade: velocidadeTorres,
+        duracao: torre.duracaoIdleMs });
     }
     if (torres.length) {
       roteiro.push({ nome: "enquadrando", duracao: duracao(config?.enquadramentoMs, 1000),
@@ -149,8 +160,8 @@ export function prepararIntroducaoNovoBoss(scene, encontro) {
       roteiro.push({ nome: "carregando-escudo", velocidade: 1, duracao: duracao(config?.cargaEscudoMs, 1500),
         iniciar: () => { raios = criarRaiosEscudoNovoBoss(scene, encontro, torres); },
         atualizar: p => {
-          raios?.atualizar(tempo, Math.min(1, p / 0.3));
           encontro.sistemaGeradores.definirCargaEscudo(Math.max(0, (p - 0.3) / 0.7));
+          raios?.atualizar(tempo, Math.min(1, p / 0.3));
         } });
       roteiro.push({ nome: "dissipando-raios", velocidade: 1, duracao: duracao(config?.dissipacaoRaiosMs, 350),
         atualizar: p => raios?.atualizar(duracao(config?.cargaEscudoMs, 1500) + tempo, 1, 1 - p),
@@ -180,6 +191,7 @@ export function prepararIntroducaoNovoBoss(scene, encontro) {
   }
 
   const sistema = {
+    iluminacao,
     get bloqueiaCombate() { return !destruida && !concluida && encontro.jogadorNaArena && !encontro.morto; },
     atualizar(delta = 0) {
       if (destruida) return false;
@@ -210,6 +222,8 @@ export function prepararIntroducaoNovoBoss(scene, encontro) {
         const ritmo = atual.velocidade ?? velocidade;
         const passo = Math.min(restante * ritmo, Math.max(0, total - tempo));
         tempo += passo;
+        // Ritmos fracionários não devem deixar uma etapa presa por resíduos de ponto flutuante.
+        if (total - tempo < 1e-7) tempo = total;
         restante = Math.max(0, restante - passo / ritmo);
         const progresso = total > 0 ? Math.min(1, tempo / total) : 1;
         deslocar(de, para, progresso);
@@ -226,6 +240,7 @@ export function prepararIntroducaoNovoBoss(scene, encontro) {
       etapa = "concluida";
       concluida = true;
       encontro.sistemaGeradores?.concluirApresentacao?.();
+      iluminacao.restaurar();
       restaurarControle();
       // O frame que encerra a cena ainda não pertence ao relógio de combate.
       return true;
@@ -233,7 +248,9 @@ export function prepararIntroducaoNovoBoss(scene, encontro) {
     destruir() {
       if (destruida) return;
       limparRaios();
-      if (!concluida) encontro.sistemaGeradores?.cancelarApresentacao?.();
+      // No shutdown os sprites podem já ter sido removidos pelo Phaser.
+      if (!concluida && !encontro.encerrado) encontro.sistemaGeradores?.cancelarApresentacao?.();
+      iluminacao.restaurar();
       restaurarControle(true);
       liberarPortas();
       destruida = true;

@@ -17,8 +17,8 @@ export const novoBossConfig = Object.freeze({
     fatorZoom: 0.8, velocidade: 5, margemSaidaX: 70, margemSaidaY: 80,
   }),
   cenaEntrada: Object.freeze({
-    ativo: true, velocidade: 1.25, idaMs: 900, pausaMs: 650, voltaMs: 900,
-    viagemTorreMs: 650, enquadramentoMs: 1000, margemEnquadramento: 70,
+    ativo: true, velocidade: 1.25, idaMs: 3200, pausaMs: 900, voltaMs: 900,
+    velocidadeTorres: 1.5, viagemTorreMs: 650, enquadramentoMs: 1000, margemEnquadramento: 70,
     cargaEscudoMs: 1500, dissipacaoRaiosMs: 350,
   }),
   combate: Object.freeze({
@@ -27,7 +27,10 @@ export const novoBossConfig = Object.freeze({
     janelaVulneravelMs: 4000,
     acertosPorAbertura: 3,
     intervaloAcertosMs: 0,
+    fatorRecuo: 0.2,
   }),
+  movimento: Object.freeze({ ativo: true, velocidade: 28, distanciaPreferida: 220,
+    alternarRumoMs: 2600 }),
   geradores: Object.freeze({
     ativo: true,
     distanciaInteracao: 72,
@@ -45,8 +48,8 @@ export const novoBossConfig = Object.freeze({
   clones: Object.freeze({ ativo: true, quantidade: 9, duracaoMs: 18000, velocidade: 55 }),
   fase2: Object.freeze({
     ativo: true, limiarVida: 0.5, intervaloOndasMs: 10000, invulneravelAoClonarMs: 0,
-    movimento: Object.freeze({ ativo: true, velocidade: 250, distanciaPreferida: 180,
-      alternarRumoMs: 1200, intervaloTeleporteMs: 6000 }),
+    movimento: Object.freeze({ ativo: true, velocidade: 60, distanciaPreferida: 180,
+      alternarRumoMs: 1800, intervaloTeleporteMs: 6000 }),
   }),
   ataques: Object.freeze({
     ativo: true,

@@ -12,6 +12,17 @@ function cena() {
   return { scene, encontro, projetil, luzes: new BossEnergyLighting(scene) };
 }
 
+test("a aura vermelha só acende quando a introdução sinaliza a reação do boss", () => {
+  const { encontro, projetil, luzes } = cena();
+  projetil.active = false; encontro.sprite.visible = true;
+  encontro.introducao = { iluminacao: { aura: 0 } };
+  assert.equal(luzes.atualizar(camera).length, 0);
+  encontro.introducao.iluminacao.aura = 0.5;
+  assert.equal(luzes.atualizar(camera).find(f => f.vermelha).intensidade, 0.45);
+  encontro.introducao.iluminacao.aura = 1;
+  assert.equal(luzes.atualizar(camera).find(f => f.vermelha).intensidade, 0.9);
+});
+
 test("halo azul aumenta junto com a formação do escudo na introdução", () => {
   const { encontro, luzes } = cena();
   encontro.barreiraAtiva = true;
@@ -75,29 +86,36 @@ test("o halo do escudo acompanha a barreira, alpha e teleporte, apagando ao desa
   }
 });
 
-test("o brilho vermelho acompanha o boss e as cópias, coexistindo com o escudo", () => {
-  const { encontro, luzes } = cena();
-  encontro.projeteisBoss.length = 0;
+test("aura acompanha boss e cópias, mantém o cache e atualiza o recorte ao mudar de pose", () => {
+  const { encontro, projetil, luzes } = cena();
+  projetil.active = false;
   encontro.sprite.visible = true;
-  encontro.barreiraAtiva = true;
-  const auras = () => luzes.atualizar(camera).filter(f => f.vermelha);
-  let [aura] = auras();
-  assert.equal(aura.intensidade, 0.45);
-  assert.equal(aura.luz.y, 225);
-  assert.ok(luzes.fontesVisiveis.some(f => f.escudo), "o escudo continua emitindo azul");
-  encontro.sprite.x = 460;
-  encontro.sprite.alpha = 0.5;
-  [aura] = auras();
-  assert.equal(aura.luz.x, 460);
-  assert.equal(aura.intensidade, 0.225);
   const copia = { ...encontro.sprite, x: 500 };
   encontro.alvosIlusorios = [{ active: true, visible: true, sprite: copia }];
-  assert.equal(auras().length, 2, "o brilho não revela qual boss é o verdadeiro");
+  let fontes = luzes.atualizar(camera);
+  assert.equal(fontes.length, 2);
+  assert.ok(fontes.every(f => f.vermelha && f.emissor));
+  assert.equal(fontes[0].intensidade, fontes[1].intensidade);
+  const revisao = luzes.revisao;
+  for (let i = 0; i < 120; i++) luzes.atualizar(camera);
+  assert.equal(luzes.revisao, revisao);
+  for (const mudar of [
+    () => { encontro.sprite.frame = {}; },
+    () => { encontro.sprite.flipX = true; },
+    () => { encontro.sprite.displayOriginX = 180; },
+  ]) {
+    const antes = luzes.revisao;
+    mudar(); luzes.atualizar(camera);
+    assert.ok(luzes.revisao > antes, "mudar de pose invalida o recorte da aura");
+  }
+  encontro.barreiraAtiva = true;
+  fontes = luzes.atualizar(camera);
+  assert.equal(fontes.filter(f => f.escudo).length, 1);
   encontro.sprite.alpha = 0;
   copia.visible = false;
-  assert.equal(auras().length, 0);
+  assert.equal(luzes.atualizar(camera).length, 0);
   encontro.sprite.alpha = 1;
-  assert.equal(auras().length, 1);
+  assert.equal(luzes.atualizar(camera).length, 2, "aura e escudo usam estados separados");
   encontro.morto = true;
   assert.equal(luzes.atualizar(camera).length, 0);
 });
@@ -133,33 +151,18 @@ test("perfis azuis têm queda suave e a luz do escudo alcança além do seu cont
   }
 });
 
-test("o foco branco acompanha o personagem somente durante a batalha ativa", () => {
+test("o personagem não emite luz nem invalida a composição ao se movimentar na batalha", () => {
   const { scene, encontro, luzes } = cena();
   scene.player = { active: true, visible: true, x: 350, y: 225, alpha: 1 };
-  const foco = () => luzes.atualizar(camera).filter(f => f.branca);
-  assert.equal(foco().length, 0, "não acende antes do combate");
+  const fontes = luzes.atualizar(camera);
+  assert.equal(fontes.length, 1, "somente o disparo emite luz");
   encontro.active = true;
-  let [fonte] = foco();
-  assert.equal(fonte.luz.x, 350);
-  assert.equal(fonte.luz.y, 217);
-  assert.equal(fonte.intensidade, 0.9);
-  scene.player.x = 450;
-  scene.player.y = 250;
-  [fonte] = foco();
-  assert.equal(fonte.luz.x, 450);
-  assert.equal(fonte.luz.y, 242);
   const revisao = luzes.revisao;
-  foco();
-  assert.equal(luzes.revisao, revisao, "o foco parado reutiliza a composição");
-  encontro.active = false;
-  assert.equal(foco().length, 0);
-  encontro.active = true;
-  encontro.jogadorNaArena = false;
-  assert.equal(foco().length, 0, "sair da sala apaga o foco");
-  encontro.jogadorNaArena = true;
-  scene.player.morto = true;
-  assert.equal(foco().length, 0);
-  scene.player.morto = false;
-  encontro.morto = true;
-  assert.equal(foco().length, 0, "a derrota do boss encerra o foco");
+  for (let i = 0; i < 120; i++) {
+    scene.player.x += 1;
+    scene.player.y += 0.5;
+    assert.equal(luzes.atualizar(camera), fontes);
+    assert.equal(fontes.length, 1, "não cria um foco no jogador durante o combate");
+  }
+  assert.equal(luzes.revisao, revisao, "o movimento do jogador preserva o cache das luzes do boss");
 });

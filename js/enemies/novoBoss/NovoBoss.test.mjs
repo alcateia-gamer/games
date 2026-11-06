@@ -22,6 +22,7 @@ import {
 // possuem seus próprios testes e não devem iniciar ataques ou criar alvos aqui.
 const configIsolada = {
   ...novoBossConfig,
+  movimento: { ...novoBossConfig.movimento, ativo: false },
   ataques: { ...novoBossConfig.ataques, ativo: false },
   geradores: { ...novoBossConfig.geradores, ativo: false },
   ilusoes: { ...novoBossConfig.ilusoes, ativo: false },
@@ -311,6 +312,19 @@ test("ZonaBoss ativa nos três retângulos e sair pausa o combate sem curar ou r
   assert.equal(encontro.sprite, sprite);
   assert.equal(sprites.length, 1);
   destruirNovoBoss(scene);
+});
+
+test("controlador já caminha na fase inicial e sincroniza a hitbox a cada quadro", () => {
+  const { scene } = criarCena({ dentro: true });
+  scene.novoBossConfig = { ...configIsolada, movimento: novoBossConfig.movimento };
+  const encontro = prepararNovoBoss(scene), sprite = encontro.sprite;
+  const origem = { x: sprite.x, y: sprite.y };
+  atualizarNovoBoss(scene, 500, 500);
+  const distancia = Math.hypot(sprite.x - origem.x, sprite.y - origem.y);
+  assert.ok(distancia > 13 && distancia <= 14.001);
+  assert.equal(encontro.fase, 1);
+  assert.equal(sprite.body.bottom, encontro.hitboxDano.y + encontro.hitboxDano.height);
+  assert.deepEqual({ ...encontro.hitboxDano }, areaCorpoNovoBoss(encontro.config, sprite));
 });
 
 test("ordena pelos pés do jogador sem atravessar camadas próximas da fábrica", () => {

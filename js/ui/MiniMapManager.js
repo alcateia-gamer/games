@@ -154,6 +154,8 @@ export default class MiniMapManager {
     this.updateEnemyMarkers();
     this.updateItemMarkers();
     this.updateGeneratorMarker();
+    this.updateShutterDoorMarkers();
+    this.updateCardReaderMarker();
     this.updateWeaponShopMarker();
     this.updateSearchMarker();
     const position = worldToMiniMap(this.transform, x, y);
@@ -230,6 +232,46 @@ export default class MiniMapManager {
     this.itemMarkers.lineStyle(1.5, 0x30250a, 1)
       .fillStyle(COLLECTIBLE_MARKER_COLOR, 1)
       .fillPoints(points, true).strokePoints(points, true);
+  }
+
+  /** Persianas cinza com frisos horizontais e moldura industrial nas duas portas iniciais. */
+  updateShutterDoorMarkers() {
+    const { bounds } = this.geometry;
+    for (const porta of this.scene.portasFabrica ?? []) {
+      if (!porta.marcador || !porta.area) continue;
+      const area = porta.area, x = area.x + area.width / 2, y = area.y + area.height / 2;
+      if (!Number.isFinite(x) || !Number.isFinite(y) || x < bounds.x || y < bounds.y ||
+          x > bounds.x + bounds.width || y > bounds.y + bounds.height) continue;
+      const position = worldToMiniMap(this.transform, x, y);
+      if (position.x < 9 || position.y < 9 ||
+          position.x > VIEW_WIDTH - 9 || position.y > VIEW_HEIGHT - 9) continue;
+      const px = VIEW_X + position.x, py = VIEW_Y + position.y;
+      const graphics = this.itemMarkers;
+      graphics.fillStyle(0x1b242a, 1).fillRect(px - 8, py - 7, 16, 14)
+        .fillStyle(0x89969d, 1).fillRect(px - 6, py - 5, 12, 10)
+        .fillStyle(0x39454c, 1);
+      for (let dy = -3; dy <= 3; dy += 2) graphics.fillRect(px - 6, py + dy, 12, 1);
+      graphics.fillStyle(COLLECTIBLE_MARKER_COLOR, 1)
+        .fillRect(px - 8, py - 7, 4, 2).fillRect(px + 4, py - 7, 4, 2);
+    }
+  }
+
+  /** Cartão fixo no leitor da arena, independente da energia e do crachá coletado. */
+  updateCardReaderMarker() {
+    const area = this.scene.leitorCartaoFabrica?.area;
+    if (!area) return;
+    const x = area.x + area.width / 2, y = area.y + area.height / 2;
+    const { bounds } = this.geometry;
+    if (!Number.isFinite(x) || !Number.isFinite(y) || x < bounds.x || y < bounds.y ||
+        x > bounds.x + bounds.width || y > bounds.y + bounds.height) return;
+    const position = worldToMiniMap(this.transform, x, y);
+    if (position.x < 9 || position.y < 9 ||
+        position.x > VIEW_WIDTH - 9 || position.y > VIEW_HEIGHT - 9) return;
+    const px = VIEW_X + position.x, py = VIEW_Y + position.y;
+    this.itemMarkers.fillStyle(0x30250a, 1).fillRect(px - 8, py - 6, 16, 12)
+      .fillStyle(COLLECTIBLE_MARKER_COLOR, 1).fillRect(px - 6, py - 4, 12, 8)
+      .fillStyle(0x30250a, 1).fillRect(px - 6, py - 3, 12, 2)
+      .fillRect(px - 4, py, 3, 3).fillRect(px + 1, py + 1, 4, 1);
   }
 
   /**
@@ -356,6 +398,8 @@ export default class MiniMapManager {
       this.updateEnemyMarkers();
       this.updateItemMarkers();
       this.updateGeneratorMarker();
+      this.updateShutterDoorMarkers();
+      this.updateCardReaderMarker();
       this.updateWeaponShopMarker();
       this.updateSearchMarker();
     } finally {

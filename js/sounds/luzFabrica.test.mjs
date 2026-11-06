@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { intensidadeLuzPartida, QUEDAS_LUZ_FABRICA } from "../effects/TerrorLighting.js";
 import { criarSomLuzFabrica, carregarSomLuzFabrica, criarSomPiscadasAmbiente } from "./luzFabrica.js";
+import FactoryLighting from "../effects/FactoryLighting.js";
 
 function criarAudioSimulado(audioBuffer, automacao = null) {
   const reproducoes = [];
@@ -237,36 +238,92 @@ test("piscadas ambientes usam o mesmo áudio bem baixo, atenuam distância e nã
     sound: { add(chave) { assert.equal(chave, "luz-fabrica-oscilando"); return som; } },
   };
   const controle = criarSomPiscadasAmbiente(scene);
-  controle.update([{ x: 450, y: 0 }, { x: 0, y: 0 }, { x: 200, y: 0 }]);
+  const piscar = luzes => controle.update(luzes.map(luz => ({ luz, inicio: scene.time.now, duracaoQueda: 0.2 })));
+  piscar([{ x: 450, y: 0 }, { x: 0, y: 0 }, { x: 200, y: 0 }]);
   scene.time.now = 30;
-  controle.update([{ x: 100, y: 0 }]);
+  piscar([{ x: 100, y: 0 }]);
   const perto = volumes.at(-1);
   assert.ok(perto > 0 && perto <= 0.025);
   assert.equal(reproducoes.length, 1, "falhas simultâneas escolhem o estalo mais próximo sem interrompê-lo");
   scene.time.now = 3000;
-  controle.update([{ x: 450, y: 0 }]);
+  piscar([{ x: 450, y: 0 }]);
   scene.time.now += 30;
-  controle.update([]);
+  piscar([]);
   assert.ok(Math.abs(volumes.at(-1) - perto / 4) < 1e-10);
   scene.time.now = 6000;
-  controle.update([{ x: 1000, y: 0 }]);
+  piscar([{ x: 1000, y: 0 }]);
   assert.equal(reproducoes.length, 2);
   assert.ok(reproducoes.every(som => som.loop === false && som.rate === 1));
   // Fora da tela, mas perto do personagem e com halo potencialmente visível.
-  controle.update([{ x: -1, y: 0 }, { x: 0, y: -1 }, { x: 0, y: 600 }]);
+  piscar([{ x: -1, y: 0 }, { x: 0, y: -1 }, { x: 0, y: 600 }]);
   assert.equal(reproducoes.length, 2);
   // Scroll e zoom devem usar a posição projetada na tela.
   scene.cameras.main.matrix = { a: 2, b: 0, c: 0, d: 2, e: 400, f: 200 };
   scene.time.now = 7000;
-  controle.update([{ x: -100, y: -50 }]);
+  piscar([{ x: -100, y: -50 }]);
   assert.equal(reproducoes.length, 3);
   const antes = paradas;
   scene.cameras.main.matrix.e = -500;
   scene.time.now += 30;
-  controle.update([]);
+  piscar([]);
   assert.equal(paradas, antes + 1, "silencia quando a luminária sai do campo de visão");
-  controle.update([{ x: -100, y: -50 }]);
+  piscar([{ x: -100, y: -50 }]);
   assert.equal(reproducoes.length, 3);
   controle.destroy();
   assert.equal(destruido, true);
+});
+
+test("falhada bruta corta a luz, repica durante o estalo e compensa o atraso do quadro", () => {
+  for (const sorteio of [0, 0.5, 1]) {
+    const { som, reproducoes } = criarAudioSimulado();
+    const camera = { width: 800, height: 450, matrix: { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 } };
+    const scene = {
+      time: { now: 0 }, player: { active: true, x: 400, y: 225 },
+      cameras: { main: camera }, cache: { audio: { exists: () => true } },
+      sound: { add: () => som },
+    };
+    const luzes = new FactoryLighting({ getObjectLayer: () => ({ objects: [
+      { id: 1, point: true, x: 400, y: 225, properties: { Piscando: true } },
+    ] }) }, { aleatorio: () => sorteio });
+    const audio = criarSomPiscadasAmbiente(scene);
+    luzes.definirEnergia(true);
+    luzes.atualizar(0, camera);
+    const perfil = luzes.estados[0].falha;
+    assert.ok(perfil.duracao >= 2370 && perfil.duracao <= 8169);
+    let eventos = 0;
+    let anterior = 1;
+    let cortes = 0;
+    let repiques = 0;
+    let apagada = false;
+    for (let agora = 0; agora < perfil.duracao * 2; agora += 16) {
+      scene.time.now = agora;
+      const [fonte] = luzes.atualizar(agora, camera);
+      if (anterior - fonte.intensidade > 0.4) cortes++;
+      if (fonte.intensidade < 0.08) apagada = true;
+      if (apagada && fonte.intensidade > 0.6 && fonte.intensidade < 0.95) {
+        repiques++;
+        apagada = false;
+      }
+      anterior = fonte.intensidade;
+      const antes = reproducoes.length;
+      audio.update(luzes.falhasIniciadas);
+      if (luzes.falhasIniciadas.length) {
+        eventos++;
+        const evento = luzes.falhasIniciadas[0];
+        assert.equal(reproducoes.length, antes + 1, "cada queda tem seu estalo, inclusive dentro do ciclo");
+        assert.ok(fonte.intensidade < 0.75, "a queda já está visível ao soar o estalo");
+        assert.equal(reproducoes.at(-1).seek, (agora - evento.inicio) / 1000);
+        assert.equal(reproducoes.at(-1).rate, 1);
+      } else assert.equal(reproducoes.length, antes, "não produz som durante os respiros");
+    }
+    assert.equal(eventos, perfil.estalos.length * 2);
+    assert.ok(cortes >= eventos, "corta de forma brusca em vez de pulsar");
+    assert.ok(repiques >= eventos, "tenta reacender antes de cair novamente");
+    const antes = reproducoes.length;
+    scene.time.now += 1000;
+    audio.update([{ luz: luzes.lampadas[0], inicio: scene.time.now - 600, duracaoQueda: 0.2 }]);
+    assert.equal(reproducoes.length, antes, "descarta som vencido após uma pausa");
+    audio.destroy();
+    luzes.destroy();
+  }
 });

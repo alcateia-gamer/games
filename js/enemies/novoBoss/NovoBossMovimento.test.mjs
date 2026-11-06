@@ -5,6 +5,7 @@ import { novoBossConfig, areaCorpoNovoBoss } from "./NovoBossConfig.js";
 import { atualizarMovimentoNovoBoss } from "./NovoBossMovimento.js";
 import { atualizarCombateNovoBoss, inicializarCombateNovoBoss } from "./NovoBossEstados.js";
 import { destinoValidoNovoBoss } from "./NovoBossTeleporte.js";
+import { atualizarFasesNovoBoss } from "./NovoBossFases.js";
 
 function criar() {
   const scene = { player: { active: true, x: -1080, y: -5500 }, vida: 100,
@@ -21,7 +22,7 @@ function criar() {
   return { scene, encontro, sprite, mover: delta => atualizarMovimentoNovoBoss(scene, encontro, delta) };
 }
 
-test("fase 2 flanqueia a 250 px/s com e sem clones e mantém corpo e hitbox", () => {
+test("fase 2 flanqueia lentamente a 60 px/s com e sem clones e mantém corpo e hitbox", () => {
   for (const ativo of [false, true]) {
     const c = criar(), origem = { ...c.sprite }, hitbox = c.encontro.hitboxDano;
     c.encontro.sistemaClones = { ativo };
@@ -29,19 +30,41 @@ test("fase 2 flanqueia a 250 px/s com e sem clones e mantém corpo e hitbox", ()
     c.encontro.relogioCombate = 1000;
     assert.equal(c.mover(400), true);
     const distancia = Math.hypot(c.sprite.x - origem.x, c.sprite.y - origem.y);
-    assert.ok(distancia > 90 && distancia <= 100.001, distancia);
+    assert.ok(distancia > 23 && distancia <= 24.001, distancia);
     assert.equal(c.encontro.hitboxDano, hitbox);
     for (const key of ["x", "y", "width", "height"]) assert.equal(c.sprite.body[key], hitbox[key]);
+  }
+});
+
+test("caminha lentamente desde a fase 1, mesmo sem habilitar a segunda fase", () => {
+  for (const fase2Ativa of [false, true]) {
+    const c = criar();
+    c.encontro.fase = 1;
+    c.encontro.config = { ...novoBossConfig, fase2: { ...novoBossConfig.fase2, ativo: fase2Ativa } };
+    const origem = { x: c.sprite.x, y: c.sprite.y };
+    atualizarFasesNovoBoss(c.scene, c.encontro, 500);
+    const distancia = Math.hypot(c.sprite.x - origem.x, c.sprite.y - origem.y);
+    assert.ok(distancia > 13 && distancia <= 14.001, "caminhada pesada de 28 px/s");
+    assert.deepEqual({ x: c.sprite.body.x, y: c.sprite.body.y },
+      { x: c.encontro.hitboxDano.x, y: c.encontro.hitboxDano.y });
+    assert.equal(c.encontro.teleportePendente, null);
+    assert.equal(c.encontro.fase, 1);
+    c.encontro.estado = "vulneravel";
+    const antes = { x: c.sprite.x, y: c.sprite.y };
+    atualizarFasesNovoBoss(c.scene, c.encontro, 500);
+    assert.deepEqual({ x: c.sprite.x, y: c.sprite.y }, antes, "para durante a abertura dos golpes");
   }
 });
 
 test("janelas, ataques centrais, quatro ilusões, viagem e interrupções seguram a verdadeira", () => {
   for (const bloquear of [
     c => { c.encontro.estado = "vulneravel"; },
-    ...["pulsoRepulsao", "lasers"].map(tipo => c => { c.encontro.estado = "atacando"; c.encontro.ataqueAtual = { tipo }; }),
+    ...["pulsoRepulsao", "lasers", "lasersEspiral"].map(tipo => c => { c.encontro.estado = "atacando"; c.encontro.ataqueAtual = { tipo }; }),
     c => { c.encontro.sistemaIlusoes = { ativo: true }; },
     c => { c.encontro.teleporte = {}; }, c => { c.encontro.teleportePendente = "reativo"; },
-    c => { c.encontro.transicaoFase2Pendente = true; }, c => { c.encontro.fase = 1; },
+    c => { c.encontro.transicaoFase2Pendente = true; },
+    c => { c.encontro.fase = 1; c.encontro.config = { ...novoBossConfig, movimento: { ativo: false } }; },
+    c => { c.encontro.apresentacao = { recuouNesteQuadro: true }; },
     c => { c.scene.multiplayer = true; }, c => { c.scene.vida = 0; },
     c => { c.encontro.jogadorNaArena = false; }, c => { c.encontro.suspenso = true; },
     c => { c.encontro.morto = true; }, c => { c.encontro.encerrado = true; },
@@ -52,7 +75,7 @@ test("janelas, ataques centrais, quatro ilusões, viagem e interrupções segura
   }
 });
 
-test("chuva e tentáculos permitem deslocamento rápido sem reposicionar ataques centrais", () => {
+test("chuva e tentáculos permitem caminhar sem reposicionar ataques centrais", () => {
   for (const tipo of ["chuva", "tentaculos"]) {
     const c = criar(); c.encontro.estado = "atacando"; c.encontro.ataqueAtual = { tipo };
     assert.equal(c.mover(500), true);
@@ -108,6 +131,6 @@ test("frame que cruza abertura ou teleporte só move pelo tempo do estado novo",
     assert.equal(c.mover(1000), true);
     const distancia = Math.hypot(c.sprite.x - novoBossConfig.posicaoInicial.x,
       c.sprite.y - novoBossConfig.posicaoInicial.y);
-    assert.ok(distancia > 4.99 && distancia <= 5.001, distancia);
+    assert.ok(distancia > 1.19 && distancia <= 1.201, distancia);
   }
 });

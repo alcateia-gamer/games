@@ -48,7 +48,7 @@ Cada fonte deve ser um objeto **Point**:
 | `Raio` | int | 170 | Alcance de referência em pixels de mundo; a dispersão usa 1,5 × esse valor. Inteiro positivo. |
 | `Intensidade` | float | 1.0 | Número finito não negativo; zero apaga a fonte, valores acima de 1 são limitados. |
 | `Cor` | color | `#FFD27A` | RGB ou ARGB do Tiled (`#AARRGGBB`); alpha controla a força da fonte. |
-| `Piscando` | bool | true | Campo legado: todas as lâmpadas participam das falhas, inclusive com `false` ou sem a propriedade. |
+| `Piscando` | bool | false | `true` mantém piscadas contínuas; `false` ou ausente permite apenas falhas ocasionais espaçadas. |
 | `Ligada` | bool | true | Permite acender a fonte apenas quando o gerador fornece energia. |
 | `Orientacao` | string | `horizontal` | `horizontal` ou `vertical`; orienta o segmento luminoso em cápsula. |
 
@@ -62,25 +62,36 @@ coordenadas válidas são ignorados com aviso. Uma camada ausente também gera a
 e mantém a escuridão, sem inventar lâmpadas. As luminárias físicas do mapa não são
 alteradas pela forma da projeção luminosa.
 
-## Falhas elétricas aleatórias
+## Piscadas contínuas e falhas ocasionais
 
 Após estabilizar o gerador, cada lâmpada ligada segue um relógio independente.
-A primeira falha ocorre após 4–16 segundos. Cada sequência dura 1,2–3,4 segundos,
-com 3–6 quedas irregulares: perdas rápidas de brilho, apagões parciais sustentados,
-recuperações incompletas e um retorno final suave. A luz pode cair a 3% do brilho
-configurado; as recuperações intermediárias variam entre 55% e 98%.
+Com `Piscando=true`, a luminária repete continuamente um perfil de 2,37–8,17 segundos,
+com 2–3 falhadas bruscas separadas por respiros de 0,85–2,1 segundos. O perfil é sorteado uma
+vez por luminária e reutilizado, inclusive ao religar a energia, sem novas alocações
+ou sorteios a cada ciclo.
 
-Depois de cada sequência, a lâmpada fica estável por 8–24 segundos antes da próxima.
-Várias lâmpadas podem falhar ao mesmo tempo, inclusive vizinhas. Todas as fontes
-participam, sem precisar editar `Piscando` no Tiled. `Ligada`, intensidade, cor,
-orientação e o pulso de emergência continuam sendo respeitados.
+Nas demais luminárias, a primeira falha ocorre após 20–60 segundos. Cada sequência
+dura 1,19–5,45 segundos com apenas 1–2 falhadas, seguida por uma pausa estável de
+30–90 segundos. Cada falhada corta a luz para 0–6% em 16–32 ms, sustenta o apagão
+por 100–180 ms, tenta reacender brevemente a 65–90% e corta novamente para 0–3%.
+Após mais 90–170 ms de mau contato, volta ao brilho normal em 40–75 ms. Um único
+estalo acompanha o corte e o repique, mantendo o intervalo maior entre falhadas.
+Várias lâmpadas podem falhar ao mesmo tempo.
+`Ligada`, intensidade, cor, orientação e o pulso de emergência continuam sendo
+respeitados.
 
-Os relógios também avançam fora da tela. Estalos só são emitidos para inícios de
-falha no campo de visão; falhas simultâneas escolhem o estalo mais próximo e não
+Os relógios também avançam fora da tela. Cada queda visível emite um estalo quando
+atinge 60% da descida, acompanhando o mau contato em vez de tocar apenas no início
+do ciclo. Luz e áudio compartilham o instante da queda; o som compensa o atraso do
+quadro com `seek`, mantendo a velocidade original. Eventos com mais de 100 ms de
+atraso são descartados. Quedas simultâneas escolhem o estalo mais próximo e não
 interrompem um estalo em reprodução. Ao suspender o jogo, eventos vencidos são
 descartados, evitando uma fila de piscadas ao retornar. Desligar a energia cancela
-as sequências e os relógios. Os perfis são sorteados uma vez por sequência, sem
-ruído aleatório por quadro nem temporizadores adicionais.
+as sequências e os relógios. As falhas ocasionais sorteiam um perfil por sequência;
+as contínuas avançam diretamente ao ciclo atual após uma suspensão. Não há ruído
+aleatório por quadro nem temporizadores adicionais. Só fontes que alcançam a câmera
+têm seu brilho interpolado; a quantização de alpha e o cache da máscara evitam
+uploads quando a iluminação visível não muda.
 
 ## Causa das manchas e correção
 
@@ -139,6 +150,14 @@ como complemento discreto.
   `camera.preRender`, preservando alinhamento durante movimento, zoom e resize.
 - Quadros sem mudança na câmera ou intensidade reutilizam a textura. Não há
   novos shaders, canvas de tela inteira adicionais ou processamento de pixels por frame.
+- O giroflex em aparelhos com toque ou sistema móvel atualiza a orientação a 30 Hz,
+  sem alterar a duração da volta. Câmera, portas e zonas continuam reagindo a cada quadro.
+- `GiroflexLightCache.js` guarda os recortes de paredes e estátuas por luz visível.
+  A máscara e a cor compartilham o mesmo carimbo: girar só redesenha o feixe,
+  sem refazer as silhuetas. O cache é invalidado ao mudar portas, estátuas ou a fonte.
+- Os três canvases locais de cada giroflex têm até 256 × 256 pixels no celular
+  (512 × 512 no desktop), mesmo com raios grandes. São liberados quando a fonte
+  sai da tela. Estátuas fora do alcance são descartadas antes do desenho.
 - O encerramento remove listener, overlay, textura e canvases temporários.
 
 ## Comparação com o GitHub
@@ -159,6 +178,7 @@ sem substituir arquivos por versões remotas ou publicar alterações.
 
 ```sh
 node --test js/effects/FactoryLighting.test.mjs
+node --test js/effects/EmergencyLighting.test.mjs js/effects/GiroflexLightCache.test.mjs
 node --test
 ```
 
@@ -177,8 +197,8 @@ Validação manual:
 3. Compare locais com uma e com várias fontes: o brilho deve se combinar suavemente,
    preservando os detalhes e as cores do cenário.
 4. Teste `Orientacao = vertical` e raios diferentes. As posições não devem mudar.
-   Após estabilizar o gerador, todas as lâmpadas devem apresentar sequências
-   irregulares de mau contato, com possibilidade de falhas simultâneas.
+   Após estabilizar o gerador, lâmpadas com `Piscando=true` devem piscar continuamente;
+   as demais devem ter falhas de 1–2 quedas com pausas de 30–90 segundos.
 5. Mova a câmera, altere zoom, redimensione e gire o celular. Saia e retorne à fábrica
    para conferir energia persistida e ausência de erros ou vazamentos.
 6. Confira a cidade e a loja e meça FPS/memória em um celular intermediário.

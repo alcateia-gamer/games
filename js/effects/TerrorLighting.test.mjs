@@ -91,3 +91,89 @@ test("flashlight updates on movement and direction changes only while factory po
   cleanup();
   assert.equal(scene.game.renderer.listenerCount("render"), 0);
 });
+
+test("neon fica atrás do boss e das cópias mesmo sem jogador visível, com clareamento separado", t => {
+  const previousPhaser = globalThis.Phaser, previousDocument = globalThis.document;
+  let limpar;
+  const chamadas = [];
+  function canvas(width = 256, height = 256) {
+    const pilha = [];
+    const context = {
+      globalAlpha: 1, globalCompositeOperation: "source-over",
+      createImageData: (w, h) => ({ data: new Uint8ClampedArray(w * h * 4) }),
+      putImageData() {},
+      save() { pilha.push([this.globalAlpha, this.globalCompositeOperation]); },
+      restore() { [this.globalAlpha, this.globalCompositeOperation] = pilha.pop(); },
+      drawImage(...args) { chamadas.push({ context, args, alpha: this.globalAlpha, op: this.globalCompositeOperation }); },
+    };
+    for (const nome of ["setTransform", "transform", "clearRect", "fillRect", "translate", "beginPath",
+      "rect", "clip", "moveTo", "lineTo", "closePath"]) context[nome] = () => {};
+    return { width, height, getContext: () => context };
+  }
+  globalThis.document = { createElement: () => canvas() };
+  globalThis.Phaser = {
+    Math: { Vector2: class { constructor() { this.x = this.y = 0; } } },
+    Textures: { FilterMode: { LINEAR: 0 } },
+    Renderer: { Events: { RENDER: "render" } }, Scenes: { Events: { SHUTDOWN: "shutdown" } },
+  };
+  t.after(() => {
+    limpar?.();
+    globalThis.Phaser = previousPhaser; globalThis.document = previousDocument;
+  });
+  let uploads = 0;
+  const texture = Object.assign(canvas(800, 450), {
+    setFilter() {}, refresh() { uploads++; },
+  });
+  const overlay = {};
+  for (const nome of ["setOrigin", "setScrollFactor", "setDepth", "setPosition", "setRotation", "setScale", "destroy"])
+    overlay[nome] = () => overlay;
+  const imagemBoss = {}, imagemCopia = {};
+  const sprite = imagem => ({ x: 100, y: 100, active: true, visible: true, alpha: 1,
+    scaleX: 0.55, scaleY: 0.55, displayOriginX: 144, displayOriginY: 144,
+    frame: { source: { image: imagem }, cutX: 0, cutY: 0, cutWidth: 288, cutHeight: 288 } });
+  const boss = sprite(imagemBoss), copia = sprite(imagemCopia);
+  const scene = {
+    game: { renderer: new EventEmitter() }, events: new EventEmitter(), time: { now: 0 },
+    map: { getObjectLayer: name => ({ objects: name === "Luzedeemergencia" ? [{
+      id: 1, point: true, x: 100, y: 100, name: "neon vermelho vertical",
+      properties: { Raio: 48, Intensidade: 1 },
+    }] : [] }) },
+    cameras: { main: { width: 800, height: 450, zoom: 1, scrollX: 0, scrollY: 0,
+      matrix: { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 } } },
+    textures: { exists: () => false, createCanvas: () => texture },
+    add: { image: () => overlay }, luzFabricaAcesa: true,
+    player: { active: false, visible: false },
+    novoBoss: { jogadorNaArena: true, sprite: boss,
+      alvosIlusorios: [{ active: true, visible: true, sprite: copia }] },
+  };
+  limpar = criarIluminacaoTerror(scene);
+  const render = () => scene.game.renderer.emit("render", scene, scene.cameras.main);
+  chamadas.length = 0;
+  render();
+  const composicao = chamadas.find(ch => ch.context === texture.getContext() && ch.args.length === 3 &&
+    ch.args[0]?.width === 800 && ch.args[0]?.height === 450);
+  assert.ok(composicao, "a cor é composta separadamente mesmo sem jogador visível");
+  const corContext = composicao.args[0].getContext();
+  for (const imagem of [imagemBoss, imagemCopia]) {
+    const recorte = chamadas.find(ch => ch.context === corContext && ch.args[0] === imagem);
+    assert.ok(recorte, "o corpo oculta o neon antes de compor a luz");
+    assert.equal(recorte.op, "destination-out");
+    assert.equal(recorte.alpha, 1, "remove a faixa inteira, não só parte do brilho");
+    assert.ok(chamadas.indexOf(recorte) < chamadas.indexOf(composicao));
+    const clareamento = chamadas.find(ch => ch.context === texture.getContext() && ch.args[0] === imagem);
+    assert.equal(clareamento.op, "destination-out");
+    assert.equal(clareamento.alpha, 0.55, "a sombra conserva o clareamento pedido para o sprite");
+    assert.ok(chamadas.indexOf(clareamento) > chamadas.indexOf(composicao));
+  }
+  assert.ok(chamadas.some(ch => ch.context === corContext && ch.op === "source-over" &&
+    chamadas.indexOf(ch) < chamadas.indexOf(composicao)), "a luz continua desenhada fora das silhuetas");
+  const antes = uploads;
+  for (let i = 0; i < 120; i++) render();
+  assert.equal(uploads, antes, "a correção preserva o cache com poses paradas");
+  boss.flipX = true;
+  render();
+  assert.equal(uploads, antes + 1, "o recorte acompanha o espelhamento");
+  copia.frame = { ...copia.frame, cutX: 288 };
+  render();
+  assert.equal(uploads, antes + 2, "o recorte acompanha a animação das cópias");
+});

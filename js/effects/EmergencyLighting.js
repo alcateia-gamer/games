@@ -84,21 +84,23 @@ export function calcularPerfilNeon(x, y, emissor = false) {
 }
 
 export default class EmergencyLighting {
-  constructor(map) {
+  constructor(map, { quadrosPorSegundo = 60 } = {}) {
     this.luzes = lerLuzesEmergencia(map);
     this.estados = this.luzes.map(luz => ({ luz, angulo: null, intensidade: 0 }));
     this.fontesVisiveis = [];
     this.revisao = 0;
+    this.quadrosPorSegundo = quadrosPorSegundo;
   }
 
   atualizar(agora, camera, zonas = null) {
     let quantidade = 0, alteradas = false;
+    const tempoGiro = Math.floor(agora * this.quadrosPorSegundo / 1000) * 1000 / this.quadrosPorSegundo;
     for (const estado of this.estados) {
       const luz = estado.luz;
       const intensidade = luz.intensidade * (luz.cor?.alpha ?? 1) * (zonas?.fatorLuz(luz, agora) ?? 1);
       if (!luz.ligada || intensidade === 0 || !luzAfetaCamera(luz, camera)) continue;
       // A rotação depende do relógio da cena, inclusive após sair e voltar à câmera.
-      const passo = Math.floor(((agora % luz.periodo) + luz.periodo) % luz.periodo / luz.periodo * PASSOS_VOLTA);
+      const passo = Math.floor(((tempoGiro % luz.periodo) + luz.periodo) % luz.periodo / luz.periodo * PASSOS_VOLTA);
       const giro = luz.fase + passo / PASSOS_VOLTA * VOLTA;
       // Nas paredes o feixe varre o semicírculo interno: sobe, desce e retorna.
       const angulo = luz.neon ? luz.fase : luz.parede
