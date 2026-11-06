@@ -1,3 +1,4 @@
+import { obterBocaMetralhadora, criarMunicaoRobo } from "./WarRobotProjectile.js";
 /**
  * Disparos dos robôs e dano ao jogador.
  * Integra Kai, Nyx e holograma sem alterar
@@ -47,34 +48,9 @@ function dispararLaser(scene, inimigo = scene.inimigoTeste) {
 
   inimigo.networkAttackId = (inimigo.networkAttackId || 0) + 1;
 
-  const angulo = Phaser.Math.Angle.Between(
-    inimigo.x,
-    inimigo.y,
-    alvo.x,
-    alvo.y,
-  );
-
-  const lado = inimigo.ultimoLadoTiro === "right" ? "right" : "left";
-
-  inimigo.ultimoLadoTiro = lado === "right" ? "left" : "right";
-
-  const offsetX = (lado === "right" ? 26 : -26) - 10;
-
-  const offsetY = 12;
-  const distanciaSaida = 34;
-
-  const laserX = inimigo.x + Math.cos(angulo) * distanciaSaida + offsetX * 0.5;
-
-  const laserY = inimigo.y + Math.sin(angulo) * distanciaSaida + offsetY;
-
-  // ===================================================
-  // CRIAR PROJÉTIL
-  // ===================================================
-
-  const laser = scene.add.circle(laserX, laserY, 4, 0xff0000, 1);
-
-  laser.setDepth(55);
-  laser.setStrokeStyle(2, 0xff8888, 1);
+  const boca = obterBocaMetralhadora(inimigo);
+  const angulo = Phaser.Math.Angle.Between(boca.x, boca.y, alvo.x, alvo.y);
+  const laser = criarMunicaoRobo(scene, boca.x, boca.y, angulo, boca);
 
   // Identificação para habilidades especiais.
   laser.especialLaserInimigo = true;
@@ -85,6 +61,7 @@ function dispararLaser(scene, inimigo = scene.inimigoTeste) {
   scene.physics.add.existing(laser);
 
   laser.body.setAllowGravity(false);
+  laser.body.setCircle(4, 6, 0);
 
   if (!scene.lasersInimigo?.add) {
     laser.destroy();

@@ -114,12 +114,13 @@ function criarCena({ player = { x: 300, y: 0 }, robos = [criarRobo()], paredes =
     time: { now: 1000, delayedCall() {} },
     lasersInimigo: { add(laser) { lasers.push(laser); }, getChildren: () => lasers },
     sound: { play() {} },
+    textures: { exists: () => true },
     add: {
-      circle(x, y) {
+      image(x, y) {
         return {
           x, y, active: true,
-          body: { velocity: { x: 0, y: 0 }, setAllowGravity() {} },
-          setDepth() {}, setStrokeStyle() {}, destroy() { this.active = false; },
+          body: { velocity: { x: 0, y: 0 }, setAllowGravity() {}, setCircle() {} },
+          setDepth() { return this; }, setOrigin() { return this; }, setRotation() { return this; }, destroy() { this.active = false; },
         };
       },
     },

@@ -1,3 +1,4 @@
+import { obterBocaMetralhadora, criarMunicaoRobo } from "../enemies/WarRobotProjectile.js";
 /**
  * @file Cena da fábrica. Integra iluminação, gerador, porta interativa, inventário e
  * mudança de sobreposição por região.
@@ -781,14 +782,14 @@ class Level1Parte2 extends Phaser.Scene {
 
       enemy.vidaMaxima = data.vidaMaxima || enemy.vidaMaxima;
 
+      atualizarEstadoVisualRobo(enemy);
+      tocarAnimacaoInimigo(enemy);
       if (data.attackId && enemy.remoteAttackId !== data.attackId) {
         enemy.remoteAttackId = data.attackId;
 
         this.criarLaserInimigoRemoto(enemy, data);
       }
 
-      atualizarEstadoVisualRobo(enemy);
-      tocarAnimacaoInimigo(enemy);
     });
 
     this.inimigos
@@ -865,12 +866,9 @@ class Level1Parte2 extends Phaser.Scene {
    * Representa um disparo inimigo comunicado pela rede com um efeito visual de laser.
    */
   criarLaserInimigoRemoto(enemy, data) {
-    const laser = this.add
-      .circle(enemy.x, enemy.y, 4, 0xff0000, 1)
-      .setDepth(55);
-
-    laser.setStrokeStyle(2, 0xff8888, 1);
-
+    const boca = obterBocaMetralhadora(enemy);
+    const angulo = Math.atan2((data.targetY ?? enemy.y) - boca.y, (data.targetX ?? enemy.x) - boca.x);
+    const laser = criarMunicaoRobo(this, boca.x, boca.y, angulo, boca);
     this.tweens.add({
       targets: laser,
       x: data.targetX ?? enemy.x,

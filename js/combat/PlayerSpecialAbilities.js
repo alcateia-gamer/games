@@ -302,8 +302,13 @@ function refletirLaser(scene, estado, laser) {
   laser.especialRefletido = true;
   laser.danoEspecial = 30;
 
-  laser.setFillStyle(0x38bdf8, 1);
-  laser.setStrokeStyle(2, 0xb9f0ff, 1);
+  if (laser.setTint) {
+    laser.setTint(0x38bdf8);
+    laser.setRotation(Math.atan2(vy, vx));
+  } else {
+    laser.setFillStyle(0x38bdf8, 1);
+    laser.setStrokeStyle(2, 0xb9f0ff, 1);
+  }
 
   // Direcionar o projétil de volta ao inimigo.
   laser.body?.setVelocity((vx / tamanho) * 530, (vy / tamanho) * 530);
