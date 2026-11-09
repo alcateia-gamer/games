@@ -1,6 +1,6 @@
 import { MULTIPLICADOR_ALCANCE_FABRICA } from "./FactoryLighting.js";
 
-/** Carimbos locais: o giro muda o feixe, mas conserva os recortes de paredes e estátuas. */
+/** Carimbos vermelhos: o alpha clareia a máscara e a mesma imagem fornece a cor do feixe. */
 export default class GiroflexLightCache {
   constructor(paredes, estatuas, resolucao = 512) {
     this.paredes = paredes;
@@ -26,7 +26,7 @@ export default class GiroflexLightCache {
     const tamanho = Math.min(this.resolucao, Math.ceil(raio * 2));
     if (!carimbo) {
       carimbo = { recorte: document.createElement("canvas"), mascara: document.createElement("canvas"),
-        cor: document.createElement("canvas"), angulo: null };
+        angulo: null };
       this.carimbos.set(luz, carimbo);
     }
     const mudou = carimbo.x !== luz.x || carimbo.y !== luz.y || carimbo.raio !== raio ||
@@ -35,7 +35,7 @@ export default class GiroflexLightCache {
     if (!mudou && carimbo.angulo === angulo && carimbo.perfil === perfil) return carimbo;
     const escala = tamanho / (raio * 2), centro = tamanho / 2;
     if (mudou) {
-      for (const canvas of [carimbo.recorte, carimbo.mascara, carimbo.cor]) {
+      for (const canvas of [carimbo.recorte, carimbo.mascara]) {
         if (canvas.width !== tamanho || canvas.height !== tamanho) canvas.width = canvas.height = tamanho;
       }
       const c = carimbo.recorte.getContext("2d");
@@ -71,30 +71,20 @@ export default class GiroflexLightCache {
     c.setTransform(1, 0, 0, 1, 0, 0);
     c.globalCompositeOperation = "destination-in";
     c.drawImage(carimbo.recorte, 0, 0);
-    const cor = carimbo.cor.getContext("2d");
-    cor.setTransform(1, 0, 0, 1, 0, 0);
-    cor.clearRect(0, 0, tamanho, tamanho);
-    cor.globalAlpha = 1;
-    cor.globalCompositeOperation = "source-over";
-    cor.drawImage(carimbo.mascara, 0, 0);
-    cor.globalCompositeOperation = "source-in";
-    cor.fillStyle = "#FF0000";
-    cor.fillRect(0, 0, tamanho, tamanho);
     carimbo.angulo = angulo;
     carimbo.perfil = perfil;
     return carimbo;
   }
 
-  desenhar(context, fonte, perfil, colorido = false) {
+  desenhar(context, fonte, perfil) {
     const carimbo = this.obter(fonte, perfil);
     const raio = carimbo.raio;
-    context.drawImage(colorido ? carimbo.cor : carimbo.mascara,
+    context.drawImage(carimbo.mascara,
       fonte.luz.x - raio, fonte.luz.y - raio, raio * 2, raio * 2);
   }
 
   liberar(carimbo) {
-    carimbo.recorte.width = carimbo.recorte.height = carimbo.mascara.width = carimbo.mascara.height =
-      carimbo.cor.width = carimbo.cor.height = 0;
+    carimbo.recorte.width = carimbo.recorte.height = carimbo.mascara.width = carimbo.mascara.height = 0;
   }
 
   destroy() {

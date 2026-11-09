@@ -3,6 +3,7 @@ import { intensidadeLuzPartida } from "./FactoryLighting.js";
 const DURACAO_REVELACAO = 150;
 const DURACAO_PARTIDA_ZONA = 700;
 const ATRASO_ENTRE_LAMPADAS = 40;
+const PORTAS_SOMBRA_COMPARTILHADA = new Set(["porta01", "porta04"]);
 // Retângulos desenhados no Tiled podem deixar pequenas frestas por arredondamento.
 const TOLERANCIA_CONEXAO_ZONAS = 1;
 const limitar = valor => Math.max(0, Math.min(1, valor));
@@ -61,6 +62,7 @@ export default class DoorLightingZones {
     }
     this.distanciaMaximaPorta = (map.tileWidth ?? 48) * 2;
     this.revisao = 0;
+    this.portasPareadasInicializadas = false;
   }
 
   associarPorta(zona, portas) {
@@ -117,8 +119,22 @@ export default class DoorLightingZones {
         vinculada = true;
       }
     } while (vinculada);
+    if (!this.portasPareadasInicializadas &&
+        portas.some(porta => PORTAS_SOMBRA_COMPARTILHADA.has(porta.nome))) {
+      if (portas.some(porta => PORTAS_SOMBRA_COMPARTILHADA.has(porta.nome) &&
+          porta.estado === "aberta")) {
+        for (const zona of this.zonas) {
+          if (!PORTAS_SOMBRA_COMPARTILHADA.has(zona.porta?.nome)) continue;
+          zona.liberada = zona.restaurada = true;
+          zona.opacidade = 0;
+        }
+      }
+      this.portasPareadasInicializadas = true;
+    }
     for (const zona of this.zonas) {
-      if (!zona.liberada && zona.porta?.estado === "aberta") {
+      const portaPareadaAberta = PORTAS_SOMBRA_COMPARTILHADA.has(zona.porta?.nome) &&
+        portas.some(porta => PORTAS_SOMBRA_COMPARTILHADA.has(porta.nome) && porta.estado === "aberta");
+      if (!zona.liberada && (zona.porta?.estado === "aberta" || portaPareadaAberta)) {
         zona.liberada = true;
         zona.inicioRevelacao = agora;
         this.revisao++;

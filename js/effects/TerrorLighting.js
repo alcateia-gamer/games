@@ -21,6 +21,7 @@ import BossRoomLighting from "./BossRoomLighting.js";
 import BossEnergyLightBuffer from "./BossEnergyLightBuffer.js";
 import BossAuraLightCache from "./BossAuraLightCache.js";
 import { ocultarBrilhoAtrasSprite as ocultarBrilhoAtrasPersonagem } from "./SpriteLightOcclusion.js";
+import { criarTexturaIluminacao } from "./LightingTexture.js";
 export { intensidadeLuzPartida, QUEDAS_LUZ_FABRICA } from "./FactoryLighting.js";
 
 const TEXTURA_ESCURIDAO_PARTE2 = "level1-parte2-escuridao";
@@ -220,6 +221,13 @@ function criarIluminacaoTerror(scene) {
   const iluminacao = new FactoryLighting(scene.map);
   const dispositivo = scene.sys?.game?.device;
   const celular = dispositivo?.os?.desktop === false || dispositivo?.input?.touch === true;
+  // Só a composição de luz usa menos pixels no celular; a máscara é ampliada com filtro linear.
+  const resolucao = dispositivo?.os?.desktop === false ? 0.5 : 1;
+  let larguraMascara = Math.ceil(width * resolucao), alturaMascara = Math.ceil(height * resolucao);
+  const transformarMascara = (ctx, a = 1, b = 0, c = 0, d = 1, e = 0, f = 0) => {
+    const sx = larguraMascara / width, sy = alturaMascara / height;
+    ctx.setTransform(a * sx, b * sy, c * sx, d * sy, e * sx, f * sy);
+  };
   const emergencia = new EmergencyLighting(scene.map, { quadrosPorSegundo: celular ? 30 : 60 });
   const arandelas = new BossWallLighting(scene.map);
   const energiaBoss = new BossEnergyLighting(scene);
@@ -243,7 +251,7 @@ function criarIluminacaoTerror(scene) {
   if (scene.textures.exists(TEXTURA_ESCURIDAO_PARTE2)) {
     scene.textures.remove(TEXTURA_ESCURIDAO_PARTE2);
   }
-  const texture = scene.textures.createCanvas(TEXTURA_ESCURIDAO_PARTE2, width, height);
+  const texture = criarTexturaIluminacao(scene.textures, TEXTURA_ESCURIDAO_PARTE2, larguraMascara, alturaMascara);
   // A máscara é um gradiente; esse filtro não altera o pixel art dos tiles e personagens.
   texture.setFilter(Phaser.Textures.FilterMode.LINEAR);
   const context = texture.getContext();
@@ -255,9 +263,10 @@ function criarIluminacaoTerror(scene) {
   const corPulsoCanvas = criarMascaraLuminaria(perfilPulso, 0xFF0000);
   const lanternaCanvas = criarMascaraLanterna();
   const perfilGiroflex = emergencia.luzes.some(luz => !luz.neon) ? criarPerfilGiroflex() : null;
-  const giroflexCanvas = perfilGiroflex ? criarMascaraLuminaria(perfilGiroflex) : null;
+  // destination-out só lê o alpha: o mesmo carimbo vermelho atende máscara e brilho.
+  const giroflexCanvas = perfilGiroflex ? criarMascaraLuminaria(perfilGiroflex, 0xFF0000) : null;
   const perfilGiroflexLateral = emergencia.luzes.some(luz => luz.parede) ? criarPerfilGiroflex(true) : null;
-  const giroflexLateralCanvas = perfilGiroflexLateral ? criarMascaraLuminaria(perfilGiroflexLateral) : null;
+  const giroflexLateralCanvas = perfilGiroflexLateral ? criarMascaraLuminaria(perfilGiroflexLateral, 0xFF0000) : null;
   const perfilNeon = emergencia.luzes.some(luz => luz.neon) ? criarPerfilParede(calcularPerfilNeon) : null;
   const neonCanvas = perfilNeon ? criarMascaraLuminaria(perfilNeon) : null;
   const perfilEmissorNeon = perfilNeon ? criarPerfilParede((x, y) => calcularPerfilNeon(x, y, true)) : null;
@@ -314,7 +323,7 @@ function criarIluminacaoTerror(scene) {
   const oclusaoContext = lanternaOclusaoCanvas.getContext("2d");
   // Uma composição compartilhada mantém todos os brilhos abaixo do personagem.
   const brilhoCanvas = document.createElement("canvas");
-  brilhoCanvas.width = width; brilhoCanvas.height = height;
+  brilhoCanvas.width = larguraMascara; brilhoCanvas.height = alturaMascara;
   const brilhoContext = brilhoCanvas.getContext("2d");
   const brilhoAnterior = { frame: null };
   const oclusaoAnterior = { frame: null };
@@ -352,6 +361,7 @@ function criarIluminacaoTerror(scene) {
   }
 
   // Já cobre a cena antes do primeiro render, mesmo sem jogador ou lâmpadas visíveis.
+  transformarMascara(context);
   context.fillStyle = COR_ESCURIDAO;
   context.fillRect(0, 0, width, height);
   texture.refresh();
@@ -376,7 +386,7 @@ function criarIluminacaoTerror(scene) {
     const escalaX = Math.hypot(m.d, m.b) / det;
     overlay.setPosition((m.c * f - m.d * e) / det, (m.b * e - m.a * f) / det)
       .setRotation(Math.atan2(-m.b, m.d))
-      .setScale(escalaX, 1 / (det * escalaX));
+      .setScale(escalaX * width / larguraMascara, height / (det * escalaX * alturaMascara));
   };
 
   /**
@@ -388,8 +398,10 @@ function criarIluminacaoTerror(scene) {
     if (width !== Math.ceil(camera.width) || height !== Math.ceil(camera.height)) {
       width = Math.ceil(camera.width);
       height = Math.ceil(camera.height);
-      texture.setSize(width, height);
-      brilhoCanvas.width = width; brilhoCanvas.height = height;
+      larguraMascara = Math.ceil(width * resolucao);
+      alturaMascara = Math.ceil(height * resolucao);
+      texture.setSize(larguraMascara, alturaMascara);
+      brilhoCanvas.width = larguraMascara; brilhoCanvas.height = alturaMascara;
       overlay.setTexture(TEXTURA_ESCURIDAO_PARTE2);
       invalidada = true;
     }
@@ -500,14 +512,14 @@ function criarIluminacaoTerror(scene) {
     const energiaReduzida = fontesEnergiaBoss.length >= 32;
     if (energiaReduzida) campoEnergiaBoss.preparar(fontesEnergiaBoss, camera, width, height);
 
-    context.setTransform(1, 0, 0, 1, 0, 0);
+    transformarMascara(context);
     context.globalAlpha = 1;
     context.globalCompositeOperation = "source-over";
     context.clearRect(0, 0, width, height);
     context.fillStyle = "#000000";
     context.fillRect(0, 0, width, height);
     context.save();
-    context.setTransform(m.a, m.b, m.c, m.d, m.e, m.f);
+    transformarMascara(context, m.a, m.b, m.c, m.d, m.e, m.f);
     context.globalCompositeOperation = "destination-out";
     salaBoss.desenhar(context, camera, luzesIntroducao?.ambiente ?? 1);
     for (const { luz, intensidade } of fontes) {
@@ -520,7 +532,7 @@ function criarIluminacaoTerror(scene) {
       carimbosGiroflex.desenhar(context, fonte, fonte.luz.parede ? giroflexLateralCanvas : giroflexCanvas);
     }
     luzesFixas.desenhar(context, false, camera);
-    if (energiaReduzida) campoEnergiaBoss.desenhar(context, false, width, height);
+    if (energiaReduzida) campoEnergiaBoss.desenhar(context, false, larguraMascara, alturaMascara);
     else for (const fonte of fontesEnergiaBoss) {
       context.globalAlpha = fonte.intensidade;
       desenharLuminaria(context, obterPerfilEnergia(fonte).mascara, fonte.luz, paredesLanterna);
@@ -547,7 +559,7 @@ function criarIluminacaoTerror(scene) {
     context.fillStyle = `rgba(0,0,0,${ESCURIDAO_MINIMA_FABRICA})`;
     context.fillRect(0, 0, width, height);
     context.save();
-    context.setTransform(m.a, m.b, m.c, m.d, m.e, m.f);
+    transformarMascara(context, m.a, m.b, m.c, m.d, m.e, m.f);
     // Colore suavemente só a sombra restante. source-atop preserva seu alpha e evita
     // acumular círculos amarelos opacos quando várias lâmpadas se sobrepõem.
     context.globalCompositeOperation = "source-atop";
@@ -560,11 +572,11 @@ function criarIluminacaoTerror(scene) {
     context.restore();
     const corContext = separarBrilho ? brilhoContext : context;
     if (separarBrilho) {
-      corContext.setTransform(1, 0, 0, 1, 0, 0);
+      transformarMascara(corContext);
       corContext.clearRect(0, 0, width, height);
     }
     corContext.save();
-    corContext.setTransform(m.a, m.b, m.c, m.d, m.e, m.f);
+    transformarMascara(corContext, m.a, m.b, m.c, m.d, m.e, m.f);
     // Vermelho puro sobre o cenário: limitar a cor à sombra residual deixava o piso
     // claro dominar o pulso. O mesmo gradiente mantém as bordas suaves.
     corContext.globalCompositeOperation = "source-over";
@@ -576,10 +588,10 @@ function criarIluminacaoTerror(scene) {
     for (const fonte of giroflex) {
       if (fonte.luz.neon) continue;
       corContext.globalAlpha = fonte.intensidade * 0.55;
-      carimbosGiroflex.desenhar(corContext, fonte, fonte.luz.parede ? giroflexLateralCanvas : giroflexCanvas, true);
+      carimbosGiroflex.desenhar(corContext, fonte, fonte.luz.parede ? giroflexLateralCanvas : giroflexCanvas);
     }
     luzesFixas.desenhar(corContext, true, camera);
-    if (energiaReduzida) campoEnergiaBoss.desenhar(corContext, true, width, height);
+    if (energiaReduzida) campoEnergiaBoss.desenhar(corContext, true, larguraMascara, alturaMascara);
     else for (const fonte of fontesEnergiaBoss) {
       corContext.globalAlpha = fonte.intensidade * 0.45;
       desenharLuminaria(corContext, obterPerfilEnergia(fonte).cor, fonte.luz, paredesLanterna);
@@ -600,7 +612,7 @@ function criarIluminacaoTerror(scene) {
       context.restore();
     }
     context.save();
-    context.setTransform(m.a, m.b, m.c, m.d, m.e, m.f);
+    transformarMascara(context, m.a, m.b, m.c, m.d, m.e, m.f);
     zonas.desenharEscuridao(context);
     // Clareia apenas os pixels do boss e das cópias, preservando as cores da arte.
     // Reutiliza o overlay e sua invalidação por pose, sem outra textura ou luz no chão.

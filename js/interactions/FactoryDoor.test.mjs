@@ -402,7 +402,7 @@ test("porta05 revalida alcance, morte e menus antes de abrir instantaneamente", 
   scene.events.emit("shutdown");
 });
 
-test("abrir a porta04 libera só sua zona LuzApagada e restaura a iluminação ao voltar ao mapa", () => {
+test("abrir a porta04 libera as duas zonas pareadas e restaura a iluminação ao voltar ao mapa", () => {
   const { scene } = createScene();
   const registry = scene.game.registry;
   const lampadas = lerLuzesFabrica(scene.map);
@@ -426,8 +426,8 @@ test("abrir a porta04 libera só sua zona LuzApagada e restaura a iluminação a
   assert.equal(zona04.opacidade, 0);
   zonas.atualizar(3200, scene.portasFabrica, true);
   assert.equal(zonas.fatorLuz(luz, 3200), 1);
-  assert.equal(zona01.opacidade, 1);
-  assert.ok([...zona01.indices.keys()].every(luz => zonas.fatorLuz(luz, 3200) === 0));
+  assert.equal(zona01.opacidade, 0);
+  assert.ok([...zona01.indices.keys()].every(luz => zonas.fatorLuz(luz, 3200) === 1));
   zonas.destroy();
   scene.events.emit("shutdown");
 
@@ -435,9 +435,11 @@ test("abrir a porta04 libera só sua zona LuzApagada e restaura a iluminação a
   const restauradas = new DoorLightingZones(retorno.map, lerLuzesFabrica(retorno.map));
   restauradas.atualizar(0, retorno.portasFabrica, true);
   const aberta = restauradas.zonas.find(zona => zona.porta.nome === "porta04");
+  const pareada = restauradas.zonas.find(zona => zona.porta.nome === "porta01");
   assert.equal(aberta.opacidade, 0);
   assert.ok([...aberta.indices.keys()].every(luz => restauradas.fatorLuz(luz, 0) === 1));
-  assert.equal(restauradas.zonas.find(zona => zona.porta.nome === "porta01").opacidade, 1);
+  assert.equal(pareada.opacidade, 0);
+  assert.ok([...pareada.indices.keys()].every(luz => restauradas.fatorLuz(luz, 0) === 1));
   restauradas.destroy();
   retorno.events.emit("shutdown");
 });

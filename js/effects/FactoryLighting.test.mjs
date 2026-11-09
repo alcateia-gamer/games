@@ -710,7 +710,7 @@ test("o giroflex vermelho gira com a câmera parada, funciona sem gerador e acom
   assert.ok(canvases.slice(1).every(canvas => canvas.width === 0 && canvas.height === 0));
 });
 
-test("no celular o giroflex usa carimbos de 256px e reduz uploads sem atrasar câmera ou portas", t => {
+test("no celular o giroflex compartilha máscara e cor em 256px sem atrasar câmera ou portas", t => {
   const body = { x: 460, y: 100, width: 6, height: 250, enable: false };
   const map = { getObjectLayer: name => ({ objects: name === "Luzedeemergencia"
     ? [ponto({}, 400, 225)] : [] }) };
@@ -719,7 +719,7 @@ test("no celular o giroflex usa carimbos de 256px e reduz uploads sem atrasar c�
     portasFabrica: [{ colisao: { body } }],
   });
   render();
-  const locais = canvases.slice(-3), quantidade = canvases.length;
+  const locais = canvases.slice(-2), quantidade = canvases.length;
   assert.ok(locais.every(canvas => canvas.width === 256 && canvas.height === 256));
   const uploads = texture.refreshes;
   for (let quadro = 1; quadro <= 60; quadro++) {
@@ -747,7 +747,35 @@ test("no celular o giroflex usa carimbos de 256px e reduz uploads sem atrasar c�
   scene.cameras.main.setScroll(5000, 0);
   render();
   assert.ok(locais.every(canvas => canvas.width === 0 && canvas.height === 0), "libera o cache fora da tela");
-  t.diagnostic(`uploads do giroflex em 60 quadros: ${atualizacoes}; carimbos locais: 3 × 256 × 256`);
+  t.diagnostic(`uploads do giroflex em 60 quadros: ${atualizacoes}; carimbos locais: 2 × 256 × 256`);
+});
+
+test("no celular a máscara usa um quarto dos pixels e mantém luz, câmera, zoom e resize alinhados", t => {
+  const { scene, render, texture, images } = cenaComMascara(t, [ponto()], true, {
+    sys: { game: { device: { os: { desktop: false }, input: { touch: true } } } },
+  });
+  const camera = scene.cameras.main;
+  const alpha = (x, y) => {
+    const m = camera.matrix;
+    return texture.canvas.alphaEm((m.a*x + m.c*y + m.e) * texture.canvas.width / camera.width,
+      (m.b*x + m.d*y + m.f) * texture.canvas.height / camera.height);
+  };
+  render();
+  assert.deepEqual([texture.canvas.width, texture.canvas.height], [400, 225]);
+  assert.equal(images[0].scaleX, 2);
+  assert.equal(images[0].scaleY, 2);
+  assert.ok(alpha(400, 225) < 0.3, "a fonte continua no centro esperado");
+  assertSombraAmbiente(alpha(10, 10));
+  const uploads = texture.refreshes;
+  render();
+  assert.equal(texture.refreshes, uploads, "a redução de pixels conserva a invalidação por estado");
+  camera.setZoom(1.3).setRotation(0.1).setScroll(-20, 10);
+  render();
+  assert.ok(alpha(400, 225) < 0.3, "zoom e rotação usam a mesma transformação nas coordenadas reduzidas");
+  camera.setViewport(0, 0, 801, 451);
+  render();
+  assert.deepEqual([texture.canvas.width, texture.canvas.height], [401, 226]);
+  assert.ok(alpha(400, 225) < 0.3, "dimensões ímpares não deslocam a máscara após resize");
 });
 
 test("giroflex lateral varre acima e abaixo sem projetar luz ou halo para fora da sala", async t => {

@@ -29,19 +29,18 @@ test("giroflex reutiliza recortes e carimbos entre passagens, limita resolução
     cache.desenhar(destino, fonte, perfil);
     const carimbo = cache.carimbos.get(fonte.luz);
     const antes = carimbo.mascara.getContext("2d").chamadas.length;
-    cache.desenhar(destino, fonte, perfil, true);
+    cache.desenhar(destino, fonte, perfil);
     assert.equal(carimbo.mascara.getContext("2d").chamadas.length, antes,
       "a cor usa o recorte pronto, sem recalcular a máscara");
   }
   assert.equal(paredesRecortadas, 1, "girar o feixe não recalcula paredes");
   assert.equal(estatuasRecortadas, 1, "as estátuas são desenhadas só ao invalidar a silhueta");
-  assert.equal(canvases.length, 3, "sem criar canvas por quadro ou ângulo");
+  assert.equal(canvases.length, 2, "o mesmo carimbo atende máscara e cor, sem canvas por quadro ou ângulo");
   const carimbo = cache.carimbos.get(fonte.luz);
   assert.ok(canvases.every(canvas => canvas.width === 256 && canvas.height === 256));
   assert.ok(carimbo.recorte.getContext("2d").chamadas.some(ch => ch.nome === "rect"),
     "a luz lateral conserva o recorte para o interior da sala");
   assert.ok(carimbo.mascara.getContext("2d").chamadas.some(ch => ch.op === "destination-in"));
-  assert.ok(carimbo.cor.getContext("2d").chamadas.some(ch => ch.op === "source-over" && ch.args[0] === carimbo.mascara));
   const mudancas = [() => paredes.revisao++, () => estatuas.revisao++, () => fonte.luz.x++,
     () => { fonte.luz.raio = 4000; }, () => { fonte.luz.parede = "esquerda"; }];
   for (const mudar of mudancas) {

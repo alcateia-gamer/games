@@ -100,6 +100,26 @@ test("cada porta revela só sua zona após terminar de abrir, com partida escalo
   assert.equal(zonas.fatorLuz(longe, 850), 1);
 });
 
+test("porta01 e porta04 desligam as sombras uma da outra sem afetar a porta do boss", () => {
+  const zonas = new DoorLightingZones(mapa([
+    zona(1, 0), zona(2, 300), zona(3, 600),
+  ]));
+  const entrada = porta("porta01", 0);
+  const saida = porta("porta04", 300);
+  const boss = porta("porta02", 600);
+  const portas = [entrada, saida, boss];
+
+  zonas.atualizar(0, portas, false);
+  entrada.estado = "aberta";
+  zonas.atualizar(0, portas, false);
+  zonas.atualizar(150, portas, false);
+
+  assert.deepEqual(zonas.zonas.map(z => z.opacidade), [0, 0, 1]);
+  assert.deepEqual(zonas.zonas.map(z => z.liberada), [true, true, false]);
+
+  zonas.destroy();
+});
+
 test("ocultar a camada LuzApagada no Tiled mantém a sombra e a partida ao abrir a porta", () => {
   const layer = { visible: false, objects: [zona()] };
   const map = { tileWidth: 48, getObjectLayer: nome => nome === "LuzApagada" ? layer : null };
