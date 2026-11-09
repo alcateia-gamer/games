@@ -287,11 +287,13 @@ test("ponto coberto por colisão do mapa aguarda preparação sem criar gerador 
 
 test("colisão circular acompanha o escudo e desliga em teleporte, saída e queda da barreira", () => {
   const { scene, encontro, criados, colliders } = criarCena();
+  scene.player.body = { enable: true };
   const sistema = prepararGeradoresNovoBoss(scene, encontro);
   const escudo = criados.find(o => o.name === "novo-boss-barreira-colisao");
   assert.ok(escudo.body.isCircle && escudo.body.enable);
   assert.equal(escudo.body.radius, 95);
-  assert.ok(colliders.some(c => c.a === scene.player && c.b === escudo));
+  assert.ok(colliders.some(c => Array.isArray(c.object1 ?? c.a) &&
+    (c.object1 ?? c.a).includes(scene.player) && c.b === escudo));
   assert.ok(!encontro.obstaculosTeleporte.includes(escudo));
   encontro.sprite.x -= 70; encontro.sprite.y -= 40;
   sistema.atualizar(16);

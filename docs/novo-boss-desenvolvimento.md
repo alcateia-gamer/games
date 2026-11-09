@@ -1,5 +1,10 @@
 # Desenvolvimento do novo boss
 
+O prólogo dos quatro geradores foi acrescentado ao encontro existente. Veja o
+[relatório do prólogo](novo-boss-prologo.md) para a sequência dos ciclos, checklist,
+arquivos modificados, colisões e resultados reais dos testes. O histórico abaixo
+permanece preservado e descreve as entregas anteriores.
+
 Especificação principal:
 `assets/PERSONAGENS/INIMIGOS PRINCIPAIS/Boss-test/Especificacao_Mestre_Novo_Boss.md`.
 A ordem abaixo segue as oito etapas solicitadas pelo desenvolvedor.

@@ -89,6 +89,7 @@ function adicionarCorposPoligono(grupo, objeto) {
         Math.min(tamanhoCelula, maiorY - y),
       );
       corpo.setVisible(false);
+      corpo.tiledCollisionId = objeto.id;
     }
   }
 }
@@ -126,6 +127,7 @@ function criarColisoesFabrica(scene, map) {
 
       collision.setSize(obj.width, obj.height);
       collision.setVisible(false);
+      collision.tiledCollisionId = obj.id;
     });
   }
 }

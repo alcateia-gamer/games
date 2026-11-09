@@ -8,6 +8,8 @@ import { tocarSomTiroLaser } from "../sounds/inimigos.js";
 import { caminhoDiretoBloqueado, caminhoMovimentoBloqueado, retanguloLivreDoMapa } from "./EnemyPathfinding.js";
 import { atualizarIAInimigo, moverInimigoAte } from "./EnemyAI.js";
 import { suavizarTexturasRoboBola, criarBrilhoOlho, criarRastroPlasma } from "./RoboBolaEffects.js";
+import { protegerColisaoRoboBola } from "./RoboBolaColisao.js";
+import { atualizarEmergenciaRoboBola } from "./RoboBolaEmergencia.js";
 
 // Grade viva 2×3: frente, disparo frontal, costas, esquerda, direita, vazio.
 // A morte usa as mesmas poses, cada uma em uma linha de quatro quadros.
@@ -159,14 +161,24 @@ function criarProjetil(scene, robo, alvo) {
   projetil.body.updateFromGameObject();
   scene.physics.velocityFromRotation(angulo, robo.velocidadeLaser, projetil.body.velocity);
   criarRastroPlasma(scene, projetil);
-  scene.time.delayedCall(2200, () => projetil.active && projetil.destroy());
+  const expiracao = scene.time.delayedCall(2200, () => projetil.active && projetil.destroy());
+  projetil.once("destroy", () => expiracao?.remove(false));
   tocarSomTiroLaser(scene);
 }
 
-function criarRoboBola(scene) {
+function criarRoboBola(scene, posicao = null) {
   if (!scene?.player?.active) return null;
-  const spawn = escolherSpawn(scene);
+  const spawn = posicao ?? escolherSpawn(scene);
   if (!spawn) return null;
+  if (posicao) {
+    const tamanho = TAMANHO_HITBOX * 0.56;
+    if (![spawn.x, spawn.y].every(Number.isFinite) ||
+        !retanguloLivreDoMapa(scene, { x: spawn.x - tamanho / 2, y: spawn.y - tamanho / 2,
+          width: tamanho, height: tamanho }) ||
+        Math.hypot(scene.player.x - spawn.x, scene.player.y - spawn.y) < 70 ||
+        (scene.inimigos ?? []).some(outro => outro?.active && !outro.morto &&
+          Math.hypot(outro.x - spawn.x, outro.y - spawn.y) < 50)) return null;
+  }
 
   registrarAnimacoes(scene);
   suavizarTexturasRoboBola(scene);
@@ -209,7 +221,10 @@ function criarRoboBola(scene) {
   robo.bordaVida = scene.add.rectangle(robo.x, robo.y - ALTURA_BARRA_VIDA, 54, 5).setStrokeStyle(1, 0xffffff, 0.7).setDepth(63);
   atualizarFrame(robo);
   criarBrilhoOlho(scene, robo, obterPosicaoOlho);
-  scene.lasersInimigo = scene.lasersInimigo || scene.physics.add.group();
+  // O Phaser destrói o grupo antes de alguns listeners de shutdown; a cena pode ser reutilizada.
+  if (!scene.lasersInimigo || ("scene" in scene.lasersInimigo && !scene.lasersInimigo.scene)) {
+    scene.lasersInimigo = scene.physics.add.group();
+  }
   scene.inimigos ||= [];
   const colliders = [];
   for (const aliado of scene.inimigos) {
@@ -219,6 +234,7 @@ function criarRoboBola(scene) {
   scene.inimigoTeste ||= robo;
   if (scene.collisionGroup) colliders.push(scene.physics.add.collider(robo, scene.collisionGroup));
   robo.once("destroy", () => colliders.forEach(collider => collider.destroy()));
+  protegerColisaoRoboBola(scene, robo);
   return robo;
 }
 
@@ -335,12 +351,17 @@ function atualizarCombateRoboBola(scene, robo, alvo, time, delta) {
 function atualizarRoboBola(scene, time, delta) {
   for (const robo of scene.inimigos || []) {
     if (!robo?.active || robo.tipoRobo !== "bola" || robo.morto || robo.remoteOnly) continue;
+    const protegendoSpawn = time < Math.max(robo.prologoProtegidoAte ?? -Infinity,
+      robo.spawnProtegidoAte ?? -Infinity);
     atualizarFlutuacao(robo, time);
     let combateVisivel = false;
-    atualizarIAInimigo(scene, time, robo, (_scene, _robo, alvo) => {
-      combateVisivel = true;
-      atualizarCombateRoboBola(scene, robo, alvo, time, delta);
-    });
+    if (!atualizarEmergenciaRoboBola(scene, robo, delta)) {
+      if (protegendoSpawn) robo.setVelocity(0, 0);
+      else atualizarIAInimigo(scene, time, robo, (_scene, _robo, alvo) => {
+        combateVisivel = true;
+        atualizarCombateRoboBola(scene, robo, alvo, time, delta);
+      });
+    }
     if (!combateVisivel) {
       robo.inicioCarga = null;
       robo.cargaTiro = 0;

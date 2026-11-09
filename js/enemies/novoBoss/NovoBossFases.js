@@ -13,6 +13,7 @@ const noCentro = encontro => {
 };
 
 function podeAtualizar(scene, encontro) {
+  if (encontro.prologo?.bloqueiaCombatePrincipal) return false;
   return Boolean(encontro.config.fase2?.ativo && !scene.multiplayer &&
     !scene.morteEmAndamento && (scene.vida ?? 1) > 0 &&
     encontro.vida > 0 && !encontro.morto && !encontro.encerrado && !encontro.suspenso &&
@@ -98,6 +99,7 @@ export function prepararFasesNovoBoss(scene, encontro) {
 }
 
 export function atualizarFasesNovoBoss(scene, encontro, delta = 0) {
+  if (encontro.prologo?.bloqueiaCombatePrincipal) return;
   if (!Number.isFinite(delta) || delta < 0) return;
   const atualizarFase2 = podeAtualizar(scene, encontro);
   if (atualizarFase2) encontro.verificarFase?.();

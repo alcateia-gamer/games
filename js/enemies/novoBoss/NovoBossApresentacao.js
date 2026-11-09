@@ -115,7 +115,7 @@ export function prepararApresentacaoNovoBoss(scene, encontro) {
       sprite?.setTint?.(0xffffff);
       sprite?.setTintMode?.(globalThis.Phaser?.TintModes?.FILL);
       const dx = sprite?.x - scene.player?.x, dy = sprite?.y - scene.player?.y;
-      if ([dx, dy].every(Number.isFinite)) {
+      if (!encontro.prologo?.bloqueiaCombatePrincipal && [dx, dy].every(Number.isFinite)) {
         const distancia = Math.hypot(dx, dy);
         recuoX = distancia > 0 ? dx / distancia : sprite.flipX ? 1 : -1;
         recuoY = distancia > 0 ? dy / distancia : 0;

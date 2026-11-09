@@ -11,6 +11,7 @@ import { assetsNovoBoss, criarAnimacoesNovoBoss } from "./NovoBossAssets.js";
 import { prepararAtaquesNovoBoss, cancelarAtaqueNovoBoss } from "./NovoBossAtaques.js";
 import { atualizarRestricaoNovoBoss } from "../../player/PlayerControlEffects.js";
 import { prepararGeradoresNovoBoss } from "./NovoBossGeradores.js";
+import { prepararPrologoNovoBoss } from "./NovoBossPrologo.js";
 import { prepararIlusoesNovoBoss } from "./NovoBossIlusoes.js";
 import { prepararClonesNovoBoss } from "./NovoBossClones.js";
 import { prepararFasesNovoBoss, atualizarFasesNovoBoss } from "./NovoBossFases.js";
@@ -83,6 +84,7 @@ function tentarPosicionar(scene, encontro) {
   inicializarCombateNovoBoss(scene, encontro);
   sincronizarCorpoNovoBoss(encontro);
   prepararGeradoresNovoBoss(scene, encontro);
+  prepararPrologoNovoBoss(scene, encontro);
   encontro.sistemaIlusoes = prepararIlusoesNovoBoss(scene, encontro);
   encontro.sistemaClones = prepararClonesNovoBoss(scene, encontro);
   encontro.apresentacao = prepararApresentacaoNovoBoss(scene, encontro);
@@ -151,8 +153,8 @@ export function prepararNovoBoss(scene, config = scene?.novoBossConfig ?? novoBo
       ...(encontro.sistemaClones?.alvos ?? []),
     ] },
   });
-  encontro.receberDano = (quantidade, regiaoAtaque = null) => {
-    const acertou = causarDanoNovoBoss(scene, encontro, quantidade, regiaoAtaque);
+  encontro.receberDano = (quantidade, regiaoAtaque = null, ataque = null) => {
+    const acertou = causarDanoNovoBoss(scene, encontro, quantidade, regiaoAtaque, ataque);
     atualizarHudNovoBoss(scene, encontro);
     return acertou;
   };
@@ -162,9 +164,9 @@ export function prepararNovoBoss(scene, config = scene?.novoBossConfig ?? novoBo
   encontro.introducao = prepararIntroducaoNovoBoss(scene, encontro);
   encontro.supercomputador = prepararSupercomputadorNovoBoss(scene, encontro);
   encontro.libertacao = prepararLibertacaoNovoBoss(scene, encontro);
-  encontro.iniciarIlusoes = () => !encontro.teleporte && !encontro.ataqueAtual &&
+  encontro.iniciarIlusoes = () => !encontro.prologo?.bloqueiaCombatePrincipal && !encontro.teleporte && !encontro.ataqueAtual &&
     !encontro.sistemaClones?.ativo && Boolean(encontro.sistemaIlusoes?.iniciarQuatro());
-  encontro.iniciarClones = () => !encontro.teleporte && !encontro.ataqueAtual &&
+  encontro.iniciarClones = () => !encontro.prologo?.bloqueiaCombatePrincipal && !encontro.teleporte && !encontro.ataqueAtual &&
     Boolean(encontro.sistemaClones?.iniciar());
   prepararAtaquesNovoBoss(scene, encontro);
   prepararFasesNovoBoss(scene, encontro);
@@ -182,6 +184,7 @@ export function atualizarNovoBoss(scene, _time, _delta) {
   encontro.jogadorNaArena = jogadorNaArenaNovoBoss(scene.player, encontro.config.arena);
   if (!encontro.jogadorNaArena || scene.multiplayer || scene.morteEmAndamento ||
       (scene.vida ?? 1) <= 0 || encontro.morto) {
+    encontro.prologo?.suspender();
     cancelarAtaqueNovoBoss(scene, encontro);
     if (!encontro.morto && encontro.fase === 2 && encontro.sistemaClones?.ativo) {
       encontro.transicaoFase2Pendente = true;
@@ -195,6 +198,7 @@ export function atualizarNovoBoss(scene, _time, _delta) {
   atualizarSuspensao(scene, encontro);
   if (encontro.sprite && !encontro.morto && !encontro.sistemaGeradores && encontro.config.geradores?.ativo) {
     prepararGeradoresNovoBoss(scene, encontro);
+    prepararPrologoNovoBoss(scene, encontro);
   }
   if (encontro.introducao?.atualizar(_delta)) {
     encontro.sistemaGeradores?.atualizar(0);
@@ -205,19 +209,20 @@ export function atualizarNovoBoss(scene, _time, _delta) {
     return;
   }
   // Move corpo e hitbox antes de atualizar escudo, ataques, profundidade e câmera.
-  encontro.apresentacao?.atualizarRecuo(_delta);
+  if (!encontro.prologo?.bloqueiaCombatePrincipal) encontro.apresentacao?.atualizarRecuo(_delta);
+  const prologoAtualizado = encontro.prologo?.atualizar(_delta) ?? false;
   let geradores = null;
   if (encontro.sprite && !encontro.morto) {
     geradores = encontro.sistemaGeradores ?? prepararGeradoresNovoBoss(scene, encontro);
-    if (geradores !== false) atualizarCombateNovoBoss(scene, encontro, _delta);
+    if (geradores !== false && !prologoAtualizado) atualizarCombateNovoBoss(scene, encontro, _delta);
   }
   const desdeOnda = encontro.relogioCombate - (encontro.inicioOndaClonesEm ?? -Infinity);
   const deltaClones = Number.isFinite(_delta) && _delta >= 0
     ? Math.min(_delta, Math.max(0, desdeOnda)) : _delta;
   encontro.sistemaClones?.atualizar(deltaClones);
-  atualizarFasesNovoBoss(scene, encontro, _delta);
+  if (!prologoAtualizado) atualizarFasesNovoBoss(scene, encontro, _delta);
   // O escudo acompanha a posição final da caminhada no mesmo quadro.
-  geradores?.atualizar?.(_delta);
+  geradores?.atualizar?.(prologoAtualizado ? 0 : _delta);
   atualizarProfundidade(scene, encontro);
   encontro.apresentacao?.atualizar(_delta);
   // A pista do núcleo usa a pose e a direção já atualizadas neste quadro.
@@ -240,6 +245,7 @@ export function destruirNovoBoss(scene) {
   encontro.transicaoFase2Pendente = false;
   encontro.proximaOndaClonesEm = Infinity;
   cancelarAtaqueNovoBoss(scene, encontro);
+  encontro.prologo?.destruir();
   encontro.libertacao?.destruir();
   encontro.sistemaGeradores?.destruir();
   encontro.sistemaIlusoes?.destruir();

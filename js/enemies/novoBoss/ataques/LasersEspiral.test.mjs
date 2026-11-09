@@ -59,6 +59,19 @@ function preparar(config = {}, extras = {}, usarVisuais = false) {
   return { ataque, scene, encontro, avisos, graficos, danos, movimentos, visuais, registrados };
 }
 
+test("agenda do prólogo emite anéis simultâneos e mantém as varreduras existentes", () => {
+  const c = preparar({ avisoMs: 100, quantidade: 4, emissoes: [
+    { em: 0, angulo: 0 }, { em: 0, angulo: 90 },
+    { em: 600, angulo: 180 }, { em: 600, angulo: 270 },
+  ] }, { atingirJogadorComLaser: () => false });
+  c.ataque.atualizar(99); assert.equal(c.ataque.snapshot().emitidos, 0);
+  c.ataque.atualizar(1); assert.equal(c.ataque.snapshot().emitidos, 2);
+  c.ataque.atualizar(600); assert.equal(c.ataque.snapshot().emitidos, 4);
+  assert.equal(c.ataque.snapshot().projeteis.length, 4);
+  assert.ok(c.ataque.snapshot().projeteis.every(p => Math.abs(Math.hypot(p.dx, p.dy) - 1) < 1e-8));
+  assert.equal(c.ataque.atualizar(10000), true);
+});
+
 test("espiral avisa antes de emitir e não causa perigo durante o aviso", () => {
   const c = preparar();
   assert.equal(c.avisos.length, 1);

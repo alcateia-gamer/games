@@ -128,7 +128,7 @@ function testarDano(scene, estado, alvos, tempo, anterior) {
       const impacto = tempoImpactoFlecha(mao, ponta, direcao, area, 0, 3);
       if (impacto === null || impacto >= parede) continue;
       golpe.acertados.add(alvo);
-      if (eAlvoAdicionalCombate(scene, alvo)) causarDanoAlvoAdicional(scene, alvo, config.dano);
+      if (eAlvoAdicionalCombate(scene, alvo)) causarDanoAlvoAdicional(scene, alvo, config.dano, null, golpe);
       else if (alvo === scene.bossFinal) causarDanoBoss(scene, config.dano);
       else causarDanoInimigo(scene, alvo, config.dano);
       if (!golpe.somAcerto && scene.cache?.audio?.exists("katana-ataque")) {

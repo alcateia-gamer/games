@@ -54,6 +54,7 @@ function derrotar(scene, encontro) {
   encontro.transicaoFase2Pendente = false;
   encontro.proximaOndaClonesEm = Infinity;
   encontro.cancelarAtaque?.();
+  encontro.prologo?.destruir();
   encontro.sistemaGeradores?.destruir();
   encontro.sistemaIlusoes?.destruir();
   encontro.sistemaClones?.destruir();
@@ -97,6 +98,7 @@ function avancarRelogio(encontro, delta) {
 
 /** Deltas só avançam dentro da arena e com o jogador vivo; sair não cura a boss. */
 export function atualizarCombateNovoBoss(scene, encontro, delta = 0) {
+  if (encontro?.prologo?.bloqueiaCombatePrincipal) return encontro;
   if (!encontro?.combateInicializado || encontro.encerrado || encontro.morto) return encontro;
   if (encontro.vida <= 0) { derrotar(scene, encontro); return encontro; }
   if (!podeAvancar(scene, encontro) || !Number.isFinite(delta) || delta < 0) return encontro;
@@ -184,13 +186,15 @@ export function atualizarCombateNovoBoss(scene, encontro, delta = 0) {
 }
 
 /** Sem escudo, ataques, clonagem e teleporte não criam invulnerabilidade. */
-export function causarDanoNovoBoss(scene, encontro, quantidade, area = null) {
+export function causarDanoNovoBoss(scene, encontro, quantidade, area = null, ataque = null) {
   if (!encontro?.combateInicializado || !podeAvancar(scene, encontro) ||
       encontro.barreiraAtiva || !Number.isFinite(quantidade) || quantidade <= 0 ||
       (area && !areasSobrepostasNovoBoss(area, encontro.hitboxDano))) return false;
+  if (encontro.prologo?.bloqueiaCombatePrincipal) return encontro.prologo.receberDanoBoss(quantidade, ataque ?? area);
   const anterior = encontro.vida;
   if (encontro.estado === "vulneravel") encontro.acertosNaAbertura = (encontro.acertosNaAbertura ?? 0) + 1;
-  encontro.vida = Math.max(0, encontro.vida - quantidade);
+  encontro.vida = Math.max(0, encontro.vida - quantidade - (encontro.danoAdiadoPrologo ?? 0));
+  encontro.danoAdiadoPrologo = 0;
   scene.events?.emit("novo-boss:vida", { encontro, anterior, vida: encontro.vida, vidaMaxima: encontro.vidaMaxima });
   if (encontro.vida <= 0) {
     derrotar(scene, encontro);

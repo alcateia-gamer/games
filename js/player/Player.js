@@ -658,7 +658,7 @@ function criarHitboxKatana(scene) {
         }
 
         if (eAlvoAdicionalCombate(scene, inimigo)) {
-          causarDanoAlvoAdicional(scene, inimigo, 25, hitboxKatana);
+          causarDanoAlvoAdicional(scene, inimigo, 25, hitboxKatana, hitboxKatana);
         } else if (inimigo === scene.bossFinal) {
           causarDanoBoss(scene, 25);
         } else {

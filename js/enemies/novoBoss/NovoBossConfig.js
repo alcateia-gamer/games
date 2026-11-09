@@ -31,6 +31,21 @@ export const novoBossConfig = Object.freeze({
   }),
   movimento: Object.freeze({ ativo: true, velocidade: 28, distanciaPreferida: 220,
     alternarRumoMs: 2600 }),
+  prologo: Object.freeze({
+    ativo: true, aberturaPortalMs: 650, fechamentoPortalMs: 450,
+    preparacaoOndaMs: 1500, intervaloSpawnMs: 950, reposicaoMs: 700,
+    protecaoSpawnMs: 1000, distanciaJogador: 140, distanciaPortais: 260,
+    falhaEscudoMs: 650, recargaEscudoMs: 1200, colapsoMs: 1000,
+    impactosPorJanela: 2, intervaloImpactosMs: 180, intervaloPadroesMs: 1800,
+    ciclos: Object.freeze([
+      Object.freeze({ total: 4, simultaneos: 2, padroes: ["espiral"] }),
+      Object.freeze({ total: 5, simultaneos: 3, padroes: ["espiral", "aneis"] }),
+      Object.freeze({ total: 6, simultaneos: 3, padroes: ["aneis", "rajadas"] }),
+      Object.freeze({ total: 6, simultaneos: 4, padroes: ["espiral", "aneis", "rajadas"] }),
+    ]),
+    lasers: Object.freeze({ velocidade: 115, raio: 5, dano: 10, alcance: 650,
+      vidaProjetilMs: 5000, avisoMs: 800 }),
+  }),
   geradores: Object.freeze({
     ativo: true,
     distanciaInteracao: 72,

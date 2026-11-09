@@ -33,8 +33,8 @@ export function obstaculosFlecha(scene, inicio, fim, margem = 19) {
     return arvore.search({
       minX: Math.min(inicio.x, fim.x) - margem, minY: Math.min(inicio.y, fim.y) - margem,
       maxX: Math.max(inicio.x, fim.x) + margem, maxY: Math.max(inicio.y, fim.y) + margem,
-    }).filter(corpo => corpo.enable !== false && grupo.contains(corpo.gameObject));
+    }).filter(corpo => corpo.enable !== false && !corpo.alvoTorreNovoBoss?.active && grupo.contains(corpo.gameObject));
   }
   return (grupo.getChildren?.() ?? []).filter(obj => obj.active && obj.body?.enable !== false)
-    .map(obj => obj.body);
+    .map(obj => obj.body).filter(corpo => !corpo.alvoTorreNovoBoss?.active);
 }

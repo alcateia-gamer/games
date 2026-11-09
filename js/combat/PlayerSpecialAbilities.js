@@ -11,7 +11,7 @@ import { criarColisaoDomoKai } from './KaiDomeCollision.js';
 import { NYX_AURA, prepararAuraNyx, iniciarAuraNyx, atualizarAuraNyx, limparAuraNyx } from './NyxHealingAura.js';
 import { criarEfeitoEspecial, atualizarEfeitoEspecial, deslocamentoChao, iniciarAnimacaoMarreta, desenharDomoKai } from './SpecialAbilityEffects.js';
 import { alvosAdicionaisCombate, eAlvoAdicionalCombate,
-  causarDanoAlvoAdicional } from "./CombatTargets.js";
+  causarDanoAlvoAdicional, causarDanoAreaAlvosAdicionais } from "./CombatTargets.js";
 
 import {
   caminhoDiretoBloqueado,
@@ -104,9 +104,9 @@ function alvosEspeciais(scene) {
   return [...alvos, ...alvosAdicionaisCombate(scene)];
 }
 
-function danoEspecial(scene, alvo, quantidade, area = null) {
+function danoEspecial(scene, alvo, quantidade, area = null, ataque = null) {
   if (eAlvoAdicionalCombate(scene, alvo)) {
-    return causarDanoAlvoAdicional(scene, alvo, quantidade, area);
+    return causarDanoAlvoAdicional(scene, alvo, quantidade, area, ataque);
   }
 
   if (alvo === scene.bossFinal) {
@@ -338,7 +338,7 @@ function atualizarLasersRefletidos(scene) {
       const ponto = pontoMaisProximo(robo.hitboxDano, laser.x, laser.y);
 
       if (distancia(ponto, laser) <= 8) {
-        danoEspecial(scene, robo, laser.danoEspecial || 30);
+        danoEspecial(scene, robo, laser.danoEspecial || 30, null, laser);
 
         laser.destroy();
         break;
@@ -399,6 +399,17 @@ function atualizarOnda(scene, estado, agora) {
     .lineStyle(2, 0xffe0a6, 0.8 * (1 - progresso))
     .strokeCircle(onda.x, onda.y, Math.max(0, onda.raioAtual - 9));
 
+  const adicionais = alvosAdicionaisCombate(scene).filter(alvo => {
+    if (onda.atingidos.has(alvo)) return false;
+    const ponto = pontoMaisProximo(alvo.hitboxDano, onda.x, onda.y);
+    return distancia(ponto, onda) <= onda.raioAtual && !caminhoDiretoBloqueado(scene, onda, ponto,
+      alvo.torre ? alvo.colisaoMapa?.corpos ?? [] : []);
+  });
+  const areaOnda = new Phaser.Geom.Rectangle(onda.x - onda.raioAtual, onda.y - onda.raioAtual,
+    onda.raioAtual * 2, onda.raioAtual * 2);
+  causarDanoAreaAlvosAdicionais(scene, adicionais, 8, areaOnda, onda);
+  adicionais.forEach(alvo => onda.atingidos.add(alvo));
+
   for (const alvo of alvosEspeciais(scene)) {
     if (onda.atingidos.has(alvo)) {
       continue;
@@ -427,6 +438,7 @@ function atualizarOnda(scene, estado, agora) {
           onda.raioAtual * 2,
           onda.raioAtual * 2,
         ),
+        onda,
       );
 
       continue;
@@ -894,7 +906,7 @@ function atualizarCortesNyx(scene, estado, delta) {
             alvo.hitboxDano,
             areaCorte,
           );
-          if (acertou && danoEspecial(scene, alvo, 12, areaCorte)) {
+          if (acertou && danoEspecial(scene, alvo, 12, areaCorte, corte)) {
             terminou = true;
             break;
           }

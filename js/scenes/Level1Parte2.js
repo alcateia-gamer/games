@@ -6,6 +6,7 @@ import { obterBocaMetralhadora, criarMunicaoRobo } from "../enemies/WarRobotProj
 
 import criarLevel1Parte2Map from "../map/MapaFabrica.js";
 import MiniMapManager from "../ui/MiniMapManager.js";
+import { criarSpawnAreasRoboBola } from "../enemies/RoboBolaSpawnAreas.js";
 import { configurarTrocaCamada } from "../map/TrocaCamada.js";
 
 import {
@@ -306,6 +307,7 @@ class Level1Parte2 extends Phaser.Scene {
     this.inimigos = [];
     this.grupoRobosAtivado = false;
     this.inimigoTeste = null;
+    this.spawnAreasRoboBola = criarSpawnAreasRoboBola(this);
   }
 
   /**
@@ -404,6 +406,7 @@ class Level1Parte2 extends Phaser.Scene {
       criarRoboBola(this);
     }
 
+    this.spawnAreasRoboBola?.atualizar(delta);
     atualizarInimigoTeste(this, time);
     atualizarRoboBola(this, time, delta);
     atualizarProjeteis(this, delta);

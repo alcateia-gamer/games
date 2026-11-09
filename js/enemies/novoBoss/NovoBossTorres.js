@@ -3,6 +3,7 @@ import { calcularDepthAtor } from "../../map/ProfundidadeMapa.js";
 import { areasSobrepostasNovoBoss } from "./NovoBossTeleporte.js";
 import { quadrosChoqueTorreIdle } from "./NovoBossTorreChoque.js";
 import { prepararPisoTorre } from "./NovoBossTorrePiso.js";
+import { criarControleColisaoTorre } from "./NovoBossColisoesTorres.js";
 
 const POSES = {
   summon: assetsNovoBoss.torreSummon, idle: assetsNovoBoss.torreIdle,
@@ -32,7 +33,7 @@ export function pontosTorresNovoBoss(scene) {
       const d = Math.hypot(cx - x, cy - y);
       if (d < distancia) { colisao = c; distancia = d; }
     }
-    return { id: o.id, x, y, width: o.width, height: o.height,
+    return { id: o.id, x, y, width: o.width, height: o.height, colisaoId: colisao?.id,
       referenciaDepthY: colisao ? colisao.y + colisao.height / 2 : o.y + o.height };
   });
 }
@@ -52,6 +53,8 @@ export function criarTorreNovoBoss(scene, encontro, ponto, aoDestruir) {
   const vidaMaxima = encontro.config.geradores.vidaTorre ?? 120;
   let estado = "summon", tempo = 0, iniciada = false, destruida = false;
   let ultimoFrame = 0;
+  let controlada = false, estadoGerador = "emergindo";
+  const colisaoMapa = criarControleColisaoTorre(scene, ponto);
   const luzChoqueIdle = { x: ponto.x, y: peY - 208 * escala, raio: 96 * escala, intensidade: 0 };
   const hitbox = new Phaser.Geom.Rectangle(ponto.x - 96 * escala, peY - 258 * escala,
     192 * escala, 258 * escala);
@@ -74,6 +77,27 @@ export function criarTorreNovoBoss(scene, encontro, ponto, aoDestruir) {
     duracaoIdleMs: DURACOES.idle,
     pontoEmissor: { x: ponto.x, y: peY - 208 * escala },
     get estado() { return estado; },
+    get estadoGerador() { return torre.morto ? "destruido" : estadoGerador; },
+    colisaoMapa,
+    controlarPrologo() { controlada = true; },
+    recolher() {
+      if (destruida || torre.morto || estadoGerador === "subterraneo") return;
+      controlada = iniciada = true;
+      estadoGerador = "recolhendo";
+      mudarPose("summon");
+      visual.setFrame(POSES.summon.ultimoFrame);
+      ultimoFrame = POSES.summon.ultimoFrame;
+      torre.body.enable = false;
+      colisaoMapa.definir(false);
+    },
+    emergir() {
+      if (destruida || torre.morto) return;
+      controlada = iniciada = true;
+      estadoGerador = "emergindo";
+      mudarPose("summon");
+      torre.body.enable = false;
+    },
+    suspenderColisao() { torre.body.enable = false; colisaoMapa.definir(false); },
     invocar() { if (!destruida && !torre.morto) iniciada = true; },
     prepararInvocacao() {
       if (destruida || torre.morto) return;
@@ -83,18 +107,23 @@ export function criarTorreNovoBoss(scene, encontro, ponto, aoDestruir) {
     },
     get active() {
       return !destruida && !torre.morto && iniciada && estado !== "summon" &&
+        (!controlada || estadoGerador === "exposto") &&
+        (!encontro.prologo?.bloqueiaCombatePrincipal || encontro.prologo.podeAtingirGerador(torre)) &&
         encontro.active && visual.visible && torre.body.enable;
     },
     get visible() { return visual.visible; },
     receberDano(quantidade, area = null) {
       if (!torre.active || !Number.isFinite(quantidade) || quantidade <= 0 ||
           (area && !areasSobrepostasNovoBoss(area, hitbox))) return false;
+      if (encontro.prologo?.bloqueiaCombatePrincipal && !encontro.prologo.podeAtingirGerador(torre)) return false;
       torre.vida = Math.max(0, torre.vida - quantidade);
       if (torre.vida === 0) {
         torre.morto = true;
         torre.ligado = false;
         torre.body.enable = false;
         mudarPose("death");
+        estadoGerador = "destruido";
+        if (controlada) colisaoMapa.definir(false);
         aoDestruir(torre);
       } else mudarPose("attacked");
       return true;
@@ -103,20 +132,46 @@ export function criarTorreNovoBoss(scene, encontro, ponto, aoDestruir) {
       if (destruida) return;
       luzChoqueIdle.intensidade = 0;
       const combate = Boolean(encontro.active);
-      if (combate && !apresentando) iniciada = true;
+      if (combate && !apresentando && !controlada) iniciada = true;
       // A base já aparece no chão; o relógio só avança quando a câmera invoca a torre.
       visual.setVisible(visivel && (iniciada || estado === "summon"));
       // Compara com body.bottom do jogador. -6010 está acima de -6000; não inverte o sinal.
       // Em empate, o personagem fica à frente, como nos demais objetos do cenário.
       visual.setDepth(calcularDepthAtor(scene, referenciaDepthY, visual) - 1e-9);
-      torre.body.enable = visivel && iniciada && !torre.morto;
+      if (controlada && estadoGerador === "subterraneo") {
+        // O quadro zero é a tampa fechada original, sem alvo ou corpo sólido.
+        visual.setDepth(calcularDepthAtor(scene, referenciaDepthY, visual) - 0.001);
+      }
+      torre.body.enable = visivel && iniciada && !torre.morto && estado !== "summon" &&
+        (!controlada || estadoGerador === "exposto");
+      if (controlada && !visivel) colisaoMapa.definir(false);
+      if (controlada && visivel && estadoGerador === "exposto" && !colisaoMapa.ocupado()) colisaoMapa.definir(true);
       if (!visivel || !iniciada || (!combate && !apresentando)) return;
       tempo += Number.isFinite(delta) ? Math.max(0, delta) : 0;
+      if (controlada && estadoGerador === "subterraneo") return;
+      if (controlada && estadoGerador === "recolhendo") {
+        const frame = Math.max(0, POSES.summon.ultimoFrame - Math.floor(tempo / POSES.summon.frameMs));
+        if (frame !== ultimoFrame) { visual.setFrame(frame); ultimoFrame = frame; }
+        if (tempo >= DURACOES.summon) {
+          estadoGerador = "subterraneo";
+          visual.setFrame(0); ultimoFrame = 0;
+          visual.setDepth(calcularDepthAtor(scene, referenciaDepthY, visual) - 0.001);
+        }
+        return;
+      }
+      if (controlada && estadoGerador === "emergindo" && tempo >= DURACOES.summon) {
+        // Aguarda o espaço ficar livre antes de restaurar a física e o dano.
+        if (colisaoMapa.ocupado()) { visual.setFrame(POSES.summon.ultimoFrame); return; }
+        colisaoMapa.definir(true);
+        estadoGerador = "exposto";
+      }
       if ((estado === "summon" || estado === "attacked") && tempo >= DURACOES[estado]) {
         const restante = tempo - DURACOES[estado];
         mudarPose("idle");
         tempo = restante;
       }
+      torre.body.enable = visivel && iniciada && !torre.morto && estado !== "summon" &&
+        (!controlada || estadoGerador === "exposto");
       const asset = poses[estado];
       let ms = estado === "idle" ? tempo % DURACOES.idle : Math.min(tempo, DURACOES[estado] - 1);
       let frame = 0;
@@ -138,7 +193,12 @@ export function criarTorreNovoBoss(scene, encontro, ponto, aoDestruir) {
       destruida = true;
       luzChoqueIdle.intensidade = 0;
       visual.destroy();
+      for (const corpo of colisaoMapa.corpos) delete corpo.alvoTorreNovoBoss;
+      if (controlada && torre.morto) colisaoMapa.definir(false);
+      else colisaoMapa.restaurar();
     },
   };
+  // Movimento continua bloqueado pela base. Armas devem atingir a torre, não sua parede invisível.
+  for (const corpo of colisaoMapa.corpos) corpo.alvoTorreNovoBoss = torre;
   return torre;
 }

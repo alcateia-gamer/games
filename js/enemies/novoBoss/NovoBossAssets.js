@@ -124,6 +124,13 @@ export const assetsNovoBoss = Object.freeze({
     arquivo: "PERSONAGENS/INIMIGOS PRINCIPAIS/Boss-test/derivados/torres/torre-death.png",
     larguraFrame: 192, alturaFrame: 258, ultimoFrame: 0, frameMs: 100,
   }),
+  portal: Object.freeze({
+    chave: "novo-boss-portal",
+    arquivo: "PERSONAGENS/INIMIGOS PRINCIPAIS/Boss-test/derivados/portal/portal-quadros.png",
+    larguraFrame: 320, alturaFrame: 320, ultimoFrame: 6,
+    duracoesMs: Object.freeze([100, 100, 100, 100, 100, 100, 200]),
+    origemX: 0.5, origemY: 0.5, escala: 0.35,
+  }),
 });
 
 /** Chamado pelo preloader após load.setPath("./assets/"). */

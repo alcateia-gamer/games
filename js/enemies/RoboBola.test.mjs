@@ -410,3 +410,28 @@ test("cada spawn cria outro robô sem sobrepor aliados nem obstáculos", (t) => 
   assert.ok(colliders.every(c => !c.active));
   scene.events.emit("shutdown");
 });
+
+test("posição explícita rejeita parede, jogador e aliados antes de criar recursos", () => {
+  const { scene } = preparar();
+  scene.collisionGroup = { getChildren: () => [
+    { body: { x: 400, y: 400, width: 80, height: 80, enable: true } },
+  ] };
+  scene.physics.add.sprite = () => { throw new Error("Não deve criar sprite"); };
+  assert.equal(criarRoboBola(scene, { x: 430, y: 430 }), null);
+  assert.equal(criarRoboBola(scene, scene.player), null);
+  assert.equal(criarRoboBola(scene, { x: scene.inimigos[0].x, y: scene.inimigos[0].y }), null);
+  assert.equal(criarRoboBola(scene, { x: NaN, y: 0 }), null);
+});
+
+test("proteção de spawn impede movimentação e disparo instantâneos sem alterar a IA normal", () => {
+  const { scene, robo, tiros } = preparar();
+  const depths = [];
+  robo.setDepth = depth => depths.push(depth);
+  robo.prologoProtegidoAte = 2000;
+  atualizarRoboBola(scene, 1999, 16);
+  assert.deepEqual(robo.body.velocity, { x: 0, y: 0 });
+  assert.equal(tiros.length, 0);
+  assert.equal(depths.length, 1, "continua visível na profundidade correta durante a proteção");
+  atualizarRoboBola(scene, 2100, 16);
+  assert.ok(Math.hypot(robo.body.velocity.x, robo.body.velocity.y) > 0);
+});

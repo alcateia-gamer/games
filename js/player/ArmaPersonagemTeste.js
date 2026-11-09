@@ -159,7 +159,7 @@ function moverLaser(scene, laser, inicio, fim) {
   laser.sprite.setPosition(inicio.x + (fim.x - inicio.x) * proporcao,
     inicio.y + (fim.y - inicio.y) * proporcao);
   if (impacto) {
-    if (eAlvoAdicionalCombate(scene, impacto.alvo)) causarDanoAlvoAdicional(scene, impacto.alvo, laser.dano);
+    if (eAlvoAdicionalCombate(scene, impacto.alvo)) causarDanoAlvoAdicional(scene, impacto.alvo, laser.dano, null, laser);
     else if (impacto.alvo === scene.bossFinal && impacto.alvo) causarDanoBoss(scene, laser.dano);
     else if (impacto.alvo) causarDanoInimigo(scene, impacto.alvo, laser.dano);
     laser.sprite.destroy();

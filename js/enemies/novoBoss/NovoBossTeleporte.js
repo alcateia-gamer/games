@@ -77,6 +77,7 @@ export function sincronizarCorpoNovoBoss(encontro, ponto = encontro.sprite) {
 }
 
 export function iniciarTeleporteNovoBoss(scene, encontro, motivo, opcoes = {}) {
+  if (encontro.prologo?.bloqueiaCombatePrincipal) return false;
   if (encontro.teleporte || encontro.morto || !encontro.sprite) return false;
   const destino = opcoes.destino
     ? (destinoValidoNovoBoss(scene, encontro, opcoes.destino) ? opcoes.destino : null)

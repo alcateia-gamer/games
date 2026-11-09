@@ -1,0 +1,17 @@
+{
+  "original": "Tilesets/mechanics/portal.gif",
+  "sha256": "0c76959a622e5500493f28ffecea6e2704b220038f94720e905b2702cb40bf22",
+  "larguraFrame": 320,
+  "alturaFrame": 320,
+  "quadros": 7,
+  "duracoesMs": [
+    100,
+    100,
+    100,
+    100,
+    100,
+    100,
+    200
+  ],
+  "loop": 0
+}

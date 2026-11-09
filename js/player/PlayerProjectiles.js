@@ -170,7 +170,7 @@ function atualizarProjeteis(scene, delta = 0) {
       if (projetil.distanciaPercorrida >= ALCANCE_MAXIMO_PROJETIL) destruirProjetil(projetil);
       return;
     }
-    if (eAlvoAdicionalCombate(scene, impacto.alvo)) causarDanoAlvoAdicional(scene, impacto.alvo, projetil.dano);
+    if (eAlvoAdicionalCombate(scene, impacto.alvo)) causarDanoAlvoAdicional(scene, impacto.alvo, projetil.dano, null, projetil);
     else if (impacto.alvo === boss && boss) causarDanoBoss(scene, projetil.dano);
     else if (impacto.alvo) causarDanoInimigo(scene, impacto.alvo, projetil.dano, { playSound: true });
 

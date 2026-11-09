@@ -87,7 +87,7 @@ export function criarServicosAtaques(scene, encontro) {
       danoJogador(dano, origem);
       return true;
     },
-    atingirAlvoComLaserRefletido(inicio, fim, raio, dano) {
+    atingirAlvoComLaserRefletido(inicio, fim, raio, dano, visual = null) {
       const vetor = direcao(inicio, fim);
       let impacto = null;
       for (const alvo of [...alvosAdicionaisCombate(scene), ...(scene.inimigos ?? [])]) {
@@ -96,7 +96,7 @@ export function criarServicosAtaques(scene, encontro) {
         if (tempo !== null && (!impacto || tempo < impacto.tempo)) impacto = { alvo, tempo };
       }
       if (!impacto) return false;
-      if (alvosAdicionaisCombate(scene).includes(impacto.alvo)) causarDanoAlvoAdicional(scene, impacto.alvo, dano);
+      if (alvosAdicionaisCombate(scene).includes(impacto.alvo)) causarDanoAlvoAdicional(scene, impacto.alvo, dano, null, visual);
       else causarDanoInimigo(scene, impacto.alvo, dano, { playSound: true });
       return true;
     },

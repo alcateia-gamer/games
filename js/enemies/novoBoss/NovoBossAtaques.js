@@ -81,6 +81,7 @@ export function prepararAtaquesNovoBoss(scene, encontro) {
 }
 
 export function executarAtaqueNovoBoss(scene, encontro, tipo) {
+  if (encontro.prologo?.bloqueiaCombatePrincipal) return false;
   const comIlusoes = tipo === "ilusoes";
   if (comIlusoes) tipo = "tentaculos";
   const def = definicaoAtaqueNovoBoss(tipo);

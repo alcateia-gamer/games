@@ -57,6 +57,20 @@ export function atualizarHudNovoBoss(scene, encontro) {
     detalhe += ` · ${clones} CLONES`;
   }
   const captura = scene.restricaoControleNovoBoss;
+  if (encontro.prologo?.bloqueiaCombatePrincipal && !encontro.introducao?.bloqueiaCombate) {
+    const p = encontro.prologo.snapshot();
+    const mensagens = {
+      PORTAIS_ABRINDO: "ESCUDO ATIVO · PORTAIS",
+      ONDA_ROBOS: `DEFENSORES ${p.restantesOnda}/${p.total}`,
+      GERADORES_SUBINDO: "GERADORES SUBINDO",
+      GERADORES_EXPOSTOS: "GERADORES EXPOSTOS",
+      GERADORES_DESCENDO: p.geradoresRestantes ? "ESCUDO INSTÁVEL" : "ESCUDO DESTRUÍDO",
+      BOSS_VULNERAVEL: `ACERTE O BOSS · ${p.impactosRestantes} IMPACTOS`,
+      ESCUDO_RECARREGANDO: p.aguardandoSaidaEscudo ? "AFASTE-SE DO ESCUDO" : "RECARREGANDO ESCUDO",
+    };
+    hud.textoEstado.setText(`${p.geradoresRestantes}/4 · ${mensagens[p.estado] ?? p.estado}`);
+    return;
+  }
   if (captura?.apertosNecessarios > 0) {
     hud.textoEstado.setText(`AGARRADO · APERTE ATAQUE ${captura.apertos}/${captura.apertosNecessarios}`);
     return;

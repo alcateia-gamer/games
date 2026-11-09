@@ -5,6 +5,7 @@ import { areaCorpoNovoBoss } from "./NovoBossConfig.js";
 import { jogadorPresoNovoBoss } from "../../player/PlayerControlEffects.js";
 import { criarEscudoEnergia } from "./NovoBossEfeitosEnergia.js";
 import { pontosTorresNovoBoss, assetsTorresDisponiveis, criarTorreNovoBoss } from "./NovoBossTorres.js";
+import { criarColisaoBarreiraNovoBoss } from "./NovoBossBarreiraColisao.js";
 
 function configuracaoValida(scene, encontro, config, torres = false) {
   if (!Array.isArray(config.pontos) || config.pontos.length === 0 ||
@@ -73,6 +74,7 @@ export function prepararGeradoresNovoBoss(scene, encontro) {
   let tempo = 0;
   let apresentando = torres && Boolean(encontro.introducao?.bloqueiaCombate);
   let cargaEscudo = apresentando ? 0 : 1;
+  let protecaoFisica = true;
   const colliders = [];
   const propiosObstaculos = [];
   encontro.obstaculosTeleporte ??= [];
@@ -84,7 +86,7 @@ export function prepararGeradoresNovoBoss(scene, encontro) {
     raioBarreira, 0, 0).setVisible(false).setName("novo-boss-barreira-colisao");
   scene.physics.add.existing(colisaoBarreira, true);
   colisaoBarreira.body.setCircle(raioBarreira);
-  colliders.push(scene.physics.add.collider(scene.player, colisaoBarreira));
+  const colisaoAtores = criarColisaoBarreiraNovoBoss(scene, colisaoBarreira);
   const geradores = config.pontos.map((ponto, indice) => {
     if (torres) {
       return criarTorreNovoBoss(scene, encontro, ponto, desativar);
@@ -124,6 +126,27 @@ export function prepararGeradoresNovoBoss(scene, encontro) {
     if (destruido) return;
     cargaEscudo = Number.isFinite(valor) ? Math.max(0, Math.min(1, valor)) : 0;
     encontro.barreiraAtiva = cargaEscudo > 0 && geradores.some(item => item.ligado);
+  }
+
+  function controlarEscudo(carga, protegido, fisico = protegido) {
+    const jaBloqueava = colisaoBarreira.body.enable && encontro.barreiraAtiva && protecaoFisica;
+    definirCargaEscudo(carga);
+    encontro.barreiraAtiva = Boolean(protegido && geradores.some(g => g.ligado));
+    // Encostar no escudo já ativo não pode desligá-lo pela verificação de ocupação.
+    protecaoFisica = Boolean(fisico || (jaBloqueava && protegido));
+    atualizar(0);
+  }
+
+  function escudoOcupado() {
+    const x = encontro.sprite.x, y = encontro.sprite.y + 16;
+    // A recarga aguarda o jogador sair; os demais atores são separados pelo controle físico.
+    return [scene.player].some(entidade => {
+      const body = entidade?.body;
+      if (!entidade?.active || entidade.morto || !body || body.enable === false) return false;
+      const px = Math.max(body.x, Math.min(x, body.x + body.width));
+      const py = Math.max(body.y, Math.min(y, body.y + body.height));
+      return Math.hypot(px - x, py - y) < raioBarreira + 3;
+    });
   }
 
   function iniciarApresentacao() {
@@ -176,6 +199,11 @@ export function prepararGeradoresNovoBoss(scene, encontro) {
   }
 
   function desativar(gerador) {
+    if (encontro.prologo?.bloqueiaCombatePrincipal) {
+      encontro.prologo.geradorDestruido(gerador);
+      scene.events.emit("novo-boss:gerador-desativado", { encontro, gerador });
+      return;
+    }
     encontro.barreiraAtiva = geradores.some(item => item.ligado);
     scene.events.emit("novo-boss:gerador-desativado", { encontro, gerador });
     if (!encontro.barreiraAtiva) {
@@ -199,12 +227,13 @@ export function prepararGeradoresNovoBoss(scene, encontro) {
       if (gerador.ligado) gerador.nucleo.setAlpha(0.72 + Math.sin(tempo / 220) * 0.22);
     }
     barreira.clear();
-    barreira.setVisible(visivel && encontro.barreiraAtiva && Boolean(encontro.sprite?.visible) &&
+    barreira.setVisible(visivel && cargaEscudo > 0 && Boolean(encontro.sprite?.visible) &&
       !encontro.teleporte && (encontro.sprite.alpha ?? 1) > 0);
     colisaoBarreira.x = encontro.sprite.x;
     colisaoBarreira.y = encontro.sprite.y + 16;
     colisaoBarreira.body.updateFromGameObject();
-    colisaoBarreira.body.enable = barreira.visible;
+    colisaoBarreira.body.enable = barreira.visible && encontro.barreiraAtiva && protecaoFisica;
+    colisaoAtores.atualizar();
     escudo?.atualizar(delta, encontro.sprite.x, encontro.sprite.y + 16,
       barreira.visible, (encontro.sprite.alpha ?? 1) * cargaEscudo, cargaEscudo);
     if (!barreira.visible) return;
@@ -225,6 +254,7 @@ export function prepararGeradoresNovoBoss(scene, encontro) {
     destruido = true;
     scene.input.keyboard?.off("keydown-E", teclaE);
     for (const collider of colliders) collider?.destroy();
+    colisaoAtores.destruir();
     for (const gerador of geradores) {
       if (gerador.torre) { gerador.destruir(); continue; }
       gerador.visual.destroy();
@@ -250,6 +280,7 @@ export function prepararGeradoresNovoBoss(scene, encontro) {
   const sistema = {
     atualizar, destruir, interagir,
     iniciarApresentacao, cancelarApresentacao, concluirApresentacao, definirCargaEscudo,
+    controlarEscudo, escudoOcupado,
     get cargaEscudo() { return cargaEscudo; },
     get corpoBarreira() { return colisaoBarreira.body; },
     snapshot: () => ({

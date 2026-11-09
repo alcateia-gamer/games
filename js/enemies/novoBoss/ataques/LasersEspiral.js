@@ -43,7 +43,8 @@ export function criarLasersEspiral(scene, encontro, config = {}, servicos = {}) 
     : Math.atan2((jogador?.y ?? origemInicial.y + 1) - origemInicial.y,
       (jogador?.x ?? origemInicial.x) - origemInicial.x);
   const limiteVida = Math.min(ajustes.vidaProjetilMs, ajustes.alcance / ajustes.velocidade * 1000);
-  const fimEmissao = ajustes.avisoMs + (ajustes.quantidade - 1) * ajustes.intervaloMs;
+  const fimEmissao = ajustes.avisoMs + (config.emissoes?.at(-1)?.em ??
+    (ajustes.quantidade - 1) * ajustes.intervaloMs);
   const fimDisparos = duracaoDisparosMs > 0 ? ajustes.avisoMs + duracaoDisparosMs : fimEmissao;
   const duracao = Math.max(fimDisparos, fimEmissao + limiteVida);
   const arena = encontro.config?.arena;
@@ -59,6 +60,7 @@ export function criarLasersEspiral(scene, encontro, config = {}, servicos = {}) 
   const projeteis = [];
 
   function anguloDisparo(indice) {
+    if (config.emissoes?.[indice]) return config.emissoes[indice].angulo * Math.PI / 180;
     const passo = ajustes.passoAngulo;
     let deslocamento = 0;
     if (config.intercalar && passo > 0) {
@@ -209,8 +211,8 @@ export function criarLasersEspiral(scene, encontro, config = {}, servicos = {}) 
       }
       for (const projetil of projeteis) avancar(projetil, decorrido - anterior);
       while (emitidos < ajustes.quantidade &&
-          ajustes.avisoMs + emitidos * ajustes.intervaloMs <= decorrido) {
-        const nascimento = ajustes.avisoMs + emitidos * ajustes.intervaloMs;
+          ajustes.avisoMs + (config.emissoes?.[emitidos]?.em ?? emitidos * ajustes.intervaloMs) <= decorrido) {
+        const nascimento = ajustes.avisoMs + (config.emissoes?.[emitidos]?.em ?? emitidos * ajustes.intervaloMs);
         const angulo = anguloDisparo(emitidos);
         const projetil = {
           x: encontro.x ?? encontro.sprite?.x ?? origemInicial.x,

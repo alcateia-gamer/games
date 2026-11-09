@@ -110,12 +110,12 @@ function algumObstaculo(cache, area, testar, dinamicos = []) {
       for (const item of itens) {
         if (item.consulta === consulta || item.body.enable === false) continue;
         item.consulta = consulta;
-        if (testar(item.rect)) return true;
+        if (testar(item.rect, item.body)) return true;
       }
     }
   }
   for (const item of cache.grandes) {
-    if (item.body.enable !== false && testar(item.rect)) return true;
+    if (item.body.enable !== false && testar(item.rect, item.body)) return true;
   }
   for (const rect of dinamicos) {
     if (testar(rect)) return true;
@@ -167,15 +167,15 @@ function coordenadasValidas(a, b) {
 }
 
 /** Visão/tiro: mantém o teste pontual, independente da hitbox de caminhada. */
-function caminhoDiretoBloqueado(scene, inimigo, alvo) {
+function caminhoDiretoBloqueado(scene, inimigo, alvo, ignorarCorpos = []) {
   if (!scene || !inimigo || !alvo) return false;
   if (!coordenadasValidas(inimigo, alvo)) return true;
   const area = {
     left: Math.min(inimigo.x, alvo.x), right: Math.max(inimigo.x, alvo.x),
     top: Math.min(inimigo.y, alvo.y), bottom: Math.max(inimigo.y, alvo.y),
   };
-  return algumObstaculo(criarIndice(scene), area, (rect) =>
-    segmentoTocaRetangulo(inimigo.x, inimigo.y, alvo.x, alvo.y, rect));
+  return algumObstaculo(criarIndice(scene), area, (rect, body) =>
+    !ignorarCorpos.includes(body) && segmentoTocaRetangulo(inimigo.x, inimigo.y, alvo.x, alvo.y, rect));
 }
 
 /** O centro físico dos pés não coincide com a posição visual do sprite. */
