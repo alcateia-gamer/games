@@ -263,8 +263,13 @@ class Level1 extends Phaser.Scene {
     // ATUALIZA DEPOIS DA FÍSICA
     // =====================================================
 
-    this.events.on(Phaser.Scenes.Events.POST_UPDATE, () => {
+    this.onPostUpdate = () => {
       atualizarHitboxDanoPlayer(this);
+    };
+    this.events.on(Phaser.Scenes.Events.POST_UPDATE, this.onPostUpdate);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.events.off(Phaser.Scenes.Events.POST_UPDATE, this.onPostUpdate);
+      this.onPostUpdate = null;
     });
 
     // =====================================================

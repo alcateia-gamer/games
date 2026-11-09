@@ -5,16 +5,22 @@ O host publicava a sala inteira a cada entrada de movimento e a cada atualizaç�
 de inimigos; o dano remoto de tiros era enviado depois de 220 ms, sem colisão.
 Boss, pet, armas independentes e a maioria dos especiais estavam bloqueados.
 
-## Etapas
+## Estado atual
 
-- [ ] Protocolo: ações confiáveis deduplicadas, movimento a 20 Hz, mundo a 12 Hz,
-  diferenças entre snapshots e recuperação por keyframes.
-- [ ] Personagens: arte/armas atuais, quatro especiais, dano, cura, captura,
-  libertação, pet e morte cooperativa.
-- [ ] Mundo: coleta, combustível, energia, portas, zonas de spawn e mapas.
-- [ ] Boss: introdução, prólogo, geradores, barreira, ataques, ilusões, clones,
-  fase 2, tentáculos e derrota preservando sua implementação solo.
-- [ ] Integração com duas instâncias e medições de tráfego/atualização.
+- [x] Protocolo: ações confiáveis deduplicadas, movimento a 20 Hz, mundo a 12 Hz,
+  diferenças entre snapshots, sequência monotônica e recuperação por keyframes.
+- [x] Personagens: contextos independentes por jogador, armas, especiais, dano,
+  cura, pet e morte cooperativa.
+- [x] Mundo: estado persistente, interações compartilhadas, coleta, energia,
+  portas, zonas de spawn e os dois mapas.
+- [x] Boss: autoridade no host, réplica visual nos clientes e preservação dos
+  sistemas atuais do modo solo.
+- [x] Integração com duas instâncias, broker MQTT/WebSocket local e métricas
+  básicas de quadros, bytes, captura e entidades.
+
+Itens que dependem de validação manual em navegadores reais, como perda de
+conexão prolongada, jitter elevado e migração de host, não são considerados
+automaticamente concluídos por esses testes.
 
 ## Decisões
 
@@ -33,5 +39,7 @@ a ser ativados apenas no multiplayer.
 Antes das alterações: 911 casos em 86 arquivos; 890 passaram e 21 falharam.
 Falhas existentes em `PlayerTestActionControls.test.mjs` (11),
 `FactoryLighting.test.mjs` (4), `ColisoesMapa.test.mjs` (4) e
-`PlayerCollisionConfig.test.mjs` (2). Resultado completo em
-`/tmp/multiplayer-baseline.json`.
+`PlayerCollisionConfig.test.mjs` (2). O relatório JSON dessa execução foi um
+artefato temporário fora do repositório; os números acima são mantidos apenas
+como referência histórica e não substituem uma nova execução no ambiente de
+validação.

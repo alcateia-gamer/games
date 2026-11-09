@@ -45,6 +45,18 @@ function registrarAtualizacaoDeViewport(game) {
       passive: true,
     });
   }
+
+  return () => {
+    if (quadroPendente !== null) {
+      window.cancelAnimationFrame(quadroPendente);
+      quadroPendente = null;
+    }
+    window.removeEventListener("resize", atualizar);
+    window.removeEventListener("orientationchange", atualizar);
+    document.removeEventListener("fullscreenchange", atualizar);
+    document.removeEventListener("webkitfullscreenchange", atualizar);
+    window.visualViewport?.removeEventListener("resize", atualizar);
+  };
 }
 
 class Game extends Phaser.Game {
@@ -84,8 +96,9 @@ class Game extends Phaser.Game {
 
       void resumeAudio();
     };
+    this._audioUnlockEvents = ["pointerdown", "touchstart", "keydown"];
 
-    ["pointerdown", "touchstart", "keydown"].forEach((nomeEvento) => {
+    this._audioUnlockEvents.forEach((nomeEvento) => {
       window.addEventListener(
         nomeEvento,
         this._unlockAudio,
@@ -102,6 +115,16 @@ class Game extends Phaser.Game {
 
     this.scene.start("Start", { iniciarAbertura: true, jogoRapido });
   }
+
+  destroy(...args) {
+    this._viewportCleanup?.();
+    this._viewportCleanup = null;
+    this._audioUnlockEvents?.forEach((nomeEvento) => {
+      window.removeEventListener(nomeEvento, this._unlockAudio);
+    });
+    this._audioUnlockEvents = null;
+    return super.destroy(...args);
+  }
 }
 
 /**
@@ -114,9 +137,9 @@ function iniciarJogo(jogoRapido = false) {
   if (jogoIniciado) return;
   jogoIniciado = true;
   const game = new Game(jogoRapido);
+  game._viewportCleanup = registrarAtualizacaoDeViewport(game);
   botaoJogar.remove();
   window.removeEventListener("keydown", iniciarComAtalho);
-  registrarAtualizacaoDeViewport(game);
 }
 
 function iniciarComAtalho(event) {

@@ -685,6 +685,7 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
     this.leaveRoom();
     this.mqtt.off("message", this.boundMessage);
     this.removeAllListeners();
+    this.mqtt.disconnect();
   }
 }
 

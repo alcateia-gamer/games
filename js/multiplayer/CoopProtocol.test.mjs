@@ -11,6 +11,7 @@ function pair() {
   class MQTT extends EventEmitter {
     constructor(id) { super(); this.clientId = id; transports.push(this); }
     connect() {} subscribe() {} unsubscribe() {}
+    disconnect() { this.disconnected = true; }
     publish(topic, value, options) {
       const data = structuredClone({ ...value, clientId: this.clientId });
       sent.push({ topic, data, options });
@@ -75,6 +76,12 @@ test("identidades têm memória limitada e entradas inválidas são recusadas", 
   const { host } = pair();
   host.receiveAction({ type: "game_state", playerId: "client", x: Infinity, y: 2 });
   assert.equal(host.room.players[1].x, -490);
+});
+
+test("destruição do gerenciador encerra a conexão MQTT", () => {
+  const { host } = pair();
+  host.destroy();
+  assert.equal(host.mqtt.disconnected, true);
 });
 
 test("sprites estáticos não são reenviados; mudanças, remoção e keyframes reconstroem o estado", () => {
