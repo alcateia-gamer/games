@@ -438,7 +438,7 @@ class Preloader extends Phaser.Scene {
 
     this.load.tilemapTiledJSON(
       "mapa",
-      "map/InicioFase1 (1).json"
+      "map/InicioFase1 (1).json?v=fuel-refill-1"
     );
 
     this.load.tilemapTiledJSON(
@@ -809,14 +809,15 @@ class Preloader extends Phaser.Scene {
       "../Tilesets/Industrial/A1_Modern_Inside_Factory_Rasak.png"
     );
 
+    // A versão acompanha o PNG original para evitar reutilizar uma arte antiga em cache.
     this.load.image(
       "industrialGenerator",
-      "../Tilesets/Industrial/Tileset_Pixel_Art_de_Gerador_Industrial.png",
+      "../Tilesets/Industrial/Tileset_Pixel_Art_de_Gerador_Industrial.png?v=4d96171721c8",
     );
 
     this.load.image(
       "industrialElectrical",
-      "../Tilesets/Industrial/Tileset_Pixel_Art_de_Eletrica_industrial.png",
+      "../Tilesets/Industrial/Tileset_Pixel_Art_de_Eletrica_industrial.png?v=137e2c850c30",
     );
 
     this.load.image(

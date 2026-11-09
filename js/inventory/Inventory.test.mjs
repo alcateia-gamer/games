@@ -147,7 +147,7 @@ test("registers gasoline with its image and supports collected quantities", () =
   const gasoline = getInventoryItem("gasolina");
   const inventory = new Inventory({ slots: [], collectedItemIds: [] });
 
-  assert.equal(gasoline.name, "Gasolina");
+  assert.equal(gasoline.name, "Galão de combustível");
   assert.equal(gasoline.image.path, "COLETAVEIS/gasolina.png");
   assert.equal(gasoline.showQuantity, false);
   assert.equal(inventory.addItem("gasolina", 3), true);

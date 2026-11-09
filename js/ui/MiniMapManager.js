@@ -6,7 +6,8 @@ import {
   MINI_MAP_PROFILES, MINI_MAP_SIZE, buildMiniMapGeometry,
   createMapTransform, worldToMiniMap, miniMapLayout,
 } from "./MiniMapData.js";
-import { drawMiniMapAtlas, RADAR_COLORS } from "./MiniMapAtlas.js";
+import { drawMiniMapAtlas } from "./MiniMapAtlas.js";
+import { obterTemaPersonagem } from "./CharacterTheme.js";
 import { drawCollectibleMarker, COLLECTIBLE_MARKER_COLOR } from "./CollectibleMarker.js";
 import { findGeneratorInteraction } from "../interactions/FactoryGenerator.js";
 import { criarCanvasHUDNitido, GraficosCanvasHUD } from "./HudCanvas.js";
@@ -25,16 +26,20 @@ let nextTextureId = 0;
 /**
  * Recupera ou cria a geometria e o atlas compartilhados para o recurso de mapa.
  */
-function getCachedMap(scene, map, profile) {
+function getCachedMap(scene, map, profile, colors) {
   const key = scene.cache.tilemap.get(profile.cacheKey)?.data ?? map;
   let entry = cache.get(key);
   if (!entry) {
     const geometry = buildMiniMapGeometry(map, profile);
     if (!geometry) return null;
-    entry = { geometry, atlas: drawMiniMapAtlas(geometry) };
+    entry = { geometry, atlases: new Map() };
     cache.set(key, entry);
   }
-  return entry;
+  // A geometria é comum, mas cada personagem mantém sua própria versão colorida.
+  if (!entry.atlases.has(colors.accent)) {
+    entry.atlases.set(colors.accent, drawMiniMapAtlas(entry.geometry, colors));
+  }
+  return { geometry: entry.geometry, atlas: entry.atlases.get(colors.accent) };
 }
 
 export default class MiniMapManager {
@@ -43,10 +48,11 @@ export default class MiniMapManager {
    */
   constructor(scene, map, profileName) {
     this.scene = scene;
+    this.colors = obterTemaPersonagem(scene.personagemSelecionada);
     this.profile = MINI_MAP_PROFILES[profileName];
     this.searchPointVisited = false;
     this.destroyed = false;
-    const entry = getCachedMap(scene, map, this.profile);
+    const entry = getCachedMap(scene, map, this.profile, this.colors);
     if (!entry) return;
     this.geometry = entry.geometry;
     this.atlas = entry.atlas;
@@ -60,17 +66,17 @@ export default class MiniMapManager {
     this.texture = scene.textures.createCanvas(this.textureKey, VIEW_WIDTH * 2, VIEW_HEIGHT * 2);
     this.root = scene.add.container(0, 0).setScrollFactor(0).setDepth(100100);
     const frame = scene.add.graphics();
-    frame.fillStyle(Number.parseInt(RADAR_COLORS.background.slice(1), 16), 1)
+    frame.fillStyle(Number.parseInt(this.colors.background.slice(1), 16), 1)
       .fillRect(0, 0, WIDTH, HEIGHT);
-    frame.lineStyle(1, RADAR_COLORS.accent, 0.85)
+    frame.lineStyle(1, this.colors.accent, 0.85)
       .strokeRect(0.5, 0.5, WIDTH - 1, HEIGHT - 1);
     // Pequenos cantos reforçam o acabamento angular da interface da referência.
-    frame.lineStyle(2, RADAR_COLORS.accent, 1)
+    frame.lineStyle(2, this.colors.accent, 1)
       .lineBetween(0, 1, 9, 1).lineBetween(1, 0, 1, 9)
       .lineBetween(WIDTH - 9, HEIGHT - 1, WIDTH, HEIGHT - 1);
-    frame.fillStyle(RADAR_COLORS.accent, 1).fillRect(0, HEIGHT + 1, WIDTH, 13);
+    frame.fillStyle(this.colors.accent, 1).fillRect(0, HEIGHT + 1, WIDTH, 13);
     const title = scene.add.text(WIDTH / 2, HEIGHT + 7.5, this.profile.label, {
-      fontFamily: "monospace", fontSize: "9px", fontStyle: "bold", color: RADAR_COLORS.label,
+      fontFamily: "monospace", fontSize: "9px", fontStyle: "bold", color: this.colors.label,
     }).setOrigin(0.5);
     this.image = scene.add.image(VIEW_X, VIEW_Y, this.textureKey).setOrigin(0, 0)
       .setDisplaySize(VIEW_WIDTH, VIEW_HEIGHT);
@@ -78,7 +84,7 @@ export default class MiniMapManager {
     this.itemMarkers = scene.add.graphics();
     this.marker = scene.add.container(0, 0);
     const glow = scene.add.circle(0, 0, 5.5, 0x071d18, 0.7);
-    const heading = scene.add.graphics().lineStyle(1.5, RADAR_COLORS.player, 1);
+    const heading = scene.add.graphics().lineStyle(1.5, this.colors.player, 1);
     heading.beginPath().moveTo(-3, 2).lineTo(0, -4).lineTo(3, 2).strokePath();
     this.marker.add([glow, heading]);
     this.root.add([frame, this.image, this.enemyMarkers, this.itemMarkers, title, this.marker]);
@@ -340,7 +346,7 @@ export default class MiniMapManager {
     const { bounds } = this.geometry;
     const transform = this.transform;
     context.save(); context.scale(2, 2);
-    context.fillStyle = RADAR_COLORS.background;
+    context.fillStyle = this.colors.background;
     context.fillRect(0, 0, VIEW_WIDTH, VIEW_HEIGHT);
     const left = bounds.x * transform.scale + transform.x;
     const top = bounds.y * transform.scale + transform.y;
@@ -365,7 +371,7 @@ export default class MiniMapManager {
       backdrop.height = view.canvas.height;
       const ctx = backdrop.getContext("2d");
       ctx.scale(backdrop.width / view.width, backdrop.height / view.height);
-      ctx.fillStyle = RADAR_COLORS.background;
+      ctx.fillStyle = this.colors.background;
       ctx.fillRect(0, 0, WIDTH, HEIGHT);
       ctx.save();
       ctx.beginPath(); ctx.rect(VIEW_X, VIEW_Y, VIEW_WIDTH, VIEW_HEIGHT); ctx.clip();
@@ -377,14 +383,14 @@ export default class MiniMapManager {
         this.atlas.image.width * transform.scale / this.atlas.scale,
         this.atlas.image.height * transform.scale / this.atlas.scale);
       ctx.restore();
-      ctx.strokeStyle = "#42e2ed";
+      ctx.strokeStyle = this.colors.accentCss;
       ctx.lineWidth = 1;
       ctx.strokeRect(0.5, 0.5, WIDTH - 1, HEIGHT - 1);
-      ctx.fillStyle = "#42e2ed";
+      ctx.fillStyle = this.colors.accentCss;
       ctx.fillRect(0, HEIGHT + 1, WIDTH, 13);
       ctx.font = "bold 9px monospace";
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      ctx.fillStyle = RADAR_COLORS.label;
+      ctx.fillStyle = this.colors.label;
       ctx.fillText(this.profile.label, WIDTH / 2, HEIGHT + 7.5);
     }
     view.limpar();
@@ -413,7 +419,7 @@ export default class MiniMapManager {
     ctx.translate(VIEW_X + position.x, VIEW_Y + position.y);
     ctx.rotate({ up: 0, right: Math.PI / 2, down: Math.PI, left: -Math.PI / 2 }[this.scene.direcaoAtual] ?? 0);
     this.nativeGraphics.fillStyle(0x071d18, 0.7).fillCircle(0, 0, 5.5);
-    this.nativeGraphics.lineStyle(1.5, RADAR_COLORS.player);
+    this.nativeGraphics.lineStyle(1.5, this.colors.player);
     this.nativeGraphics.path([{ x: -3, y: 2 }, { x: 0, y: -4 }, { x: 3, y: 2 }], false);
     ctx.stroke();
     ctx.restore();

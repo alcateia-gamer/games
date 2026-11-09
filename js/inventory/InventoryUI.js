@@ -3,11 +3,28 @@
  * posição e tamanho durante o zoom.
  */
 
+import { obterTemaPersonagem } from "../ui/CharacterTheme.js";
+
 const SLOT_SIZE = 36;
 const SLOT_GAP = 5;
 const SLOT_STRIDE = SLOT_SIZE + SLOT_GAP;
 const UI_DEPTH = 220;
 const ICON_SIZE = SLOT_SIZE - 2;
+
+/** A porcentagem é desenhada pelo navegador para não ser ampliada com o canvas de pixel art. */
+function createFuelLabel(scene, index) {
+  if (!scene.add.dom) return null;
+  const node = document.createElement("div");
+  node.setAttribute("data-inventory-fuel-label", String(index));
+  Object.assign(node.style, {
+    font: "bold 9px monospace", color: "#ffe29a", background: "#07121d",
+    whiteSpace: "nowrap", pointerEvents: "none", textRendering: "optimizeLegibility",
+  });
+  const label = scene.add.dom(0, 0, node).setOrigin(0.5).setScrollFactor(0)
+    .setDepth(UI_DEPTH + 1).setName(`inventory-fuel-label-native:${index}`);
+  label.pointerEvents = "none";
+  return label;
+}
 
 /**
  * Encontra os pixels visíveis do frame, preserva sua proporção e armazena um ícone no tamanho
@@ -79,7 +96,12 @@ class InventoryUI {
     this.inventory = inventory;
     this.container = scene.add.container(0, 0).setDepth(UI_DEPTH);
     this.container.setScrollFactor(0);
-    this.unsubscribe = inventory.onChange(() => this.render());
+    this.fuelVisuals = [];
+    this.unsubscribe = inventory.onChange(slots => {
+      const signature = slots.map(slot => `${slot.itemId}:${slot.quantity}`).join("|");
+      if (signature === this.slotSignature) this.updateFuelBars(slots);
+      else this.render();
+    });
     this.updateCameraLayout = this.updateCameraLayout.bind(this);
     this.scene.events.on(
       Phaser.Scenes.Events.PRE_RENDER,
@@ -99,8 +121,11 @@ class InventoryUI {
    * item.
    */
   render() {
+    for (const { nativeLabel } of this.fuelVisuals) nativeLabel?.destroy();
     this.container.removeAll(true);
     const slots = this.inventory.getSlots();
+    this.slotSignature = slots.map(slot => `${slot.itemId}:${slot.quantity}`).join("|");
+    this.fuelVisuals = [];
     const columns = this.getColumnCount();
     this.columns = columns;
 
@@ -125,12 +150,26 @@ class InventoryUI {
 
       const background = this.scene.add
         .rectangle(x, y, SLOT_SIZE, SLOT_SIZE, 0x07121d, 0.94)
-        .setStrokeStyle(1, 0x16d9f5, 0.9);
+        .setStrokeStyle(1, obterTemaPersonagem(this.scene.personagemSelecionada).accent, 0.9);
       const iconKey = prepareInventoryIcon(this.scene, definition);
       const icon = this.scene.add
         .image(x, y, iconKey)
         .setDisplaySize(ICON_SIZE, ICON_SIZE);
       const slotObjects = [background, icon];
+      if (slot.itemId === "gasolina") {
+        icon.setPosition(x, y - 4).setDisplaySize(ICON_SIZE - 7, ICON_SIZE - 7);
+        const track = this.scene.add.rectangle(x - 14, y + 13, 28, 4, 0x26333c).setOrigin(0, 0.5);
+        const bar = this.scene.add.rectangle(x - 14, y + 13, 28, 4, 0xf3c24b).setOrigin(0, 0.5)
+          .setName(`inventory-fuel-bar:${index}`);
+        const label = this.scene.add.text(x, y + 6, "", {
+          fontFamily: "monospace", fontSize: "8px", color: "#ffe29a",
+          backgroundColor: "#07121d", resolution: 2,
+        }).setOrigin(0.5);
+        const nativeLabel = createFuelLabel(this.scene, index);
+        if (nativeLabel) label.setAlpha(0);
+        this.fuelVisuals.push({ index, bar, label, nativeLabel });
+        slotObjects.push(track, bar, label);
+      }
       if (definition.showQuantity) {
         const amount = this.scene.add
           .text(x + 15, y + 14, String(slot.quantity), {
@@ -147,8 +186,22 @@ class InventoryUI {
       this.container.add(slotObjects);
     });
 
+    this.updateFuelBars(slots);
     this.lastWidth = 0;
     this.updateCameraLayout();
+  }
+
+  /** Atualiza só a barra e a porcentagem durante o abastecimento. */
+  updateFuelBars(slots) {
+    for (const { index, bar, label, nativeLabel } of this.fuelVisuals) {
+      const fuel = slots[index]?.fuel ?? 0;
+      bar.setScale(fuel, 1).setData("fuel", fuel);
+      label.setText(`${Math.floor(fuel * 100)}%`);
+      if (nativeLabel) {
+        nativeLabel.node.textContent = label.text;
+        nativeLabel.updateSize();
+      }
+    }
   }
 
   /**
@@ -194,6 +247,12 @@ class InventoryUI {
       )
       .setScale(1 / zoomX, 1 / zoomY);
 
+    for (const { label, nativeLabel } of this.fuelVisuals) {
+      nativeLabel?.setPosition(this.container.x + label.x / zoomX,
+        this.container.y + label.y / zoomY)
+        .setScale(1 / zoomX, 1 / zoomY).setVisible(this.container.visible);
+    }
+
     if (
       camera.width !== this.lastWidth ||
       camera.height !== this.lastHeight ||
@@ -216,6 +275,7 @@ class InventoryUI {
       this.updateCameraLayout,
     );
     this.unsubscribe?.();
+    for (const { nativeLabel } of this.fuelVisuals) nativeLabel?.destroy();
     this.container.destroy();
   }
 }

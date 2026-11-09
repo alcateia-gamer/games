@@ -756,8 +756,8 @@ test("o leitor usa uma exclamação e só exibe falas sobre o cartão, mesmo sem
   abrirComE(scene);
   assert.equal(fala.texto.visible, true);
   assert.equal(fala.texto.text, "Preciso encontrar o cartão de acesso.");
-  assert.equal(fala.texto.style.color, "#ffffff");
-  assert.equal(fala.texto.style.backgroundColor, "#145c37");
+  assert.equal(fala.texto.style.color, "#102b3b");
+  assert.equal(fala.texto.style.backgroundColor, "#38bdf8");
   assert.equal(fala.texto.y, scene.hitboxDanoPlayer.y + 10, "o balão fica ao lado da cabeça, sem considerar a margem vazia");
   assert.notEqual(scene.movimentoBloqueado, true);
   assert.notEqual(scene.generatorMenuOpen, true);
@@ -1086,6 +1086,7 @@ test("E opens the generator menu in the current map and activation consumes its 
   activate();
   assert.notEqual(scene.luzFabricaAcesa, true);
   scene.inventory.addItem("gasolina", 2);
+  scene.inventory.fillFuel(1);
   scene.inventory.addItem("bateria", 1);
   activate();
   assert.notEqual(scene.luzFabricaAcesa, true, "ter os itens não substitui arrastá-los");
@@ -1130,10 +1131,95 @@ test("collecting an item keeps priority over the nearby generator", () => {
   scene.teclaColetarItem.pressed = true;
   scene.atualizarColetaItens();
   assert.equal(scene.inventory.getQuantity("gasolina"), 1);
+  assert.equal(scene.inventory.getSlots().find(s => s.itemId === "gasolina").fuel, 0);
+  assert.match(scene.texts.find(t => t.name === "fuel-speech-bubble").text, /galão está vazio.*enchê-lo/);
   assert.notEqual(scene.generatorMenuOpen, true);
   scene.teclaColetarItem.pressed = true;
   scene.atualizarColetaItens();
   assert.equal(scene.generatorMenuOpen, true);
+  scene.events.emit("shutdown");
+});
+
+test("galão vazio não encaixa no gerador nem consome a bateria; só o cheio libera a ativação", () => {
+  const { scene } = createScene();
+  scene.inventory.addItem("gasolina");
+  scene.inventory.addItem("bateria");
+  approachGenerator(scene);
+  scene.interagirGerador();
+  dragGenerator(scene, 133, 200, 318, 205);
+  dragGenerator(scene, 133, 279, 318, 315);
+  clickGenerator(scene, 604, 356);
+  assert.notEqual(scene.luzFabricaAcesa, true);
+  assert.equal(scene.inventory.getQuantity("bateria"), 1);
+  assert.ok(scene.texts.some(t => /Encha o galão/.test(t.text)));
+  scene.inventory.fillFuel(0.7);
+  dragGenerator(scene, 133, 279, 318, 315);
+  clickGenerator(scene, 604, 356);
+  assert.notEqual(scene.luzFabricaAcesa, true);
+  scene.inventory.fillFuel(0.3);
+  dragGenerator(scene, 133, 279, 318, 315);
+  clickGenerator(scene, 604, 356);
+  assert.equal(scene.luzFabricaAcesa, true);
+  assert.equal(scene.inventory.getQuantity("gasolina"), 0);
+  assert.equal(scene.inventory.getQuantity("bateria"), 0);
+  scene.events.emit("shutdown");
+});
+
+test("E inicia o abastecimento, afastar cancela e o toque continua a partir do nível parcial", () => {
+  const city = JSON.parse(readFileSync(new URL("../../assets/map/InicioFase1 (1).json", import.meta.url)));
+  const gasLayer = city.layers.find(l => l.name.toLowerCase() === "gasolina");
+  const { scene } = createScene(new Map(), raw => raw.layers.push(gasLayer));
+  const area = gasLayer.objects[0];
+  scene.player.x = area.x + area.width / 2;
+  scene.player.y = area.y + area.height / 2;
+  scene.inventory.addItem("gasolina");
+  scene.atualizarAbastecimento(0);
+  scene.teclaColetarItem.pressed = true;
+  scene.atualizarColetaItens();
+  for (let i = 0; i < 10; i++) scene.atualizarAbastecimento(100);
+  const parcial = scene.inventory.getSlots()[0].fuel;
+  assert.ok(Math.abs(parcial - 0.25) < 1e-9);
+  scene.player.x += 500;
+  scene.atualizarAbastecimento(100);
+  assert.equal(scene.inventory.getSlots()[0].fuel, parcial);
+  scene.player.x -= 500;
+  scene.atualizarAbastecimento(100);
+  assert.equal(scene.inventory.getSlots()[0].fuel, parcial, "voltar não retoma automaticamente");
+  scene.atualizarColetaItens();
+  scene.botaoColetarItem.emit("pointerdown");
+  for (let i = 0; i < 31; i++) scene.atualizarAbastecimento(100);
+  assert.equal(scene.inventory.getSlots()[0].fuel, 1);
+  assert.match(scene.texts.find(t => t.name === "fuel-speech-bubble").text, /Galão cheio/);
+  scene.events.emit("shutdown");
+  assert.equal(scene.atualizarAbastecimento, null);
+  assert.equal(scene.game.events.listenerCount("blur"), 0);
+});
+
+test("abastecimento exige galão e proximidade e é interrompido por menu, morte e perda de foco", () => {
+  const { scene } = createScene(new Map(), raw => raw.layers.push({ name: "gasolina", objects: [
+    { x: -2000, y: -2000, width: 80, height: 80 },
+  ] }));
+  scene.player.x = scene.player.y = -1960;
+  scene.atualizarAbastecimento(0);
+  scene.interacaoCombustivelProxima.interact();
+  assert.match(scene.texts.find(t => t.name === "fuel-speech-bubble").text, /encontrar um galão/);
+  scene.inventory.addItem("gasolina");
+  for (const bloqueio of ["generatorMenuOpen", "devItemMenuOpen", "morteEmAndamento"]) {
+    scene.atualizarAbastecimento(0);
+    scene.interacaoCombustivelProxima.interact();
+    scene[bloqueio] = true;
+    scene.atualizarAbastecimento(100);
+    scene[bloqueio] = false;
+    scene.atualizarAbastecimento(100);
+    assert.equal(scene.inventory.getSlots()[0].fuel, 0);
+  }
+  scene.interacaoCombustivelProxima.interact();
+  scene.game.events.emit("blur");
+  scene.atualizarAbastecimento(100);
+  assert.equal(scene.inventory.getSlots()[0].fuel, 0);
+  const interagir = scene.interacaoCombustivelProxima.interact;
+  scene.player.x += 500;
+  assert.equal(interagir(), false, "revalida o alcance no instante do toque");
   scene.events.emit("shutdown");
 });
 
@@ -1152,6 +1238,7 @@ test("encaixes rejeitam peças trocadas, devolvem ao inventário e revalidam os 
   const { scene } = createScene();
   scene.inventory.addItem("bateria");
   scene.inventory.addItem("gasolina");
+  scene.inventory.fillFuel(1);
   approachGenerator(scene);
   scene.interagirGerador();
   dragGenerator(scene, 133, 200, 318, 315);
@@ -1175,6 +1262,7 @@ test("fechar e reabrir limpa reservas; cancelar um arraste e outro dedo não enc
   const { scene } = createScene();
   scene.inventory.addItem("bateria");
   scene.inventory.addItem("gasolina");
+  scene.inventory.fillFuel(1);
   approachGenerator(scene);
   scene.interagirGerador();
   dragGenerator(scene, 133, 200, 318, 205);

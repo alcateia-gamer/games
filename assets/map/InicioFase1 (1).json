@@ -202,6 +202,124 @@
          "y":0
         }, 
         {
+         "draworder":"topdown",
+         "id":52,
+         "name":"SpawnRobo",
+         "objects":[
+                {
+                 "height":330,
+                 "id":637,
+                 "name":"",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":342,
+                 "x":-479,
+                 "y":1153
+                }, 
+                {
+                 "height":331,
+                 "id":638,
+                 "name":"",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":333,
+                 "x":1056,
+                 "y":1153
+                }, 
+                {
+                 "height":164,
+                 "id":639,
+                 "name":"",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":335,
+                 "x":919,
+                 "y":-427
+                }, 
+                {
+                 "height":278.666666666667,
+                 "id":640,
+                 "name":"",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":430.666666666667,
+                 "x":62.6666666666667,
+                 "y":20
+                }, 
+                {
+                 "height":224,
+                 "id":641,
+                 "name":"",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":318.666666666667,
+                 "x":-441.333333333333,
+                 "y":-541.333333333333
+                }, 
+                {
+                 "height":314,
+                 "id":642,
+                 "name":"",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":364,
+                 "x":1054,
+                 "y":-1560
+                }, 
+                {
+                 "height":326,
+                 "id":643,
+                 "name":"",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":312,
+                 "x":-442,
+                 "y":-1590
+                }],
+         "opacity":1,
+         "type":"objectgroup",
+         "visible":true,
+         "x":0,
+         "y":0
+        }, 
+        {
+         "draworder":"topdown",
+         "id":53,
+         "name":"Gasolina",
+         "objects":[
+                {
+                 "height":62,
+                 "id":644,
+                 "name":"",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":62.6666666666667,
+                 "x":-560,
+                 "y":-2328.66666666667
+                }],
+         "opacity":1,
+         "type":"objectgroup",
+         "visible":true,
+         "x":0,
+         "y":0
+        }, 
+        {
          "chunks":[
                 {
                  "data":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACSBgAAAAAAAJIGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAkgYAAAAAAACSBgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJIGAAAAAAAAkgYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJIGAAAAAAAAkgYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACSBgAAAAAAAJIGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAkgYAAAAAAACSBgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
@@ -1409,7 +1527,8 @@
          "width":48,
          "x":0,
          "y":0
-        }, 
+        },
+    
         {
          "chunks":[
                 {
@@ -1462,8 +1581,7 @@
          "width":32,
          "x":0,
          "y":0
-        },
-    
+        }, 
         {
          "chunks":[
                 {
@@ -5008,7 +5126,8 @@
          "width":80,
          "x":0,
          "y":0
-        }, 
+        },
+    
         {
          "chunks":[
                 {
@@ -5195,8 +5314,7 @@
          "width":96,
          "x":0,
          "y":0
-        },
-    
+        }, 
         {
          "chunks":[
                 {
@@ -9617,8 +9735,8 @@
          "x":0,
          "y":0
         }],
- "nextlayerid":52,
- "nextobjectid":637,
+ "nextlayerid":54,
+ "nextobjectid":645,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.12.2",
@@ -10024,7 +10142,7 @@
          "margin":0,
          "name":"tanque_pixel_art_300x150_transparente",
          "spacing":0,
-         "tilecount":18,
+         "tilecount":0,
          "tileheight":48,
          "tilewidth":48
         }, 

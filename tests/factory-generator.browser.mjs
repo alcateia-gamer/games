@@ -82,6 +82,12 @@ try {
   await page.screenshot({ path: "/tmp/factory-generator-open.png" });
   await click(604, 356);
   assert.equal((await sceneState()).powered, false);
+  // O galão vazio não pode ser conectado nem consumir a bateria.
+  await drag(133, 279, 318, 315);
+  assert.equal((await sceneState()).ready, false);
+  assert.equal((await sceneState()).battery, 1);
+  await page.evaluate(() => { window.__game.scene.getScene("Level1Parte2").inventory.fillFuel(1); });
+  await frame();
   // Trocar bateria e gasolina não fecha o circuito.
   await drag(133, 200, 318, 315);
   await drag(133, 279, 318, 205);
@@ -160,6 +166,7 @@ try {
   };
   assert.equal((await devState()).label, "FAB ON", "gerador normal atualiza o botão DEV");
   await toggleLight();
+  await page.waitForFunction(() => !window.__game.scene.getScene("Level1Parte2").sound.get("gerador-diesel")?.isPlaying);
   let dev = await devState();
   assert.equal(dev.powered, false);
   assert.equal(dev.saved, false);

@@ -9,13 +9,19 @@ const GREEN = 0x64f5ba;
 const DIM = 0x347958;
 const ROWS = [
   { id: "bateria", name: "Bateria", y: -20, sourceY: -25, number: "01" },
-  { id: "gasolina", name: "Gasolina", y: 90, sourceY: 54, number: "02" },
+  { id: "gasolina", name: "Combustível", y: 90, sourceY: 54, number: "02" },
 ];
 const inside = (p, x, y, w, h) => Math.abs(p.x - x) <= w / 2 && Math.abs(p.y - y) <= h / 2;
 
 export function criarPainelGerador(scene, { onActivate, onClose }) {
   const camera = scene.cameras.main;
   const inventory = scene.inventory;
+  const availableQuantity = id => inventory.getQuantity(id, id === "gasolina" ? { minFuel: 1 } : {});
+  const fuelLevel = () => Math.max(0, ...inventory.getSlots()
+    .filter(slot => slot.itemId === "gasolina").map(slot => slot.fuel ?? 0));
+  const instructions = () => inventory.getQuantity("gasolina") > 0 && !availableQuantity("gasolina")
+    ? "Encha o galão no ponto de gasolina antes de conectar ao gerador."
+    : "Arraste a bateria e o galão cheio para conectar o circuito.";
   const display = criarDisplayGerador(scene, WIDTH, HEIGHT);
   const root = scene.add.container(0, 0).setDepth(1000).setScrollFactor(0)
     .setName("generator-modal").setVisible(false);
@@ -145,19 +151,21 @@ export function criarPainelGerador(scene, { onActivate, onClose }) {
   const ghost = add(scene.add.image(0, 0, visuals[0].iconKey))
     .setDisplaySize(48, 48).setVisible(false).setName("generator-drag");
 
-  const ready = () => installed.size === 2 && ROWS.every(row => inventory.getQuantity(row.id) >= 1);
+  const ready = () => installed.size === 2 && ROWS.every(row => availableQuantity(row.id) >= 1);
   const refresh = (force = false) => {
     if (!activating) {
-      for (const row of ROWS) if (inventory.getQuantity(row.id) < 1) installed.delete(row.id);
+      for (const row of ROWS) if (availableQuantity(row.id) < 1) installed.delete(row.id);
     }
-    const next = `${activating}:${[...installed]}:${ROWS.map(row => inventory.getQuantity(row.id))}:${drag?.id}:${drag?.hover}`;
+    const next = `${activating}:${[...installed]}:${ROWS.map(row => availableQuantity(row.id))}:${fuelLevel()}:${inventory.getQuantity("gasolina")}:${drag?.id}:${drag?.hover}`;
     if (!force && next === signature) return;
     signature = next;
     for (const visual of visuals) {
       const connected = installed.has(visual.id);
-      const available = inventory.getQuantity(visual.id) >= 1;
+      const available = availableQuantity(visual.id) >= 1;
       const dragging = drag?.id === visual.id;
-      visual.quantity.setText(connected ? "CONECTADO" : available ? "DISPONÍVEL" : "NÃO COLETADO")
+      const precisaEncher = visual.id === "gasolina" && !available && inventory.getQuantity("gasolina") > 0;
+      visual.quantity.setText(connected ? "CONECTADO" : available ? "DISPONÍVEL" : precisaEncher
+        ? `${Math.floor(fuelLevel() * 100)}% · ENCHA` : "NÃO COLETADO")
         .setColor(available ? "#9dcdb0" : "#e3b891");
       visual.source.setAlpha(connected ? 0.45 : available ? 1 : 0.35);
       visual.piece.setPosition(connected ? -82 : -312, connected ? visual.y - 5 : visual.sourceY)
@@ -208,7 +216,13 @@ export function criarPainelGerador(scene, { onActivate, onClose }) {
     if (ready() && inside(p, 204, 131, 270, 46)) {
       pressed = { id: pointer.id, action: "activate" }; return;
     }
-    const visual = visuals.find(v => inventory.getQuantity(v.id) >= 1 &&
+    const combustivel = visuals.find(v => v.id === "gasolina");
+    if (!availableQuantity("gasolina") && inventory.getQuantity("gasolina") > 0 &&
+      inside(p, -267, combustivel.sourceY, 144, 65)) {
+      feedback.setText(instructions()).setColor("#e3b891");
+      return;
+    }
+    const visual = visuals.find(v => availableQuantity(v.id) >= 1 &&
       (installed.has(v.id) ? inside(p, -82, v.y, 144, 88) : inside(p, -267, v.sourceY, 144, 65)));
     if (!visual) return;
     drag = { id: visual.id, pointerId: pointer.id, hover: false };
@@ -229,7 +243,7 @@ export function criarPainelGerador(scene, { onActivate, onClose }) {
     const p = point(pointer);
     if (drag?.pointerId === pointer.id) {
       const visual = visuals.find(v => v.id === drag.id);
-      if (inside(p, -82, visual.y, 144, 88) && inventory.getQuantity(visual.id) >= 1) {
+      if (inside(p, -82, visual.y, 144, 88) && availableQuantity(visual.id) >= 1) {
         installed.add(visual.id);
         feedback.setText(installed.size === 2 ? "Circuito completo. Pressione LIGAR para iniciar." : "Peça conectada. Arraste o próximo item.");
       } else if (inside(p, -267, 36, 164, 258)) {
@@ -268,7 +282,7 @@ export function criarPainelGerador(scene, { onActivate, onClose }) {
     open() {
       installed.clear(); activating = false; opened = true; cancelDrag(); layout();
       hideDOM();
-      feedback.setText("Arraste a bateria e a gasolina para conectar o circuito.").setColor("#b1dec3");
+      feedback.setText(instructions()).setColor("#b1dec3");
       root.setVisible(true);
     },
     close() { opened = false; cancelDrag(); installed.clear(); root.setVisible(false); display?.hide(); restoreDOM(); },

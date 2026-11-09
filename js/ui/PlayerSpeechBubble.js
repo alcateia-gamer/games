@@ -1,13 +1,16 @@
 /** Fala temporária no mundo, acompanhando a cabeça do personagem sem bloquear controles. */
-export function criarFalaFlutuante(scene) {
+import { obterTemaPersonagem } from "./CharacterTheme.js";
+
+export function criarFalaFlutuante(scene, nome = "player-speech-bubble") {
+  const tema = obterTemaPersonagem(scene.personagemSelecionada);
   const texto = scene.add.text(0, 0, "", {
-    fontFamily: "monospace", fontSize: "11px", fontStyle: "bold", color: "#ffffff", resolution: 3,
-    backgroundColor: "#145c37", align: "center", padding: { x: 6, y: 4 },
-    wordWrap: { width: 144, useAdvancedWrap: true },
-  }).setOrigin(0, 1).setDepth(501).setName("player-speech-bubble").setVisible(false);
+    fontFamily: "monospace", fontSize: "12px", fontStyle: "bold", color: tema.label, resolution: 3,
+    backgroundColor: tema.accentCss, align: "center", padding: { x: 6, y: 4 },
+    wordWrap: { width: 160, useAdvancedWrap: true },
+  }).setOrigin(0, 1).setDepth(501).setName(nome).setVisible(false);
   const ponta = scene.add.graphics().setDepth(500).setVisible(false);
-  ponta.fillStyle(0x145c37, 1).fillTriangle(1, -7, 1, -2, -5, 2);
-  const nativo = criarTextoNitido(scene, texto, ponta);
+  ponta.fillStyle(tema.accent, 1).fillTriangle(1, -7, 1, -2, -5, 2);
+  const nativo = criarTextoNitido(scene, texto, ponta, nome);
   let visivel = false, destruido = false, timer = null;
   let ultimaFrase = "", ultimaEm = -Infinity;
   const ocultar = () => {
@@ -59,14 +62,14 @@ export function criarFalaFlutuante(scene) {
 }
 
 /** O navegador mantém as letras nítidas na escala FIT, no zoom e em telas de alta densidade. */
-function criarTextoNitido(scene, texto, ponta) {
+function criarTextoNitido(scene, texto, ponta, nome) {
   if (!scene.add.dom) return null;
   const caixa = document.createElement("div");
-  caixa.dataset.playerSpeechBubble = "";
+  caixa.setAttribute(`data-${nome}`, "");
   Object.assign(caixa.style, {
     background: texto.style.backgroundColor, color: texto.style.color,
     font: `${texto.style.fontStyle} ${texto.style.fontSize} ${texto.style.fontFamily}`,
-    lineHeight: "14px", textAlign: "center", whiteSpace: "pre", padding: "4px 6px",
+    lineHeight: "16px", textAlign: "center", whiteSpace: "pre", padding: "4px 6px",
     pointerEvents: "none", textRendering: "optimizeLegibility",
   });
   caixa.appendChild(document.createElement("span"));
@@ -77,7 +80,7 @@ function criarTextoNitido(scene, texto, ponta) {
   });
   caixa.appendChild(cauda);
   const nativo = scene.add.dom(0, 0, caixa).setOrigin(0, 1).setDepth(501)
-    .setName("player-speech-bubble-native").setVisible(false);
+    .setName(`${nome}-native`).setVisible(false);
   nativo.pointerEvents = "none";
   // O texto Phaser continua medindo e quebrando as linhas, sem duplicar o desenho.
   texto.setAlpha(0); ponta.setAlpha(0);

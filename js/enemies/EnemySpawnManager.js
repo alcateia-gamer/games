@@ -5,26 +5,49 @@
 
 import { criarInimigoTeste } from "./EnemyTest.js";
 
-// =====================================================
-// ZONAS ORIGINAIS DE SPAWN
-// =====================================================
+/** Usa exclusivamente as áreas do Tiled; sem zonas não há spawn automático. */
+function zonasDoMapa(map) {
+  const layer = map?.getObjectLayer?.("SpawnRobos") || map?.getObjectLayer?.("SpawnRobo");
 
-const SPAWN_ZONES = [
-  { id: 1, x: -316, y: 1304 },
-  { id: 2, x: 1221, y: 1298 },
-  { id: 3, x: 1123, y: -463 },
-  { id: 4, x: 678, y: 29 },
-  { id: 5, x: -313, y: -557 },
-  { id: 6, x: 1221, y: -1434 },
-  { id: 7, x: -309, y: -1438 },
-];
+  return (layer?.objects || [])
+    .filter((object) =>
+      object.visible !== false && !object.gid && !object.text &&
+      !object.point && !object.ellipse && !object.polyline && !object.polygon &&
+      [object.x, object.y, object.width, object.height, object.rotation ?? 0].every(Number.isFinite) &&
+      object.width > 0 && object.height > 0)
+    .map((object) => {
+      const area = {
+        x: object.x, y: object.y,
+        width: object.width, height: object.height,
+        rotation: (object.rotation || 0) * Math.PI / 180,
+      };
+      return { id: object.id, ...pontoNaArea(area, area.width / 2, area.height / 2), area };
+    });
+}
+
+/** Converte uma posição local da área para as coordenadas do mapa. */
+function pontoNaArea(area, x, y) {
+  const cos = Math.cos(area.rotation), sin = Math.sin(area.rotation);
+  return { x: area.x + x * cos - y * sin, y: area.y + x * sin + y * cos };
+}
+
+/** Mantém toda a hitbox de spawn dentro da forma desenhada no Tiled. */
+function areaContemCorpo(area, rect) {
+  const cos = Math.cos(area.rotation), sin = Math.sin(area.rotation);
+  return [[rect.left, rect.top], [rect.right, rect.top],
+    [rect.right, rect.bottom], [rect.left, rect.bottom]].every(([x, y]) => {
+    const dx = x - area.x, dy = y - area.y;
+    const localX = dx * cos + dy * sin;
+    const localY = -dx * sin + dy * cos;
+    return localX >= 0 && localX <= area.width && localY >= 0 && localY <= area.height;
+  });
+}
 
 // =====================================================
 // CONFIGURACOES
 // =====================================================
 
 const SPAWN_CONFIG = {
-  spawnRadius: 250,
   activationRadius: 600,
 
   minEnemies: 3,
@@ -157,6 +180,19 @@ function footprint(x, y, tipo, margem) {
   );
 }
 
+/** Inclui o sprite inteiro e a margem dos pés nos limites da zona de nascimento. */
+function areaSpawn(x, y, tipo, margem) {
+  const perfil = PERFIS[tipo] || PERFIS.padrao;
+  const pes = footprint(x, y, tipo, margem);
+  const width = perfil.frameWidth * perfil.scale;
+  const height = perfil.frameHeight * perfil.scale;
+  const left = Math.min(pes.left, x - width / 2);
+  const top = Math.min(pes.top, y - height / 2);
+  const right = Math.max(pes.right, x + width / 2);
+  const bottom = Math.max(pes.bottom, y + height / 2);
+  return new Phaser.Geom.Rectangle(left, top, right - left, bottom - top);
+}
+
 // =====================================================
 // LIMPEZA DE ELEMENTOS
 // =====================================================
@@ -198,8 +234,9 @@ class EnemySpawnManager {
       ...config,
     };
 
-    this.regions = SPAWN_ZONES.map((z) => ({
+    this.regions = zonasDoMapa(map).map((z) => ({
       id: z.id,
+      area: z.area,
 
       center: {
         x: z.x,
@@ -599,23 +636,20 @@ class EnemySpawnManager {
    */
   findPosition(region, tipoRobo, positions) {
     const rejeitados = [];
+    if (!region.area) return null;
 
     for (
       let tentativa = 0;
       tentativa < this.config.maxAttemptsPerEnemy;
       tentativa++
     ) {
-      const ang = Math.random() * Math.PI * 2;
+      const area = region.area;
+      const ponto = pontoNaArea(area, Math.random() * area.width, Math.random() * area.height);
 
-      const raio = Math.sqrt(Math.random()) * this.config.spawnRadius;
+      const dentroDaZona = areaContemCorpo(area,
+        areaSpawn(ponto.x, ponto.y, tipoRobo, this.config.wallMargin));
 
-      const ponto = {
-        x: region.center.x + Math.cos(ang) * raio,
-
-        y: region.center.y + Math.sin(ang) * raio,
-      };
-
-      if (this.isValidPosition(ponto, tipoRobo, positions)) {
+      if (dentroDaZona && this.isValidPosition(ponto, tipoRobo, positions)) {
         region.rejected = rejeitados;
         return ponto;
       }
@@ -746,7 +780,10 @@ class EnemySpawnManager {
     for (const region of this.regions) {
       g.lineStyle(2, 0xffcc00, 0.8);
 
-      g.strokeCircle(region.center.x, region.center.y, this.config.spawnRadius);
+      const area = region.area;
+      const pontos = [[0, 0], [area.width, 0], [area.width, area.height], [0, area.height]]
+        .map(([x, y]) => pontoNaArea(area, x, y));
+      g.strokePoints(pontos, true);
 
       g.lineStyle(2, 0x00ccff, 0.8);
 
@@ -800,6 +837,6 @@ class EnemySpawnManager {
   }
 }
 
-export { SPAWN_CONFIG, SPAWN_ZONES, EnemySpawnManager };
+export { SPAWN_CONFIG, EnemySpawnManager };
 
 export default EnemySpawnManager;

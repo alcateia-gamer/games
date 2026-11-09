@@ -5,17 +5,9 @@
 import { connectSidewalks } from "./MiniMapConnections.js";
 import { mergeMiniMapRects, connectedSidewalkBlocks, miniMapBarriers } from "./MiniMapBlocks.js";
 import { solidVehicleBlocks } from "./MiniMapVehicles.js";
+import { obterTemaPersonagem } from "./CharacterTheme.js";
 
-export const RADAR_COLORS = {
-  background: "#303538",
-  paths: "#35676b",
-  outline: "#40777b",
-  accent: 0x42e2ed,
-  label: "#153e45",
-  player: 0x62ffad,
-  vehicles: "#172e33",
-  vehicleOutline: "#6a9b9e",
-};
+export const RADAR_COLORS = obterTemaPersonagem();
 
 /**
  * Preenche o contorno de um obstáculo em coordenadas do mundo.
@@ -38,7 +30,7 @@ function fillObstacle(context, shape) {
  * Cria uma planta com grandes retângulos de piso, sem recortes dos objetos sobre eles.
  * As colisões conectam calçadas e preservam as separações de paredes e cercas compridas.
  */
-export function drawMiniMapAtlas(geometry) {
+export function drawMiniMapAtlas(geometry, colors = RADAR_COLORS) {
   const { bounds, rects, shapes } = geometry;
   const scale = Math.min(1 / 12, 1024 / Math.max(bounds.width, bounds.height));
   const image = document.createElement("canvas");
@@ -50,7 +42,7 @@ export function drawMiniMapAtlas(geometry) {
   const mask = paths.getContext("2d");
   mask.scale(scale, scale);
   mask.translate(-bounds.x, -bounds.y);
-  mask.fillStyle = RADAR_COLORS.paths;
+  mask.fillStyle = colors.paths;
   const floors = rects.filter(rect => rect.kind === "floors" || rect.kind === "roads" || rect.kind === "interiors");
   for (const rect of mergeMiniMapRects(floors)) {
     mask.fillRect(rect.x, rect.y, rect.width, rect.height);
@@ -99,7 +91,7 @@ export function drawMiniMapAtlas(geometry) {
     context.drawImage(paths, x * 0.75, y * 0.75);
   }
   context.globalCompositeOperation = "source-in";
-  context.fillStyle = RADAR_COLORS.outline;
+  context.fillStyle = colors.outline;
   context.fillRect(0, 0, image.width, image.height);
   context.globalCompositeOperation = "source-over";
   context.drawImage(paths, 0, 0);
@@ -109,7 +101,7 @@ export function drawMiniMapAtlas(geometry) {
     context.save();
     context.scale(scale, scale);
     context.translate(-bounds.x, -bounds.y);
-    context.fillStyle = RADAR_COLORS.background;
+    context.fillStyle = colors.background;
     for (const barrier of barriers) fillObstacle(context, barrier);
     context.restore();
   }
@@ -119,8 +111,8 @@ export function drawMiniMapAtlas(geometry) {
     context.save();
     context.scale(scale, scale);
     context.translate(-bounds.x, -bounds.y);
-    context.fillStyle = RADAR_COLORS.vehicles;
-    context.strokeStyle = RADAR_COLORS.vehicleOutline;
+    context.fillStyle = colors.vehicles;
+    context.strokeStyle = colors.vehicleOutline;
     context.lineWidth = 0.6 / scale;
     for (const rect of vehicles) {
       context.fillRect(rect.x, rect.y, rect.width, rect.height);

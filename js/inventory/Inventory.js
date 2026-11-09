@@ -21,6 +21,11 @@ class Inventory {
     this.maxSlots = maxSlots;
     this.state = state;
     this.state.slots = Array.isArray(state.slots) ? state.slots : [];
+    // Cada galão tem seu próprio nível; pilhas de partidas anteriores são desmembradas.
+    this.state.slots = this.state.slots.flatMap(slot => slot.itemId === "gasolina"
+      ? Array.from({ length: slot.quantity }, () => ({ ...slot, quantity: 1,
+        fuel: Number.isFinite(slot.fuel) ? Math.max(0, Math.min(1, slot.fuel)) : 0 }))
+      : [slot]);
     this.state.collectedItemIds = Array.isArray(state.collectedItemIds)
       ? state.collectedItemIds
       : [];
@@ -37,9 +42,10 @@ class Inventory {
   /**
    * Soma a quantidade de um item em todas as suas pilhas.
    */
-  getQuantity(itemId) {
+  getQuantity(itemId, { minFuel } = {}) {
     return this.state.slots
-      .filter((slot) => slot.itemId === itemId)
+      .filter((slot) => slot.itemId === itemId &&
+        (minFuel == null || (slot.fuel ?? 0) >= minFuel))
       .reduce((total, slot) => total + slot.quantity, 0);
   }
 
@@ -96,12 +102,23 @@ class Inventory {
 
     while (remaining > 0) {
       const added = Math.min(remaining, definition.maxStack);
-      this.state.slots.push({ itemId, quantity: added });
+      this.state.slots.push({ itemId, quantity: added,
+        ...(itemId === "gasolina" ? { fuel: 0 } : {}) });
       remaining -= added;
     }
 
     this.notifyChanged();
     return true;
+  }
+
+  /** Abastece um galão por vez; devolve seu nível ou null se não houver galão incompleto. */
+  fillFuel(amount) {
+    if (!Number.isFinite(amount) || amount <= 0) return null;
+    const slot = this.state.slots.find(slot => slot.itemId === "gasolina" && slot.fuel < 1);
+    if (!slot) return null;
+    slot.fuel = Math.min(1, slot.fuel + amount);
+    this.notifyChanged();
+    return slot.fuel;
   }
 
   /**
@@ -147,47 +164,36 @@ class Inventory {
       return false;
     }
 
-    const totalsByItem = new Map();
-
     for (const requirement of requirements) {
       if (
         typeof requirement?.itemId !== "string" ||
         !Number.isInteger(requirement.quantity) ||
-        requirement.quantity < 1
+        requirement.quantity < 1 ||
+        (requirement.minFuel != null && (!Number.isFinite(requirement.minFuel) ||
+          requirement.minFuel < 0 || requirement.minFuel > 1))
       ) {
         return false;
       }
-
-      totalsByItem.set(
-        requirement.itemId,
-        (totalsByItem.get(requirement.itemId) ?? 0) + requirement.quantity,
-      );
     }
 
-    // Primeiro verifica todos os saldos; só depois o próximo laço realiza o consumo.
-    for (const [itemId, quantity] of totalsByItem) {
-      if (this.getQuantity(itemId) < quantity) return false;
-    }
-
-    for (const [itemId, quantity] of totalsByItem) {
+    // Reserva primeiro os slots que atendem aos requisitos mais restritos, sem consumir.
+    const planned = new Map();
+    for (const { itemId, quantity, minFuel } of [...requirements]
+      .sort((a, b) => (b.minFuel ?? 0) - (a.minFuel ?? 0))) {
       let remaining = quantity;
-
-      for (
-        let index = this.state.slots.length - 1;
-        index >= 0 && remaining > 0;
-        index -= 1
-      ) {
+      for (let index = this.state.slots.length - 1; index >= 0 && remaining > 0; index--) {
         const slot = this.state.slots[index];
-        if (slot.itemId !== itemId) continue;
-
-        const amount = Math.min(remaining, slot.quantity);
-        slot.quantity -= amount;
+        if (slot.itemId !== itemId || (minFuel != null && (slot.fuel ?? 0) < minFuel)) continue;
+        const reserved = planned.get(slot) ?? 0;
+        const amount = Math.min(remaining, slot.quantity - reserved);
+        planned.set(slot, reserved + amount);
         remaining -= amount;
-
-        if (slot.quantity === 0) this.state.slots.splice(index, 1);
       }
+      if (remaining > 0) return false;
     }
 
+    for (const [slot, amount] of planned) slot.quantity -= amount;
+    this.state.slots = this.state.slots.filter(slot => slot.quantity > 0);
     this.notifyChanged();
     return true;
   }

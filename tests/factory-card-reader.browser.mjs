@@ -106,12 +106,12 @@ try {
       sideOffset: text.x - s.player.x, width: text.displayWidth, menu: !!s.cardReaderMenuOpen };
   });
   assert.equal(speech.message, "Preciso encontrar o cartão de acesso.");
-  assert.equal(speech.color, "#ffffff");
-  assert.equal(speech.background, "#145c37");
+  assert.equal(speech.color, "#102b3b");
+  assert.equal(speech.background, "#38bdf8");
   assert.equal(speech.above, true);
   assert.equal(speech.headGap, -10);
   assert.equal(speech.sideOffset, 16);
-  assert.ok(speech.width > 80 && speech.width <= 156, "o balão se estende para o lado para acomodar a fala");
+  assert.ok(speech.width > 80 && speech.width <= 172, "o balão se estende para o lado para acomodar a fala");
   assert.equal(speech.menu, false);
   const nativeSpeech = page.locator("[data-player-speech-bubble]");
   await nativeSpeech.waitFor({ state: "visible" });

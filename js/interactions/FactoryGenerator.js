@@ -15,6 +15,7 @@ const GENERATOR_REQUIREMENTS = Object.freeze([
     id: "gasolina",
     label: "COMBUSTÍVEL",
     quantity: 1,
+    minFuel: 1,
   }),
   Object.freeze({
     id: "bateria",
@@ -96,7 +97,7 @@ function pointerDentroDoBotao(pointer, viewportWidth, viewportHeight, area) {
  */
 function listarRecursosFaltantes(inventory) {
   return GENERATOR_REQUIREMENTS.filter(
-    ({ id, quantity }) => inventory.getQuantity(id) < quantity,
+    ({ id, quantity, minFuel }) => inventory.getQuantity(id, { minFuel }) < quantity,
   );
 }
 
@@ -189,9 +190,10 @@ function criarInteracaoGeradorFabrica(scene) {
 
     isActivating = true;
     const removed = inventory.removeItems(
-      GENERATOR_REQUIREMENTS.map(({ id, quantity }) => ({
+      GENERATOR_REQUIREMENTS.map(({ id, quantity, minFuel }) => ({
         itemId: id,
         quantity,
+        minFuel,
       })),
     );
     if (!removed) {

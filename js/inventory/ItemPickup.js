@@ -14,12 +14,13 @@ import { createCollectibleMarker } from "../ui/CollectibleMarker.js";
 import { PERSONAGEM_TESTE, personagemTesteAtivo } from "../player/PersonagemTeste.js";
 import { POSICAO_ACAO_TESTE } from "../controls/PlayerTestActionControls.js";
 import { posicionarBotaoFixo } from "../controls/FixedActionButton.js";
+import { criarSistemaCombustivel } from "../interactions/FuelRefill.js";
 
 const ITEM_LAYER_NAMES = ["Coletaveis", "Itens"];
 const DEFAULT_PICKUP_RANGE = 64;
 const PICKUP_BUTTON_DEPTH = 230;
 const CONFIG_BOTAO_COLETA = {
-  tamanho: 60,
+  tamanho: 85,
   distanciaXBotao: -10,
   distanciaYBotao: 90,
 };
@@ -112,6 +113,7 @@ function criarSistemaInventario(scene) {
     if (quantidade > 0) scene.inventory.removeItem(id, quantidade);
   }
   scene.inventoryUI = new InventoryUI(scene, scene.inventory);
+  criarSistemaCombustivel(scene);
   scene.teclaColetarItem = scene.input.keyboard.addKey(
     Phaser.Input.Keyboard.KeyCodes.E,
   );
@@ -258,6 +260,9 @@ function criarSistemaInventario(scene) {
     }
 
     scene.inventory.markCollected(pickup.uniqueId);
+    if (pickup.itemId === "gasolina") {
+      scene.falaCombustivel?.mostrar("O galão está vazio. Preciso enchê-lo antes de usar no gerador.");
+    }
     pickup.image.destroy();
     scene.itensColetaveis = scene.itensColetaveis.filter(
       (item) => item !== pickup,
@@ -297,7 +302,8 @@ function criarSistemaInventario(scene) {
         : closest;
     }, null);
 
-    const interaction = scene.interacaoMundoProxima;
+    const interaction = [scene.interacaoMundoProxima, scene.interacaoCombustivelProxima]
+      .filter(Boolean).sort((a, b) => a.distance - b.distance)[0];
     const useWorldInteraction = interaction &&
       (!nearest || interaction.distance < nearest.distance);
     interagirComMundo = useWorldInteraction ? interaction.interact : null;
@@ -382,7 +388,8 @@ function criarSistemaInventario(scene) {
 /**
  * Executa a atualização de coleta quando o sistema está disponível na cena.
  */
-function atualizarSistemaInventario(scene) {
+function atualizarSistemaInventario(scene, delta = 0) {
+  scene.atualizarAbastecimento?.(delta);
   scene.atualizarColetaItens?.();
 }
 

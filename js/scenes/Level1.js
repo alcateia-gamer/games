@@ -405,7 +405,7 @@ class Level1 extends Phaser.Scene {
     // =====================================================
 
     atualizarControles(this);
-    atualizarSistemaInventario(this);
+    atualizarSistemaInventario(this, delta);
 
     // =====================================================
     // VIDA E ESTAMINA

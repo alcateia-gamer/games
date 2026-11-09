@@ -367,7 +367,7 @@ class Level1Parte2 extends Phaser.Scene {
     this.atualizarInteracaoGeradorFabrica?.();
     this.atualizarInteracaoPortaFabrica?.();
     atualizarControles(this);
-    atualizarSistemaInventario(this);
+    atualizarSistemaInventario(this, delta);
     atualizarStatusPlayer(this, delta);
 
     this.definirProfundidadePersonagem(this.profundidadePersonagemParte2);

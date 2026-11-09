@@ -3,7 +3,7 @@
  * o preloader usa este registro.
  */
 
-// Fonte única das definições: o inventário guarda apenas IDs e quantidades.
+// Fonte única das definições dos itens e de suas imagens.
 const ITEMS = new Map();
 
 /**
@@ -142,12 +142,12 @@ registerInventoryItem({
 
 registerInventoryItem({
   id: "gasolina",
-  name: "Gasolina",
+  name: "Galão de combustível",
   image: {
     key: "inventory-gasolina-icon",
     path: "COLETAVEIS/gasolina.png",
   },
-  maxStack: 99,
+  maxStack: 1,
   category: "consumable",
   usable: true,
   showQuantity: false,
