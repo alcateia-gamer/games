@@ -179,6 +179,7 @@ export function prepararNovoBoss(scene, config = scene?.novoBossConfig ?? novoBo
 
 /** Não prepara encontros: chamadas tardias após shutdown não recriam o boss. */
 export function atualizarNovoBoss(scene, _time, _delta) {
+  if (scene?.multiplayer && scene.coopRuntime) return scene.coopRuntime.updateBoss(_time, _delta);
   const encontro = scene?.novoBoss;
   if (!encontro || encontro.encerrado) return;
   encontro.jogadorNaArena = jogadorNaArenaNovoBoss(scene.player, encontro.config.arena);

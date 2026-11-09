@@ -70,6 +70,8 @@ const DEBUG_TELEPORTES = false;
 // LEVEL 1
 // =====================================================
 
+import { criarRuntimeCoop } from "../multiplayer/CoopRuntime.js";
+
 class Level1 extends Phaser.Scene {
   /**
    * Registra Level1 e define os parâmetros iniciais de movimento, combate e respawn.
@@ -353,6 +355,7 @@ class Level1 extends Phaser.Scene {
     // =====================================================
 
     this.teclaR = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R);
+    criarRuntimeCoop(this);
   }
 
   // =====================================================
@@ -437,7 +440,7 @@ class Level1 extends Phaser.Scene {
     ) {
       criarRobos(this, 3);
     }
-    if (Phaser.Input.Keyboard.JustDown(this.teclaSpawnRoboSerra)) {
+    if ((!this.multiplayer || this.isMultiplayerHost) && Phaser.Input.Keyboard.JustDown(this.teclaSpawnRoboSerra)) {
       criarRoboSerra(this);
     }
     if (
@@ -458,6 +461,7 @@ class Level1 extends Phaser.Scene {
 
     if (
       this.multiplayer &&
+      !this.coopRuntime &&
       this.isMultiplayerHost &&
       time - this.lastEnemyNetworkUpdate >= 1000 / 30
     ) {
@@ -483,7 +487,7 @@ class Level1 extends Phaser.Scene {
       respawnPlayer(this);
     }
 
-    if (this.multiplayer && time - this.lastNetworkUpdate >= 1000 / 30) {
+    if (this.multiplayer && !this.coopRuntime && time - this.lastNetworkUpdate >= 1000 / 30) {
       this.lastNetworkUpdate = time;
       this.multiplayerManager?.sendPlayerState(
         this.player.x,
@@ -563,6 +567,7 @@ class Level1 extends Phaser.Scene {
    * estado recebido.
    */
   atualizarInimigosRemotos(room) {
+    if (this.coopRuntime) return;
     if (!this.multiplayer || this.isMultiplayerHost || !room) return;
     const activeIds = new Set();
     (room.enemies || []).forEach((data) => {
@@ -612,6 +617,7 @@ class Level1 extends Phaser.Scene {
    * Sincroniza sprites, animações e projéteis dos outros jogadores a partir dos dados da sala.
    */
   atualizarJogadoresRemotos(room) {
+    if (this.coopRuntime) return;
     if (!room?.players) return;
     const activeIds = new Set();
     room.players.forEach((player) => {
@@ -764,6 +770,7 @@ class Level1 extends Phaser.Scene {
    * Aproxima suavemente sprites remotos de seus destinos usando um fator calculado pelo delta.
    */
   atualizarInterpolacaoRemota(delta = 0) {
+    if (this.coopRuntime) return;
     const alpha = 1 - Math.exp((-12 * Math.max(0, delta)) / 1000);
     this.remotePlayers.forEach((sprite) => {
       sprite.x = Phaser.Math.Linear(

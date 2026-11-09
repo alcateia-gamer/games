@@ -972,7 +972,7 @@ function criarSistemaEspeciais(scene) {
   // A física atualiza a posição do sprite no pós-update. Desenha a área depois
   // disso para que ela e o domo acompanhem a caminhada no mesmo quadro.
   const sincronizarDomo = () => {
-    if (!scene.multiplayer && estado.parryGrafico && scene.player?.active) {
+    if ((!scene.multiplayer || scene.coopRuntime?.host) && estado.parryGrafico && scene.player?.active) {
       atualizarParry(scene,estado,scene.time.now);
     }
   };
@@ -983,8 +983,9 @@ function criarSistemaEspeciais(scene) {
   // ===================================================
 
   const ativar = () => {
+    if (scene.multiplayer && scene.coopRuntime && !scene.isMultiplayerHost) return scene.coopRuntime.requestSpecial();
     if (
-      (scene.multiplayer && scene.personagemSelecionada !== 'nyx') ||
+      (scene.multiplayer && !scene.coopRuntime && scene.personagemSelecionada !== 'nyx') ||
       !scene.player?.active ||
       scene.morteEmAndamento ||
       scene.generatorMenuOpen ||
@@ -1133,7 +1134,7 @@ function atualizarSistemaEspeciais(scene, delta = 16.67) {
 
   const agora = scene.time.now;
 
-  if (!scene.multiplayer) {
+  if (!scene.multiplayer || scene.coopRuntime?.host) {
     atualizarParry(scene, estado, agora);
     atualizarOnda(scene, estado, agora);
     if (estado.impactoMagnus) {

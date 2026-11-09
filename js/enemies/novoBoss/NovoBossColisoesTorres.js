@@ -8,6 +8,7 @@ function sobrepoe(a, b) {
 
 export function entidadesFisicasArena(scene) {
   return [scene.player, scene.companionPet, ...(scene.inimigos ?? []),
+    ...(scene.coopRuntime ? (scene.remotePlayers?.values?.() ?? []) : []),
     ...(Array.isArray(scene.aliados) ? scene.aliados : [])];
 }
 

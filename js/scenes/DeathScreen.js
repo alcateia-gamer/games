@@ -58,6 +58,7 @@ function mostrarOpcaoJogarNovamente(scene, camada) {
  * Inicia a morte uma única vez, para sons e física e monta o overlay com a sequência de falha.
  */
 function mostrarTelaMorte(scene) {
+  if (scene.coopRuntime) return scene.coopRuntime.downPlayer();
   if (scene.morteEmAndamento) {
     return;
   }

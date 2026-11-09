@@ -253,6 +253,7 @@ function criarSistemaInventario(scene) {
         : false;
     }
     if (scene.inventory.hasCollected(pickup.uniqueId)) return false;
+    if (scene.coopRuntime) return scene.coopRuntime.world.collect(pickup);
 
     if (!scene.inventory.addItem(pickup.itemId, pickup.quantity)) {
       scene.mostrarAvisoInventarioCheio?.();

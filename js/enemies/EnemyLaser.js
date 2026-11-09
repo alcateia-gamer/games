@@ -86,7 +86,7 @@ function dispararLaser(scene, inimigo = scene.inimigoTeste) {
   });
 
   // Preservar sincronização original do multiplayer.
-  if (scene.multiplayer && scene.isMultiplayerHost && alvo.id) {
+  if (scene.multiplayer && !scene.coopRuntime && scene.isMultiplayerHost && alvo.id) {
     scene.time.delayedCall(220, () => {
       scene.multiplayerManager?.publishPlayerDamage(alvo.id, inimigo.danoLaser);
     });
@@ -233,6 +233,8 @@ function acertarPlayerComLaser(scene, laser) {
 // =====================================================
 
 function causarDanoPlayer(scene, dano, atacante = null) {
+  if (scene.coopRemotePlayerId && scene.coopRuntime) return scene.coopRuntime.damage(scene, dano, atacante);
+  if (scene.coopParryUntil > (scene.time?.now || 0)) return;
   if (
     scene.morteEmAndamento ||
     !scene.player?.active ||

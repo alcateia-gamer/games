@@ -1050,6 +1050,7 @@ function tomarDano(scene, quantidade, atacante = null) {
  * Recupera vida sem ultrapassar os limites e redesenha o preenchimento da HUD.
  */
 function recuperarVida(scene, quantidade) {
+  if (scene.coopRemotePlayerId) { scene.vida = Math.min(scene.vidaMaxima, scene.vida + quantidade); return; }
   scene.vida = Phaser.Math.Clamp(scene.vida + quantidade, 0, scene.vidaMaxima);
 
   atualizarBarrasHUD(scene);

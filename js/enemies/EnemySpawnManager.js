@@ -347,6 +347,7 @@ class EnemySpawnManager {
    */
   limparDistantes(time) {
     const player = this.scene.player;
+    const players = this.scene.coopRuntime?.playerContexts().filter(c => c.vida > 0 && !c.morteEmAndamento).map(c => c.player) || [player];
 
     const limite2 = this.config.despawnDistance ** 2;
 
@@ -356,7 +357,7 @@ class EnemySpawnManager {
           return false;
         }
 
-        const distanciaAtual = distancia2(r.x, r.y, player.x, player.y);
+        const distanciaAtual = Math.min(...players.map(p => distancia2(r.x, r.y, p.x, p.y)));
 
         if (distanciaAtual <= limite2) {
           r.tempoLongeSpawnManager = null;
@@ -425,6 +426,7 @@ class EnemySpawnManager {
    */
   checkSpawnZones(time = this.scene.time?.now ?? 0) {
     const player = this.scene.player;
+    const players = this.scene.coopRuntime?.playerContexts().filter(c => c.vida > 0 && !c.morteEmAndamento).map(c => c.player) || [player];
 
     if (!player?.active) return;
 
@@ -438,12 +440,7 @@ class EnemySpawnManager {
         continue;
       }
 
-      const distanciaZona = distancia2(
-        player.x,
-        player.y,
-        region.center.x,
-        region.center.y,
-      );
+      const distanciaZona = Math.min(...players.map(p => distancia2(p.x, p.y, region.center.x, region.center.y)));
 
       if (distanciaZona > raio2) {
         continue;
@@ -704,11 +701,10 @@ class EnemySpawnManager {
 
     // Distancia do jogador.
     const player = this.scene.player;
+    const players = this.scene.coopRuntime?.playerContexts().filter(c => c.vida > 0 && !c.morteEmAndamento).map(c => c.player) || [player];
 
     if (
-      player?.active &&
-      distancia2(candidate.x, candidate.y, player.x, player.y) <
-        this.config.minPlayerDistance ** 2
+      players.some(p => p?.active && distancia2(candidate.x, candidate.y, p.x, p.y) < this.config.minPlayerDistance ** 2)
     ) {
       return false;
     }

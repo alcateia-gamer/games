@@ -98,6 +98,7 @@ function criarAnimacoesPorta(scene) {
  * Bloqueia transições repetidas, pausa a física e entra na fábrica após o fade da câmera.
  */
 function iniciarTransicao(scene) {
+  if (scene.coopRuntime) return scene.coopRuntime.world.requestMap("Level1Parte2");
   if (scene.transicaoEmAndamento) {
     return;
   }

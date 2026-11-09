@@ -8,6 +8,7 @@ import { alvosAdicionaisCombate, causarDanoAlvoAdicional } from "../../combat/Co
 import { capturarJogadorNovoBoss, liberarJogadorNovoBoss } from "../../player/PlayerControlEffects.js";
 import { criarAvisoNovoBoss } from "./NovoBossAvisos.js";
 import { configurarCorpoDisparoEnergia } from "./NovoBossDisparoEnergia.js";
+import { coopBossServices } from "../../multiplayer/CoopBossServices.js";
 
 function direcao(inicio, fim) {
   const mag = Math.hypot(fim.x - inicio.x, fim.y - inicio.y) || 1;
@@ -29,7 +30,7 @@ export function criarServicosAtaques(scene, encontro) {
     }
     return Boolean(aceito);
   };
-  return {
+  const servicos = {
     rng: () => (encontro.rng ?? Math.random)(),
     criarAviso: (x, y, raio) => criarAvisoNovoBoss(scene, x, y, raio),
     jogadorAtingeCirculo(x, y, raio) {
@@ -101,4 +102,5 @@ export function criarServicosAtaques(scene, encontro) {
       return true;
     },
   };
+  return scene.coopRuntime?.host ? coopBossServices(scene.coopRuntime, encontro, servicos) : servicos;
 }

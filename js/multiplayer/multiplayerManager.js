@@ -3,6 +3,8 @@
  * ações, presença e atualizações de movimento.
  */
 
+import { COOP, RecentActions, validPlayerState } from "./CoopProtocol.js";
+
 const ROOM_CODE = /^[A-Z0-9]{4,6}$/;
 const CHARACTER_IDS = ["kai-mercer", "magnus-force", "aria-kade", "nyx"];
 const MAX_PLAYERS = 4;
@@ -40,6 +42,10 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
     this.room = null;
     this.roomTopic = null;
     this.heartbeatTimer = null;
+    this.coopActions = new RecentActions();
+    this.coopSequence = 0;
+    this.coopReceivedSequence = -1;
+    this.actionSequence = 0;
     /**
      * Encaminha mensagens MQTT para o roteador do gerenciador, preservando a referência para
      * remoção do listener.
@@ -75,6 +81,11 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
       attackStartedAt: Number(player.attackStartedAt) || 0,
       serverTick: Number(player.serverTick) || 0,
       projectiles: Array.isArray(player.projectiles) ? player.projectiles : [],
+      mapKey: COOP.maps.includes(player.mapKey) ? player.mapKey : "Level1",
+      health: Number.isFinite(player.health) ? player.health : 100,
+      maxHealth: Number.isFinite(player.maxHealth) ? player.maxHealth : 100,
+      dead: Boolean(player.dead),
+      coop: player.coop && typeof player.coop === "object" ? player.coop : null,
       nyxAura: player.character === "nyx" && player.nyxAura &&
         typeof player.nyxAura.id === "string" && Number.isFinite(player.nyxAura.startedAt)
         ? { id: player.nyxAura.id, startedAt: player.nyxAura.startedAt,
@@ -113,8 +124,12 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
   enterRoom(code, host) {
     this.leaveRoom(false);
     this.lastSentPlayerState = null;
+    this.coopReceivedSequence = -1;
+    this.coopSequence = 0;
+    this.coopActions.clear();
+    this.coopWorld = null;
     this.roomTopic = `room/${code}`;
-    ["state", "action", "presence"].forEach((suffix) =>
+    ["state", "action", "presence", "frame"].forEach((suffix) =>
       this.mqtt.subscribe(`${this.roomTopic}/${suffix}`),
     );
     this.room = host
@@ -147,6 +162,7 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
     if (kind === "state") this.receiveState(data);
     if (kind === "action") this.receiveAction(data);
     if (kind === "presence") this.receivePresence(data);
+    if (kind === "frame") this.receiveCoopFrame(data);
   }
 
   /**
@@ -175,6 +191,16 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
    */
   receiveAction(action) {
     if (!action || !action.type) return;
+    if (action.type === "coop_action") {
+      const known = this.room?.players?.some(p => p.id === action.playerId);
+      if (!known || (action.clientId && action.clientId !== action.playerId) ||
+          !this.coopActions.accept(action.id)) return;
+      if (action.targetId && action.targetId !== this.playerId) return;
+      if (action.authority && action.playerId !== this.room.hostId) return;
+      if (!action.authority && this.room.hostId !== this.playerId) return;
+      this.emit("coopAction", action);
+      return;
+    }
     if (
       action.type === "character_rejected" &&
       action.playerId === this.playerId
@@ -229,6 +255,7 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
       return;
     }
     if (action.type === "player_damage" && action.targetId === this.playerId) {
+      if (action.clientId && action.clientId !== this.room?.hostId) return;
       this.emit("playerDamage", Number(action.damage) || 0);
       return;
     }
@@ -285,6 +312,8 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
       }
       this.publishState();
     } else if (action.type === "game_state" && player) {
+      if (this.coopEnabled && (!validPlayerState(action) ||
+          (action.clientId && action.clientId !== action.playerId))) return;
       const previousAttackId = player.attackId;
       player.x = Number.isFinite(action.x) ? action.x : player.x;
       player.y = Number.isFinite(action.y) ? action.y : player.y;
@@ -298,9 +327,17 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
         player.attackStartedAt = Date.now();
       }
       player.projectiles = Array.isArray(action.projectiles)
-        ? action.projectiles
+        ? action.projectiles.slice(0, 64)
         : [];
-      this.publishState({ retain: false, qos: 0 });
+      if (this.coopEnabled) {
+        player.mapKey = action.mapKey || "Level1";
+        player.health = Math.max(0, Math.min(10000, Number(action.health) || 0));
+        player.maxHealth = Math.max(1, Math.min(10000, Number(action.maxHealth) || 100));
+        player.dead = Boolean(action.dead);
+        player.coop = action.coop;
+        player.lastSeen = Date.now();
+        this.emit("playerInput", player);
+      } else this.publishState({ retain: false, qos: 0 });
     }
   }
 
@@ -328,7 +365,7 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
    * Publica uma ação no tópico da sala atual com as opções de entrega recebidas.
    */
   publishAction(action, options = {}) {
-    this.mqtt.publish(`${this.roomTopic}/action`, action, options);
+    return this.mqtt.publish(`${this.roomTopic}/action`, action, options);
   }
 
   /**
@@ -478,11 +515,13 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
     }
     this.stopHeartbeat();
     if (this.roomTopic)
-      ["state", "action", "presence"].forEach((suffix) =>
+      ["state", "action", "presence", "frame"].forEach((suffix) =>
         this.mqtt.unsubscribe(`${this.roomTopic}/${suffix}`),
       );
     this.roomTopic = null;
     this.room = null;
+    this.coopEnabled = false;
+    this.coopWorld = null;
   }
 
   /**
@@ -499,6 +538,7 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
     attackId = 0,
     attackPhase = "normal",
     projectiles = [],
+    extra = {},
   ) {
     const nextState = {
       x,
@@ -510,6 +550,7 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
       attackId: Number(attackId) || 0,
       attackPhase,
       projectiles,
+      ...extra,
     };
     const projectilesKey = JSON.stringify(projectiles);
     const previousState = this.lastSentPlayerState;
@@ -525,11 +566,16 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
       previousState.attackId === nextState.attackId &&
       previousState.attackPhase === nextState.attackPhase &&
       previousState.projectilesKey === projectilesKey
+      && previousState.extraKey === JSON.stringify(extra)
     ) {
       return false;
     }
 
-    this.lastSentPlayerState = { ...nextState, projectilesKey };
+    this.lastSentPlayerState = { ...nextState, projectilesKey, extraKey: JSON.stringify(extra) };
+    if (this.coopEnabled && this.room?.hostId === this.playerId) {
+      this.receiveAction({ type: "game_state", playerId: this.playerId, ...nextState });
+      return true;
+    }
     this.publishAction(
       {
         type: "game_state",
@@ -569,7 +615,42 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
         vida: enemy.vida,
         vidaMaxima: enemy.vidaMaxima,
       }));
-    this.publishState({ retain: false, qos: 0 });
+    if (!this.coopEnabled) this.publishState({ retain: false, qos: 0 });
+  }
+
+  enableCoop() { this.coopEnabled = true; }
+
+  sendCoopAction(kind, payload = {}, { authority = false, targetId = null } = {}) {
+    if (!this.roomTopic || (authority && this.room?.hostId !== this.playerId)) return false;
+    this.publishAction({ type: "coop_action", kind, payload, authority, targetId,
+      playerId: this.playerId, id: `${this.playerId}:${Date.now()}:${++this.actionSequence}` },
+      { qos: 1, retain: false });
+    return true;
+  }
+
+  publishCoopFrame(world) {
+    if (!this.coopEnabled || this.room?.hostId !== this.playerId) return false;
+    const packet = { roomCode: this.room.roomCode, hostId: this.playerId,
+      sequence: ++this.coopSequence, serverTime: Date.now(),
+      players: this.room.players, enemies: this.room.enemies || [], ...world };
+    this.mqtt.publish(`${this.roomTopic}/frame`, packet, { qos: 0, retain: false,
+      compress: this.room.players.every(p => p.coop?.compression) });
+    return true;
+  }
+
+  receiveCoopFrame(packet) {
+    if (!this.room || packet.roomCode !== this.room.roomCode ||
+        packet.hostId !== this.room.hostId ||
+        (packet.clientId && packet.clientId !== this.room.hostId) ||
+        !Number.isSafeInteger(packet.sequence) || packet.sequence <= this.coopReceivedSequence ||
+        !Array.isArray(packet.players) || packet.players.length > MAX_PLAYERS) return;
+    this.coopReceivedSequence = packet.sequence;
+    this.coopWorld = packet;
+    this.room.players = packet.players.map(p => this.normalizePlayer(p));
+    this.room.enemies = packet.enemies || [];
+    this.room.serverTime = packet.serverTime;
+    this.emit("coopFrame", packet);
+    this.emit("roomUpdated", this.room);
   }
 
   /**

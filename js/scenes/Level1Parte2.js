@@ -75,6 +75,8 @@ import {
 import { criarInteracaoPortaFabrica } from "../interactions/FactoryDoor.js";
 import { criarRoboBola, atualizarRoboBola } from "../enemies/RoboBola.js";
 
+import { criarRuntimeCoop } from "../multiplayer/CoopRuntime.js";
+
 class Level1Parte2 extends Phaser.Scene {
   /**
    * Registra a segunda parte da fase e define movimento e profundidade inicial do personagem.
@@ -308,6 +310,7 @@ class Level1Parte2 extends Phaser.Scene {
     this.grupoRobosAtivado = false;
     this.inimigoTeste = null;
     this.spawnAreasRoboBola = criarSpawnAreasRoboBola(this);
+    criarRuntimeCoop(this);
   }
 
   /**
@@ -396,7 +399,7 @@ class Level1Parte2 extends Phaser.Scene {
       criarRobos(this, 3);
     }
 
-    if (Phaser.Input.Keyboard.JustDown(this.teclaSpawnRoboSerra)) {
+    if ((!this.multiplayer || this.isMultiplayerHost) && Phaser.Input.Keyboard.JustDown(this.teclaSpawnRoboSerra)) {
       criarRoboSerra(this);
     }
     if (
@@ -421,6 +424,7 @@ class Level1Parte2 extends Phaser.Scene {
 
     if (
       this.multiplayer &&
+      !this.coopRuntime &&
       this.isMultiplayerHost &&
       time - this.lastEnemyNetworkUpdate >= 1000 / 30
     ) {
@@ -429,7 +433,7 @@ class Level1Parte2 extends Phaser.Scene {
       this.multiplayerManager?.publishEnemyState(this.inimigos);
     }
 
-    if (this.multiplayer && time - this.lastNetworkUpdate >= 1000 / 30) {
+    if (this.multiplayer && !this.coopRuntime && time - this.lastNetworkUpdate >= 1000 / 30) {
       this.lastNetworkUpdate = time;
 
       this.multiplayerManager?.sendPlayerState(
@@ -548,6 +552,7 @@ class Level1Parte2 extends Phaser.Scene {
    * compartilhado.
    */
   atualizarJogadoresRemotos(room) {
+    if (this.coopRuntime) return;
     if (!room?.players) return;
 
     const activeIds = new Set();
@@ -746,6 +751,7 @@ class Level1Parte2 extends Phaser.Scene {
    * recebida.
    */
   atualizarInimigosRemotos(room) {
+    if (this.coopRuntime) return;
     if (!this.multiplayer || this.isMultiplayerHost || !room) {
       return;
     }
@@ -821,6 +827,7 @@ class Level1Parte2 extends Phaser.Scene {
    * recebidas.
    */
   atualizarInterpolacaoRemota(delta = 0) {
+    if (this.coopRuntime) return;
     const alpha = 1 - Math.exp((-12 * Math.max(0, delta)) / 1000);
 
     this.remotePlayers.forEach((sprite) => {
@@ -936,6 +943,11 @@ class Level1Parte2 extends Phaser.Scene {
       }
 
       this.transicaoRetornoEmAndamento = true;
+
+      if (this.coopRuntime) {
+        this.transicaoRetornoEmAndamento = false;
+        return this.coopRuntime.world.requestMap("Level1");
+      }
 
       this.physics.pause();
 

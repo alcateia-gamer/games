@@ -70,6 +70,17 @@ function distancia(a, b) {
  */
 
 function obterAlvo(scene, robo) {
+  if (scene.coopRuntime?.host) {
+    const contexts = scene.coopRuntime.playerContexts().filter(c => c.player?.active && c.vida > 0 && !c.morteEmAndamento);
+    const holograms = contexts.map(c => c.especialHolograma).filter(h => h?.active &&
+      distancia(h, robo) <= 420 && linhaLivre(scene, robo, h));
+    const players = contexts.map(c => c.player);
+    const targets = holograms.length ? holograms : players;
+    const target = targets.sort((a, b) => distancia(a, robo) - distancia(b, robo))[0];
+    if (!target) return { x: robo.x, y: robo.y, active: false };
+    robo.alvoPlayerId = target.id || scene.multiplayerManager?.playerId;
+    return target;
+  }
   const remoto = scene.multiplayerManager?.room?.players?.find(
     (p) => p.id === robo.alvoPlayerId,
   );
@@ -672,7 +683,8 @@ tocarAnimacaoAtaqueInimigo(robo);
 
 // ARIA - O holograma recebe o golpe.
 if (alvo.especialHolograma) {
-  scene.acertarHologramaEspecial?.(robo);
+  const context = scene.coopRuntime?.playerContexts().find(c => c.especialHolograma === alvo) || scene;
+  context.acertarHologramaEspecial?.(robo);
   return true;
 }
 
@@ -682,7 +694,10 @@ if (alvo === scene.player && scene.tentarParryFisicoEspecial?.(robo)) {
 }
 
 // COMPORTAMENTO ORIGINAL
-if (!scene.multiplayer || alvo === scene.player) {
+if (scene.coopRuntime?.host && alvo !== scene.player && alvo.id) {
+  const context = scene.coopRuntime.players.remotes.get(alvo.id)?.context;
+  if (context) scene.coopRuntime.damage(context, robo.danoContato, robo);
+} else if (!scene.multiplayer || alvo === scene.player) {
   causarDanoPlayer(scene, robo.danoContato, robo);
 } else if (alvo.id && scene.isMultiplayerHost) {
   scene.multiplayerManager?.publishPlayerDamage(alvo.id, robo.danoContato);
@@ -897,7 +912,7 @@ function atualizarIAInimigo(scene, time, robo = scene.inimigoTeste, combaterPers
 
   if (
     !alvo ||
-    scene.morteEmAndamento ||
+    (scene.morteEmAndamento && !scene.coopRuntime?.host) ||
     alvo.active === false ||
     !Number.isFinite(alvo.x) ||
     !Number.isFinite(alvo.y)

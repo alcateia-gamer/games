@@ -76,7 +76,7 @@ export function criarColisaoDomoKai(scene, estado, raio, duracao) {
     });
   const atualizar = (x = scene.player.x,y = scene.player.y) => {
     if (encerrado) return;
-    if (scene.multiplayer || scene.personagemSelecionada !== 'kai-mercer' ||
+    if ((scene.multiplayer && !scene.coopRuntime?.host) || scene.personagemSelecionada !== 'kai-mercer' ||
       !scene.player.active || scene.morteEmAndamento || scene.time.now >= estado.parryAte) {
       destruir();
       return;

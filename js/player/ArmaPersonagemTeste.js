@@ -89,7 +89,7 @@ export function calcularPoseArmaTeste(player, direcao, alvo = null, recuo = 0,
 }
 
 function podeDisparar(scene) {
-  return personagemTesteAtivo(scene) && !scene.multiplayer && scene.player?.active &&
+  return personagemTesteAtivo(scene) && (!scene.multiplayer || scene.coopRuntime) && scene.player?.active &&
     scene.player.visible !== false && !scene.morteEmAndamento && (scene.vida ?? 1) > 0 &&
     !scene.generatorMenuOpen && !scene.movimentoBloqueado;
 }

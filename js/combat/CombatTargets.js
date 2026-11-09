@@ -1,7 +1,7 @@
 /** Alvos de encontros próprios, sem inseri-los nas listas de robôs ou no boss antigo. */
 export function alvosAdicionaisCombate(scene) {
   // O encontro só participa do combate solo até receber protocolo de rede próprio.
-  if (scene?.multiplayer) return [];
+  if (scene?.multiplayer && !scene.coopRuntime) return [];
   const encontro = scene?.novoBoss;
   if (encontro?.encerrado || encontro?.morto || encontro?.suspenso ||
       encontro?.jogadorNaArena === false) return [];

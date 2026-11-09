@@ -3,6 +3,8 @@
  * em eventos internos.
  */
 
+import { encodeFrame, decodeFrame } from "./multiplayer/CoopCompression.js";
+
 const CLIENT_ID_LETTERS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
 /**
@@ -29,6 +31,9 @@ class MqttClient extends Phaser.Events.EventEmitter {
     this.client = null;
     this.connected = false;
     this.subscriptions = new Set();
+    this.pendingFrame = null;
+    this.encodingFrame = false;
+    this.networkStats = { messages: 0, rawBytes: 0, sentBytes: 0 };
   }
 
   /**
@@ -55,9 +60,13 @@ class MqttClient extends Phaser.Events.EventEmitter {
     this.client.on("offline", () => { this.connected = false; this.emit("close"); });
     this.client.on("close", () => { this.connected = false; this.emit("close"); });
     this.client.on("error", (error) => this.emit("error", error));
-    this.client.on("message", (topic, message) => {
+    this.client.on("message", async (topic, message) => {
       let data;
-      try { data = JSON.parse(message.toString()); } catch { data = message.toString(); }
+      try {
+        const decoded = message[0] === 0x1f && message[1] === 0x8b
+          ? await decodeFrame(message) : message.toString();
+        data = JSON.parse(decoded);
+      } catch { return; }
       const prefix = `${this.topicPrefix}/`;
       const shortTopic = topic.startsWith(prefix) ? topic.slice(prefix.length) : topic;
       this.emit("message", shortTopic, data);
@@ -91,8 +100,38 @@ class MqttClient extends Phaser.Events.EventEmitter {
   publish(topic, data, options = {}) {
     if (!this.client || !this.connected) return false;
     const envelope = typeof data === "object" && data !== null ? { ...data, clientId: this.clientId } : { data, clientId: this.clientId };
-    this.client.publish(`${this.topicPrefix}/${topic}`, JSON.stringify(envelope), { qos: options.qos ?? 1, retain: options.retain ?? false });
+    const json = JSON.stringify(envelope), fullTopic = `${this.topicPrefix}/${topic}`;
+    const publishOptions = { qos: options.qos ?? 1, retain: options.retain ?? false };
+    if (options.compress && topic.endsWith("/frame")) {
+      // Uma codificação em andamento e apenas o quadro seguinte: nunca acumula atraso.
+      if (!this.pendingFrame?.full || data.visuals?.full) this.pendingFrame = {
+        json, topic: fullTopic, options: publishOptions, full: !!data.visuals?.full };
+      void this.flushFrame();
+    } else {
+      this.client.publish(fullTopic, json, publishOptions);
+      this.recordNetwork(json.length, json.length);
+    }
     return true;
+  }
+
+  recordNetwork(raw, sent) {
+    this.networkStats.messages++; this.networkStats.rawBytes += raw; this.networkStats.sentBytes += sent;
+  }
+
+  async flushFrame() {
+    if (this.encodingFrame) return;
+    this.encodingFrame = true;
+    try {
+      while (this.pendingFrame && this.connected && this.client) {
+        const frame = this.pendingFrame, client = this.client; this.pendingFrame = null;
+        const bytes = await encodeFrame(frame.json);
+        if (this.client === client && this.connected) {
+          client.publish(frame.topic, bytes, frame.options);
+          this.recordNetwork(frame.json.length, bytes.byteLength);
+        }
+      }
+    } catch (error) { this.emit("error", error); }
+    finally { this.encodingFrame = false; }
   }
 
   /**
@@ -104,6 +143,7 @@ class MqttClient extends Phaser.Events.EventEmitter {
     this.client = null;
     this.connected = false;
     this.subscriptions.clear();
+    this.pendingFrame = null;
   }
 }
 

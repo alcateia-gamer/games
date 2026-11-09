@@ -197,6 +197,16 @@ function criarPorta(scene, layer, area, fala) {
     scene.game.registry.set(stateKey, true);
   };
 
+  // O host transmite também o progresso das persianas e seu bloqueio temporário.
+  porta.aplicarEstadoRede = estado => {
+    porta.estado = estado.estado;
+    porta.progresso = estado.progresso;
+    porta.bloqueadaPorBoss = !!estado.bloqueadaPorBoss;
+    if (porta.estado === "aberta") { porta.colisao?.destroy(); porta.colisao = null; }
+    else if (!porta.colisao) porta.colisao = criarColisao();
+    atualizarVisual();
+  };
+
   /** Abre diretamente ou conclui a persiana antes de remover a colisão. */
   const abrir = (alvo = area) => {
     if (!podeInteragir(alvo)) return false;

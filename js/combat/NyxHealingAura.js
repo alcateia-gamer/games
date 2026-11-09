@@ -17,6 +17,7 @@ export function prepararAuraNyx(scene, estado) {
   estado.aurasRemotas = new Map();
   estado.curasNyx = new Map();
   const receber = room => {
+    if (scene.coopRuntime) return;
     const proprio = room?.players?.find(p=>p.id===scene.multiplayerManager?.playerId);
     estado.redeRecargaAte = scene.time.now + Math.max(0,
       (proprio?.nyxAuraCooldownUntil || 0)-(room?.serverTime || Date.now()));
@@ -69,7 +70,7 @@ export function prepararAuraNyx(scene, estado) {
 export function iniciarAuraNyx(scene, estado) {
   const id = `${scene.multiplayerManager?.playerId || 'solo'}:${Date.now()}:${++sequencia}`;
   estado.auraNyx = criarAura(scene,id,scene.time.now);
-  if (scene.multiplayer) scene.multiplayerManager?.publishAction({type:'nyx_aura',
+  if (scene.multiplayer && !scene.coopRuntime) scene.multiplayerManager?.publishAction({type:'nyx_aura',
     playerId:scene.multiplayerManager.playerId, id, mapKey:mapa(scene)});
 }
 
@@ -81,7 +82,7 @@ function destruirAura(aura) {
 function encerrarLocal(scene,estado,avisar = true) {
   const aura = estado.auraNyx;
   if (!aura) return;
-  if (scene.multiplayer && avisar) scene.multiplayerManager?.publishAction({type:'nyx_aura',stop:true,
+  if (scene.multiplayer && !scene.coopRuntime && avisar) scene.multiplayerManager?.publishAction({type:'nyx_aura',stop:true,
     playerId:scene.multiplayerManager.playerId,id:aura.id});
   destruirAura(aura);
   estado.auraNyx = null;
@@ -100,7 +101,7 @@ function jogadorVivo(scene) {
 function concederCura(scene,estado,aura,centro) {
   const alvos = new Set();
   if (jogadorVivo(scene) && dentroDaAura(scene.player,centro)) alvos.add(scene.player);
-  if (!scene.multiplayer && !aura.dono) {
+  if ((!scene.multiplayer || scene.coopRuntime) && !aura.dono) {
     const aliados = scene.aliados?.getChildren?.() || scene.aliados || [];
     for (const aliado of aliados instanceof Map ? aliados.values() : aliados) {
       if (aliado?.active && !aliado.morto && aliado.vida > 0 && Number.isFinite(aliado.vidaMaxima) &&
