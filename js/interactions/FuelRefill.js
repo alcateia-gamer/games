@@ -4,6 +4,33 @@ import { criarFalaFlutuante } from "../ui/PlayerSpeechBubble.js";
 export const FUEL_FILL_DURATION_MS = 4000;
 export const FUEL_INTERACTION_RANGE = 48;
 
+export const FALAS_GALAO = {
+  vazio: [
+    "O galão está vazio. Preciso enchê-lo antes de usar no gerador.",
+    "Achei um galão, mas está vazio. Preciso de gasolina.",
+    "Sem combustível ainda. Vou procurar onde encher este galão.",
+    "Galão vazio. Antes do gerador, preciso achar gasolina.",
+  ],
+  semGalao: [
+    "Preciso encontrar um galão para levar combustível.",
+    "Tem gasolina aqui, mas preciso de um galão para levar.",
+    "Preciso trazer um galão para encher aqui.",
+    "Achei combustível. Falta um galão para levar ao gerador.",
+  ],
+  jaCheio: [
+    "O galão já está cheio.",
+    "Não cabe mais gasolina. Hora de voltar ao gerador.",
+    "Já tenho combustível suficiente neste galão.",
+    "Está cheio. Preciso levar este galão ao gerador.",
+  ],
+  abastecido: [
+    "Galão cheio. Agora posso abastecer o gerador.",
+    "Pronto, galão cheio. Hora de levar o combustível ao gerador.",
+    "Agora sim, combustível para o gerador.",
+    "Terminei de encher o galão. Próxima parada: o gerador.",
+  ],
+};
+
 export function lerAreasGasolina(map) {
   const layers = map?.objects ?? map?.layers ?? [];
   return layers.filter(layer => layer.name?.toLowerCase() === "gasolina")
@@ -55,10 +82,10 @@ export function criarSistemaCombustivel(scene) {
   const iniciar = area => {
     if (!permitido() || distanciaAreaGasolina(centroJogador(), area) > FUEL_INTERACTION_RANGE) return false;
     if (!inventory.getQuantity("gasolina")) {
-      fala.mostrar("Preciso encontrar um galão para levar combustível.");
+      fala.mostrar(FALAS_GALAO.semGalao);
       return true;
     }
-    if (!incompleto()) { fala.mostrar("O galão já está cheio."); return true; }
+    if (!incompleto()) { fala.mostrar(FALAS_GALAO.jaCheio); return true; }
     abastecendo = area;
     fala.ocultar();
     scene.player.setVelocity(0, 0);
@@ -73,7 +100,7 @@ export function criarSistemaCombustivel(scene) {
         cancelar();
       } else if (Number.isFinite(delta) && delta > 0) {
         const nivel = inventory.fillFuel(Math.min(delta, 100) / FUEL_FILL_DURATION_MS);
-        if (nivel === 1) { cancelar(); fala.mostrar("Galão cheio. Agora posso abastecer o gerador."); }
+        if (nivel === 1) { cancelar(); fala.mostrar(FALAS_GALAO.abastecido); }
       }
     }
     if (abastecendo || (inventory.getQuantity("gasolina") > 0 && !incompleto())) return;

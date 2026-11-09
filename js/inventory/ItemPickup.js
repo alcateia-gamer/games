@@ -14,7 +14,7 @@ import { createCollectibleMarker } from "../ui/CollectibleMarker.js";
 import { PERSONAGEM_TESTE, personagemTesteAtivo } from "../player/PersonagemTeste.js";
 import { POSICAO_ACAO_TESTE } from "../controls/PlayerTestActionControls.js";
 import { posicionarBotaoFixo } from "../controls/FixedActionButton.js";
-import { criarSistemaCombustivel } from "../interactions/FuelRefill.js";
+import { criarSistemaCombustivel, FALAS_GALAO } from "../interactions/FuelRefill.js";
 
 const ITEM_LAYER_NAMES = ["Coletaveis", "Itens"];
 const DEFAULT_PICKUP_RANGE = 64;
@@ -261,7 +261,7 @@ function criarSistemaInventario(scene) {
 
     scene.inventory.markCollected(pickup.uniqueId);
     if (pickup.itemId === "gasolina") {
-      scene.falaCombustivel?.mostrar("O galão está vazio. Preciso enchê-lo antes de usar no gerador.");
+      scene.falaCombustivel?.mostrar(FALAS_GALAO.vazio);
     }
     pickup.image.destroy();
     scene.itensColetaveis = scene.itensColetaveis.filter(

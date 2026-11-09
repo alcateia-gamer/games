@@ -13,6 +13,7 @@ export function criarFalaFlutuante(scene, nome = "player-speech-bubble") {
   const nativo = criarTextoNitido(scene, texto, ponta, nome);
   let visivel = false, destruido = false, timer = null;
   let ultimaFrase = "", ultimaEm = -Infinity;
+  const ultimasPorGrupo = new WeakMap();
   const ocultar = () => {
     timer?.remove(false); timer = null;
     visivel = false;
@@ -39,7 +40,9 @@ export function criarFalaFlutuante(scene, nome = "player-speech-bubble") {
       const agora = scene.time.now ?? performance.now();
       if (visivel && agora - ultimaEm < 500) return;
       const opcoes = Array.isArray(frases) ? frases : [frases];
-      ultimaFrase = opcoes[(opcoes.indexOf(ultimaFrase) + 1) % opcoes.length];
+      const anterior = ultimasPorGrupo.get(opcoes) ?? ultimaFrase;
+      ultimaFrase = opcoes[(opcoes.indexOf(anterior) + 1) % opcoes.length];
+      ultimasPorGrupo.set(opcoes, ultimaFrase);
       ultimaEm = agora;
       texto.setText(ultimaFrase);
       if (nativo) {

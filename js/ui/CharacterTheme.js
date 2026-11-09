@@ -1,4 +1,4 @@
-/** Paleta compartilhada pelo inventário, minimapa e balões do personagem selecionado. */
+/** Paleta compartilhada pela HUD, inventário, minimapa e balões do personagem selecionado. */
 const THEMES = {
   "kai-mercer": {
     accent: 0x38bdf8, accentCss: "#38bdf8", background: "#252f38",

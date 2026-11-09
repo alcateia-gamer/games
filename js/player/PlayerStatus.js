@@ -4,6 +4,8 @@
  */
 
 import { playPlayerHitEffects } from "../combat/CombatEffects.js";
+import { obterTemaPersonagem } from "../ui/CharacterTheme.js";
+import { colorirContornoEstaminaHUD, colorirMolduraHUD, colorirPixelHUD } from "../ui/HudTheme.js";
 
 // =====================================================
 // NULLBORNS — HUD NÍTIDA COM CARREGAMENTO ANTECIPADO
@@ -361,6 +363,12 @@ function prepararHUDOriginal(scene, frameIndex) {
   const imgBase = ctxBase.getImageData(0, 0, area.width, area.height);
 
   const dadosBase = imgBase.data;
+  const personagem = Object.keys(HUD_FRAME_PERSONAGEM).find(
+    personagem => HUD_FRAME_PERSONAGEM[personagem] === frameIndex,
+  );
+  const tema = obterTemaPersonagem(personagem);
+  colorirMolduraHUD(dadosBase, area.width, area.height, estamina.x, tema.accent);
+  colorirContornoEstaminaHUD(dadosBase, area.width, area.height, estamina, vida, tema.accent);
 
   // ===================================================
   // SEPARAR PREENCHIMENTO DAS BARRAS
@@ -383,11 +391,14 @@ function prepararHUDOriginal(scene, frameIndex) {
       for (let x = barra.x; x < barra.x + barra.width; x++) {
         const i = (y * area.width + x) * 4;
 
-        if (!pixelEhBarra(dadosBase, i, tipo)) {
+        // Detecta o preenchimento na cor da fonte antes de aplicar o tema.
+        const preenchimento = pixelEhBarra(dadosBase, i, tipo);
+        if (tipo === "estamina") colorirPixelHUD(dadosBase, i, tema.accent);
+        if (!preenchimento) {
           continue;
         }
 
-        // Preserva exatamente o preenchimento original.
+        // Mantém o degradê e a transparência da arte, com a cor do personagem.
         for (let c = 0; c < 4; c++) {
           saida[i + c] = dadosBase[i + c];
         }
@@ -573,7 +584,7 @@ function atualizarBarrasHUD(scene) {
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // Desenha retrato e moldura originais.
+  // Desenha o retrato e a moldura preparada na cor do personagem.
   ctx.drawImage(hud.texturasDeTela.base, 0, 0);
 
   // ===================================================
@@ -618,7 +629,7 @@ function atualizarBarrasHUD(scene) {
     vida,
   );
 
-  // ESTAMINA — CIANO.
+  // ESTAMINA — COR DO PERSONAGEM.
   desenharPreenchimento(
     hud.texturasDeTela.estamina,
     dados.estamina,
