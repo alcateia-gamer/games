@@ -4,11 +4,13 @@
  */
 
 import { calcularDepthAtor } from "../map/ProfundidadeMapa.js";
+import { configurarSomPropulsaoRoboBola } from "../sounds/propulsaoRoboBola.js";
 import { tocarSomTiroLaser } from "../sounds/inimigos.js";
 import { caminhoDiretoBloqueado, caminhoMovimentoBloqueado, retanguloLivreDoMapa } from "./EnemyPathfinding.js";
 import { atualizarIAInimigo, moverInimigoAte } from "./EnemyAI.js";
 import { suavizarTexturasRoboBola, criarBrilhoOlho, criarRastroPlasma } from "./RoboBolaEffects.js";
 import { protegerColisaoRoboBola } from "./RoboBolaColisao.js";
+import { ROBO_BOLA_FLUTUACAO } from "./RoboBolaFlutuacao.js";
 import { atualizarEmergenciaRoboBola } from "./RoboBolaEmergencia.js";
 
 // Grade viva 2×3: frente, disparo frontal, costas, esquerda, direita, vazio.
@@ -45,7 +47,9 @@ function atualizarHitboxRoboBola(robo) {
 
 /** Move só a imagem: a colisão de navegação permanece estável sobre o chão. */
 function atualizarFlutuacao(robo, time) {
-  robo.deslocamentoFlutuacao = Math.sin(time / 380 + (robo.faseFlutuacao || 0)) * 2.5;
+  robo.faseFlutuacaoAtual = time / ROBO_BOLA_FLUTUACAO.periodoMs * Math.PI * 2 +
+    (robo.faseFlutuacao || 0);
+  robo.deslocamentoFlutuacao = Math.sin(robo.faseFlutuacaoAtual) * ROBO_BOLA_FLUTUACAO.amplitude;
   const deslocamentoLocal = robo.deslocamentoFlutuacao / robo.scaleY;
   robo.setOrigin(0.5, 0.5 - deslocamentoLocal / 127);
   const offset = (127 - TAMANHO_HITBOX) / 2;
@@ -221,6 +225,7 @@ function criarRoboBola(scene, posicao = null) {
   robo.bordaVida = scene.add.rectangle(robo.x, robo.y - ALTURA_BARRA_VIDA, 54, 5).setStrokeStyle(1, 0xffffff, 0.7).setDepth(63);
   atualizarFrame(robo);
   criarBrilhoOlho(scene, robo, obterPosicaoOlho);
+  configurarSomPropulsaoRoboBola(scene, robo);
   // O Phaser destrói o grupo antes de alguns listeners de shutdown; a cena pode ser reutilizada.
   if (!scene.lasersInimigo || ("scene" in scene.lasersInimigo && !scene.lasersInimigo.scene)) {
     scene.lasersInimigo = scene.physics.add.group();

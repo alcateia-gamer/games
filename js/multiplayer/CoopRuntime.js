@@ -12,6 +12,7 @@ import { prepararPisoTorre } from "../enemies/novoBoss/NovoBossTorrePiso.js";
 import { causarDanoInimigo } from "../enemies/EnemyHealth.js";
 import { causarDanoPlayer } from "../enemies/EnemyLaser.js";
 import { atualizarInimigoTeste } from "../enemies/EnemyTest.js";
+import { configurarSomPropulsaoRoboBola } from "../sounds/propulsaoRoboBola.js";
 import { atualizarRoboBola } from "../enemies/RoboBola.js";
 import { causarDanoAlvoAdicional, alvosAdicionaisCombate } from "../combat/CombatTargets.js";
 import { recuperarVida } from "../player/PlayerStatus.js";
@@ -239,6 +240,7 @@ export class CoopRuntime {
         // A réplica não simula física. GameObject.body é reservado a corpos
         // do Phaser, que precisam implementar destroy() ao trocar de cena.
         coopBody: data.body && new Phaser.Geom.Rectangle(...Object.values(data.body)) });
+      configurarSomPropulsaoRoboBola(s, actor);
       return actor;
     }).filter(Boolean);
     s.inimigoTeste = s.inimigos[0] || null;

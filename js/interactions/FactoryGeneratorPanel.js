@@ -1,4 +1,6 @@
 /** Painel do gerador. Os encaixes reservam os itens; o consumo pertence à ativação. */
+
+import { tocarSomColocando } from "../sounds/colocando.js";
 import { getInventoryItem } from "../inventory/InventoryItems.js";
 import { prepareInventoryIcon } from "../inventory/InventoryUI.js";
 import { criarDisplayGerador } from "./FactoryGeneratorDisplay.js";
@@ -262,7 +264,9 @@ export function criarPainelGerador(scene, { onActivate, onClose }) {
     if (drag?.pointerId === pointer.id) {
       const visual = visuals.find(v => v.id === drag.id);
       if (inside(p, -82, visual.y, 144, 88) && availableQuantity(visual.id) >= 1) {
+        const novoEncaixe = !installed.has(visual.id);
         installed.add(visual.id);
+        if (novoEncaixe) tocarSomColocando(scene, "encaixe");
         feedback.setText(installed.size === 2 ? "Circuito completo. Pressione LIGAR para iniciar." : "Peça conectada. Arraste o próximo item.");
       } else if (inside(p, -267, 36, 164, 258)) {
         installed.delete(visual.id);
@@ -302,6 +306,7 @@ export function criarPainelGerador(scene, { onActivate, onClose }) {
       hideDOM();
       feedback.setText(instructions()).setColor("#b1dec3");
       root.setVisible(true);
+      tocarSomColocando(scene, "acesso");
     },
     close() { opened = false; cancelDrag(); installed.clear(); root.setVisible(false); display?.hide(); restoreDOM(); },
     message(label) { feedback.setText(label).setColor("#d4a17c"); },

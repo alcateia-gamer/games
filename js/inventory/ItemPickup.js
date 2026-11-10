@@ -3,6 +3,7 @@
  * itens, porta e gerador, respeitando o menu aberto.
  */
 
+import { tocarSomColocando } from "../sounds/colocando.js";
 import { InventoryUI } from "./InventoryUI.js";
 import {
   createBuiltinInventoryTextures,
@@ -251,6 +252,7 @@ function criarSistemaInventario(scene) {
     }
 
     scene.inventory.markCollected(pickup.uniqueId);
+    tocarSomColocando(scene);
     if (pickup.itemId === "gasolina") {
       scene.falaCombustivel?.mostrar(FALAS_GALAO.vazio);
     }

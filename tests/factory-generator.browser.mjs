@@ -36,6 +36,13 @@ try {
   const area = await page.evaluate(async () => {
     const s = window.__game.scene.getScene("Level1Parte2");
     const { findGeneratorInteraction } = await import("/js/interactions/FactoryGenerator.js");
+    window.__sonsColocando = [];
+    const addSound = s.sound.add.bind(s.sound);
+    s.sound.add = (key, config) => {
+      const sound = addSound(key, config);
+      if (key === "colocando-item") sound.on("play", () => window.__sonsColocando.push(sound.currentConfig.volume));
+      return sound;
+    };
     s.developerMode = true;
     s.inventory.addItem("bateria", 1);
     s.inventory.addItem("gasolina", 2);
@@ -52,6 +59,7 @@ try {
     const r = window.__game.canvas.getBoundingClientRect();
     return { x: r.x, y: r.y, width: r.width, height: r.height };
   });
+  assert.deepEqual(await page.evaluate(() => window.__sonsColocando), [0.28], "acesso toca uma vez");
   await frame();
   const sharpDisplay = page.locator("canvas[data-generator-display]");
   assert.equal(await sharpDisplay.isVisible(), true);
@@ -66,6 +74,8 @@ try {
   let sharp = await checkDisplay();
   assert.equal(sharp.width, sharp.expectedWidth, "painel desenha na densidade real da tela");
   assert.ok(sharp.width > 800, "textos não são ampliados do framebuffer do jogo");
+  // Chromium recente exige sair do fullscreen antes de redimensionar a janela.
+  await page.evaluate(async () => { if (document.fullscreenElement) await document.exitFullscreen(); });
   await page.setViewportSize({ width: 960, height: 720 });
   await page.waitForFunction(() => {
     const display = document.querySelector("canvas[data-generator-display]").getBoundingClientRect();
@@ -92,7 +102,11 @@ try {
   await drag(133, 200, 318, 315);
   await drag(133, 279, 318, 205);
   assert.equal((await sceneState()).ready, false);
+  assert.deepEqual(await page.evaluate(() => window.__sonsColocando), [0.28], "encaixes inválidos ficam silenciosos");
   await drag(133, 200, 318, 205);
+  assert.deepEqual(await page.evaluate(() => window.__sonsColocando), [0.28, 0.55], "som no encaixe confirmado");
+  await drag(318, 205, 318, 205);
+  assert.deepEqual(await page.evaluate(() => window.__sonsColocando), [0.28, 0.55], "mesmo encaixe não repete o som");
   assert.equal((await sceneState()).ready, false);
   assert.equal((await sceneState()).battery, 1);
   await click(743, 54);

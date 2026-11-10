@@ -1,3 +1,4 @@
+import { tocarSomColocando } from "../sounds/colocando.js";
 import { COOP } from "./CoopProtocol.js";
 import { localizarTelasSupercomputador } from "../enemies/novoBoss/NovoBossSupercomputador.js";
 import { novoBossConfig } from "../enemies/novoBoss/NovoBossConfig.js";
@@ -71,10 +72,13 @@ export class CoopWorld {
   }
   applyCollected(grant) {
     const s = this.scene;
+    const coletaLocalPendente = this.pending.has(grant.uid);
     this.pending.delete(grant.uid);
     if (s.inventory.hasCollected(grant.uid)) return;
     if (grant.playerId === this.manager.playerId && !s.inventory.addItem(grant.itemId, grant.quantity)) return;
     s.inventory.markCollected(grant.uid);
+    // Restauração de progresso e coletas de outros jogadores não são novas coletas locais.
+    if (coletaLocalPendente && grant.playerId === this.manager.playerId) tocarSomColocando(s);
     for (const item of s.itensColetaveis) if (item.uniqueId === grant.uid) {
       item.marker?.destroy?.(); item.image.destroy();
     }

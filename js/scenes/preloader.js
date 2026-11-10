@@ -3,7 +3,8 @@
  * entra na fase quando os recursos estão prontos.
  */
 
-
+import { carregarSomPropulsaoRoboBola } from "../sounds/propulsaoRoboBola.js";
+import { carregarSomColocando } from "../sounds/colocando.js";
 import { carregarSonsInimigos } from "../sounds/inimigos.js";
 import { carregarSonsKatana } from "../sounds/katana.js";
 import { carregarSonsPersonagem } from "../sounds/personagem.js";
@@ -164,6 +165,8 @@ class Preloader extends Phaser.Scene {
     carregarSonsPersonagem(this.load);
     carregarSonsKatana(this.load);
     carregarSonsInimigos(this.load);
+    carregarSomPropulsaoRoboBola(this.load);
+    carregarSomColocando(this.load);
     carregarSomGerador(this.load);
     carregarSomLuzFabrica(this.load);
     carregarSonsLeitorCartao(this.load);

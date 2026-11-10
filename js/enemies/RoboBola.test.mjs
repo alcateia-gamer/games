@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { EventEmitter } from "node:events";
 import { criarRoboBola, atualizarRoboBola, registrarAnimacoesRoboBola, ROBO_BOLA_CONFIG } from "./RoboBola.js";
+import { ROBO_BOLA_FLUTUACAO } from "./RoboBolaFlutuacao.js";
 import { caminhoMovimentoBloqueado } from "./EnemyPathfinding.js";
 import { destruirInimigoTeste } from "./EnemyHealth.js";
 import { criarBrilhoOlho, suavizarTexturasRoboBola } from "./RoboBolaEffects.js";
@@ -173,10 +174,14 @@ test("órbita mantém distância e velocidade limitadas sem trocas repetidas na 
   const { scene, robo } = preparar();
   robo.ultimoTiro = Infinity;
   const trocas = [];
+  const alturasVisuais = [];
   let direcaoAnterior;
   for (let time = 0; time < 12000; time += 16) {
     atualizarRoboBola(scene, time, 16);
     const v = robo.body.velocity;
+    alturasVisuais.push((0.5 - robo.originY) * 127 * robo.scaleY);
+    assert.ok(Math.abs(robo.hitboxDano.y + robo.hitboxDano.height / 2 -
+      robo.y - robo.deslocamentoFlutuacao) < 1e-9, "hitbox de dano acompanha a imagem");
     assert.equal(robo.hitboxDano.width, 60 * robo.scaleX);
     assert.equal(robo.hitboxDano.height, 60 * robo.scaleY);
     assert.ok(Math.abs(robo.hitboxDano.x + robo.hitboxDano.width / 2 - robo.x) < 1e-9);
@@ -190,6 +195,8 @@ test("órbita mantém distância e velocidade limitadas sem trocas repetidas na 
       direcaoAnterior = robo.direcaoAtual;
     }
   }
+  assert.ok(Math.max(...alturasVisuais) - Math.min(...alturasVisuais) >= 26,
+    "levitação permanece evidente durante o deslocamento ao redor do jogador");
   assert.ok(trocas.length >= 3 && trocas.length <= 8);
   for (let i = 1; i < trocas.length; i++) {
     assert.ok(trocas[i] - trocas[i - 1] > 500, "não troca de pose em sequência rápida");
@@ -358,16 +365,20 @@ test("busca a última posição vista por A*, sem atualizar a pista pela posiç�
   assert.equal(robo.iaEstado, "retorno", "desiste após procurar por tempo limitado");
 });
 
-test("vigia parado continua levitando sem deslocar o corpo de colisão", () => {
+test("vigia parado levita visivelmente sem deslocar o corpo de colisão", () => {
   const { scene, robo } = preparar();
   iniciarVigia(scene, robo);
   scene.player.y = robo.y - 200;
-  atualizarRoboBola(scene, 100, 16);
+  robo.faseFlutuacao = 0;
+  atualizarRoboBola(scene, ROBO_BOLA_FLUTUACAO.periodoMs / 4, 16);
   const origem = robo.originY;
+  const centroVisualBaixo = robo.y + (0.5 - robo.originY) * 127 * robo.scaleY;
   const corpo = { x: robo.body.x, y: robo.body.y };
-  atualizarRoboBola(scene, 450, 16);
+  atualizarRoboBola(scene, ROBO_BOLA_FLUTUACAO.periodoMs * 3 / 4, 16);
+  const centroVisualAlto = robo.y + (0.5 - robo.originY) * 127 * robo.scaleY;
   assert.notEqual(robo.originY, origem);
-  assert.ok(Math.abs(robo.deslocamentoFlutuacao) <= 2.5);
+  assert.ok(centroVisualBaixo - centroVisualAlto >= 26, "levitação tem amplitude visível");
+  assert.ok(Math.abs(robo.deslocamentoFlutuacao) <= ROBO_BOLA_FLUTUACAO.amplitude);
   assert.ok(Math.abs(robo.body.x - corpo.x) < 1e-9);
   assert.ok(Math.abs(robo.body.y - corpo.y) < 1e-9);
   assert.deepEqual(robo.body.velocity, { x: 0, y: 0 });
