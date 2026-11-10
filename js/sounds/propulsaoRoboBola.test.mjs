@@ -9,12 +9,13 @@ import { carregarSomPropulsaoRoboBola, configurarSomPropulsaoRoboBola as configu
 const configurarSomPropulsaoRoboBola = (scene, robo) =>
   configurarPropulsao(scene, robo, { silencioInicialMs: 0 });
 
-function fixture(webAudio = false) {
-  const sons = [], filtros = [];
+function fixture(webAudio = false, entradaWebAudio = false) {
+  const sons = [], filtros = [], envelopes = [];
   const scene = { events: new EventEmitter(), player: { x: 0, y: 0, active: true },
     cache: { audio: { exists: () => true } }, sound: { add(key) {
       const som = { key, volume: 0, totalDuration: 8, plays: [], stops: 0, destroyed: false,
-        play(config) { this.plays.push(config); this.detune = config.detune; return true; },
+        play(config) { this.plays.push(config); this.detune = config.detune;
+          this.ganhoAoIniciar = envelopes.at(-1)?.gain.value; return true; },
         stop() { this.stops++; }, destroy() { this.destroyed = true; },
         setVolume(volume) { this.volume = volume; }, setPan(pan) { this.pan = pan; },
         setDetune(detune) { this.detune = detune; },
@@ -31,6 +32,15 @@ function fixture(webAudio = false) {
             disconnect() { this.disconnected = true; } };
           filtros.push(filtro); return filtro;
         } } };
+        if (entradaWebAudio) som.manager.context.createGain = () => {
+          const gain = parametro();
+          gain.setValueCurveAtTime = (curve, time, duration) => {
+            gain.curva = Array.from(curve); gain.inicio = time; gain.duracao = duration;
+          };
+          const node = { gain, connect(destino) { this.connected = destino; },
+            disconnect() { this.disconnected = true; } };
+          envelopes.push(node); return node;
+        };
       }
       sons.push(som); return som;
     } } };
@@ -38,8 +48,8 @@ function fixture(webAudio = false) {
     x: 0, y: 0, alpha: 1, faseFlutuacao: 1, deslocamentoFlutuacao: 0,
     body: { velocity: { x: 0, y: 0 } } });
   const tick = (delta = 20) => scene.events.emit("postupdate", 0, delta);
-  const avancar = (n = 30) => { for (let i = 0; i < n; i++) tick(); };
-  return { scene, sons, filtros, robo, tick, avancar };
+  const avancar = (n = 65) => { for (let i = 0; i < n; i++) tick(); };
+  return { scene, sons, filtros, envelopes, robo, tick, avancar };
 }
 
 test("carrega o loop recortado e mantém a sustentação mais grave", () => {
@@ -81,7 +91,7 @@ test("começar já em movimento não dispara rajada e a propulsão entra suaveme
   const r = robo(); r.body.velocity.x = 120;
   configurarSomPropulsaoRoboBola(scene, r); tick();
   const inicial = sons[0].volume;
-  avancar(15); const cruzeiro = sons[0].volume;
+  avancar(65); const cruzeiro = sons[0].volume;
   assert.ok(inicial < cruzeiro / 20, "entrada discreta, sem impacto de nascimento");
   assert.ok(cruzeiro < 0.02, "velocidade inicial não inventa uma rajada");
   avancar(30); assert.equal(sons[0].volume, cruzeiro);
@@ -112,7 +122,7 @@ test("nascimento fica silencioso mesmo com subidas e manobras, sem guardar jato 
 });
 test("rajadas seguem os instantes irregulares de arranque, curva e frenagem", () => {
   const { scene, sons, robo, tick, avancar } = fixture();
-  const r = robo(); configurarSomPropulsaoRoboBola(scene, r); tick(); avancar(7);
+  const r = robo(); configurarSomPropulsaoRoboBola(scene, r); tick(); avancar(65);
   const repouso = sons[0].volume;
   r.body.velocity.x = 120; tick(); const arranque = sons[0].volume;
   assert.ok(arranque > repouso * 10);
@@ -128,12 +138,30 @@ test("rajadas seguem os instantes irregulares de arranque, curva e frenagem", ()
 });
 test("início real da subida dispara propulsão, altura estática não sustenta o pulso", () => {
   const { scene, sons, robo, tick, avancar } = fixture();
-  const r = robo(); configurarSomPropulsaoRoboBola(scene, r); tick();
+  const r = robo(); configurarSomPropulsaoRoboBola(scene, r); tick(); avancar();
   r.deslocamentoFlutuacao = 0.5; tick(100); const descendo = sons[0].volume;
   r.deslocamentoFlutuacao = 0.2; tick(100);
   assert.ok(sons[0].volume > descendo * 10);
   const subindo = sons[0].volume; avancar(60);
   assert.ok(sons[0].volume < subindo / 20);
+});
+test("Web Audio começa com ganho zero e sobe continuamente por 1,2 segundo antes dos pulsos normais", () => {
+  const { scene, sons, filtros, envelopes, robo, tick } = fixture(true, true);
+  const r = robo(); configurarSomPropulsaoRoboBola(scene, r); tick();
+  const envelope = envelopes[0];
+  assert.equal(sons[0].ganhoAoIniciar, 0, "fonte inicia com a saída já silenciada");
+  assert.equal(filtros[0].connected, envelope);
+  assert.equal(envelope.connected, sons[0].spatialNode);
+  assert.equal(envelope.gain.duracao, 1.2);
+  assert.equal(envelope.gain.curva[0], 0);
+  assert.equal(envelope.gain.curva.at(-1), 1);
+  assert.ok(envelope.gain.curva[10] < 0.02, "primeiros ~94 ms continuam quase inaudíveis");
+  for (let i = 1; i < envelope.gain.curva.length; i++) {
+    assert.ok(envelope.gain.curva[i] >= envelope.gain.curva[i - 1]);
+  }
+  r.body.velocity.x = 175; tick();
+  assert.equal(envelope.gain.inicio, 1, "arranque não reinicia nem pula a entrada de volume");
+  scene.events.emit("shutdown"); assert.equal(envelope.disconnected, true);
 });
 test("aproximação tem mais presença e distância perde agudos; passagem cruza o estéreo", () => {
   const { scene, sons, filtros, robo, tick, avancar } = fixture(true);

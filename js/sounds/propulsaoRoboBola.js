@@ -4,7 +4,11 @@ const ALCANCE = 400;
 const AFINACAO = -600; // Sustentação mais grave; deslocamento eleva o tom do motor.
 const VOLUME_MAXIMO = 0.26;
 const LIMITE_CONJUNTO = 0.41;
-const ENTRADA_SUAVE_SEGUNDOS = 0.2;
+const ENTRADA_SUAVE_SEGUNDOS = 1.2;
+const CURVA_ENTRADA = Float32Array.from({ length: 129 }, (_, i) => {
+  const t = i / 128;
+  return t * t * (3 - 2 * t);
+});
 const controles = new WeakMap();
 const grupos = new WeakMap();
 const limitar = (valor, min, max) => Math.max(min, Math.min(max, valor));
@@ -15,7 +19,7 @@ export function carregarSomPropulsaoRoboBola(loader) {
 
 export function configurarSomPropulsaoRoboBola(scene, robo, { silencioInicialMs = 600 } = {}) {
   if (robo.tipoRobo !== "bola" || robo.morto || controles.has(robo)) return;
-  let som = null, filtro = null, tocando = false, destruido = false, volumeAnterior = null;
+  let som = null, filtro = null, envelope = null, tocando = false, destruido = false, volumeAnterior = null;
   let anterior = null, forca = 0, liberacao = 0.2, intervalo = Infinity, entrada = 0;
   let silencioNascimento = silencioInicialMs;
   let direcaoImpulso = null, velocidadeImpulso = 0, pan = null, afinacao = AFINACAO, afinacaoAplicada = AFINACAO;
@@ -39,6 +43,16 @@ export function configurarSomPropulsaoRoboBola(scene, robo, { silencioInicialMs 
     for (const item of grupo) total += item.volume;
     const fator = total > LIMITE_CONJUNTO ? LIMITE_CONJUNTO / total : 1;
     for (const item of grupo) item.aplicar(item.volume * fator);
+  };
+  const iniciarEntrada = () => {
+    entrada = 0;
+    if (!envelope) return;
+    const agora = som.manager.context.currentTime;
+    // Ganho independente do Phaser: permanece em zero antes de iniciar a fonte.
+    // O relógio de áudio faz a subida contínua, mesmo se o jogo perder quadros.
+    envelope.gain.cancelScheduledValues(0);
+    envelope.gain.setValueAtTime(0, agora);
+    envelope.gain.setValueCurveAtTime(CURVA_ENTRADA, agora, ENTRADA_SUAVE_SEGUNDOS);
   };
   const parar = () => {
     if (!tocando) return;
@@ -116,6 +130,14 @@ export function configurarSomPropulsaoRoboBola(scene, robo, { silencioInicialMs 
         som.volumeNode.disconnect(destino);
         som.volumeNode.connect(filtro); filtro.connect(destino);
       }
+      if (som.volumeNode && contexto?.createGain && destino) {
+        envelope = contexto.createGain();
+        envelope.gain.value = 0;
+        const saida = filtro ?? som.volumeNode;
+        saida.disconnect(destino);
+        saida.connect(envelope);
+        envelope.connect(destino);
+      }
     }
     const alvoPan = limitar(dx / Math.sqrt(dx * dx + dy * dy + 90 * 90) * 0.9, -0.9, 0.9);
     pan = pan === null ? alvoPan : pan + (alvoPan - pan) * (1 - Math.exp(-dt / 0.05));
@@ -131,11 +153,11 @@ export function configurarSomPropulsaoRoboBola(scene, robo, { silencioInicialMs 
     const suavidadeTom = alvoAfinacao > afinacao ? 0.09 : 0.2;
     afinacao += (alvoAfinacao - afinacao) * (1 - Math.exp(-dt / suavidadeTom));
     if (!tocando) {
+      iniciarEntrada();
       const seek = som.totalDuration > 0
         ? ((robo.faseFlutuacao ?? Math.abs(robo.x) * 0.013) * 1.27) % som.totalDuration : 0;
       tocando = !!som.play({ volume: 0, loop: true, rate: 1, detune: afinacao, seek, pan });
       afinacaoAplicada = afinacao;
-      entrada = 0;
     }
     if (!tocando) return;
     const proximidade = 1 - distancia / ALCANCE;
@@ -143,7 +165,7 @@ export function configurarSomPropulsaoRoboBola(scene, robo, { silencioInicialMs 
     const atenuacao = borda / (1 + (distancia / 125) ** 2);
     const intensidade = limitar(0.018 + 0.035 * Math.min(velocidade / 175, 1) + 0.947 * forca, 0, 1);
     entrada = Math.min(1, entrada + dt / ENTRADA_SUAVE_SEGUNDOS);
-    const ganhoEntrada = entrada * entrada * (3 - 2 * entrada);
+    const ganhoEntrada = envelope ? 1 : entrada * entrada * (3 - 2 * entrada);
     fonte.volume = VOLUME_MAXIMO * atenuacao * intensidade * limitar(robo.alpha ?? 1, 0, 1) * ganhoEntrada;
     som.setPan(pan);
     if (Math.abs(afinacao - afinacaoAplicada) >= 1) {
@@ -158,12 +180,13 @@ export function configurarSomPropulsaoRoboBola(scene, robo, { silencioInicialMs 
   const pausar = () => { if (tocando) som.pause(); };
   const retomar = () => {
     anterior = null; direcaoImpulso = null; intervalo = Infinity;
-    if (tocando) som.resume();
+    if (tocando) { iniciarEntrada(); som.resume(); }
   };
   const destruir = () => {
     if (destruido) return;
     destruido = true;
-    parar(); som?.destroy(); filtro?.disconnect(); som = null; filtro = null;
+    parar(); som?.destroy(); filtro?.disconnect(); envelope?.disconnect();
+    som = null; filtro = null; envelope = null;
     scene.events.off("postupdate", atualizar);
     scene.events.off("pause", pausar);
     scene.events.off("resume", retomar);

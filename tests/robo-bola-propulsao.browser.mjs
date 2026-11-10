@@ -17,18 +17,30 @@ try {
     const loopBuffer = s.cache.audio.get(key);
     if (Math.abs(loopBuffer.duration - 7.15) > 0.001) throw new Error("carregou o áudio sem recorte");
     // Compara o PCM usado pelo jogo com a região preservada do arquivo original.
-    const original = await s.sound.context.decodeAudioData(await (await fetch(
+    const bufferOriginal = await s.sound.context.decodeAudioData(await (await fetch(
       "/assets/sounds.mp3/SONS PARA BOTAR AINDA/robo_bola_voando.mp3"
     )).arrayBuffer());
-    const inicioFonte = Math.round(0.75 * original.sampleRate);
+    const inicioFonte = Math.round(0.75 * bufferOriginal.sampleRate);
     let diferenca = 0;
     for (let canal = 0; canal < loopBuffer.numberOfChannels; canal++) {
-      const fonte = original.getChannelData(canal), loop = loopBuffer.getChannelData(canal);
+      const fonte = bufferOriginal.getChannelData(canal), loop = loopBuffer.getChannelData(canal);
       for (let i = 0; i < Math.round(7.1 * loopBuffer.sampleRate); i++) {
         diferenca = Math.max(diferenca, Math.abs(fonte[inicioFonte + i] - loop[i]));
       }
     }
-    if (diferenca > 0.00004) throw new Error(`o recorte alterou a textura do trecho preservado: ${diferenca}`);
+    // Quantização PCM16: até meio passo de arredondamento mais um de escala.
+    if (diferenca > 1.5 / 32768) throw new Error(`o recorte alterou a textura do trecho preservado: ${diferenca}`);
+    const entradas = [];
+    const contexto = s.sound.context, criarGanho = contexto.createGain;
+    contexto.createGain = function () {
+      const node = criarGanho.call(this);
+      const agendar = node.gain.setValueCurveAtTime.bind(node.gain);
+      node.gain.setValueCurveAtTime = (curve, inicio, duracao) => {
+        entradas.push({ curve: Float32Array.from(curve), duracao });
+        return agendar(curve, inicio, duracao);
+      };
+      return node;
+    };
     const r = criarRoboBola(s);
     if (!r) throw new Error("Não foi possível criar o robô-bola");
     r.faseFlutuacao = 0; r.spawnProtegidoAte = Infinity;
@@ -42,6 +54,16 @@ try {
     }
     tick(0);
     const sound = s.sound.get(key);
+    contexto.createGain = criarGanho;
+    if (entradas.length !== 1 || entradas[0].duracao !== 1.2) throw new Error("entrada gradual não foi agendada no relógio de áudio");
+    // Renderiza a curva realmente agendada no jogo: nenhuma etapa depende do FPS.
+    const offline = new OfflineAudioContext(1, 44100 * 1.4, 44100);
+    const constante = offline.createConstantSource(), ganho = offline.createGain();
+    ganho.gain.setValueAtTime(0, 0);
+    ganho.gain.setValueCurveAtTime(entradas[0].curve, 0, entradas[0].duracao);
+    constante.connect(ganho); ganho.connect(offline.destination); constante.start(0);
+    const render = (await offline.startRendering()).getChannelData(0);
+    const entradaVolume = { primeiro: render[0], apos100ms: render[4410], apos1200ms: render[52920] };
     const inicial = { playing: sound.isPlaying, rate: sound.rate, detune: sound.detune,
       loop: sound.loop, duration: sound.totalDuration };
     tick(flutuacao.periodoMs / 4);
@@ -81,11 +103,14 @@ try {
       visual: r.getBounds().centerY - r.y, corpo: r.body.center.y - r.y,
     });
     s.events.on("postupdate", window.__registrarFlutuacao);
-    return { inicial, quieto, subida, depois, arranque, cruzeiro, curva,
+    return { inicial, entradaVolume, quieto, subida, depois, arranque, cruzeiro, curva,
       visualBaixo, visualAlto, corpoBaixo, corpoAlto, perto, longe, esquerda,
       aproxima, afasta, pairando, distante, retomou, pausou };
   });
   assert.equal(result.inicial.playing, true); assert.equal(result.inicial.detune, -600);
+  assert.equal(result.entradaVolume.primeiro, 0);
+  assert.ok(result.entradaVolume.apos100ms < 0.021, "primeiros 100 ms abaixo de 2,1% do ganho normal");
+  assert.ok(result.entradaVolume.apos1200ms > 0.999, "chega ao ganho normal após 1,2 segundo");
   assert.equal(result.inicial.rate, 1); assert.equal(result.inicial.loop, true);
   assert.ok(Math.abs(result.inicial.duration - 7.15) < 0.001);
   assert.ok(result.subida > result.quieto * 5, JSON.stringify(result));
