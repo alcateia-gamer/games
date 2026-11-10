@@ -50,6 +50,7 @@ var config = {
   mqtt: {
     brokerUrl: "wss://broker.hivemq.com:8884/mqtt",
     topicPrefix: "nullborns-night-city",
+    brokerUrl: "wss://nullborns.feira-de-jogos.dev.br/mqtt",
   },
 };
 
