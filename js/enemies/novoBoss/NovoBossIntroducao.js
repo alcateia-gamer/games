@@ -2,6 +2,7 @@
 import { criarRaiosEscudoNovoBoss } from "./NovoBossRaiosEscudo.js";
 import { ocultarHUDDuranteCena } from "../../ui/HudCinematic.js";
 import BossIntroLighting from "../../effects/BossIntroLighting.js";
+import { prepararMusicaNovoBoss } from "../../sounds/novoBoss.js";
 
 const PORTAS_ENTRADA = new Set(["porta02", "porta03"]);
 const duracao = (valor, padrao) => Number.isFinite(valor) && valor >= 0 ? valor : padrao;
@@ -32,6 +33,7 @@ export function prepararIntroducaoNovoBoss(scene, encontro) {
   let centroAtual = null, de = null, para = null, zoomDe = null, zoomPara = null;
   let hud = null;
   const iluminacao = new BossIntroLighting(encontro.config.arena);
+  const musica = prepararMusicaNovoBoss(scene, encontro);
 
   function limparRaios() { raios?.destruir(); raios = null; }
 
@@ -65,6 +67,7 @@ export function prepararIntroducaoNovoBoss(scene, encontro) {
 
   function cancelar() {
     limparRaios();
+    musica.parar();
     encontro.sistemaGeradores?.cancelarApresentacao?.();
     restaurarControle(true);
     iluminacao.iniciar(scene.iluminacaoEmergencia?.luzes);
@@ -228,6 +231,7 @@ export function prepararIntroducaoNovoBoss(scene, encontro) {
         const progresso = total > 0 ? Math.min(1, tempo / total) : 1;
         deslocar(de, para, progresso);
         atual.atualizar?.(progresso);
+        musica.atualizar(etapa === "indo" ? progresso : 1);
         // Consome só o tempo desta etapa: a próxima torre não nasce adiantada em frames longos.
         encontro.sistemaGeradores?.atualizar(passo);
         if (tempo < total) return true;
@@ -250,6 +254,7 @@ export function prepararIntroducaoNovoBoss(scene, encontro) {
       limparRaios();
       // No shutdown os sprites podem já ter sido removidos pelo Phaser.
       if (!concluida && !encontro.encerrado) encontro.sistemaGeradores?.cancelarApresentacao?.();
+      musica.destruir();
       iluminacao.restaurar();
       restaurarControle(true);
       liberarPortas();

@@ -1,13 +1,16 @@
 /** Ciclo de vida do terminal: trava os controles e só autoriza a porta após a leitura. */
 import { criarPainelLeitorCartao } from "./FactoryCardReaderPanel.js";
+import { criarSonsLeitorCartao } from "../sounds/leitorCartao.js";
 
 export function criarInteracaoLeitorCartao(scene, { podeUsar, abrirPortas }) {
   let opened = false, destroyed = false, previousMovement = false;
   let confirmation = null;
+  const sons = criarSonsLeitorCartao(scene);
   const close = () => {
     if (!opened) return;
     opened = false;
     confirmation?.remove(false); confirmation = null;
+    sons.parar();
     scene.cardReaderMenuOpen = false;
     // Os consoles industriais compartilham o bloqueio já usado por ataques, HUD e coleta.
     scene.generatorMenuOpen = false;
@@ -17,9 +20,11 @@ export function criarInteracaoLeitorCartao(scene, { podeUsar, abrirPortas }) {
   };
   const panel = criarPainelLeitorCartao(scene, {
     onClose: close,
+    onSwipe: () => sons.tocar("passagem", 700),
     onRead() {
       if (!opened || confirmation || !podeUsar(true)) return false;
-      confirmation = scene.time.delayedCall(650, () => {
+      const duracaoConfirmacao = Math.max(650, sons.tocar("acesso", 650));
+      confirmation = scene.time.delayedCall(duracaoConfirmacao, () => {
         confirmation = null;
         const valid = opened && podeUsar(true);
         close();
@@ -56,6 +61,7 @@ export function criarInteracaoLeitorCartao(scene, { podeUsar, abrirPortas }) {
       scene.events.off(Phaser.Scenes.Events.PRE_RENDER, update);
       escape.off("down", onEscape);
       panel.destroy();
+      sons.destruir();
     },
   };
 }

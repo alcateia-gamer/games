@@ -8,7 +8,7 @@ const GREEN = 0x64f5ba, DIM = 0x347958;
 const TRILHO_CARTAO = Object.freeze({ inicio: -85, fim: 275, y: 45 });
 const inside = (p, x, y, w, h) => Math.abs(p.x - x) <= w / 2 && Math.abs(p.y - y) <= h / 2;
 
-export function criarPainelLeitorCartao(scene, { onRead, onClose }) {
+export function criarPainelLeitorCartao(scene, { onRead, onClose, onSwipe }) {
   const camera = scene.cameras.main;
   const display = criarDisplayGerador(scene, WIDTH, HEIGHT, "cardReaderDisplay");
   const root = scene.add.container(0, 0).setDepth(1000).setScrollFactor(0)
@@ -119,8 +119,9 @@ export function criarPainelLeitorCartao(scene, { onRead, onClose }) {
       onComplete() {
         if (!opened || destroyed) return;
         status.setText("LENDO CARTÃO...").setColor("#baffd6");
+        const duracaoPassagem = onSwipe?.() ?? 700;
         animation = scene.tweens.add({
-          targets: ghost, x: rail.fim, y: rail.y, duration: 700, ease: "Linear",
+          targets: ghost, x: rail.fim, y: rail.y, duration: duracaoPassagem, ease: "Linear",
           onUpdate() {
             const fraction = Math.max(0, Math.min(1, (ghost.x - rail.inicio) / (rail.fim - rail.inicio)));
             progress.setSize(Math.max(1, fraction * (rail.fim - rail.inicio)), 4).setVisible(fraction > 0);

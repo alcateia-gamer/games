@@ -9,6 +9,8 @@ import { carregarSonsKatana } from "../sounds/katana.js";
 import { carregarSonsPersonagem } from "../sounds/personagem.js";
 import { carregarSomGerador } from "../sounds/gerador.js";
 import { carregarSomLuzFabrica } from "../sounds/luzFabrica.js";
+import { carregarMusicaNovoBoss } from "../sounds/novoBoss.js";
+import { carregarSonsLeitorCartao } from "../sounds/leitorCartao.js";
 import { preloadInventoryItemImages } from "../inventory/InventoryItems.js";
 import { carregarAssetsNovoBoss } from "../enemies/novoBoss/NovoBossAssets.js";
 import { carregarEfeitosEspeciais } from "../combat/SpecialAbilityEffects.js";
@@ -144,6 +146,7 @@ class Preloader extends Phaser.Scene {
    */
   carregarAssets() {
     this.load.setPath("./assets/");
+    carregarMusicaNovoBoss(this.load);
     carregarAssetsNovoBoss(this);
     carregarEfeitosEspeciais(this);
 
@@ -155,6 +158,7 @@ class Preloader extends Phaser.Scene {
     carregarSonsInimigos(this.load);
     carregarSomGerador(this.load);
     carregarSomLuzFabrica(this.load);
+    carregarSonsLeitorCartao(this.load);
 
     // =====================================================
     // MAPAS

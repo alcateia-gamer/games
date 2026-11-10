@@ -860,6 +860,66 @@ test("o cartão passa sozinho ao abrir o terminal e libera as portas após a con
   scene.events.emit("shutdown");
 });
 
+test("sons do cartão acompanham a passagem e a confirmação em sua velocidade natural", () => {
+  const { scene } = createScene();
+  const reproducoes = [], sons = [];
+  scene.cache = { audio: { exists: () => true } };
+  scene.sound = { add(chave) {
+    const som = {
+      totalDuration: chave === "cartao-passando" ? 1.584 : 2.064,
+      addMarker() {},
+      play(nome, config) { reproducoes.push({ chave, config }); this.tocando = true; return true; },
+      stop() { this.tocando = false; },
+      destroy() { this.destruido = true; },
+    };
+    sons.push(som);
+    return som;
+  } };
+  let espera;
+  const delayedCall = scene.time.delayedCall;
+  scene.time.delayedCall = (delay, callback) => { espera = delay; return delayedCall(delay, callback); };
+  liberarAcesso(scene); aproximarLeitor(scene); abrirComE(scene);
+  assert.equal(reproducoes.length, 0, "posicionar o cartão ainda não toca a passagem");
+  const posicionar = scene.animations.at(-1);
+  posicionar.onComplete();
+  const passagem = scene.animations.at(-1);
+  assert.equal(passagem.duration, 1584);
+  assert.equal(reproducoes[0].chave, "cartao-passando");
+  assert.equal(reproducoes[0].config.rate, 1);
+  passagem.onComplete();
+  assert.equal(sons[0].tocando, false, "a passagem não se sobrepõe à confirmação");
+  assert.equal(reproducoes[1].chave, "cartao-acesso-concedido");
+  assert.equal(espera, 2064, "a confirmação tem tempo de terminar antes de fechar o painel");
+  assert.ok(scene.portasFabrica.every(porta => porta.estado === "fechada"));
+  scene.finishActivation();
+  assert.equal(scene.portasFabrica.find(porta => porta.nome === "porta02").estado, "abrindo");
+  assert.ok(sons.every(som => !som.tocando));
+  scene.events.emit("shutdown");
+  assert.ok(sons.every(som => som.destruido));
+});
+
+test("cancelar a passagem interrompe o som e não anuncia acesso concedido", () => {
+  const { scene } = createScene();
+  const reproducoes = [];
+  let tocando = false;
+  scene.cache = { audio: { exists: () => true } };
+  scene.sound = { add(chave) { return {
+    totalDuration: 1.584, addMarker() {},
+    play() { reproducoes.push(chave); tocando = true; return true; },
+    stop() { tocando = false; }, destroy() {},
+  }; } };
+  liberarAcesso(scene); aproximarLeitor(scene); abrirComE(scene);
+  scene.animations.at(-1).onComplete();
+  const passagem = scene.animations.at(-1);
+  assert.equal(tocando, true);
+  scene.leitorCartaoFabrica.terminal.close();
+  passagem.onComplete();
+  assert.equal(tocando, false);
+  assert.deepEqual(reproducoes, ["cartao-passando"]);
+  assert.ok(scene.portasFabrica.every(porta => porta.estado === "fechada"));
+  scene.events.emit("shutdown");
+});
+
 test("movimentos do mouse e do toque não interferem na passagem automática", () => {
   const { scene } = createScene();
   liberarAcesso(scene); aproximarLeitor(scene); abrirComE(scene);

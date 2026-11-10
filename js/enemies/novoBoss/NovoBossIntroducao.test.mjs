@@ -113,6 +113,52 @@ test("a entrada espera o corpo passar pelas portas, menus e animações de abert
   sistema.destruir();
 });
 
+test("a música entra durante a aproximação da câmera e acompanha o avanço da apresentação", () => {
+  const { scene, sistema } = fixture();
+  const eventosSom = new EventEmitter();
+  const sons = [];
+  scene.cache = { audio: { exists: () => true, get: () => ({ duration: 100 }) } };
+  scene.sound = {
+    add() {
+      const som = {
+        totalDuration: 100,
+        volumes: [],
+        on: (...args) => eventosSom.on(...args),
+        off: (...args) => eventosSom.off(...args),
+        addMarker(marcador) { this.marcador = marcador; },
+        play(nome, opcoes) {
+          this.reproducao = typeof nome === "object"
+            ? { nome: "", opcoes: nome }
+            : { nome, opcoes };
+        },
+        setVolume(volume) { this.volumes.push(volume); },
+        stop() {},
+        destroy() {},
+      };
+      sons.push(som);
+      return som;
+    },
+  };
+
+  sistema.atualizar(0);
+  sistema.atualizar(3200 * 0.34);
+  assert.equal(sons.length, 0, "a faixa aguarda a câmera avançar");
+  sistema.atualizar(3200 * 0.1);
+  assert.equal(sons.length, 1);
+  assert.ok(sons[0].volumes.at(-1) > 0);
+  sistema.atualizar(3200);
+  assert.equal(sons[0].volumes.at(-1), 0.2);
+  assert.equal(sons[0].marcador.start, 48);
+  assert.deepEqual(sons[0].reproducao, {
+    nome: "boss-continuo", opcoes: { volume: 0, seek: -48 },
+  });
+  eventosSom.emit("complete");
+  assert.deepEqual(sons[0].reproducao, {
+    nome: "boss-continuo", opcoes: { volume: 0, seek: -48 },
+  });
+  sistema.destruir();
+});
+
 test("sair durante a apresentação volta a deixar a arena apagada para a próxima entrada", () => {
   const { encontro, sistema } = fixture();
   const luz = { x: -1080, y: -5600, neon: true };
