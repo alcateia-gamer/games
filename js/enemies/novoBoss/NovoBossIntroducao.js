@@ -153,7 +153,7 @@ export function prepararIntroducaoNovoBoss(scene, encontro) {
           y: torre.hitboxDano.y + torre.hitboxDano.height / 2 } });
       roteiro.push({ nome: "invocando-torre", torre: torre.id, velocidade: velocidadeTorres,
         duracao: torre.duracaoInvocacaoMs,
-        iniciar: () => torre.invocar() });
+        iniciar: () => torre.invocar(velocidadeTorres) });
       roteiro.push({ nome: "mostrando-choque-torre", torre: torre.id, velocidade: velocidadeTorres,
         duracao: torre.duracaoIdleMs });
     }

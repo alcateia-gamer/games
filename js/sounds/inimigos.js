@@ -15,7 +15,7 @@ const DISTANCIA_SOM_PASSOS_ROBOS = 700;
 
 // Volume dos sons existentes.
 const VOLUME_TIRO_LASER = 0.02;
-const VOLUME_MORTE_ROBO = 0.3;
+const VOLUME_MORTE_ROBO = 0.13;
 
 /** Enfileira os sons de tiro, passos e explosão dos robôs. */
 function carregarSonsInimigos(loader) {
@@ -142,7 +142,7 @@ function tocarSomMorteRobo(scene, inimigo) {
   inimigo.somMorteTocado = true;
 
   scene.sound.play("robo-explodindo", {
-    volume: inimigo.tipoRobo === "bola" ? VOLUME_MORTE_ROBO * 0.8 : VOLUME_MORTE_ROBO,
+    volume: VOLUME_MORTE_ROBO,
   });
 }
 

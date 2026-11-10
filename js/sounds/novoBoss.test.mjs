@@ -55,9 +55,9 @@ test("inclui a introdução e agenda o loop antes do encerramento da faixa", () 
   assert.equal(musica.volumes.at(-1), 0);
 
   controle.atualizar(0.675);
-  assert.ok(musica.volumes.at(-1) > 0.09 && musica.volumes.at(-1) < 0.11);
+  assert.ok(musica.volumes.at(-1) > 0.049 && musica.volumes.at(-1) < 0.051);
   controle.atualizar(1);
-  assert.equal(musica.volumes.at(-1), 0.2);
+  assert.equal(musica.volumes.at(-1), 0.1);
   assert.deepEqual(chamadas.find(([tipo]) => tipo === "play"), [
     "play", "boss-continuo", { volume: 0, seek: -48 },
   ]);

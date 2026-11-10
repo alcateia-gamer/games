@@ -4,6 +4,9 @@ import { areasSobrepostasNovoBoss } from "./NovoBossTeleporte.js";
 import { quadrosChoqueTorreIdle } from "./NovoBossTorreChoque.js";
 import { prepararPisoTorre } from "./NovoBossTorrePiso.js";
 import { criarControleColisaoTorre } from "./NovoBossColisoesTorres.js";
+import { criarSomEscotilhaBoss } from "../../sounds/escotilhaBoss.js";
+import { criarSomImpactoEscotilhaBoss, criarSomExplosaoEscotilhaBoss } from "../../sounds/impactoEscotilhaBoss.js";
+import { criarSomRaioEscotilhaBoss } from "../../sounds/raioEscotilhaBoss.js";
 
 const POSES = {
   summon: assetsNovoBoss.torreSummon, idle: assetsNovoBoss.torreIdle,
@@ -54,6 +57,11 @@ export function criarTorreNovoBoss(scene, encontro, ponto, aoDestruir) {
   let estado = "summon", tempo = 0, iniciada = false, destruida = false;
   let ultimoFrame = 0;
   let controlada = false, estadoGerador = "emergindo";
+  let velocidadeMovimento = 1;
+  const somEscotilha = criarSomEscotilhaBoss(scene, ponto, DURACOES.summon);
+  const somImpacto = criarSomImpactoEscotilhaBoss(scene, ponto);
+  const somExplosao = criarSomExplosaoEscotilhaBoss(scene, ponto);
+  const somRaio = criarSomRaioEscotilhaBoss(scene, ponto);
   const colisaoMapa = criarControleColisaoTorre(scene, ponto);
   const luzChoqueIdle = { x: ponto.x, y: peY - 208 * escala, raio: 96 * escala, intensidade: 0 };
   const hitbox = new Phaser.Geom.Rectangle(ponto.x - 96 * escala, peY - 258 * escala,
@@ -62,6 +70,8 @@ export function criarTorreNovoBoss(scene, encontro, ponto, aoDestruir) {
   hitbox.enable = false;
 
   function mudarPose(pose) {
+    somEscotilha.parar();
+    somRaio.parar();
     estado = pose;
     tempo = 0;
     ultimoFrame = 0;
@@ -81,7 +91,8 @@ export function criarTorreNovoBoss(scene, encontro, ponto, aoDestruir) {
     colisaoMapa,
     controlarPrologo() { controlada = true; },
     recolher() {
-      if (destruida || torre.morto || estadoGerador === "subterraneo") return;
+      if (destruida || torre.morto || estadoGerador === "subterraneo" || estadoGerador === "recolhendo") return;
+      velocidadeMovimento = 1;
       controlada = iniciada = true;
       estadoGerador = "recolhendo";
       mudarPose("summon");
@@ -92,13 +103,22 @@ export function criarTorreNovoBoss(scene, encontro, ponto, aoDestruir) {
     },
     emergir() {
       if (destruida || torre.morto) return;
+      if (controlada && iniciada && estadoGerador === "emergindo") return;
+      velocidadeMovimento = 1;
       controlada = iniciada = true;
       estadoGerador = "emergindo";
       mudarPose("summon");
       torre.body.enable = false;
     },
-    suspenderColisao() { torre.body.enable = false; colisaoMapa.definir(false); },
-    invocar() { if (!destruida && !torre.morto) iniciada = true; },
+    suspenderColisao() {
+      somEscotilha.parar(); somImpacto.parar(); somExplosao.parar(); somRaio.parar();
+      torre.body.enable = false; colisaoMapa.definir(false);
+    },
+    invocar(velocidade = 1) {
+      if (destruida || torre.morto || iniciada) return;
+      velocidadeMovimento = Number.isFinite(velocidade) && velocidade > 0 ? velocidade : 1;
+      iniciada = true;
+    },
     prepararInvocacao() {
       if (destruida || torre.morto) return;
       iniciada = false;
@@ -116,12 +136,14 @@ export function criarTorreNovoBoss(scene, encontro, ponto, aoDestruir) {
       if (!torre.active || !Number.isFinite(quantidade) || quantidade <= 0 ||
           (area && !areasSobrepostasNovoBoss(area, hitbox))) return false;
       if (encontro.prologo?.bloqueiaCombatePrincipal && !encontro.prologo.podeAtingirGerador(torre)) return false;
+      somImpacto.tocar();
       torre.vida = Math.max(0, torre.vida - quantidade);
       if (torre.vida === 0) {
         torre.morto = true;
         torre.ligado = false;
         torre.body.enable = false;
         mudarPose("death");
+        somExplosao.tocar();
         estadoGerador = "destruido";
         if (controlada) colisaoMapa.definir(false);
         aoDestruir(torre);
@@ -146,8 +168,13 @@ export function criarTorreNovoBoss(scene, encontro, ponto, aoDestruir) {
         (!controlada || estadoGerador === "exposto");
       if (controlada && !visivel) colisaoMapa.definir(false);
       if (controlada && visivel && estadoGerador === "exposto" && !colisaoMapa.ocupado()) colisaoMapa.definir(true);
-      if (!visivel || !iniciada || (!combate && !apresentando)) return;
+      if (!visivel || !iniciada || (!combate && !apresentando)) {
+        somEscotilha.parar(); somImpacto.parar(); somExplosao.parar(); somRaio.parar(); return;
+      }
       tempo += Number.isFinite(delta) ? Math.max(0, delta) : 0;
+      somEscotilha.atualizar(tempo, estado === "summon" &&
+        (!controlada || estadoGerador === "emergindo" || estadoGerador === "recolhendo"),
+      controlada && estadoGerador === "recolhendo", velocidadeMovimento);
       if (controlada && estadoGerador === "subterraneo") return;
       if (controlada && estadoGerador === "recolhendo") {
         const frame = Math.max(0, POSES.summon.ultimoFrame - Math.floor(tempo / POSES.summon.frameMs));
@@ -187,10 +214,15 @@ export function criarTorreNovoBoss(scene, encontro, ponto, aoDestruir) {
         luzChoqueIdle.y = visual.y + (choque.y - 258) * escala;
         luzChoqueIdle.intensidade = choque.intensidade;
       }
+      somRaio.atualizar(luzChoqueIdle.intensidade, estado === "idle" && !torre.morto);
     },
     destruir() {
       if (destruida) return;
       destruida = true;
+      somEscotilha.destruir();
+      somImpacto.destruir();
+      somExplosao.destruir();
+      somRaio.destruir();
       luzChoqueIdle.intensidade = 0;
       visual.destroy();
       for (const corpo of colisaoMapa.corpos) delete corpo.alvoTorreNovoBoss;

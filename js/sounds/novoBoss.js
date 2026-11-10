@@ -1,7 +1,7 @@
 const CHAVE_MUSICA = "musica-novo-boss";
 const NOME_MARCADOR_LOOP = "boss-continuo";
 const ATRASO_ENTRADA = 0.35;
-const VOLUME_MAXIMO = 0.2;
+const VOLUME_MAXIMO = 0.1;
 // Pontos correspondentes da faixa: um ciclo de 160 batidas a 172 BPM.
 // O salto acontece antes do encerramento/fade da gravação (~110 s).
 const INICIO_LOOP = 48;

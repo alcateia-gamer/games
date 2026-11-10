@@ -5,6 +5,7 @@ import { obterBocaMetralhadora, criarMunicaoRobo } from "../enemies/WarRobotProj
  */
 
 import criarLevel1Map from "../map/MapaCidade.js";
+import { iniciarMusicaCidade } from "../sounds/musicaCidade.js";
 import {
   atualizarDepthAtores,
   atualizarDepthCercaFabrica2,
@@ -382,6 +383,7 @@ class Level1 extends Phaser.Scene {
 
     this.teclaR = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R);
     criarRuntimeCoop(this);
+    iniciarMusicaCidade(this);
   }
 
   // =====================================================

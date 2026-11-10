@@ -5,6 +5,7 @@ import { iniciarEmergenciaRoboBola } from "../RoboBolaEmergencia.js";
 import { criarPortaisNovoBoss, escolherParPortais, pontoSeguroPortal } from "./NovoBossPortais.js";
 import { criarPadraoPrologo } from "./NovoBossPadroesPrologo.js";
 import { obterFilhosGrupoSeguro } from "../EnemyPathfinding.js";
+import { criarSomCargaEscudoBoss } from "../../sounds/raioEscotilhaBoss.js";
 
 export const ESTADOS_PROLOGO = Object.freeze({
   PORTAIS_ABRINDO: "PORTAIS_ABRINDO", ONDA_ROBOS: "ONDA_ROBOS",
@@ -31,6 +32,7 @@ export function prepararPrologoNovoBoss(scene, encontro) {
   let impactos = 0, ultimoImpacto = -Infinity, geradorDoCiclo = null;
   const ataquesContados = new Set(), robos = new Set();
   const grafico = scene.add.graphics().setDepth(52).setName("novo-boss-prologo-energia");
+  const somCarga = criarSomCargaEscudoBoss(scene);
   const sobreviventes = () => encontro.geradores.filter(g => g.ligado && !g.morto);
   const regra = () => config.ciclos[Math.min(ciclo - 1, config.ciclos.length - 1)];
   const vivo = robo => !robo.morto && robo.vida > 0 && robo.active !== false && Boolean(robo.scene);
@@ -38,6 +40,7 @@ export function prepararPrologoNovoBoss(scene, encontro) {
 
   function mudar(proximo) {
     const anterior = estado;
+    if (anterior === "ESCUDO_RECARREGANDO" && proximo !== anterior) somCarga.parar();
     estado = proximo;
     tempo = 0;
     encontro.estado = "prologo";
@@ -149,6 +152,7 @@ export function prepararPrologoNovoBoss(scene, encontro) {
   function energia() {
     grafico.clear();
     if (estado === "ESCUDO_RECARREGANDO") {
+      somCarga.atualizar(sobreviventes().length ? tempo / config.recargaEscudoMs / 0.8 : 0);
       grafico.lineStyle(2, 0x90f2ff, Math.min(0.8, tempo / config.recargaEscudoMs));
       for (const torre of sobreviventes()) grafico.lineBetween(torre.x, torre.y,
         encontro.x, encontro.y + 16);
@@ -248,6 +252,7 @@ export function prepararPrologoNovoBoss(scene, encontro) {
     suspender() {
       if (destruido || suspenso || estado === "COMBATE_PRINCIPAL") return;
       suspenso = true;
+      somCarga.parar();
       limparRobos(); portais?.destruir(); portais = null;
       grafico.clear();
       encontro.geradores.forEach(g => g.suspenderColisao());
@@ -281,6 +286,7 @@ export function prepararPrologoNovoBoss(scene, encontro) {
     destruir() {
       if (destruido) return;
       destruido = true;
+      somCarga.destruir();
       limparRobos(); portais?.destruir(); portais = null;
       grafico.destroy(); ataquesContados.clear();
     },

@@ -453,6 +453,120 @@ test("summon toca uma vez; idle repete respeitando o quadro original de 200 ms",
   sistema.atualizar(16000); assert.equal(t.estado, "idle"); assert.equal(t.visual.frame, 0);
 });
 
+test("torre reutiliza o áudio na subida, descida e nova subida sem repetir em comandos duplicados", () => {
+  const { scene, encontro } = criarArenaTorres();
+  const sons = [];
+  scene.cache = { audio: { exists: chave => chave === "boss-escotilha" } };
+  scene.sound = { add() {
+    const som = { totalDuration: 0.916, reproducoes: [],
+      play(config) { this.reproducoes.push(config); this.tocando = true; return true; },
+      setVolume() {}, setPan() {}, stop() { this.tocando = false; },
+      destroy() { this.destruido = true; },
+    };
+    sons.push(som); return som;
+  } };
+  const sistema = prepararGeradoresNovoBoss(scene, encontro);
+  sistema.atualizar(0);
+  assert.equal(sons.length, 4);
+  sistema.atualizar(1600);
+  assert.ok(sons.every(som => som.reproducoes.length === 1 && !som.tocando));
+  const torre = encontro.geradores[0], audio = sons[0];
+  torre.recolher();
+  torre.atualizar(699, true);
+  torre.recolher();
+  assert.equal(audio.reproducoes.length, 1);
+  torre.atualizar(1, true);
+  assert.equal(audio.reproducoes.length, 2, "a tampa começa a mover após recolher a cabeça");
+  torre.atualizar(900, true);
+  assert.equal(torre.estadoGerador, "subterraneo");
+  assert.equal(audio.tocando, false);
+  torre.emergir();
+  torre.atualizar(0, true);
+  torre.emergir();
+  torre.atualizar(100, true);
+  assert.equal(audio.reproducoes.length, 3);
+  assert.equal(sons.length, 4, "cada torre conserva sua única instância de áudio");
+  torre.suspenderColisao();
+  assert.equal(audio.tocando, false);
+  sistema.destruir();
+  assert.ok(sons.every(som => som.destruido && !som.tocando));
+});
+
+test("as quatro escotilhas tocam impacto baixo apenas em acertos válidos, reutilizando cada som", () => {
+  const { scene, encontro } = criarArenaTorres();
+  const sons = [];
+  scene.cache = { audio: { exists: chave => chave === "boss-impacto-escotilha" } };
+  scene.sound = { add(chave) {
+    assert.equal(chave, "boss-impacto-escotilha");
+    const som = { reproducoes: [],
+      play(config) { this.reproducoes.push(config); this.tocando = true; return true; },
+      stop() { this.tocando = false; }, destroy() { this.destruido = true; },
+    };
+    sons.push(som); return som;
+  } };
+  const sistema = prepararGeradoresNovoBoss(scene, encontro);
+  for (const torre of encontro.geradores) {
+    assert.equal(torre.receberDano(10), false, "durante a invocação ainda não pode receber dano");
+  }
+  assert.equal(sons.length, 0);
+  sistema.atualizar(1600);
+  for (const [i, torre] of encontro.geradores.entries()) {
+    aproximar(scene, torre, 0);
+    assert.equal(torre.receberDano(0), false);
+    assert.equal(torre.receberDano(10, { x: 1000, y: 1000, width: 1, height: 1 }), false);
+    assert.equal(sons.length, i);
+    assert.equal(causarDanoAlvoAdicional(scene, torre, 10), true);
+    assert.equal(sons[i].reproducoes.length, 1);
+    assert.deepEqual(sons[i].reproducoes[0],
+      { volume: 0.07, loop: false, rate: 1, detune: 0, seek: 0 });
+    sistema.atualizar(50);
+    assert.equal(sons[i].reproducoes.length, 1, "a animação de impacto não repete o áudio");
+    scene.player.body.center.x += 800;
+    assert.equal(causarDanoAlvoAdicional(scene, torre, 10), true);
+    assert.ok(sons[i].reproducoes[1].volume < 0.07);
+    assert.equal(causarDanoAlvoAdicional(scene, torre, 1000), true);
+    assert.equal(sons[i].reproducoes.length, 3, "o golpe fatal também toca");
+    assert.equal(causarDanoAlvoAdicional(scene, torre, 10), false);
+    assert.equal(sons[i].reproducoes.length, 3);
+    assert.equal(sons.length, i + 1, "não cria outro som a cada acerto");
+  }
+  sistema.destruir();
+  assert.ok(sons.every(som => som.destruido && !som.tocando));
+});
+
+test("cada escotilha toca uma explosão de volume reduzido ao entrar na animação de destruição", () => {
+  const { scene, encontro } = criarArenaTorres();
+  const sons = [];
+  scene.cache = { audio: { exists: chave => chave === "boss-explosao-escotilha" } };
+  scene.sound = { add(chave) {
+    assert.equal(chave, "boss-explosao-escotilha");
+    const som = { reproducoes: [],
+      play(config) { this.reproducoes.push(config); this.tocando = true; return true; },
+      stop() { this.tocando = false; }, destroy() { this.destruido = true; },
+    };
+    sons.push(som); return som;
+  } };
+  const sistema = prepararGeradoresNovoBoss(scene, encontro);
+  sistema.atualizar(1600);
+  for (const [i, torre] of encontro.geradores.entries()) {
+    aproximar(scene, torre, 0);
+    assert.equal(causarDanoAlvoAdicional(scene, torre, 1), true);
+    assert.equal(sons.length, i, "golpes não fatais não tocam a explosão");
+    if (i > 0) scene.player.body.center.x += 800;
+    assert.equal(causarDanoAlvoAdicional(scene, torre, 1000), true);
+    assert.equal(torre.estado, "death");
+    assert.equal(sons[i].reproducoes.length, 1);
+    assert.deepEqual(sons[i].reproducoes[0],
+      { volume: i > 0 ? 0.325 : 0.65, loop: false, rate: 1, detune: 0, seek: 0 });
+    sistema.atualizar(100);
+    assert.equal(sons[i].tocando, true, "o efeito continua após o início da animação de morte");
+    assert.equal(causarDanoAlvoAdicional(scene, torre, 1000), false);
+    assert.equal(sons[i].reproducoes.length, 1, "a animação e novos golpes não repetem a explosão");
+  }
+  sistema.destruir();
+  assert.ok(sons.every(som => som.destruido && !som.tocando));
+});
+
 test("luz azul segue as faíscas do idle, a pausa de 200 ms e o ciclo de vida da torre", () => {
   const { scene, encontro } = criarArenaTorres();
   const sistema = prepararGeradoresNovoBoss(scene, encontro), torre = encontro.geradores[0];
@@ -503,6 +617,46 @@ test("luz azul segue as faíscas do idle, a pausa de 200 ms e o ciclo de vida da
   sistema.destruir();
   assert.equal(choques().length, 0);
   luzes.destroy();
+});
+
+test("áudio dos raios segue os quadros reais e a pausa de 200 ms, silenciando em dano e suspensão", () => {
+  const { scene, encontro } = criarArenaTorres();
+  const sons = [];
+  scene.cache = { audio: { exists: chave => chave === "boss-raio-escotilha" } };
+  scene.sound = { add() {
+    const som = { totalDuration: 4, reproducoes: [],
+      play(config) { this.reproducoes.push(config); this.tocando = true; return true; },
+      setVolume(volume) { this.volume = volume; }, setPan() {},
+      stop() { this.tocando = false; }, destroy() { this.destruido = true; },
+    };
+    sons.push(som); return som;
+  } };
+  const sistema = prepararGeradoresNovoBoss(scene, encontro);
+  const torre = encontro.geradores[0];
+  aproximar(scene, torre, 0);
+  sistema.atualizar(1600);
+  assert.equal(sons.length, 0, "invocação e primeiro quadro sem raio não tocam");
+  sistema.atualizar(100);
+  const som = sons[0], fraco = som.volume;
+  assert.ok(fraco > 0);
+  sistema.atualizar(100);
+  assert.ok(som.volume > fraco);
+  sistema.atualizar(500);
+  assert.equal(torre.visual.frame, 7);
+  assert.equal(som.volume, 0);
+  sistema.atualizar(199);
+  assert.equal(som.volume, 0, "o silêncio respeita a pausa de 200 ms");
+  sistema.atualizar(1);
+  assert.equal(torre.visual.frame, 8);
+  assert.ok(som.volume > 0);
+  assert.equal(som.reproducoes.length, 1);
+  assert.equal(causarDanoAlvoAdicional(scene, torre, 1), true);
+  assert.equal(som.tocando, false, "a pose de dano não tem raios");
+  encontro.suspenso = true;
+  sistema.atualizar(0);
+  assert.ok(sons.every(audio => !audio.tocando));
+  sistema.destruir();
+  assert.ok(sons.every(audio => audio.destruido));
 });
 
 test("ataques usam vida própria e attacked temporário; último dano derruba o escudo imediatamente", () => {

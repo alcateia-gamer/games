@@ -8,6 +8,8 @@ import { pontosTorresNovoBoss } from "./NovoBossTorres.js";
 import { novoBossConfig } from "./NovoBossConfig.js";
 import { causarDanoAreaAlvosAdicionais } from "../../combat/CombatTargets.js";
 import { retanguloLivreDoMapa } from "../EnemyPathfinding.js";
+import { EventEmitter } from "node:events";
+import { prepararPrologoNovoBoss } from "./NovoBossPrologo.js";
 
 function arenaReal() {
   const tiled = JSON.parse(readFileSync(new URL("../../../assets/map/parte2-fase1.json", import.meta.url)));
@@ -19,6 +21,73 @@ function arenaReal() {
   const encontro = { config: novoBossConfig, x: -1080, y: -5810, geradores: pontosTorresNovoBoss(scene) };
   return { scene, encontro, objetos };
 }
+
+test("as três recargas após a formação inicial tocam somente enquanto seus feixes estão visíveis", () => {
+  const { scene, encontro } = arenaReal();
+  const sons = [];
+  const visual = () => {
+    const v = {};
+    for (const metodo of ["setDepth", "setName", "setOrigin", "setScale", "setFlipX",
+      "setVisible", "setFrame", "setAlpha", "clear", "lineStyle", "lineBetween", "strokeCircle", "destroy"]) {
+      v[metodo] = () => v;
+    }
+    return v;
+  };
+  Object.assign(scene, {
+    events: new EventEmitter(), vida: 100, textures: { exists: () => true },
+    add: { graphics: visual, sprite: visual },
+    cache: { audio: { exists: chave => chave === "boss-raio-escotilha" } },
+    sound: { add() {
+      const som = { reproducoes: [],
+        play(config) { this.reproducoes.push(config); this.tocando = true; return true; },
+        setVolume(volume) { this.volume = volume; },
+        stop() { this.tocando = false; }, destroy() { this.destruido = true; },
+      };
+      sons.push(som); return som;
+    } },
+  });
+  encontro.config = { ...novoBossConfig, ataques: { ativo: false }, prologo: {
+    ...novoBossConfig.prologo, aberturaPortalMs: 0, fechamentoPortalMs: 0,
+    ciclos: Array.from({ length: 4 }, () => ({ total: 0, simultaneos: 0, padroes: [] })),
+  } };
+  Object.assign(encontro, { active: true, vida: 1000, vidaMaxima: 1000, relogioCombate: 0,
+    sistemaGeradores: { atualizar() {}, controlarEscudo() {}, escudoOcupado: () => false },
+  });
+  encontro.geradores.forEach(g => Object.assign(g, {
+    torre: true, ligado: true, morto: false, estadoGerador: "exposto",
+    controlarPrologo() {}, suspenderColisao() {},
+    recolher() { this.estadoGerador = "subterraneo"; },
+    emergir() { this.estadoGerador = "exposto"; },
+  }));
+  const prologo = prepararPrologoNovoBoss(scene, encontro);
+  function ate(estado) {
+    for (let i = 0; i < 100 && prologo.estado !== estado; i++) prologo.atualizar(50);
+    assert.equal(prologo.estado, estado);
+  }
+  for (let ciclo = 0; ciclo < 4; ciclo++) {
+    ate("GERADORES_EXPOSTOS");
+    const torre = encontro.geradores[ciclo];
+    torre.ligado = false; torre.morto = true;
+    prologo.geradorDestruido(torre);
+    if (ciclo === 3) { ate("COMBATE_PRINCIPAL"); break; }
+    ate("BOSS_VULNERAVEL");
+    assert.equal(prologo.receberDanoBoss(1, {}), true);
+    prologo.atualizar(180);
+    assert.equal(prologo.receberDanoBoss(1, {}), true);
+    assert.equal(prologo.estado, "ESCUDO_RECARREGANDO");
+    prologo.atualizar(600);
+    assert.equal(sons[0].volume, 0.15625);
+    prologo.atualizar(400);
+    assert.equal(sons[0].volume, 0.25);
+    prologo.atualizar(200);
+    assert.equal(sons[0].tocando, false, "terminar a recarga interrompe o áudio");
+    assert.equal(sons[0].reproducoes.length, ciclo + 1);
+  }
+  assert.equal(sons.length, 1, "a mesma voz atende às três recargas");
+  assert.equal(sons[0].reproducoes.length, 3, "destruir a quarta torre não cria outro escudo");
+  prologo.destruir();
+  assert.equal(sons[0].destruido, true);
+});
 
 test("mapa real liga exatamente os quatro retângulos de colisão às torres", () => {
   const { scene, encontro } = arenaReal();

@@ -147,7 +147,7 @@ test("a música entra durante a aproximação da câmera e acompanha o avanço d
   assert.equal(sons.length, 1);
   assert.ok(sons[0].volumes.at(-1) > 0);
   sistema.atualizar(3200);
-  assert.equal(sons[0].volumes.at(-1), 0.2);
+  assert.equal(sons[0].volumes.at(-1), 0.1);
   assert.equal(sons[0].marcador.start, 48);
   assert.deepEqual(sons[0].reproducao, {
     nome: "boss-continuo", opcoes: { volume: 0, seek: -48 },
@@ -276,6 +276,57 @@ function avancarAte(f, etapa) {
   for (let i = 0; i < 1000 && f.sistema.snapshot().etapa !== etapa; i++) f.sistema.atualizar(50);
   assert.equal(f.sistema.snapshot().etapa, etapa);
 }
+
+test("o áudio de formação inicial segue o alcance dos feixes e sua dissipação até o silêncio", t => {
+  const f = fixtureTorres(t, { velocidade: 1.25, velocidadeTorres: 1.5 });
+  const sons = [];
+  f.scene.cache = { audio: { exists: chave => chave === "boss-raio-escotilha" } };
+  f.scene.sound = { add() {
+    const som = { totalDuration: 4, reproducoes: [],
+      play(config) { this.reproducoes.push(config); this.tocando = true; return true; },
+      setVolume(volume) { this.volume = volume; }, setPan() {},
+      stop() { this.tocando = false; }, destroy() { this.destruido = true; },
+    };
+    sons.push(som); return som;
+  } };
+  avancarAte(f, "carregando-escudo");
+  f.sistema.atualizar(500);
+  const feixe = sons.at(-1);
+  assert.equal(feixe.volume, 0.25);
+  assert.equal(feixe.reproducoes.length, 1);
+  avancarAte(f, "dissipando-raios");
+  f.sistema.atualizar(175);
+  assert.ok(feixe.volume > 0 && feixe.volume < 0.25);
+  avancarAte(f, "voltando");
+  assert.equal(feixe.tocando, false);
+  assert.equal(feixe.destruido, true);
+  assert.equal(feixe.reproducoes.length, 1);
+});
+
+test("as quatro escotilhas tocam uma vez cada na cutscene, no ritmo acelerado das torres", t => {
+  const f = fixtureTorres(t, { velocidade: 1.25, velocidadeTorres: 1.5 });
+  const sons = [];
+  f.scene.cache = { audio: { exists: chave => chave === "boss-escotilha" } };
+  f.scene.sound = { add(chave) {
+    assert.equal(chave, "boss-escotilha");
+    const som = { totalDuration: 0.916, reproducoes: [],
+      play(config) { this.reproducoes.push(config); this.tocando = true; return true; },
+      setVolume(volume) { this.volume = volume; }, setPan() {},
+      stop() { this.tocando = false; }, destroy() { this.destruido = true; },
+    };
+    sons.push(som); return som;
+  } };
+  avancarAte(f, "enquadrando");
+  assert.equal(sons.length, 4);
+  for (const som of sons) {
+    assert.equal(som.reproducoes.length, 1);
+    assert.equal(som.reproducoes[0].seek, 0);
+    assert.ok(Math.abs(som.totalDuration / som.reproducoes[0].rate - 0.6) < 1e-9);
+    assert.equal(som.tocando, false, "o som termina antes da montagem da cabeça e do idle");
+  }
+  f.geradores.destruir();
+  assert.ok(sons.every(som => som.destruido));
+});
 
 test("torres reais nascem uma por vez; quatro raios formam o escudo com a câmera enquadrando a sala", t => {
   const f = fixtureTorres(t), { encontro, sistema, geradores, c } = f;
