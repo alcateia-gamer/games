@@ -11,6 +11,9 @@ import { carregarSomGerador } from "../sounds/gerador.js";
 import { carregarSomLuzFabrica } from "../sounds/luzFabrica.js";
 import { carregarMusicaNovoBoss } from "../sounds/novoBoss.js";
 import { carregarSonsLeitorCartao } from "../sounds/leitorCartao.js";
+import { carregarSomPortaFabrica } from "../sounds/portaFabrica.js";
+import { carregarSomEnchendoGalao } from "../sounds/enchendoGalao.js";
+import { carregarSomEscudoBoss } from "../sounds/escudoBoss.js";
 import { preloadInventoryItemImages } from "../inventory/InventoryItems.js";
 import { carregarAssetsNovoBoss } from "../enemies/novoBoss/NovoBossAssets.js";
 import { carregarEfeitosEspeciais } from "../combat/SpecialAbilityEffects.js";
@@ -159,6 +162,9 @@ class Preloader extends Phaser.Scene {
     carregarSomGerador(this.load);
     carregarSomLuzFabrica(this.load);
     carregarSonsLeitorCartao(this.load);
+    carregarSomPortaFabrica(this.load);
+    carregarSomEnchendoGalao(this.load);
+    carregarSomEscudoBoss(this.load);
 
     // =====================================================
     // MAPAS

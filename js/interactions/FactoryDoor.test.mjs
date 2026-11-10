@@ -271,6 +271,111 @@ test("E opens the door, while out-of-range interaction and generator menus canno
   scene.events.emit("shutdown");
 });
 
+function registrarSonsPortas(scene) {
+  const reproducoes = [], sons = [];
+  scene.cache = { audio: { exists: () => true } };
+  scene.sound = { add(chave) {
+    const som = {
+      totalDuration: 6.7, addMarker() {},
+      play(nome, config) { reproducoes.push({ chave, config: typeof nome === "object" ? nome : config }); this.tocando = true; return true; },
+      stop() { this.tocando = false; }, destroy() { this.destruido = true; },
+    };
+    sons.push(som);
+    return som;
+  } };
+  return { reproducoes, sons, portas: () => reproducoes.filter(som => som.chave === "porta-fabrica") };
+}
+
+test("cada porta individual toca uma vez ao abrir, nunca ao negar acesso ou restaurar estado", () => {
+  for (const nome of ["porta01", "porta04", "porta05"]) {
+    const { scene } = createScene();
+    const audio = registrarSonsPortas(scene);
+    const porta = scene.portasFabrica.find(porta => porta.nome === nome);
+    scene.player.x = porta.area.x + porta.area.width / 2;
+    scene.player.y = porta.area.y + porta.area.height / 2;
+    scene.atualizarInteracaoPortaFabrica();
+    const abrir = scene.interacaoMundoProxima.interact;
+    if (nome !== "porta05") {
+      assert.equal(abrir(), false);
+      assert.equal(audio.portas().length, 0);
+    }
+    scene.luzFabricaAcesa = true;
+    assert.equal(abrir(), true);
+    assert.equal(audio.portas().length, 1);
+    assert.equal(abrir(), false);
+    assert.equal(audio.portas().length, 1);
+    scene.events.emit("shutdown");
+    assert.ok(audio.sons.every(som => som.destruido && !som.tocando));
+    const retorno = createScene(scene.game.registry);
+    const audioRetorno = registrarSonsPortas(retorno.scene);
+    retorno.scene.atualizarInteracaoPortaFabrica();
+    assert.equal(audioRetorno.portas().length, 0);
+    retorno.scene.events.emit("shutdown");
+  }
+});
+
+test("as duas persianas do leitor tocam só após a confirmação e param se o boss interromper", () => {
+  const { scene } = createScene();
+  const audio = registrarSonsPortas(scene);
+  liberarAcesso(scene); aproximarLeitor(scene); abrirComE(scene);
+  animarCartao(scene);
+  assert.equal(audio.portas().length, 0);
+  scene.finishActivation();
+  assert.equal(audio.portas().length, 2);
+  for (const porta of scene.portasFabrica.filter(porta => ["porta02", "porta03"].includes(porta.nome))) {
+    porta.fecharParaBoss();
+  }
+  assert.ok(audio.sons.every(som => !som.tocando));
+  scene.events.emit("shutdown");
+});
+
+test("atualizações de rede não repetem o som em cada pacote da abertura", () => {
+  const { scene } = createScene();
+  const audio = registrarSonsPortas(scene);
+  scene.portaFabrica.aplicarEstadoRede({ estado: "abrindo", progresso: 0.3 });
+  scene.portaFabrica.aplicarEstadoRede({ estado: "abrindo", progresso: 0.5 });
+  assert.equal(audio.portas().length, 1);
+  assert.equal(audio.portas()[0].config.seek, (650 + 0.3 * 5050) / 1000);
+  scene.portaFabrica.aplicarEstadoRede({ estado: "fechando", progresso: 0.5 });
+  assert.ok(audio.sons.every(som => !som.tocando));
+  scene.events.emit("shutdown");
+});
+
+test("o tween real do Phaser acompanha o mecanismo e libera a colisão no impacto acelerado de 2,5 s", async () => {
+  const { default: vm } = await import("node:vm");
+  const bundle = readFileSync(new URL("../libs/phaser.min.js", import.meta.url), "utf8");
+  const contexto = { module: { exports: {} }, exports: {}, importScripts() {}, window: {}, navigator: {} };
+  vm.runInNewContext(bundle.replace("i(85454)})());", "i})());"), contexto);
+  const TweenManager = contexto.module.exports(40382);
+  const manager = new TweenManager({ sys: { events: new EventEmitter() } });
+  const { scene } = createScene();
+  const audio = registrarSonsPortas(scene);
+  scene.acenderLuzFabrica();
+  scene.interacaoMundoProxima.interact();
+  const config = scene.animations.at(-1);
+  const tween = manager.add(config);
+  const porta = scene.portaFabrica;
+  tween.update(0);
+  let terminouEm = null;
+  for (let tempo = 1; tempo <= 5800; tempo++) {
+    tween.update(1);
+    if (tempo === Math.floor(600 / 2.28)) assert.equal(porta.progresso, 0, "aguarda o mecanismo começar");
+    if (tempo === Math.round(3200 / 2.28)) {
+      assert.ok(porta.progresso > 0.49 && porta.progresso < 0.52);
+      assert.ok(porta.colisao, "o movimento ainda mantém a passagem bloqueada");
+    }
+    if (porta.estado === "aberta") { terminouEm = tempo; break; }
+  }
+  assert.ok(terminouEm >= 2500 && terminouEm <= 2502, `fim em ${terminouEm} ms`);
+  assert.equal(porta.colisao, null);
+  assert.equal(audio.portas().length, 1);
+  assert.equal(audio.portas()[0].config.seek, 0);
+  assert.equal(audio.portas()[0].config.rate, 2.28);
+  assert.ok(audio.sons[0].tocando, "a cauda do áudio continua sem corte após o impacto");
+  scene.events.emit("shutdown");
+  manager.destroy();
+});
+
 test("as duas portas próximas ao atalho O usam seis tiles e preservam a coluna de parede", () => {
   const { scene, layer } = createScene();
   assert.deepEqual(scene.portasFabrica.map(porta => porta.nome), ["porta01", "porta02", "porta03", "porta04", "porta05"]);
@@ -481,8 +586,9 @@ test("a porta perto de X322/Y-1887 exige somente energia e usa a mesma animaçã
   assert.equal(porta.estado, "abrindo");
   assert.equal(aviso.visible, false);
   assert.equal(scene.inventory.getQuantity("card"), 0, "abre sem precisar do cartão ou leitor");
-  assert.equal(animation.duration, 850);
-  assert.equal(animation.ease, "Sine.easeInOut");
+  assert.equal(animation.delay, 650 / 2.28);
+  assert.equal(animation.duration, 5050 / 2.28);
+  assert.equal(animation.ease, "Linear");
   assert.equal(bodies.size, 5);
   porta.progresso = 0.5;
   animation.onUpdate();
@@ -713,7 +819,7 @@ test("E e o botão de interação revalidam cartão e energia no instante de abr
   scene.events.emit("shutdown");
 });
 
-test("passar o cartão no leitor abre as duas portas com a animação original e colisão até o fim", () => {
+test("passar o cartão abre as duas portas com movimento sincronizado ao áudio e colisão até o fim", () => {
   const { scene, bodies } = createScene();
   liberarAcesso(scene);
   const [original, esquerda, direita] = scene.portasFabrica;
@@ -729,8 +835,9 @@ test("passar o cartão no leitor abre as duas portas com a animação original e
   assert.equal(esquerda.estado, "abrindo");
   assert.equal(direita.estado, "abrindo");
   assert.equal(original.estado, "fechada");
-  assert.equal(esquerdaTween.duration, 850);
-  assert.equal(esquerdaTween.ease, "Sine.easeInOut");
+  assert.equal(esquerdaTween.delay, 650 / 2.28);
+  assert.equal(esquerdaTween.duration, 5050 / 2.28);
+  assert.equal(esquerdaTween.ease, "Linear");
   esquerda.progresso = 0.5;
   esquerdaTween.onUpdate();
   assert.equal(esquerda.visual.y, -5376);
@@ -868,7 +975,7 @@ test("sons do cartão acompanham a passagem e a confirmação em sua velocidade 
     const som = {
       totalDuration: chave === "cartao-passando" ? 1.584 : 2.064,
       addMarker() {},
-      play(nome, config) { reproducoes.push({ chave, config }); this.tocando = true; return true; },
+      play(nome, config) { reproducoes.push({ chave, config: typeof nome === "object" ? nome : config }); this.tocando = true; return true; },
       stop() { this.tocando = false; },
       destroy() { this.destruido = true; },
     };
@@ -893,7 +1000,8 @@ test("sons do cartão acompanham a passagem e a confirmação em sua velocidade 
   assert.ok(scene.portasFabrica.every(porta => porta.estado === "fechada"));
   scene.finishActivation();
   assert.equal(scene.portasFabrica.find(porta => porta.nome === "porta02").estado, "abrindo");
-  assert.ok(sons.every(som => !som.tocando));
+  assert.ok(sons.slice(0, 2).every(som => !som.tocando), "os efeitos do cartão terminam antes das portas");
+  assert.equal(reproducoes.filter(som => som.chave === "porta-fabrica").length, 2);
   scene.events.emit("shutdown");
   assert.ok(sons.every(som => som.destruido));
 });
@@ -1300,6 +1408,66 @@ test("abastecimento exige galão e proximidade e é interrompido por menu, morte
   scene.player.x += 500;
   assert.equal(interagir(), false, "revalida o alcance no instante do toque");
   scene.events.emit("shutdown");
+});
+
+test("som baixo acompanha só o tempo restante de abastecimento, inclusive após retomar um galão parcial", () => {
+  const { scene } = createScene(new Map(), raw => raw.layers.push({ name: "gasolina", objects: [
+    { x: -2000, y: -2000, width: 80, height: 80 },
+  ] }));
+  const audio = registrarSonsPortas(scene);
+  scene.player.x = scene.player.y = -1960;
+  scene.atualizarAbastecimento(0);
+  scene.interacaoCombustivelProxima.interact();
+  assert.equal(audio.reproducoes.length, 0, "sem galão não há áudio");
+  scene.inventory.addItem("gasolina");
+  scene.interacaoCombustivelProxima.interact();
+  scene.interacaoCombustivelProxima.interact();
+  assert.equal(audio.reproducoes.length, 1, "interações repetidas não reiniciam o som");
+  assert.equal(audio.reproducoes[0].chave, "enchendo-galao");
+  assert.deepEqual(audio.reproducoes[0].config,
+    { volume: 0.08, loop: false, rate: 1, detune: 0, seek: 0 });
+  for (let i = 0; i < 10; i++) scene.atualizarAbastecimento(100);
+  assert.equal(audio.sons[0].tocando, true);
+  scene.player.x += 500;
+  scene.atualizarAbastecimento(0);
+  assert.equal(audio.sons[0].tocando, false, "afastar interrompe o áudio imediatamente");
+  scene.player.x -= 500;
+  scene.atualizarAbastecimento(0);
+  scene.interacaoCombustivelProxima.interact();
+  assert.equal(audio.reproducoes.length, 2);
+  for (let i = 0; i < 29; i++) scene.atualizarAbastecimento(100);
+  assert.equal(audio.sons[0].tocando, true);
+  scene.atualizarAbastecimento(100);
+  assert.equal(scene.inventory.getSlots()[0].fuel, 1);
+  assert.equal(audio.sons[0].tocando, false, "retomada toca só os três segundos restantes");
+  scene.interacaoCombustivelProxima?.interact();
+  assert.equal(audio.reproducoes.length, 2, "galão cheio não dispara som");
+  scene.events.emit("shutdown");
+  assert.ok(audio.sons[0].destruido);
+});
+
+test("áudio de abastecimento para em menus, morte, pausa, perda de foco e encerramento", () => {
+  for (const interromper of [
+    s => { s.generatorMenuOpen = true; s.atualizarAbastecimento(0); },
+    s => { s.devItemMenuOpen = true; s.atualizarAbastecimento(0); },
+    s => { s.morteEmAndamento = true; s.atualizarAbastecimento(0); },
+    s => s.events.emit("pause"), s => s.events.emit("sleep"),
+    s => s.game.events.emit("blur"), s => s.events.emit("shutdown"),
+  ]) {
+    const { scene } = createScene(new Map(), raw => raw.layers.push({ name: "gasolina", objects: [
+      { x: -2000, y: -2000, width: 80, height: 80 },
+    ] }));
+    const audio = registrarSonsPortas(scene);
+    scene.player.x = scene.player.y = -1960;
+    scene.inventory.addItem("gasolina");
+    scene.atualizarAbastecimento(0);
+    scene.interacaoCombustivelProxima.interact();
+    assert.equal(audio.sons[0].tocando, true);
+    interromper(scene);
+    assert.equal(audio.sons[0].tocando, false);
+    scene.events.emit("shutdown");
+    assert.ok(audio.sons[0].destruido);
+  }
 });
 
 function clickGenerator(scene, x, y) {

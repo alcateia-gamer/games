@@ -100,6 +100,66 @@ function aproximar(scene, gerador, distancia = 60) {
   scene.player.body = { center: { x: gerador.x, y: gerador.y - distancia } };
 }
 
+function registrarAudioEscudo(scene) {
+  const chamadas = [];
+  scene.cache = { audio: { exists: () => true } };
+  scene.sound = { add(chave, config) {
+    chamadas.push(["add", chave, config]);
+    return {
+      play(config) { chamadas.push(["play", config]); return true; },
+      stop() { chamadas.push(["stop"]); },
+      destroy() { chamadas.push(["destroy"]); },
+    };
+  } };
+  return chamadas;
+}
+
+test("quatro quebras do escudo tocam quatro vezes reutilizando uma única instância de som", () => {
+  const { scene, encontro } = criarCena();
+  const chamadas = registrarAudioEscudo(scene);
+  const sistema = prepararGeradoresNovoBoss(scene, encontro);
+  assert.equal(chamadas.length, 0, "não cria áudio antes da primeira quebra");
+  for (let ciclo = 1; ciclo <= 4; ciclo++) {
+    sistema.controlarEscudo(1, true, true);
+    sistema.controlarEscudo(1, true, false);
+    assert.equal(chamadas.filter(([tipo]) => tipo === "play").length, ciclo - 1,
+      "perder a colisão física não é quebrar o escudo");
+    sistema.controlarEscudo(1, false, false);
+    for (const carga of [0.8, 0.3, 0.6, 0]) {
+      sistema.controlarEscudo(carga, false, false);
+      sistema.atualizar(50);
+    }
+    assert.equal(chamadas.filter(([tipo]) => tipo === "play").length, ciclo,
+      "o colapso visual não pode repetir o som");
+  }
+  assert.equal(chamadas.filter(([tipo]) => tipo === "add").length, 1);
+  assert.equal(chamadas.find(([tipo]) => tipo === "add")[1], "boss-escudo-quebrado");
+  for (const [, config] of chamadas.filter(([tipo]) => tipo === "play")) {
+    assert.deepEqual(config, { volume: 0.35, loop: false, rate: 1, detune: 0, seek: 0 });
+  }
+  sistema.destruir();
+  assert.deepEqual(chamadas.slice(-2), [["stop"], ["destroy"]]);
+  const total = chamadas.length;
+  sistema.controlarEscudo(1, true);
+  sistema.controlarEscudo(0, false);
+  sistema.destruir();
+  assert.equal(chamadas.length, total, "não toca nem recria som depois da limpeza");
+});
+
+test("fora do prólogo, somente a queda da barreira no último gerador toca o efeito", () => {
+  const { scene, encontro } = criarCena();
+  const chamadas = registrarAudioEscudo(scene);
+  const sistema = prepararGeradoresNovoBoss(scene, encontro);
+  for (let i = 0; i < encontro.geradores.length; i++) {
+    const gerador = encontro.geradores[i];
+    aproximar(scene, gerador);
+    assert.equal(sistema.interagir(gerador.id), true);
+    assert.equal(chamadas.filter(([tipo]) => tipo === "play").length, i === 3 ? 1 : 0);
+    assert.equal(sistema.interagir(gerador.id), false);
+  }
+  sistema.destruir();
+});
+
 test("prepara quatro corpos próprios e barreira sem alterar o mapa nem o gerador da fábrica", () => {
   const { scene, encontro, colliders, objetosMapa, obstaculoExtra } = criarCena();
   const factoryState = { energia: true };

@@ -6,10 +6,11 @@ import { distanceToInteractionArea, findFactoryInteraction } from "./FactoryGene
 import { criarInteracaoLeitorCartao } from "./FactoryCardReader.js";
 import { drawCollectibleMarker } from "../ui/CollectibleMarker.js";
 import { criarFalaFlutuante } from "../ui/PlayerSpeechBubble.js";
+import { criarSomPortaFabrica, SINCRONIA_PORTA_FABRICA } from "../sounds/portaFabrica.js";
 
 const FACTORY_DOOR_STATE_KEY = "factoryDoorOpen";
 const INTERACTION_RANGE = 64;
-const OPEN_DURATION = 850;
+const CLOSE_DURATION = 850;
 const PORTAS_COM_ACESSO = new Set(["porta02", "porta03"]);
 const PORTAS_COM_ENERGIA = new Set(["porta01", "porta04"]);
 const FALAS_SEM_ENERGIA = Object.freeze([
@@ -106,6 +107,7 @@ function criarPorta(scene, layer, area, fala) {
   const firstTile = layer.getTileAtWorldXY(area.x, area.y);
   if (!firstTile?.tileset) return null;
   const animada = area.semAnimacao !== true;
+  const som = criarSomPortaFabrica(scene, area, animada);
   const originalAlphas = tiles.map((tile) => tile.alpha);
   let visual = null, header = null;
   if (animada) {
@@ -199,6 +201,8 @@ function criarPorta(scene, layer, area, fala) {
 
   // O host transmite também o progresso das persianas e seu bloqueio temporário.
   porta.aplicarEstadoRede = estado => {
+    if (estado.estado === "abrindo" && porta.estado !== "abrindo") som.tocar(estado.progresso);
+    else if (estado.estado === "fechada" || estado.estado === "fechando") som.parar();
     porta.estado = estado.estado;
     porta.progresso = estado.progresso;
     porta.bloqueadaPorBoss = !!estado.bloqueadaPorBoss;
@@ -224,6 +228,7 @@ function criarPorta(scene, layer, area, fala) {
     scene.interacaoMundoProxima = null;
     prompt?.setVisible(false);
     marcador?.setVisible(false);
+    som.tocar();
     if (!animada) {
       concluirAbertura();
       return true;
@@ -231,8 +236,9 @@ function criarPorta(scene, layer, area, fala) {
     tween = scene.tweens.add({
       targets: porta,
       progresso: 1,
-      duration: OPEN_DURATION,
-      ease: "Sine.easeInOut",
+      delay: SINCRONIA_PORTA_FABRICA.atraso,
+      duration: SINCRONIA_PORTA_FABRICA.movimento,
+      ease: "Linear",
       onUpdate: atualizarVisual,
       onComplete: concluirAbertura,
     });
@@ -247,6 +253,7 @@ function criarPorta(scene, layer, area, fala) {
     prompt?.setVisible(false);
     marcador?.setVisible(false);
     tween?.stop();
+    som.parar();
     if (porta.estado === "fechada") return true;
     porta.estado = "fechando";
     const concluir = () => {
@@ -257,7 +264,7 @@ function criarPorta(scene, layer, area, fala) {
     };
     if (!animada) concluir();
     else tween = scene.tweens.add({ targets: porta, progresso: 0,
-      duration: OPEN_DURATION, ease: "Sine.easeInOut",
+      duration: CLOSE_DURATION, ease: "Sine.easeInOut",
       onUpdate: atualizarVisual, onComplete: concluir });
     return true;
   };
@@ -296,6 +303,7 @@ function criarPorta(scene, layer, area, fala) {
     encerrada = true;
     porta.bloqueadaPorBoss = false;
     tween?.stop();
+    som.destruir();
     porta.colisao?.destroy();
     visual?.destroy();
     header?.destroy();

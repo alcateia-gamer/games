@@ -1,6 +1,7 @@
 /** Abastecimento do galão nas áreas Gasolina do Tiled, com progresso persistente no inventário. */
 import { criarFalaFlutuante } from "../ui/PlayerSpeechBubble.js";
 import { createInteractionMarker } from "../ui/CollectibleMarker.js";
+import { criarSomEnchendoGalao } from "../sounds/enchendoGalao.js";
 
 export const FUEL_FILL_DURATION_MS = 4000;
 export const FUEL_INTERACTION_RANGE = 48;
@@ -77,6 +78,7 @@ export function criarSistemaCombustivel(scene) {
   scene.falaCombustivel = fala;
   let abastecendo = null;
   let encerrado = false;
+  const som = criarSomEnchendoGalao(scene);
 
   const ui = scene.add.container(0, 0).setDepth(502).setName("fuel-fill-progress").setVisible(false);
   const fundo = scene.add.rectangle(0, 0, 176, 37, 0x07121d, 0.96).setStrokeStyle(1, 0xf3c24b);
@@ -97,7 +99,7 @@ export function criarSistemaCombustivel(scene) {
   const centroJogador = () => scene.player?.body?.center ?? scene.player;
   const incompleto = () => inventory.getSlots().find(slot => slot.itemId === "gasolina" && slot.fuel < 1);
   const ocultarProgresso = () => { ui.setVisible(false); labelNitido?.setVisible(false); };
-  const cancelar = () => { abastecendo = null; ocultarProgresso(); };
+  const cancelar = () => { abastecendo = null; som.parar(); ocultarProgresso(); };
   const iniciar = area => {
     if (!permitido() || distanciaAreaGasolina(centroJogador(), area) > FUEL_INTERACTION_RANGE) return false;
     if (!inventory.getQuantity("gasolina")) {
@@ -107,6 +109,7 @@ export function criarSistemaCombustivel(scene) {
     if (!incompleto()) { fala.mostrar(FALAS_GALAO.jaCheio); return true; }
     scene.registry?.set(FUEL_USED_KEY, true);
     abastecendo = area;
+    som.iniciar();
     fala.ocultar();
     scene.player.setVelocity(0, 0);
     return true;
@@ -157,6 +160,7 @@ export function criarSistemaCombustivel(scene) {
   scene.game.events.on("blur", cancelar);
   scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
     encerrado = true;
+    som.destruir();
     scene.events.off(Phaser.Scenes.Events.PRE_RENDER, desenhar);
     scene.events.off("pause", cancelar);
     scene.events.off("sleep", cancelar);

@@ -6,6 +6,7 @@ import { jogadorPresoNovoBoss } from "../../player/PlayerControlEffects.js";
 import { criarEscudoEnergia } from "./NovoBossEfeitosEnergia.js";
 import { pontosTorresNovoBoss, assetsTorresDisponiveis, criarTorreNovoBoss } from "./NovoBossTorres.js";
 import { criarColisaoBarreiraNovoBoss } from "./NovoBossBarreiraColisao.js";
+import { criarSomEscudoBoss } from "../../sounds/escudoBoss.js";
 
 function configuracaoValida(scene, encontro, config, torres = false) {
   if (!Array.isArray(config.pontos) || config.pontos.length === 0 ||
@@ -71,6 +72,7 @@ export function prepararGeradoresNovoBoss(scene, encontro) {
   }
 
   let destruido = false;
+  const somEscudo = criarSomEscudoBoss(scene);
   let tempo = 0;
   let apresentando = torres && Boolean(encontro.introducao?.bloqueiaCombate);
   let cargaEscudo = apresentando ? 0 : 1;
@@ -129,9 +131,14 @@ export function prepararGeradoresNovoBoss(scene, encontro) {
   }
 
   function controlarEscudo(carga, protegido, fisico = protegido) {
+    if (destruido) return;
+    const estavaAtiva = encontro.barreiraAtiva;
     const jaBloqueava = colisaoBarreira.body.enable && encontro.barreiraAtiva && protecaoFisica;
     definirCargaEscudo(carga);
     encontro.barreiraAtiva = Boolean(protegido && geradores.some(g => g.ligado));
+    // Uma transição por quebra, inclusive nos quatro ciclos do prólogo.
+    // Oscilações visuais, recarga e perda de colisão não repetem o efeito.
+    if (estavaAtiva && !encontro.barreiraAtiva) somEscudo.tocar();
     // Encostar no escudo já ativo não pode desligá-lo pela verificação de ocupação.
     protecaoFisica = Boolean(fisico || (jaBloqueava && protegido));
     atualizar(0);
@@ -204,7 +211,9 @@ export function prepararGeradoresNovoBoss(scene, encontro) {
       scene.events.emit("novo-boss:gerador-desativado", { encontro, gerador });
       return;
     }
+    const estavaAtiva = encontro.barreiraAtiva;
     encontro.barreiraAtiva = geradores.some(item => item.ligado);
+    if (estavaAtiva && !encontro.barreiraAtiva) somEscudo.tocar();
     scene.events.emit("novo-boss:gerador-desativado", { encontro, gerador });
     if (!encontro.barreiraAtiva) {
       scene.events.emit("novo-boss:barreira-desativada", { encontro });
@@ -252,6 +261,7 @@ export function prepararGeradoresNovoBoss(scene, encontro) {
   function destruir() {
     if (destruido) return;
     destruido = true;
+    somEscudo.destruir();
     scene.input.keyboard?.off("keydown-E", teclaE);
     for (const collider of colliders) collider?.destroy();
     colisaoAtores.destruir();
