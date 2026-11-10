@@ -124,8 +124,11 @@ function algumObstaculo(cache, area, testar, dinamicos = []) {
 }
 
 function sobrepoe(a, b) {
-  return a.left < b.right && a.right > b.left &&
-    a.top < b.bottom && a.bottom > b.top;
+  // Escalas fracionárias podem deixar os pés além da borda por arredondamento.
+  // Esse contato não deve invalidar a posição segura usada contra atravessamentos.
+  const tolerancia = 1e-7;
+  return a.left < b.right - tolerancia && a.right > b.left + tolerancia &&
+    a.top < b.bottom - tolerancia && a.bottom > b.top + tolerancia;
 }
 
 function retanguloLivreDoMapa(scene, rect) {

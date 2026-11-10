@@ -19,6 +19,11 @@ function check(name, value) { assert.ok(value, name); report.checks.push(name); 
 async function pageBoot(name) {
   const context = await browser.newContext({ viewport: { width: 960, height: 540 } });
   const page = await context.newPage(); pages.push(page); page.setDefaultTimeout(25000);
+  page.on("request", request => {
+    if (/BOSS_FINAL|\/bossFinal\/|\/BossFinal\.js|\/bossRaio\.js|EnergiaBoss\.png|raio_boss\.mp3|soco_boss_[12]\.mp3/i.test(decodeURIComponent(request.url()))) {
+      errors.push(`${name}: carregou recurso do boss antigo: ${request.url()}`);
+    }
+  });
   page.on("pageerror", e => { errors.push(`${name}: ${e.stack}`); console.error(name, e.stack); });
   await page.route("**/js/core/game.js*", async route => {
     const response = await route.fetch();
@@ -99,6 +104,34 @@ try {
   }));
   await client.screenshot({ path: `${artifacts}/cidade-coop.png` });
   check("sem erros JavaScript até a integração inicial", errors.length === 0);
+  for (const page of pages) await page.evaluate(async () => {
+    const { novoBossConfig: config } = await import("/js/enemies/novoBoss/NovoBossConfig.js");
+    window.__bossTestConfig = { ...config,
+      cenaEntrada: { ...config.cenaEntrada, ativo: false },
+      geradores: { ...config.geradores, ativo: false },
+      prologo: { ...config.prologo, ativo: false },
+      ataques: { ...config.ataques, ativo: false },
+      movimento: { ...config.movimento, ativo: false },
+      ilusoes: { ...config.ilusoes, ativo: false },
+      clones: { ...config.clones, ativo: false },
+      fase2: { ...config.fase2, ativo: false },
+    };
+  });
+  await Promise.all([
+    gotoMap(host, "Level1Parte2", -1093, -5520, "kai-mercer"),
+    gotoMap(client, "Level1Parte2", -1040, -5520, "nyx"),
+  ]);
+  for (const page of pages) await page.waitForFunction(() => {
+    const boss = window.__game.scene.getScene("Level1Parte2").novoBoss;
+    return boss?.active && boss.sprite?.active && boss.vida === 1000;
+  });
+  check("boss principal aparece no host e na réplica do cliente", await get(client, () =>
+    window.__game.scene.getScene("Level1Parte2").novoBoss.sprite.texture.key === "novo-boss-idle"));
+  await get(client, () => window.__game.scene.getScene("Level1Parte2").novoBoss.receberDano(25));
+  for (const page of pages) await page.waitForFunction(() =>
+    window.__game.scene.getScene("Level1Parte2").novoBoss.vida === 975);
+  check("dano do cliente ao boss principal é autorizado pelo host e replicado", true);
+  check("solo e rede carregam somente recursos do boss atual", errors.length === 0);
   writeFileSync(`${artifacts}/relatorio.json`, JSON.stringify({ ...report, errors }, null, 2));
   console.log("PASSOU integração inicial", artifacts);
 } finally {

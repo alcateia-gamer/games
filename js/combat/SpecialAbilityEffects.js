@@ -1,5 +1,5 @@
 /** Reprodução por duração de cada quadro, sem timers que sobrevivam à cena. */
-const BOSS_AREA = 'PERSONAGENS/INIMIGOS PRINCIPAIS/Boss-test/derivados/area-ataque/';
+const BOSS_AREA = 'PERSONAGENS/INIMIGOS PRINCIPAIS/BossPrincipal/derivados/area-ataque/';
 const DEFINICOES = {
   kai: { arquivo: `${BOSS_AREA}area-ataque-quadros.png`, meta: `${BOSS_AREA}area-ataque.json`, w:221, h:157, origem:[110/221,84/157], diametro:190 },
   nyx: { arquivo:'efeitos/especiais/nyx.png', meta:'efeitos/especiais/nyx.json', w:384, h:192, origem:[189/384,126/192], diametro:240 },

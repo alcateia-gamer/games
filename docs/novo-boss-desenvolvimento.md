@@ -1,4 +1,8 @@
-# Desenvolvimento do novo boss
+# Desenvolvimento do boss principal
+
+O encontro descrito aqui é o boss principal da fábrica. Consulte a
+[migração definitiva](boss-principal.md) para os nomes e recursos atuais.
+O restante deste documento registra o histórico de desenvolvimento.
 
 O prólogo dos quatro geradores foi acrescentado ao encontro existente. Veja o
 [relatório do prólogo](novo-boss-prologo.md) para a sequência dos ciclos, checklist,
@@ -6,7 +10,7 @@ arquivos modificados, colisões e resultados reais dos testes. O histórico abai
 permanece preservado e descreve as entregas anteriores.
 
 Especificação principal:
-`assets/PERSONAGENS/INIMIGOS PRINCIPAIS/Boss-test/Especificacao_Mestre_Novo_Boss.md`.
+`assets/PERSONAGENS/INIMIGOS PRINCIPAIS/BossPrincipal/Especificacao_Mestre_Novo_Boss.md`.
 A ordem abaixo segue as oito etapas solicitadas pelo desenvolvedor.
 
 **Refinamento de combate solicitado após os playtests:** concluído. Os itens
@@ -49,7 +53,7 @@ falhas preexistentes estão documentadas na etapa 8. Nenhum arquivo do boss anti
 ## Etapa 1: comportamento integrado
 
 - O encontro é preparado por `Level1Parte2.create()` e atualizado pelo `update()`
-  da mesma cena, usando `scene.novoBoss`, separado de `scene.bossFinal` e dos robôs.
+  da mesma cena, usando `scene.novoBoss`, separado das listas de robôs.
 - O jogador encontra a entidade na sala do boss antigo, ao norte da fábrica.
   A criação ocorre ao entrar na área definida em `NovoBossConfig.js`; uma visita
   que já começa dentro da sala também cria a entidade imediatamente.
@@ -73,8 +77,8 @@ Os arquivos de origem permanecem intactos; os recortes são feitos pelo Phaser:
 
 | Arquivo | Chave própria | Recorte |
 | --- | --- | --- |
-| `Boss-test/boss-test-idle.png` | `novo-boss-idle` | 16 quadros de 288×288, idle em repetição. |
-| `Boss-test/boss-test-attack.png` | `novo-boss-ataque` | 48 quadros de 336×336, ataque a 16 fps. |
+| `BossPrincipal/boss-idle.png` | `novo-boss-idle` | 16 quadros de 288×288, idle em repetição. |
+| `BossPrincipal/boss-ataque.png` | `novo-boss-ataque` | 48 quadros de 336×336, ataque a 16 fps. |
 | `Tilesets/mechanics/HeavensFury_preview(transparente).png` | `novo-boss-heavens-fury` | Células de 384×384, índices 0–12; chuva integrada com impacto no quadro 4. |
 
 A chuva tem avisos vermelhos antes dos impactos. As células e o instante de
@@ -87,7 +91,7 @@ Criados:
 
 - `js/enemies/novoBoss/NovoBossConfig.js`: limites da arena, posição e corpo.
 - `js/enemies/novoBoss/NovoBossAssets.js`: carregamento e animação próprias.
-- `js/enemies/novoBoss/NovoBoss.js`: ciclo de vida, apresentação e suspensão.
+- `js/enemies/BossPrincipal.js`: ciclo de vida, apresentação e suspensão.
 - `js/enemies/novoBoss/NovoBoss.test.mjs`: testes de regras, recursos e ciclo.
 - `tests/novo-boss.browser.mjs`: teste integrado com Phaser e WebGL no Chromium.
 - `docs/novo-boss-desenvolvimento.md`: este checklist e registro.
@@ -95,8 +99,8 @@ Criados:
 Alterados pontualmente:
 
 - `js/scenes/preloader.js`: importa e chama `carregarAssetsNovoBoss`.
-- `js/scenes/Level1Parte2.js`: importa e chama `prepararNovoBoss` e
-  `atualizarNovoBoss`, mantendo a desativação do boss antigo.
+- `js/scenes/Level1Parte2.js`: importa e chama `prepararBoss` e
+  `atualizarBoss`, mantendo a desativação do boss antigo.
 
 Na etapa 1 não foram alterados os módulos do boss antigo, os PNGs/GIFs/ZIPs, o mapa,
 as armas, os controles, o inventário ou os sistemas de outros inimigos. As
@@ -222,11 +226,9 @@ Criados:
 
 Alterados:
 
-- `js/enemies/novoBoss/NovoBoss.js`, `NovoBossConfig.js` e `NovoBoss.test.mjs`.
+- `js/enemies/BossPrincipal.js`, `NovoBossConfig.js` e `NovoBoss.test.mjs`.
 - `js/player/Player.js` e `PlayerProjectiles.js`: alvos e despacho de dano.
 - `js/combat/PlayerSpecialAbilities.js`: alvos e dano dos especiais.
-- `js/player/ArmaPersonagemTeste.js`, `EspadaPersonagemTeste.js` e
-  `FloretePersonagemTeste.js`: inclusão do alvo adicional, preservando as armas.
 - `tests/novo-boss.browser.mjs`: o teste de ciclo de vida acompanha a evolução
   dos estados sem exigir que `posicionada` seja permanente.
 - Este checklist.
@@ -299,15 +301,15 @@ e interrupção nas paredes. A lista própria de projéteis participa do parry,
 da onda Magnus, do corte Nyx e do holograma Aria, sem usar o grupo dos robôs.
 
 `PlayerControlEffects.js` mantém o agarrão separado dos bloqueios de outros
-sistemas; os controles de movimento, dash, impulso do florete e troca com
-holograma consultam essa restrição. Morte, saída, cancelamento e encerramento
+sistemas; os controles de movimento, dash e troca com holograma consultam essa
+restrição. Morte, saída, cancelamento e encerramento
 liberam a fonte. O pulso aplica 14 de dano e repulsão; chuva, 16; laser, 10;
 tentáculos, nenhum dano. Esses valores ficam em `NovoBossConfig.js`.
 
-Arquivos ajustados na integração: `NovoBoss.js`, `NovoBossEstados.js`,
+Arquivos ajustados na integração: `BossPrincipal.js`, `NovoBossEstados.js`,
 `NovoBossConfig.js`, `NovoBossHud.js`, `Level1Parte2.js` (configuração explícita
 do encontro), `PlayerSpecialAbilities.js`, `PlayerMovement.js`,
-`PlayerDashControls.js` e `FloretePersonagemTeste.js`. Os testes antigos usam
+`PlayerDashControls.js`. Os testes antigos usam
 configurações isoladas para continuarem verificando suas etapas sem ataques.
 Os desenhos de laser, onda e agarrão são efeitos temporários por código,
 conforme autorização; nenhum PNG, GIF, ZIP ou arquivo antigo foi alterado.
@@ -346,7 +348,7 @@ Uma configuração inválida aguarda preparação sem criar uma barreira imposs�
 de derrubar. Encerramento/derrota removem somente seus recursos e listener.
 
 Arquivos da etapa: criados `NovoBossGeradores.js` e `.test.mjs`; ajustados
-`NovoBoss.js`, `NovoBossEstados.js`, `NovoBossConfig.js`, `NovoBossHud.js` e
+`BossPrincipal.js`, `NovoBossEstados.js`, `NovoBossConfig.js`, `NovoBossHud.js` e
 `NovoBossEstados.test.mjs`. Os 11 testes do módulo e 16 dos estados passaram.
 `tests/novo-boss-etapa4.browser.mjs` verifica teclado e clique reais.
 
@@ -381,7 +383,7 @@ tentáculos; continua havendo apenas um ataque ofensivo por vez. A ativação
 automática dos clones abaixo de metade da vida pertence à etapa 6.
 
 Arquivos: criados `NovoBossIlusoes.js`, `NovoBossClones.js` e seus testes;
-ajustados `NovoBoss.js`, `NovoBossConfig.js`, `NovoBossAtaques.js`,
+ajustados `BossPrincipal.js`, `NovoBossConfig.js`, `NovoBossAtaques.js`,
 `NovoBossEstados.js`, `NovoBossTeleporte.js`, `CombatTargets.js` e seu teste.
 O roteiro integrado é `tests/novo-boss-etapa5.browser.mjs`.
 
@@ -410,7 +412,7 @@ automática, ainda listada como decisão em aberto no documento. Sair durante a
 onda a encerra; retornar prepara novamente os clones, mantendo vida e fase.
 Não há cura, multiplicação da vida ou dano dos falsos.
 
-Criados `NovoBossFases.js` e `.test.mjs`; ajustados `NovoBoss.js`,
+Criados `NovoBossFases.js` e `.test.mjs`; ajustados `BossPrincipal.js`,
 `NovoBossEstados.js`, `NovoBossConfig.js` e `NovoBossHud.js`. Os **12 testes de
 fases passaram**, incluindo a corrida entre limiar e recarga do teletransporte.
 O roteiro integrado é `tests/novo-boss-etapa6.browser.mjs`.
@@ -443,7 +445,7 @@ de 900 ms; a derrota desvanece o sprite em 900 ms. Todos são recursos próprios
 sem alteração na iluminação da fábrica ou nos arquivos de imagem fornecidos.
 
 Criados `NovoBossApresentacao.js` e `.test.mjs`; ajustados `NovoBossAssets.js`,
-`NovoBossIlusoes.js` e seu teste, `NovoBoss.js` e `NovoBossHud.js`. Os 14 testes
+`NovoBossIlusoes.js` e seu teste, `BossPrincipal.js` e `NovoBossHud.js`. Os 14 testes
 do módulo passaram. O roteiro é `tests/novo-boss-etapa7.browser.mjs`.
 
 Validação final da etapa 7: **14 testes unitários e seis grupos Chromium
@@ -510,7 +512,7 @@ boss antigo:
 
 | Arquivos | Responsabilidade |
 | --- | --- |
-| `NovoBoss.js` | Criação, atualização, suspensão, integração dos sistemas e limpeza. |
+| `BossPrincipal.js` | Criação, atualização, suspensão, integração dos sistemas e limpeza. |
 | `NovoBossConfig.js` | Arena, vida, janelas, posições e parâmetros de balanceamento. |
 | `NovoBossAssets.js` | Carregamento e animações dos sprites fornecidos. |
 | `NovoBossEstados.js`, `NovoBossTeleporte.js` | Dano, aberturas, derrota, troca e validação de destinos. |
@@ -538,7 +540,6 @@ Integrações alteradas pontualmente:
 | `js/scenes/preloader.js` | Carrega os recursos da nova boss. |
 | `js/scenes/Level1Parte2.js` | Desativa a antiga, prepara e atualiza a nova; aceita configuração explícita do encontro nos testes. |
 | `js/player/Player.js`, `js/player/PlayerProjectiles.js` | Incluem os novos alvos no dano normal e nas flechas. |
-| `js/player/ArmaPersonagemTeste.js`, `EspadaPersonagemTeste.js`, `FloretePersonagemTeste.js` | Reconhecem os novos alvos; o impulso do florete respeita o agarrão. |
 | `js/combat/PlayerSpecialAbilities.js` | Especiais reconhecem os alvos e lasers próprios; troca com holograma respeita contenção. |
 | `js/controls/PlayerMovement.js`, `PlayerDashControls.js` | Consultam a contenção somente durante o agarrão. |
 | `docs/novo-boss-desenvolvimento.md` | Checklist, decisões, arquivos e validação. |
@@ -550,7 +551,7 @@ protocolo multiplayer não receberam implementação específica da nova boss.
 ### Preservação e apresentação provisória
 
 A lista completa dos arquivos e referências do boss antigo preservados e
-desativados está em [boss-antigo-desativado.md](boss-antigo-desativado.md).
+desativados está em [boss-principal.md](boss-principal.md).
 `prepararIABoss` e `atualizarIABoss` não são chamados pela fábrica; as seis peças
 222–227 continuam no mapa e ficam ocultas em execução. Nenhum arquivo foi
 excluído ou renomeado. Sprites, animações, sons, implementação antiga, ZIP,
@@ -589,8 +590,8 @@ não foram integrados nem alterados, conforme solicitado. Heavens Fury também
 foi preservado.
 
 O Phaser utiliza os quadros completos em folhas PNG, em
-`Boss-test/derivados/escudo-energia-quadros.png` e
-`Boss-test/derivados/ataque-explosao-quadros.png`. Não há redimensionamento ou
+`BossPrincipal/derivados/escudo-energia-quadros.png` e
+`BossPrincipal/derivados/ataque-explosao-quadros.png`. Não há redimensionamento ou
 recorte dos pixels de origem. `gifs-originais.json` registra SHA-256, dimensões,
 quadros e durações; `scripts/preparar-gifs-novo-boss.py` permite regenerar as
 folhas com Pillow. Executar com `--verificar` compara todos os pixels RGBA
@@ -600,7 +601,7 @@ Arquivos desta atualização:
 
 - Criados `NovoBossEfeitosEnergia.js` e `.test.mjs`, com renderização e sete testes
   de temporização, encaixe, fidelidade e limpeza.
-- Alterados `NovoBossAssets.js`, `NovoBossGeradores.js`, `NovoBoss.js`,
+- Alterados `NovoBossAssets.js`, `NovoBossGeradores.js`, `BossPrincipal.js`,
   `NovoBossApresentacao.js`, `NovoBossServicosAtaques.js`, `NovoBossAtaques.js` e
   `ataques/PulsoRepulsao.js`: carregamento, animações independentes e limpeza.
 - Atualizados `NovoBoss.test.mjs` e `tests/novo-boss-etapa4.browser.mjs` para os
@@ -657,7 +658,7 @@ Arquivos desta parte:
 
 - `js/enemies/novoBoss/NovoBossApresentacao.js`: direção, pivô espelhado,
   compensação do corpo e posição do núcleo.
-- `js/enemies/novoBoss/NovoBoss.js`: atualizar a apresentação antes do núcleo.
+- `js/enemies/BossPrincipal.js`: atualizar a apresentação antes do núcleo.
 - `js/enemies/novoBoss/NovoBossApresentacao.test.mjs`: três novos casos de
   direção, alinhamento e continuidade da animação.
 - `tests/novo-boss-direcao.browser.mjs`: novo roteiro integrado dos dois lados,
@@ -727,7 +728,7 @@ Arquivos desta parte:
   relógio de animação, sem reiniciar a reprodução a cada atualização.
 - `js/enemies/novoBoss/NovoBossIlusoes.js`: desacoplar a duração da pose da
   duração do efeito holográfico; a implementação é compartilhada com os clones.
-- `js/enemies/novoBoss/NovoBoss.js`: sincronizar as cópias após a atualização da
+- `js/enemies/BossPrincipal.js`: sincronizar as cópias após a atualização da
   apresentação e dos dois sistemas de aparições.
 - `js/enemies/novoBoss/NovoBossApresentacao.test.mjs` e
   `js/enemies/novoBoss/NovoBossIlusoes.test.mjs`: três novos casos de sincronia,
@@ -1222,7 +1223,7 @@ Arquivos desta parte:
   preparação, preservando o ataque e a abertura que já estiverem em curso.
 - `js/enemies/novoBoss/NovoBossEstados.js`: conclusão da viagem central,
   recusa de dano durante a proteção e limpeza do agendamento na derrota.
-- `js/enemies/novoBoss/NovoBoss.js`: tempo dos clones após seu nascimento,
+- `js/enemies/BossPrincipal.js`: tempo dos clones após seu nascimento,
   preservação da rejeição de deltas inválidos e limpeza ao suspender/encerrar.
 - `js/enemies/novoBoss/NovoBossHud.js`: indicação da proteção e manutenção do
   rótulo de vulnerabilidade quando uma onda estiver aguardando.
@@ -1402,7 +1403,7 @@ exatos. Não há redesenho, suavização, redimensionamento, limiar aproximado o
 quantização de cores. A paleta de saída preserva as **200 cores visíveis** mais
 um índice transparente; não sobra preto opaco nas bordas ou entre os anéis.
 
-Derivados criados em `assets/PERSONAGENS/INIMIGOS PRINCIPAIS/Boss-test/derivados/`:
+Derivados criados em `assets/PERSONAGENS/INIMIGOS PRINCIPAIS/BossPrincipal/derivados/`:
 
 - `disparo-energia-previa.png`: comparação dos quadros 1, 31 e 46 antes da
   conversão integral, no original e sobre fundos claro/escuro.
@@ -1517,7 +1518,7 @@ cobertura parcial por quadro**, já identificados no relatório, e não os pixel
 sólidos. Não se promete recuperar um contorno original anterior à composição
 com o fundo; os PNGs individuais permitem correção manual se desejada.
 
-Entregas em `assets/PERSONAGENS/INIMIGOS PRINCIPAIS/Boss-test/derivados/`:
+Entregas em `assets/PERSONAGENS/INIMIGOS PRINCIPAIS/BossPrincipal/derivados/`:
 
 - `tentaculo-previa/comparacao.png`, cinco PNGs roxos e cinco vermelhos e
   `relatorio-previa.json`: resultado apresentado e aprovado antes da conversão.
@@ -1605,7 +1606,6 @@ compartilhados permanecem intactos nesta rodada.
 ## Novas artes: botões, morte e teleporte
 
 - [x] Analisar os três botões WebP, a pose de morte e os 26 quadros do GIF.
-- [x] Trocar os botões das duas personagens de teste; interação e ataque em 92 × 92 px.
 - [x] Integrar a pose `boss-death.webp`, alinhada ao corpo e espelhada, sem colisão.
 - [x] Produzir e inspecionar prévia representativa antes da exportação completa.
 - [x] Exportar saída e chegada transparentes, duas folhas e 27 PNGs individuais.
@@ -1734,7 +1734,7 @@ Arquivos de implementação: `js/enemies/novoBoss/NovoBossApresentacao.js`,
 `js/enemies/novoBoss/ataques/ChuvaRaios.js`.
 
 Testes ajustados: `NovoBossApresentacao.test.mjs`, `ataques/PulsoRepulsao.test.mjs`,
-`ataques/ChuvaRaios.test.mjs`, `tests/novo-boss-botoes-morte-teleporte.browser.mjs`,
+`ataques/ChuvaRaios.test.mjs`, `tests/boss-morte-teleporte.browser.mjs`,
 `tests/novo-boss-etapa8.browser.mjs`; roteiro novo:
 `tests/novo-boss-impacto-corpo.browser.mjs`. Checklist atualizado neste documento.
 Nenhum asset, mapa, código compartilhado ou arquivo do boss antigo foi alterado
@@ -1747,7 +1747,7 @@ nesta rodada. Prévia inspecionada: `/tmp/boss-corpo-impactos/corpo-apos-60s.png
   60/70 ms e fundo verde composto por trás do rosa. Original preservado por SHA-256.
 - [x] Desfazer a contribuição do verde em uma cópia RGBA, com alfa parcial nas
   bordas. Exportar spritesheet, GIF transparente, prévia PNG e manifesto em
-  `assets/PERSONAGENS/INIMIGOS PRINCIPAIS/Boss-test/derivados/area-ataque/`.
+  `assets/PERSONAGENS/INIMIGOS PRINCIPAIS/BossPrincipal/derivados/area-ataque/`.
   O GIF tem alfa binário; a spritesheet PNG é a versão principal usada no jogo.
 - [x] Integrar os 109 quadros aos avisos de pulso, chuva, lasers e tentáculos,
   incluindo cópias inofensivas. No jogo, a sequência acompanha o progresso de cada
@@ -1793,7 +1793,7 @@ Implementação alterada nesta rodada:
 | `NovoBossAssets.js`, `NovoBossAvisos.js` | Carregar e reproduzir a nova marcação transparente. |
 | `NovoBossConfig.js`, `ataques/Tentaculos.js` | Quantidade, anel local e duração da captura ligada à libertação. |
 | `NovoBossPuxao.js` | Corrigir a aplicação duplicada do offset na física ativa. |
-| `NovoBossLibertacao.js` (novo), `NovoBoss.js` | Escutar apertos reais e limpar os listeners junto do encontro. |
+| `NovoBossLibertacao.js` (novo), `BossPrincipal.js` | Escutar apertos reais e limpar os listeners junto do encontro. |
 | `NovoBossHud.js` | Mostrar o progresso dos oito apertos. |
 | `NovoBossServicosAtaques.js`, `NovoBossAtaquesIlusorios.js` | Consultar a captura real e manter cópias inofensivas. |
 | `js/player/PlayerControlEffects.js`, `js/player/Player.js` | Contar apertos e bloquear ataques normais enquanto preso. |
@@ -1856,7 +1856,7 @@ Arquivos de implementação alterados, todos em `js/enemies/novoBoss/`:
 | `NovoBossAtaques.js` | Ciclo independente das armadilhas, seleção imediata de outro ataque e limpeza. |
 | `NovoBossAtaquesIlusorios.js` | Tentáculos visuais persistentes coexistindo com o ataque imitado. |
 | `NovoBossEstados.js` | Avanço das armadilhas pelo relógio do combate; dano sem janelas de imunidade. |
-| `NovoBoss.js` | Hitbox de combate disponível durante o teleporte. |
+| `BossPrincipal.js` | Hitbox de combate disponível durante o teleporte. |
 | `NovoBossFases.js` | Clonagem sem proteção adicional e preservação das armadilhas na transição. |
 | `NovoBossHud.js` | Remoção da indicação de imunidade por clonagem. |
 

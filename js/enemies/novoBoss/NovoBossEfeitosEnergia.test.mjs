@@ -33,7 +33,7 @@ function cena() {
 }
 
 test("folhas derivadas preservam fontes, dimensões, quantidade e duração dos quadros", () => {
-  const base = new URL("../../../assets/PERSONAGENS/INIMIGOS PRINCIPAIS/Boss-test/", import.meta.url);
+  const base = new URL("../../../assets/PERSONAGENS/INIMIGOS PRINCIPAIS/BossPrincipal/", import.meta.url);
   const manifest = JSON.parse(readFileSync(new URL("derivados/gifs-originais.json", base)));
   assert.deepEqual(Object.keys(manifest), ["escudo-energia.gif", "ataque-explosão.gif"]);
   for (const [fonte, asset] of [["escudo-energia.gif", assetsNovoBoss.escudoEnergia], ["ataque-explosão.gif", assetsNovoBoss.explosao]]) {

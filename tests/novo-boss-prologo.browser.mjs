@@ -48,7 +48,7 @@ async function matarVivos() {
 async function avancarOnda(ms) {
   await page.evaluate(async ms => {
     const s = window.__game.scene.getScene("Level1Parte2");
-    const { atualizarNovoBoss } = await import("/js/enemies/novoBoss/NovoBoss.js");
+    const { atualizarBoss } = await import("/js/enemies/BossPrincipal.js");
     const { atualizarRoboBola } = await import("/js/enemies/RoboBola.js");
     const devAnterior = s.developerMode;
     // Este ensaio mede estados/limites das ondas. Mantém o jogador vivo enquanto
@@ -58,7 +58,7 @@ async function avancarOnda(ms) {
     try {
       for (let restante = ms; restante > 0;) {
         const dt = Math.min(20, restante); restante -= dt; s.time.now += dt;
-        atualizarNovoBoss(s, s.time.now, dt);
+        atualizarBoss(s, s.time.now, dt);
         atualizarRoboBola(s, s.time.now, dt);
         s.physics.world.bodies.forEach(b => { if (b.enable) b.preUpdate(false, dt / 1000); });
         s.physics.world.step(dt / 1000); s.physics.world.postUpdate();

@@ -6,23 +6,17 @@
 import { gastarEstamina } from "./PlayerStatus.js";
 import { jogadorPresoNovoBoss } from "./PlayerControlEffects.js";
 import { dispararProjetil } from "./PlayerProjectiles.js";
-import { ARIA_ATTACK_CONFIG, ARIA_AIM_DIRECTIONS, calcularCargaAria } from "../controls/AriaAttackConfig.js";
+import { ARIA_ATTACK_CONFIG, ARIA_AIM_DIRECTIONS, calcularCargaAria,
+  direcaoVisualAria } from "../controls/AriaAttackConfig.js";
+import { obterDirecaoMiraAutomaticaAria } from "./AriaAutoAim.js";
 import { pararSomTensaoAria } from "../sounds/SOUNDS_PERSONAGENS.js/sounds_Aria.js";
 
 import { causarDanoInimigo } from "../enemies/EnemyTest.js";
-import { causarDanoBoss } from "../enemies/BossFinal.js";
 import { alvosAdicionaisCombate, eAlvoAdicionalCombate,
   causarDanoAlvoAdicional } from "../combat/CombatTargets.js";
 import { tocarSomKatanaAcerto, tocarSomKatanaErro } from "../sounds/katana.js";
 import { COMBAT_FEEL } from "../combat/CombatEffects.js";
 import { calcularDepthAtor } from "../map/ProfundidadeMapa.js";
-import {
-  obterPersonagemTeste,
-  personagemTesteAtivo,
-  configurarVisualPersonagemTeste,
-  configurarHitboxPersonagemTeste,
-} from "./PersonagemTeste.js";
-import { criarArmaPersonagemTeste, atacarComArmaPersonagemTeste } from "./ArmaPersonagemTeste.js";
 import {
   obterConfiguracaoHitboxAtaque,
   obterConfiguracaoHitboxWalk,
@@ -82,7 +76,6 @@ const NYX_ATTACK_ORIGIN_Y = 0.45;
  * Retorna a chave da textura de caminhada do personagem selecionado.
  */
 function texturaWalk(scene, direcao = scene.direcaoAtual) {
-  if (personagemTesteAtivo(scene)) return obterPersonagemTeste(scene).textura;
   if (personagem4Ativa(scene)) {
     return "personagem4-walk";
   }
@@ -96,10 +89,6 @@ function texturaWalk(scene, direcao = scene.direcaoAtual) {
  * Configura a origem visual de caminhada e ajusta o ponto de ancoragem específico da Aria.
  */
 function configurarVisualWalk(scene) {
-  if (personagemTesteAtivo(scene)) {
-    configurarVisualPersonagemTeste(scene);
-    return;
-  }
   scene.player.setOrigin(0.5, 0.5);
   if (personagem3Ativa(scene)) {
     scene.player.setDisplayOrigin(64, 68);
@@ -110,7 +99,6 @@ function configurarVisualWalk(scene) {
  * Escolhe o frame parado do personagem conforme a direção informada.
  */
 function frameParado(scene, direcao = scene.direcaoAtual) {
-  if (personagemTesteAtivo(scene)) return 0;
   // Quadro inicial usado ao criar/retomar o personagem, por direção.
   // Atualize junto com idleFrames em PlayerAnimations.js para manter as poses consistentes.
   const frames = personagem4Ativa(scene)
@@ -192,7 +180,7 @@ function criarPlayer(scene) {
 
   scene.player.invulneravel = false;
 
-  if (personagemTesteAtivo(scene) || personagem3Ativa(scene) || personagem4Ativa(scene)) {
+  if (personagem3Ativa(scene) || personagem4Ativa(scene)) {
     scene.player.anims.play("idle-down", true);
   }
 
@@ -230,7 +218,6 @@ function criarPlayer(scene) {
 
   atualizarDepthPlayer(scene);
   atualizarHitboxDanoPlayer(scene);
-  criarArmaPersonagemTeste(scene);
 
   // =====================================================
   // FIM DO ATAQUE
@@ -304,11 +291,6 @@ function criarPlayer(scene) {
  */
 function configurarHitboxWalk(scene) {
   if (!scene.player || !scene.player.body) {
-    return;
-  }
-
-  if (personagemTesteAtivo(scene)) {
-    configurarHitboxPersonagemTeste(scene);
     return;
   }
 
@@ -619,9 +601,6 @@ function criarHitboxKatana(scene) {
           : scene.inimigoTeste && scene.inimigoTeste.active
             ? [scene.inimigoTeste]
             : []),
-        ...(scene.bossFinal?.active && !scene.bossFinal.morto
-          ? [scene.bossFinal]
-          : []),
         ...alvosAdicionaisCombate(scene),
       ];
 
@@ -659,8 +638,6 @@ function criarHitboxKatana(scene) {
 
         if (eAlvoAdicionalCombate(scene, inimigo)) {
           causarDanoAlvoAdicional(scene, inimigo, 25, hitboxKatana, hitboxKatana);
-        } else if (inimigo === scene.bossFinal) {
-          causarDanoBoss(scene, 25);
         } else {
           causarDanoInimigo(scene, inimigo, 25);
         }
@@ -702,7 +679,6 @@ function criarHitboxKatana(scene) {
 function atacar(scene) {
   if (jogadorPresoNovoBoss(scene)) return false;
   // A arma é independente do idle: atacar não troca a folha nem bloqueia a caminhada.
-  if (personagemTesteAtivo(scene)) return atacarComArmaPersonagemTeste(scene);
   // =====================================================
   // JÁ ESTÁ ATACANDO
   // =====================================================
@@ -841,9 +817,14 @@ function soltarAtaque(scene, agora = scene.time.now) {
     return false;
   }
   const potencia = calcularCargaAria(tempo, config);
-  const direction = scene.ariaAttackJoystick
-    ? scene.ariaMira ?? ARIA_AIM_DIRECTIONS[scene.direcaoAtaque]
-    : ARIA_AIM_DIRECTIONS[scene.direcaoAtaque];
+  const miraAutomatica = obterDirecaoMiraAutomaticaAria(scene);
+  if (miraAutomatica) {
+    scene.ariaMira = miraAutomatica;
+    atualizarDirecaoAtaqueAria(scene,
+      direcaoVisualAria(miraAutomatica, scene.direcaoAtaque, config));
+  }
+  const direction = miraAutomatica ?? (scene.ariaAttackJoystick ? scene.ariaMira : null) ??
+    ARIA_AIM_DIRECTIONS[scene.direcaoAtaque];
   scene.ariaAtaqueCarregando = false;
   scene.ariaCargaInicio = null;
   scene.ariaProximoDisparoRapido = agora + config.quickShotCooldown;
@@ -926,7 +907,6 @@ function respawnPlayer(scene) {
   // =====================================================
 
   scene.estamina = scene.estaminaMaxima;
-  criarArmaPersonagemTeste(scene);
 }
 
 // =====================================================

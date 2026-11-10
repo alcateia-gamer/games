@@ -247,10 +247,14 @@ class InventoryUI {
       )
       .setScale(1 / zoomX, 1 / zoomY);
 
+    // Rótulos HTML ficam acima do canvas; acompanham o fade para não atravessar a tela preta.
+    const fadeAlpha = Math.max(0, Math.min(1, camera.fadeEffect?.alpha ?? 0));
     for (const { label, nativeLabel } of this.fuelVisuals) {
       nativeLabel?.setPosition(this.container.x + label.x / zoomX,
         this.container.y + label.y / zoomY)
-        .setScale(1 / zoomX, 1 / zoomY).setVisible(this.container.visible);
+        .setScale(1 / zoomX, 1 / zoomY)
+        .setAlpha((this.container.alpha ?? 1) * (1 - fadeAlpha))
+        .setVisible(this.container.visible && fadeAlpha < 1);
     }
 
     if (

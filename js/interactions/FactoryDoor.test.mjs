@@ -67,7 +67,12 @@ class DisplayObject extends EventEmitter {
   /**
    * Aceita atualizações de texto do modal sem renderização de fontes.
    */
-  setText(text) { this.text = text; return this; }
+  setText(text) { this.text = text; this.width = text.length * 7 + 12; this.height = 24; return this; }
+  setFixedSize(width, height) {
+    this.width = width || (this.text ?? "").length * 7 + 12;
+    this.height = height || 24;
+    return this;
+  }
   /**
    * Aceita mudanças de cor do texto no substituto usado pelo teste.
    */
@@ -80,10 +85,13 @@ class DisplayObject extends EventEmitter {
   clear() { return this; }
   lineStyle() { return this; }
   beginPath() { return this; }
+  arc() { return this; }
   moveTo() { return this; }
   lineTo() { return this; }
   strokePath() { return this; }
   fillTriangle() { return this; }
+  fillRoundedRect() { return this; }
+  strokeRoundedRect() { return this; }
   strokeRect() { return this; }
   lineBetween() { return this; }
   fillStyle() { return this; }
@@ -186,7 +194,7 @@ function createScene(registry = new Map(), alterarMapa = () => {}) {
     add: Object.fromEntries(["image", "text", "container", "rectangle", "graphics"].map((type) =>
       [type, (x, y, text, style) => {
         const visual = new DisplayObject(x, y);
-        if (type === "text") { visual.text = text; visual.style = style; scene.texts.push(visual); }
+        if (type === "text") { visual.setText(text); visual.style = style; scene.texts.push(visual); }
         return visual;
       }])),
     textures: { exists: () => true, getFrame: () => ({ cutWidth: 16, cutHeight: 16 }) },
@@ -194,7 +202,7 @@ function createScene(registry = new Map(), alterarMapa = () => {}) {
     input: Object.assign(new EventEmitter(), {
       keyboard: { addKey: () => Object.assign(new DisplayObject(), { pressed: false }) },
     }),
-    time: { delayedCall(delay, callback) {
+    time: { now: 0, delayedCall(delay, callback) {
       scene.finishActivation = callback;
       return { remove() {} };
     } },
@@ -212,6 +220,7 @@ function createScene(registry = new Map(), alterarMapa = () => {}) {
   criarSistemaInventario(scene);
   criarInteracaoGeradorFabrica(scene);
   criarInteracaoPortaFabrica(scene);
+  scene.revelarFalas = () => { scene.time.now += 10000; scene.events.emit("prerender"); };
   return { scene, bodies, tiles: layer.getTilesWithinWorldXY(-1152, -1584, 144, 96), texture, layer };
 }
 
@@ -550,6 +559,7 @@ test("as duas portas iniciais mostram as oito falas de energia por E e toque, me
         scene.atualizarColetaItens();
         scene.botaoColetarItem.emit("pointerdown");
       }
+      scene.revelarFalas();
       assert.equal(texto.visible, true);
       assert.equal(porta.estado, "fechada");
       assert.ok(porta.colisao);
@@ -756,10 +766,11 @@ test("o leitor usa uma exclamação e só exibe falas sobre o cartão, mesmo sem
   scene.player.getTopCenter = () => ({ x: scene.player.x, y: scene.player.y - 100 });
   scene.hitboxDanoPlayer = { y: scene.player.y - 20 };
   abrirComE(scene);
+  scene.revelarFalas();
   assert.equal(fala.texto.visible, true);
   assert.equal(fala.texto.text, "Preciso encontrar o cartão de acesso.");
   assert.equal(fala.texto.style.color, "#102b3b");
-  assert.equal(fala.texto.style.backgroundColor, "#38bdf8");
+  assert.equal(fala.texto.style.backgroundColor, undefined, "o fundo arredondado é desenhado separadamente");
   assert.equal(fala.texto.y, scene.hitboxDanoPlayer.y + 10, "o balão fica ao lado da cabeça, sem considerar a margem vazia");
   assert.notEqual(scene.movimentoBloqueado, true);
   assert.notEqual(scene.generatorMenuOpen, true);
@@ -774,6 +785,7 @@ test("o leitor usa uma exclamação e só exibe falas sobre o cartão, mesmo sem
     scene.finishActivation();
     assert.equal(fala.texto.visible, false);
     abrirComE(scene);
+    scene.revelarFalas();
     frases.add(fala.texto.text);
   }
   assert.equal(frases.size, 8);
@@ -788,12 +800,14 @@ test("com energia mas sem cartão, a fala explica o requisito e some ao iniciar 
   const { scene } = createScene();
   scene.luzFabricaAcesa = true;
   aproximarLeitor(scene); abrirComE(scene);
+  scene.revelarFalas();
   const { fala, marcador } = scene.leitorCartaoFabrica;
   assert.equal(fala.texto.text, "Preciso encontrar o cartão de acesso.");
   const frases = new Set([fala.texto.text]);
   for (let i = 0; i < 7; i++) {
     scene.finishActivation();
     abrirComE(scene);
+    scene.revelarFalas();
     frases.add(fala.texto.text);
   }
   assert.equal(frases.size, 8);
@@ -1134,6 +1148,7 @@ test("collecting an item keeps priority over the nearby generator", () => {
   scene.atualizarColetaItens();
   assert.equal(scene.inventory.getQuantity("gasolina"), 1);
   assert.equal(scene.inventory.getSlots().find(s => s.itemId === "gasolina").fuel, 0);
+  scene.revelarFalas();
   assert.match(scene.texts.find(t => t.name === "fuel-speech-bubble").text, /galão está vazio.*enchê-lo/);
   assert.notEqual(scene.generatorMenuOpen, true);
   scene.teclaColetarItem.pressed = true;
@@ -1191,6 +1206,7 @@ test("E inicia o abastecimento, afastar cancela e o toque continua a partir do n
   scene.botaoColetarItem.emit("pointerdown");
   for (let i = 0; i < 31; i++) scene.atualizarAbastecimento(100);
   assert.equal(scene.inventory.getSlots()[0].fuel, 1);
+  scene.revelarFalas();
   assert.match(scene.texts.find(t => t.name === "fuel-speech-bubble").text, /Galão cheio/);
   scene.events.emit("shutdown");
   assert.equal(scene.atualizarAbastecimento, null);
@@ -1204,6 +1220,7 @@ test("abastecimento exige galão e proximidade e é interrompido por menu, morte
   scene.player.x = scene.player.y = -1960;
   scene.atualizarAbastecimento(0);
   scene.interacaoCombustivelProxima.interact();
+  scene.revelarFalas();
   assert.match(scene.texts.find(t => t.name === "fuel-speech-bubble").text, /encontrar um galão/);
   scene.inventory.addItem("gasolina");
   for (const bloqueio of ["generatorMenuOpen", "devItemMenuOpen", "morteEmAndamento"]) {

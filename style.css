@@ -28,11 +28,10 @@ body {
   user-select: none;
 }
 
-/* O primeiro clique libera o áudio e inicia o Phaser. */
+/* O primeiro clique pede tela cheia no mobile, libera o áudio e inicia o Phaser. */
 #start-game {
-  /* Mesma proporção do Phaser FIT para a resolução lógica de 850×405. */
-  --pixel-jogo: min(calc(100vw / 850), calc(100vh / 405));
-  --pixel-jogo: min(calc(100vw / 850), calc(100dvh / 405));
+  --pixel-jogo: min(calc(100vw / 800), calc(100vh / 450));
+  --pixel-jogo: min(calc(100vw / 800), calc(100dvh / 450));
   position: absolute;
   left: 50%;
   top: 50%;
@@ -59,7 +58,7 @@ body {
 #game-container canvas {
   display: block;
   touch-action: none;
-  /* O modo FIT amplia o canvas via CSS; mantém os pixels nítidos nessa ampliação. */
+  /* Mantém os pixels nítidos na ampliação feita pelo Phaser. */
   image-rendering: pixelated;
 }
 

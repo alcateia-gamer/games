@@ -13,7 +13,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw, GifImagePlugin
 
 RAIZ = Path(__file__).resolve().parents[1]
-PASTA = RAIZ / "assets/PERSONAGENS/INIMIGOS PRINCIPAIS/Boss-test"
+PASTA = RAIZ / "assets/PERSONAGENS/INIMIGOS PRINCIPAIS/BossPrincipal"
 DESTINO = PASTA / "derivados/teleporte"
 TAMANHO = (512, 640)
 POSICAO = (112, 200)
@@ -28,7 +28,7 @@ def fontes():
         frames.append(gif.convert("RGBA").copy())
         tempos.append(gif.info.get("duration", 0))
     assert len(frames) == 26 and gif.size == (400, 400)
-    idle = Image.open(PASTA / "boss-test-idle.png").convert("RGBA").crop((0, 0, 288, 288))
+    idle = Image.open(PASTA / "boss-idle.png").convert("RGBA").crop((0, 0, 288, 288))
     return frames, tempos, idle
 
 
@@ -155,7 +155,7 @@ def exportar(verificar=False):
     manifesto = {"resolucaoFonte": [400, 400], "quadrosFonte": 26,
         "duracoesFonteMs": tempos, "resolucaoSaida": list(TAMANHO), "pivo": list(PIVO),
         "fontes": {nome: hashlib.sha256((PASTA / nome).read_bytes()).hexdigest()
-                   for nome in ["teleporte(base).gif", "boss-test-idle.png", "boss-death.webp"]},
+                   for nome in ["teleporte(base).gif", "boss-idle.png", "boss-death.webp"]},
         "notas": ["Corpo original 288×288 sem redimensionamento ou redesenho.",
             "Fundo sólido azul removido apenas da energia de referência.",
             "Anéis 3× nearest; feixe reposicionado acima do corpo, sem esticar o GIF inteiro.",

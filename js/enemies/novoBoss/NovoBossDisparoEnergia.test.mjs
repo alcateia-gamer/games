@@ -28,7 +28,7 @@ function cena() {
 }
 
 test("derivados mantêm a fonte, 61 quadros, 20 ms e páginas de até 4096 px", () => {
-  const base = new URL("../../../assets/PERSONAGENS/INIMIGOS PRINCIPAIS/Boss-test/", import.meta.url);
+  const base = new URL("../../../assets/PERSONAGENS/INIMIGOS PRINCIPAIS/BossPrincipal/", import.meta.url);
   const meta = JSON.parse(readFileSync(new URL("derivados/disparo-energia.json", base)));
   assert.equal(createHash("sha256").update(readFileSync(new URL(meta.original, base))).digest("hex"), meta.sha256Original);
   assert.equal(meta.quadros, assetsNovoBoss.disparoEnergia.totalQuadros);

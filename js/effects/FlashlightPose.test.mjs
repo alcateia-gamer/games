@@ -45,15 +45,12 @@ test("a barriga mantém a origem durante a animação e respeita a transformaç�
   assert.ok(Math.abs(pose.y - (-892)) < 1e-10);
 });
 
-test("cada personagem usa as coordenadas da própria folha e os testes respeitam flipX", () => {
+test("cada personagem usa as coordenadas da própria folha e respeita flipX", () => {
   for (const [textura, frame, tamanho, origemY, escala, esperado] of [
     ["walk", 18, 128, 64, 1, [0,10]],
     ["personagem2-walk", 18, 64, 32, 1, [0,8]],
     ["personagem3-walk", 18, 128, 68, 1, [0,9]],
     ["personagem4-walk", 18, 64, 32, 1, [0,6]],
-    ["personagem-teste-idle", 0, 240, 136.5, 64/240, [0, (190-136.5)*64/240]],
-    ["personagem-teste-2-idle", 0, 240, 130.5, 64/240, [0,17.2]],
-    ["personagem-teste-2-walk", 0, 240, 130.5, 64/240, [0,17.2]],
   ]) {
     const scene = cena();
     Object.assign(scene.player, { texture: { key: textura }, frame: { name: frame },

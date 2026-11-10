@@ -10,6 +10,7 @@ import {
   atualizarEstadoVisualRobo,
 } from "./EnemyAnimations.js";
 import { atualizarIAInimigo } from "./EnemyAI.js";
+import { protegerColisaoInimigo } from "./EnemyCollision.js";
 import {
   verificarLasersNoMapa,
   verificarLasersNoPlayer,
@@ -134,6 +135,7 @@ function criarInimigoTeste(scene, config = {}) {
 
   scene.inimigos.push(inimigo);
   scene.inimigoTeste = inimigo;
+  if (!inimigo.remoteOnly) protegerColisaoInimigo(scene, inimigo);
 
   return inimigo;
 }

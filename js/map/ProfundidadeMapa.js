@@ -50,6 +50,7 @@ function calcularDepthAtor(scene, footY, ator = null) {
 /** Usa o contato físico com o chão, inclusive nas representações recebidas pela rede. */
 function obterFootYAtor(ator) {
   if (Number.isFinite(ator?.body?.bottom)) return ator.body.bottom;
+  if (Number.isFinite(ator?.coopBody?.bottom)) return ator.coopBody.bottom;
   if (ator?.mapCharacter && ator.getTopLeft) {
     const config = ator.remoteAttackActive
       ? obterConfiguracaoHitboxAtaque(ator.mapCharacter)

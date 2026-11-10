@@ -597,6 +597,7 @@ function enemyRadarFixture(enemies) {
     fillStyle(color) { this.color = color; return this; },
     fillRect(...args) { itemCommands.push([this.color, ...args]); return this; },
     lineStyle() { return this; },
+    lineBetween() { return this; },
     fillPoints(points) { itemCommands.push(["bolt", this.color, points]); return this; },
     strokePoints() { return this; },
   };
@@ -776,6 +777,19 @@ test("the generator hides its lightning icon when the lights turn on and stays w
   radar.generatorPosition = null;
   radar.update(4);
   assert.equal(itemCommands.length, 0);
+});
+
+test("o posto mantém a bomba no minimapa após o uso e não desenha fora do radar", () => {
+  const { radar, itemCommands } = enemyRadarFixture([]);
+  radar.fuelPositions = [{ x: 100, y: 0 }, { x: 350, y: 0 }, { x: NaN, y: 0 }];
+  radar.update();
+  assert.equal(itemCommands.length, 5);
+  assert.deepEqual(itemCommands[0], [0x30250a, 51, 37, 11, 16]);
+  assert.equal(itemCommands[2][0], COLLECTIBLE_MARKER_COLOR);
+  const original = structuredClone(itemCommands);
+  radar.scene.registry = new Map([["tanqueCombustivelUsado", true]]);
+  radar.update();
+  assert.deepEqual(itemCommands, original, "o ícone permanece como referência após abastecer");
 });
 
 test("as duas persianas têm ícones com lâminas cinza fixos no radar, respeitando seus limites", () => {

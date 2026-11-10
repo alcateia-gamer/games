@@ -54,10 +54,10 @@ const snapshot = () => page.evaluate(() => {
 async function estadoVulneravel() {
   const result = await page.evaluate(async () => {
     const scene = window.__game.scene.getScene("Level1Parte2");
-    const { atualizarNovoBoss } = await import("/js/enemies/novoBoss/NovoBoss.js");
+    const { atualizarBoss } = await import("/js/enemies/BossPrincipal.js");
     for (let i = 0; i < 1000; i++) {
       if (scene.novoBoss.estado === "vulneravel") return true;
-      atualizarNovoBoss(scene, scene.time.now, 20);
+      atualizarBoss(scene, scene.time.now, 20);
     }
     return false;
   });

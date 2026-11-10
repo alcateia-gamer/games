@@ -10,7 +10,7 @@ from pathlib import Path
 import struct
 import zlib
 
-BASE = Path(__file__).resolve().parents[1] / "assets/PERSONAGENS/INIMIGOS PRINCIPAIS/Boss-test"
+BASE = Path(__file__).resolve().parents[1] / "assets/PERSONAGENS/INIMIGOS PRINCIPAIS/BossPrincipal"
 SAIDA = BASE / "derivados/torres"
 LIB = ctypes.CDLL(ctypes.util.find_library("webp"))
 LIB.WebPDecodeRGBA.argtypes = [ctypes.c_void_p, ctypes.c_size_t,

@@ -42,7 +42,7 @@ async function instalarDriver() {
   await page.evaluate(async () => {
     const scene = window.__game.scene.getScene("Level1Parte2");
     const boss = scene.novoBoss;
-    const { atualizarNovoBoss } = await import("/js/enemies/novoBoss/NovoBoss.js");
+    const { atualizarBoss } = await import("/js/enemies/BossPrincipal.js");
     const { dispararProjetil, atualizarProjeteis } = await import("/js/player/PlayerProjectiles.js");
     const { atualizarHitboxDanoPlayer } = await import("/js/player/Player.js");
     const { retanguloLivreDoMapa } = await import("/js/enemies/EnemyPathfinding.js");
@@ -188,7 +188,7 @@ async function instalarDriver() {
       // avançando: inclusive os 500 ms de invulnerabilidade após dano normal.
       scene.time.preUpdate();
       scene.time.update(scene.time.now + delta, delta);
-      atualizarNovoBoss(scene, scene.time.now, delta);
+      atualizarBoss(scene, scene.time.now, delta);
       atualizarProjeteis(scene, delta);
       tempo += delta;
       observar();

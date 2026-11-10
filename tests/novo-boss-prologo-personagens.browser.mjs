@@ -28,13 +28,13 @@ async function expor() {
 async function simularAtaque() {
   await page.evaluate(async () => {
     const s = window.__game.scene.getScene("Level1Parte2");
-    const { atualizarNovoBoss } = await import("/js/enemies/novoBoss/NovoBoss.js");
+    const { atualizarBoss } = await import("/js/enemies/BossPrincipal.js");
     const { atualizarProjeteis } = await import("/js/player/PlayerProjectiles.js");
     const { atualizarSistemaEspeciais } = await import("/js/combat/PlayerSpecialAbilities.js");
     for (let ms = 0; ms < 800; ms += 20) {
       s.time.preUpdate(); s.time.update(s.time.now + 20, 20);
       s.player.anims.update(s.time.now, 20);
-      atualizarNovoBoss(s, s.time.now, 20);
+      atualizarBoss(s, s.time.now, 20);
       atualizarProjeteis(s, 20); atualizarSistemaEspeciais(s);
     }
   });

@@ -361,7 +361,6 @@ function criarTilesetsFabrica(map, scene) {
     ["!$Neontubes1", "neonTubes1"],
     ["!$Neontubes2", "neonTubes2"],
     ["!Industrials_Lights1", "industrialLights1"],
-    ["EnergiaBoss", "energiaBoss"],
     ["RoboV", "roboV"],
     ["!$ModernFloorLights", "modernFloorLights"],
     ["!ShopDoor", "shopDoor"],

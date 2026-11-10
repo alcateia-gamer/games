@@ -12,7 +12,7 @@ const ler=()=>page.evaluate(()=>{
  const s=window.__game.scene.getScene('Level1Parte2'),b=s.novoBoss;
  return {captura:s.restricaoControleNovoBoss,ataque:b.tentaculosAtivos?.snapshot(),vida:s.vida,estamina:s.estamina,
   hud:b.hud.textoEstado.text,atacando:s.atacando,player:{x:s.player.x,y:s.player.y},
-  tiros:s.armaPersonagemTeste?.lasers.length??s.projeteis?.getChildren?.().length??0};
+  tiros:s.projeteisPlayer?.getChildren?.().length??0};
 });
 async function clicarAtaque(){
  const p=await page.evaluate(()=>{const g=window.__game,r=g.canvas.getBoundingClientRect();return{x:r.left+720/g.scale.width*r.width,y:r.top+350/g.scale.height*r.height};});
@@ -59,7 +59,7 @@ try{
  });
  for(const o of ondas){assert.equal(o.n,o.esperado);assert.equal(o.n,5);assert.ok(o.distancias.every(d=>d>=119.99&&d<=300.01));}
  console.log('PASS surgimento: 20 ondas nas quatro posições, sempre cinco tentáculos a 120–300px.');
- for(const personagem of ['kai-mercer','aria-kade','personagem-teste']){
+ for(const personagem of ['kai-mercer','magnus-force','aria-kade','nyx']){
   await sessao.reiniciar({personagem});
   const alvo=await page.evaluate(()=>{const b=window.__game.scene.getScene('Level1Parte2').novoBoss;b.rng=()=>.4;
    b.executarAtaque('tentaculos');return b.tentaculosAtivos.snapshot().armadilhas[0];});

@@ -1,19 +1,7 @@
-# Botões, morte e teleporte da nova boss
+# Morte e teleporte do boss principal
 
-As três artes de botão estão integradas nas duas personagens de teste. A pose
-de morte e as duas sequências de transformação estão integradas à boss solo.
-
-## Botões
-
-| Arquivo original | Uso | Tamanho na tela |
-| --- | --- | --- |
-| `personagens-teste/Attack_Button.webp` | Ataque, substituindo círculo/espada anteriores | 92 × 92 px |
-| `personagens-teste/Action_Button.webp` | Acionar/interagir, substituindo a mão | 92 × 92 px |
-| `personagens-teste/Weapon_Button.webp` | Trocar arma, mantendo a miniatura equipada | 60 px de largura; proporção preservada |
-
-Ataque e interação continuam alternando no mesmo local. Coleta, portas, geradores,
-cadência, armas e atalhos mantêm seus controles. Os demais personagens usam a
-interface anterior. `Extra_Button.webp` não foi usado nem modificado.
+A pose de morte e as sequências de transformação pertencem ao boss principal.
+Os controles dos quatro operadores usam a interface padrão do jogo.
 
 ## Morte
 
@@ -31,7 +19,7 @@ Não foram inventados quadros intermediários de morte.
   centro X=106 e reaparece em X=282.
 - O GIF tem pausas de 1000 ms nas duas pontas e três quadros com duração zero.
   Os tempos originais completos ficam em `manifesto.json`.
-- `boss-test-idle.png`: grade 4 × 4 de células 288 × 288. A referência é o
+- `boss-idle.png`: grade 4 × 4 de células 288 × 288. A referência é o
   primeiro quadro completo: mantém silhueta, proporções, detalhes e alfa.
 - O recorte remove o fundo apenas da referência. A região ocupada pelo
   personagem central também é excluída, inclusive suas silhuetas pretas; não
@@ -51,7 +39,7 @@ Não foram inventados quadros intermediários de morte.
 ## Entregáveis
 
 Tudo fica em
-`assets/PERSONAGENS/INIMIGOS PRINCIPAIS/Boss-test/derivados/teleporte/`:
+`assets/PERSONAGENS/INIMIGOS PRINCIPAIS/BossPrincipal/derivados/teleporte/`:
 
 | Arquivo/pasta | Conteúdo |
 | --- | --- |
@@ -76,49 +64,14 @@ durações são ajustados às janelas existentes de **250 ms de saída + 250 ms 
 chegada**. Isso conserva o combate rápido, a invulnerabilidade e as verificações
 de destino atuais. Os arquivos exportados mantêm o ritmo útil mais lento da referência.
 
-## Arquivos de código e documentação alterados
+## Código e validação
 
-- `js/player/PersonagemTeste.js`: configura e carrega os três botões.
-- `js/controls/PlayerAttackControls.js`: nova arte somente para personagens de
-  teste; tamanho visual e pressão compensam o zoom. Implementação anterior preservada.
-- `js/inventory/ItemPickup.js`: arte de acionar e 92 px para as personagens de teste.
 - `js/enemies/novoBoss/NovoBossAssets.js`: recursos de morte, saída e chegada.
-- `js/enemies/novoBoss/NovoBossApresentacao.js`: pose de morte, transição e
-  coordenação do novo visual de teleporte; fallback anterior preservado.
-- `js/enemies/novoBoss/NovoBossTeleporteVisual.js` (novo): amostragem por progresso,
-  espelhamento, pivô, ocultação do corpo durante o efeito e limpeza. Sem física própria.
-- `scripts/preparar-teleporte-boss.py` (novo): prévia, exportação e verificação reproduzíveis.
-- Testes atualizados: `js/controls/PlayerTestActionControls.test.mjs`,
-  `js/player/ArmaPersonagemTeste.test.mjs`, `js/enemies/novoBoss/NovoBoss.test.mjs`,
-  `js/enemies/novoBoss/NovoBossApresentacao.test.mjs`.
-- Testes novos: `js/enemies/novoBoss/NovoBossTeleporteVisual.test.mjs` e
-  `tests/novo-boss-botoes-morte-teleporte.browser.mjs`.
-- Documentação: este relatório, `docs/personagem-teste.md` e
-  `docs/novo-boss-desenvolvimento.md` com checklist atualizado.
-
-## Validação realizada
-
-- Os **24 arquivos Node** do encontro, ataques, dano, efeitos, controle,
-  botões, armas de teste e regressão da Aria passaram.
-- `preparar-teleporte-boss.py --verificar`: compara cada PNG/spritesheet com a
-  transformação, confere quantidade e duração de todos os quadros GIF, alfa e hashes.
-- Chromium real: três texturas carregadas, cliques reais de troca, interação e
-  ataque, ataque/interação com 92 × 92 px mesmo em zoom diferente por eixo.
-- Saída e entrada no relógio de 250+250 ms, posições reais, espelhamento,
-  corpo desativado durante toda a viagem e restaurado apenas ao concluir.
-- Derrota real mostra a nova pose por 600 ms, desvanece e some aos 900 ms;
-  reinício restaura idle e remove os efeitos anteriores.
-- Luta completa de produção em Chromium: **1000 → 0 com 40 impactos reais de
-  25**, quatro geradores, barreira, todos os ataques, duas fases, duas ondas de
-  clones, vitória, WASD após a vitória, reinício e retorno à cidade.
-- Capturas da prévia e dos três botões, saída, chegada e morte foram inspecionadas.
-  A sessão visual não registrou erros JavaScript ou de carregamento dos recursos.
-
-Nenhum arquivo existente foi excluído ou renomeado. As fontes WebP/GIF/PNG,
-o boss antigo, seus sprites e implementações foram preservados. Mapa, cenas,
-ataques, regras de teleporte, multiplayer e arquivos dos colegas não foram
-alterados nesta rodada; as mudanças em controles compartilhados são condicionais
-às personagens de teste e preservam o comportamento dos demais personagens.
+- `js/enemies/novoBoss/NovoBossApresentacao.js`: apresentação da derrota.
+- `js/enemies/novoBoss/NovoBossTeleporteVisual.js`: progresso, espelhamento,
+  pivô, ocultação do corpo e limpeza do efeito, sem física própria.
+- `tests/boss-morte-teleporte.browser.mjs`: teleporte e derrota com Kai,
+  seguidos de reinício com Nyx e verificação dos controles padrão.
 
 Para repetir a preparação (Pillow 13):
 

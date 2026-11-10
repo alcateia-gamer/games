@@ -1,0 +1,96 @@
+{
+  "resolucaoFonte": [
+    400,
+    400
+  ],
+  "quadrosFonte": 26,
+  "duracoesFonteMs": [
+    1000,
+    30,
+    30,
+    30,
+    0,
+    50,
+    50,
+    0,
+    50,
+    50,
+    50,
+    30,
+    30,
+    30,
+    30,
+    50,
+    50,
+    30,
+    20,
+    20,
+    20,
+    40,
+    30,
+    0,
+    10,
+    1000
+  ],
+  "resolucaoSaida": [
+    512,
+    640
+  ],
+  "pivo": [
+    256,
+    344
+  ],
+  "fontes": {
+    "teleporte(base).gif": "ace3b15c06ab148d3614bce31616f596f182745db0b8a12f67ca32630b7855e1",
+    "boss-idle.png": "3ec9cab695d83f87c22215e9e4f28c4be4db23fa09d640a0d216bbeb17225909",
+    "boss-death.webp": "6d5b5c25410e757d4c2311dc9b68aa07b03261b015832cf931efee5714bcec65"
+  },
+  "notas": [
+    "Corpo original 288×288 sem redimensionamento ou redesenho.",
+    "Fundo sólido azul removido apenas da energia de referência.",
+    "Anéis 3× nearest; feixe reposicionado acima do corpo, sem esticar o GIF inteiro.",
+    "Saída: fonte 0–16 e quadro transparente extra. Entrada: fonte 17–25 em ordem original.",
+    "Pausas de 1000 ms substituídas por 60/80 ms; quadros 0 ms normalizados a 20 ms.",
+    "No jogo, relógios visuais são ajustados às janelas existentes de 250 ms por etapa; física preservada.",
+    "GIF: alfa binário e até 255 cores locais; PNG RGBA é a versão principal."
+  ],
+  "saida": {
+    "quadros": 18,
+    "duracoesMs": [
+      60,
+      30,
+      30,
+      30,
+      20,
+      50,
+      50,
+      20,
+      50,
+      50,
+      50,
+      30,
+      30,
+      30,
+      30,
+      50,
+      50,
+      40
+    ],
+    "duracaoMs": 700
+  },
+  "entrada": {
+    "quadros": 9,
+    "duracoesMs": [
+      30,
+      20,
+      20,
+      20,
+      40,
+      30,
+      20,
+      10,
+      80
+    ],
+    "duracaoMs": 270
+  }
+}

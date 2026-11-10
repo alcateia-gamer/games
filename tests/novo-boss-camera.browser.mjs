@@ -8,7 +8,7 @@ const config = { ...novoBossConfig,
   ataques: { ...novoBossConfig.ataques, automatico: false },
   geradores: { ...novoBossConfig.geradores, ativo: false },
   fase2: { ...novoBossConfig.fase2, ativo: false } };
-const sessao = await abrirSessaoNovoBoss(config, { personagem: "personagem-teste-2" });
+const sessao = await abrirSessaoNovoBoss(config, { personagem: "kai-mercer" });
 const { page, avancar, posicionar } = sessao;
 const snap = () => page.evaluate(() => {
   const s = window.__game.scene.getScene("Level1Parte2"), c = s.cameras.main;
@@ -22,7 +22,7 @@ const snap = () => page.evaluate(() => {
 });
 const near = (a, b) => assert.ok(Math.abs(a - b) < 0.001, `${a} ≠ ${b}`);
 try {
-  await posicionar(-1093, -5350); await avancar(2000);
+  await posicionar(-1093, -5250); await avancar(2000);
   near((await snap()).zoomX, 1);
   await posicionar(-1093, -5520); await avancar(100);
   let s = await snap();
@@ -37,7 +37,7 @@ try {
 
   await posicionar(-1093, config.arena.entradaY + 40); await avancar(2000);
   near((await snap()).zoomX, 0.8);
-  await posicionar(-1093, -5350); await avancar(100);
+  await posicionar(-1093, -5250); await avancar(100);
   s = await snap(); assert.ok(s.zoomX > 0.8 && s.zoomX < 1);
   await avancar(2000); near((await snap()).zoomX, 1);
   await page.evaluate(() => {
@@ -46,7 +46,7 @@ try {
   });
   await posicionar(-1093, -5520); await avancar(2000);
   s = await snap(); near(s.zoomX, 1); near(s.zoomY, 0.88);
-  await posicionar(-1093, -5350); await avancar(2000);
+  await posicionar(-1093, -5250); await avancar(2000);
   s = await snap(); near(s.zoomX, 1.25); near(s.zoomY, 1.1);
   console.log("PASS: margem evita oscilações na porta; sair restaura o zoom anterior, inclusive por eixo.");
 

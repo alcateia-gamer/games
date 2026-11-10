@@ -34,6 +34,18 @@ function criarVisual(layerName, centerY) {
   };
 }
 
+test("réplica de robô mantém a ordem pelos pés sem ocupar o campo do corpo físico", () => {
+  const player = { ...criarVisual("", 0), body: { bottom: -5800 } };
+  const replica = { ...criarVisual("", -5600), coopBody: { bottom: -5810 } };
+  const scene = { player, inimigos: [replica], profundidadePersonagemParte2: 16.5 };
+  atualizarDepthAtores(scene);
+  assert.ok(replica.depth < player.depth, "réplica atrás do jogador, apesar da margem visual");
+  replica.coopBody.bottom = -5790;
+  atualizarDepthAtores(scene);
+  assert.ok(replica.depth > player.depth, "réplica passa à frente pelos pés recebidos da rede");
+  assert.equal(replica.body, undefined, "o Phaser pode destruir o visual sem tentar destruir um retângulo");
+});
+
 test("SuperPC usa o topo de 1297/1300 e a base dos demais contra os pés físicos com Y negativo", () => {
   const map = JSON.parse(readFileSync(new URL("../../assets/map/parte2-fase1.json", import.meta.url)));
   const objects = map.layers.find(layer => layer.name === "ObjetosSuperPC").objects;

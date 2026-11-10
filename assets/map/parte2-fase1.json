@@ -22156,19 +22156,6 @@
          "tilewidth":48
         }, 
         {
-         "columns":8,
-         "firstgid":7047,
-         "image":"..\/..\/Tilesets\/extras\/EnergiaBoss.png",
-         "imageheight":384,
-         "imagewidth":384,
-         "margin":0,
-         "name":"EnergiaBoss",
-         "spacing":0,
-         "tilecount":64,
-         "tileheight":48,
-         "tilewidth":48
-        }, 
-        {
          "columns":6,
          "firstgid":7111,
          "image":"..\/..\/Tilesets\/extras\/RoboV.png",

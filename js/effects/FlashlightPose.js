@@ -4,9 +4,6 @@ const ORIGENS_BARRIGA = {
   "personagem2-walk": { tamanho: 64, x: 32, y: 40 },
   "personagem3-walk": { tamanho: 128, x: 64, y: 77 },
   "personagem4-walk": { tamanho: 64, x: 32, y: 38 },
-  "personagem-teste-idle": { tamanho: 240, x: 120, y: 190 },
-  "personagem-teste-2-idle": { tamanho: 240, x: 120, y: 195 },
-  "personagem-teste-2-walk": { tamanho: 240, x: 120, y: 195 },
 };
 
 const ANGULOS = { right: 0, down: Math.PI / 2, left: Math.PI, up: -Math.PI / 2 };

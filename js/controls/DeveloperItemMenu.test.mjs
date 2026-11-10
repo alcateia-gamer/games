@@ -105,6 +105,31 @@ test("inventário cheio mostra feedback sem conceder parcialmente ou perder iten
   scene.events.emit("shutdown");
 });
 
+test("galões vazios e cheios ficam junto das quantidades e preservam os galões anteriores", () => {
+  const { scene, tecla, clicar, botao, textos } = fixture();
+  scene.inventory.addItem("gasolina");
+  scene.inventory.fillFuel(0.35);
+  tecla(73);
+  assert.equal(botao("dev-item:gasolina:1").y, botao("dev-item:gasolina:1:cheio").y);
+  assert.ok(textos().includes("+1 vazio"));
+  assert.ok(textos().includes("+1 cheio"));
+  clicar("dev-item:gasolina:1:cheio");
+  clicar("dev-item:gasolina:1");
+  assert.deepEqual(scene.inventory.getSlots().map(slot => slot.fuel), [0.35, 1, 0]);
+  assert.equal(scene.inventory.getQuantity("gasolina", { minFuel: 1 }), 1);
+  scene.events.emit("shutdown");
+});
+
+test("pegar galão cheio com inventário lotado não abastece os galões existentes", () => {
+  const { scene, tecla, clicar, textos } = fixture({ maxSlots: 1 });
+  scene.inventory.addItem("gasolina");
+  tecla(73);
+  clicar("dev-item:gasolina:1:cheio");
+  assert.deepEqual(scene.inventory.getSlots(), [{ itemId: "gasolina", quantity: 1, fuel: 0 }]);
+  assert.ok(textos().some(text => text.includes("Inventário cheio")));
+  scene.events.emit("shutdown");
+});
+
 test("I, Esc e Fechar restauram o bloqueio anterior e removem a assinatura", () => {
   for (const modo of ["I", "Esc", "Fechar"]) {
     const { scene, tecla, clicar, visuais } = fixture();

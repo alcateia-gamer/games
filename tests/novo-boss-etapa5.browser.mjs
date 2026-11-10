@@ -44,10 +44,10 @@ const snapshot = () => page.evaluate(async () => {
 async function abrirJanela() {
   assert.ok(await page.evaluate(async () => {
     const scene = window.__game.scene.getScene("Level1Parte2");
-    const { atualizarNovoBoss } = await import("/js/enemies/novoBoss/NovoBoss.js");
+    const { atualizarBoss } = await import("/js/enemies/BossPrincipal.js");
     for (let i = 0; i < 1000; i++) {
       if (scene.novoBoss.estado === "vulneravel") return true;
-      atualizarNovoBoss(scene, scene.time.now, 20);
+      atualizarBoss(scene, scene.time.now, 20);
     }
     return false;
   }), "A boss precisa oferecer uma janela normal de dano.");
@@ -143,7 +143,7 @@ try {
   const trocasRepetidas = await page.evaluate(async () => {
     const scene = window.__game.scene.getScene("Level1Parte2");
     const boss = scene.novoBoss;
-    const { atualizarNovoBoss } = await import("/js/enemies/novoBoss/NovoBoss.js");
+    const { atualizarBoss } = await import("/js/enemies/BossPrincipal.js");
     const { destinoValidoNovoBoss } = await import("/js/enemies/novoBoss/NovoBossTeleporte.js");
     const sprite = boss.sprite;
     const hitbox = boss.hitboxDano;
@@ -156,7 +156,7 @@ try {
       boss.sistemaIlusoes.encerrarQuatro();
       const anterior = { x: boss.x, y: boss.y };
       if (!boss.executarAtaque("ilusoes")) throw new Error("O ataque de ilusões não iniciou.");
-      atualizarNovoBoss(scene, scene.time.now, 0);
+      atualizarBoss(scene, scene.time.now, 0);
       const falsoNoLugar = boss.alvosIlusorios.some(alvo =>
         alvo.x === anterior.x && alvo.y === anterior.y);
       const locais = new Set([`${boss.x},${boss.y}`,
@@ -294,11 +294,11 @@ try {
   await iniciarClones();
   const colisaoGeradores = await page.evaluate(async () => {
     const scene = window.__game.scene.getScene("Level1Parte2");
-    const { atualizarNovoBoss } = await import("/js/enemies/novoBoss/NovoBoss.js");
+    const { atualizarBoss } = await import("/js/enemies/BossPrincipal.js");
     const { areasSobrepostasNovoBoss } = await import("/js/enemies/novoBoss/NovoBossTeleporte.js");
     const { retanguloLivreDoMapa } = await import("/js/enemies/EnemyPathfinding.js");
     for (let i = 0; i < 120; i++) {
-      atualizarNovoBoss(scene, scene.time.now, 100);
+      atualizarBoss(scene, scene.time.now, 100);
       for (const alvo of scene.novoBoss.alvosIlusorios.filter(alvo => alvo.active)) {
         if (!retanguloLivreDoMapa(scene, alvo.hitboxDano) || scene.novoBoss.geradores.some(g =>
           areasSobrepostasNovoBoss(alvo.hitboxDano, g.body))) {

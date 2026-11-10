@@ -21,11 +21,11 @@ const ler = () => page.evaluate(() => {
 async function avancar(ms) {
   await page.evaluate(async ms=>{
     const s=window.__game.scene.getScene('Level1Parte2');
-    const {atualizarNovoBoss}=await import('/js/enemies/novoBoss/NovoBoss.js');
+    const {atualizarBoss}=await import('/js/enemies/BossPrincipal.js');
     for(let restante=ms;restante>0;){
       const d=Math.min(20,restante);
       s.time.preUpdate();s.time.update(s.time.now+d,d);
-      atualizarNovoBoss(s,s.time.now,d);restante-=d;
+      atualizarBoss(s,s.time.now,d);restante-=d;
     }
     s.children.depthSort();
   },ms);

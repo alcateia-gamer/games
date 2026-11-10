@@ -192,17 +192,42 @@ function applySquash(enemy) {
   const baseScaleY = enemy.baseScaleY ?? enemy.scaleY;
   enemy.baseScaleX = baseScaleX;
   enemy.baseScaleY = baseScaleY;
+  // A deformação é visual: mudar escala também redimensiona e desloca os pés
+  // no Arcade, podendo colocá-los dentro de uma parede antes da colisão.
+  const body = enemy.body;
+  const fisica = enemy.combatSquashBody ?? (body?.setSize && body?.setOffset ? {
+    body, largura: body.sourceWidth, altura: body.sourceHeight,
+    offsetX: body.offset.x, offsetY: body.offset.y,
+  } : null);
+  enemy.combatSquashBody = fisica;
+  const preservarCorpo = () => {
+    if (!fisica || !enemy.active || enemy.body !== fisica.body) return;
+    const fatorX = Math.abs(baseScaleX / enemy.scaleX);
+    const fatorY = Math.abs(baseScaleY / enemy.scaleY);
+    body.setSize(fisica.largura * fatorX, fisica.altura * fatorY, false);
+    body.setOffset(
+      enemy.displayOriginX + (fisica.offsetX - enemy.displayOriginX) * fatorX,
+      enemy.displayOriginY + (fisica.offsetY - enemy.displayOriginY) * fatorY,
+    );
+    body.updateFromGameObject();
+  };
   enemy.scene.tweens.killTweensOf(enemy);
   enemy.setScale(
     baseScaleX * COMBAT_FEEL.squash.impactScaleX,
     baseScaleY * COMBAT_FEEL.squash.impactScaleY,
   );
+  preservarCorpo();
   enemy.scene.tweens.add({
     targets: enemy,
     scaleX: baseScaleX,
     scaleY: baseScaleY,
     duration: COMBAT_FEEL.squash.duration,
     ease: "Back.Out",
+    onUpdate: preservarCorpo,
+    onComplete: () => {
+      preservarCorpo();
+      enemy.combatSquashBody = null;
+    },
   });
 }
 

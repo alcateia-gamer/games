@@ -18,6 +18,7 @@ import {
   desenharDebugRotaInimigo,
 } from "./EnemyPathfinding.js";
 import { causarDanoPlayer, tentarDispararLaser } from "./EnemyLaser.js";
+import { posicaoDentroAreaSpawn } from "./EnemySpawnArea.js";
 
 // =====================================================
 // CONFIGURACOES GERAIS DA IA
@@ -602,7 +603,7 @@ function patrulhar(scene, robo, agora, d) {
         y: centro.y + Math.sin(angulo) * raio,
       };
 
-      if (!caminhoMovimentoBloqueado(scene, robo, ponto)) {
+      if (posicaoDentroAreaSpawn(robo, ponto) && !caminhoMovimentoBloqueado(scene, robo, ponto)) {
         robo.iaDestinoPatrulha = ponto;
 
         robo.iaPatrulhaLimite = agora + IA.patrulhaTempoMaxMs;
@@ -640,6 +641,7 @@ function patrulhar(scene, robo, agora, d) {
   if (
     distancia(robo, robo.iaDestinoPatrulha) <= IA.distanciaChegada ||
     agora > robo.iaPatrulhaLimite ||
+    !posicaoDentroAreaSpawn(robo, robo.iaDestinoPatrulha) ||
     caminhoMovimentoBloqueado(scene, robo, robo.iaDestinoPatrulha)
   ) {
     robo.iaDestinoPatrulha = null;

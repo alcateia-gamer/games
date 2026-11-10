@@ -22,13 +22,13 @@ const snapshot = () => page.evaluate(() => {
 async function esperar(condicao, limite = 40000) {
   assert.ok(await page.evaluate(async ({ condicao, limite }) => {
     const scene = window.__game.scene.getScene("Level1Parte2"), b = scene.novoBoss;
-    const { atualizarNovoBoss } = await import("/js/enemies/novoBoss/NovoBoss.js");
+    const { atualizarBoss } = await import("/js/enemies/BossPrincipal.js");
     for (let t = 0; t <= limite; t += 20) {
       if (condicao === "abertura" && b.estado === "vulneravel") return true;
       if (condicao === "fim-onda" && !b.sistemaClones.ativo) return true;
       if (condicao === "viagem-central" && b.teleporte?.motivo === "clones-centro") return true;
       if (typeof condicao === "number" && b.ondasClonesFase2 >= condicao && b.sistemaClones.ativo) return true;
-      atualizarNovoBoss(scene, scene.time.now, 20);
+      atualizarBoss(scene, scene.time.now, 20);
     }
     return false;
   }, { condicao, limite }), `Não atingiu ${condicao}.`);
@@ -71,15 +71,15 @@ function conferirNascimento(s, numero) {
 async function verificarAtaque(tipo) {
   return page.evaluate(async tipo => {
     const scene = window.__game.scene.getScene("Level1Parte2"), b = scene.novoBoss;
-    const { atualizarNovoBoss } = await import("/js/enemies/novoBoss/NovoBoss.js");
+    const { atualizarBoss } = await import("/js/enemies/BossPrincipal.js");
     if (!b.executarAtaque(tipo)) throw new Error(`Não iniciou ${tipo}.`);
-    for (let t = 0; b.ataquePendente && t < 2000; t += 20) atualizarNovoBoss(scene, scene.time.now, 20);
+    for (let t = 0; b.ataquePendente && t < 2000; t += 20) atualizarBoss(scene, scene.time.now, 20);
     if (!b.ataqueAtual) throw new Error("Ataque não iniciou após posicionar.");
     let amostras = 0;
     while (b.ataqueAtual && amostras < 1000) {
       b.sprite.preUpdate(scene.time.now, 20);
       for (const a of b.alvosIlusorios) a.sprite.preUpdate(scene.time.now, 20);
-      atualizarNovoBoss(scene, scene.time.now, 20);
+      atualizarBoss(scene, scene.time.now, 20);
       if (b.alvosIlusorios.length !== 9) throw new Error("Perdeu clones antes de concluir ataque da onda.");
       for (const a of b.alvosIlusorios) {
         const c = a.ataquesIlusorios.snapshot();
@@ -132,9 +132,9 @@ try {
   assert.equal(s.vida, 474);
   assert.ok(await page.evaluate(async () => {
     const scene = window.__game.scene.getScene("Level1Parte2"), b = scene.novoBoss;
-    const { atualizarNovoBoss } = await import("/js/enemies/novoBoss/NovoBoss.js");
+    const { atualizarBoss } = await import("/js/enemies/BossPrincipal.js");
     const antes = JSON.stringify(b.sistemaClones.snapshot());
-    for (const delta of [NaN, Infinity, -1]) atualizarNovoBoss(scene, scene.time.now, delta);
+    for (const delta of [NaN, Infinity, -1]) atualizarBoss(scene, scene.time.now, delta);
     return JSON.stringify(b.sistemaClones.snapshot()) === antes;
   }), "Deltas inválidos não envelhecem ou movem a onda.");
   await page.evaluate(() => {

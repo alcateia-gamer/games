@@ -6,13 +6,15 @@
  * As habilidades serão implementadas posteriormente.
  */
 
+import { posicaoAcaoNaTela } from "./FixedActionButton.js";
+
 const CHAVE_ATLAS_ORIGINAL = "botoes-ulti";75
 const CHAVE_FRAMES = "botoes-ulti-quadros";
 
 const CONFIG_BOTAO_ESPECIAL = Object.freeze({
   tamanho: 76,
 
-  // Coordenadas lógicas do jogo: 850x405
+  // Coordenadas lógicas de referência: 800×450.
   // Ataque: (720,350)
   // Dash: (630,370)
   telaX: 650,
@@ -202,9 +204,9 @@ function criarControlesEspecial(scene) {
 
     const origemY = camera.height * camera.originY;
 
-    const x = origemX + (CONFIG_BOTAO_ESPECIAL.telaX - origemX) / zoomX;
-
-    const y = origemY + (CONFIG_BOTAO_ESPECIAL.telaY - origemY) / zoomY;
+    const ponto = posicaoAcaoNaTela(camera, CONFIG_BOTAO_ESPECIAL.telaX, CONFIG_BOTAO_ESPECIAL.telaY);
+    const x = origemX + (ponto.x - origemX) / zoomX;
+    const y = origemY + (ponto.y - origemY) / zoomY;
 
     const escala = pressionado ? CONFIG_BOTAO_ESPECIAL.escalaPressionado : 1;
 

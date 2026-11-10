@@ -5,7 +5,6 @@
  */
 
 import { causarDanoInimigo } from "../enemies/EnemyHealth.js";
-import { causarDanoBoss } from "../enemies/BossFinal.js";
 import { jogadorPresoNovoBoss } from "../player/PlayerControlEffects.js";
 import { criarColisaoDomoKai } from './KaiDomeCollision.js';
 import { NYX_AURA, prepararAuraNyx, iniciarAuraNyx, atualizarAuraNyx, limparAuraNyx } from './NyxHealingAura.js';
@@ -93,26 +92,12 @@ function inimigosVivos(scene) {
 function alvosEspeciais(scene) {
   const alvos = inimigosVivos(scene);
 
-  if (
-    scene.bossFinal?.active &&
-    !scene.bossFinal.morto &&
-    scene.bossFinal.hitboxDano
-  ) {
-    alvos.push(scene.bossFinal);
-  }
-
   return [...alvos, ...alvosAdicionaisCombate(scene)];
 }
 
 function danoEspecial(scene, alvo, quantidade, area = null, ataque = null) {
   if (eAlvoAdicionalCombate(scene, alvo)) {
     return causarDanoAlvoAdicional(scene, alvo, quantidade, area, ataque);
-  }
-
-  if (alvo === scene.bossFinal) {
-    // O chefe continua recebendo dano
-    // somente nas regiões verdes.
-    return causarDanoBoss(scene, quantidade, area);
   }
 
   causarDanoInimigo(scene, alvo, quantidade, {
@@ -427,7 +412,7 @@ function atualizarOnda(scene, estado, agora) {
     onda.atingidos.add(alvo);
 
     // Boss não sofre empurrão.
-    if (alvo === scene.bossFinal || eAlvoAdicionalCombate(scene, alvo)) {
+    if (eAlvoAdicionalCombate(scene, alvo)) {
       danoEspecial(
         scene,
         alvo,
@@ -907,18 +892,6 @@ function atualizarCortesNyx(scene, estado, delta) {
             areaCorte,
           );
           if (acertou && danoEspecial(scene, alvo, 12, areaCorte, corte)) {
-            terminou = true;
-            break;
-          }
-        } else if (alvo === scene.bossFinal) {
-          // Verificar as áreas verdes do boss.
-          const zonas = alvo.hitboxesReceberDano || [];
-
-          const acertouZona = zonas.some((r) =>
-            Phaser.Geom.Intersects.RectangleToRectangle(r, areaCorte),
-          );
-
-          if (acertouZona && danoEspecial(scene, alvo, 12, areaCorte)) {
             terminou = true;
             break;
           }

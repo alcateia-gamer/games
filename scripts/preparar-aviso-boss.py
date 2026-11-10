@@ -6,7 +6,7 @@ from pathlib import Path
 from PIL import Image, GifImagePlugin
 
 ROOT = Path(__file__).resolve().parents[1]
-FONTE = ROOT / 'assets/PERSONAGENS/INIMIGOS PRINCIPAIS/Boss-test/are-de-ataque.gif'
+FONTE = ROOT / 'assets/PERSONAGENS/INIMIGOS PRINCIPAIS/BossPrincipal/are-de-ataque.gif'
 DESTINO = FONTE.parent / 'derivados/area-ataque'
 
 def preparar(verificar=False):

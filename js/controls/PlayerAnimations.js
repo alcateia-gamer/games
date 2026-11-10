@@ -3,16 +3,11 @@
  */
 
 import { atualizarDirecaoAtaqueAria } from "../player/Player.js";
-import { personagemTesteAtivo } from "../player/PersonagemTeste.js";
 
 /**
  * Reproduz uma animação quando necessário, preservando ataques e a direção da carga da Aria.
  */
 function tocarAnimacaoSeNecessario(scene, chave) {
-  // Com a arma equipada, seu POST_UPDATE orienta o personagem pela mira.
-  if (personagemTesteAtivo(scene) && !scene.armaPersonagemTeste) {
-    scene.player.setFlipX(chave.endsWith("-left"));
-  }
   if (
     scene.atacando &&
     scene.ariaAtaqueCarregando &&
@@ -75,9 +70,7 @@ function atualizarAnimacaoParado(scene) {
     return;
   }
 
-  if (personagemTesteAtivo(scene)) {
-    tocarAnimacaoSeNecessario(scene, `idle-${scene.direcaoAtual}`);
-  } else if (scene.personagemSelecionada === "magnus-force") {
+  if (scene.personagemSelecionada === "magnus-force") {
     const framesParados = { up: 0, left: 9, down: 18, right: 27 };
     scene.player.anims.stop();
     scene.player.setFrame(framesParados[scene.direcaoAtual] ?? 18);

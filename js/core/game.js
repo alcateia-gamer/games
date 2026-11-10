@@ -4,60 +4,12 @@
  */
 
 import config from "./config.js";
+import { solicitarTelaCheiaMobile, registrarAtualizacaoDeViewport } from "./MobileDisplay.js";
 
 import Start from "../scenes/start.js";
 import BootPartida from "../scenes/BootPartida.js";
 import MultiplayerMenu from "../scenes/MultiplayerMenu.js";
 import MultiplayerLobby from "../scenes/MultiplayerLobby.js";
-
-/**
- * Atualiza a escala do canvas após uma mudança no tamanho visível da página.
- */
-function atualizarEscalaComViewport(game) {
-  game.scale.refresh();
-}
-
-/**
- * Registra os eventos de tamanho, orientação e tela cheia que exigem recalcular a escala.
- */
-function registrarAtualizacaoDeViewport(game) {
-  let quadroPendente = null;
-  /**
-   * Adia o ajuste da escala para o próximo quadro do navegador.
-   */
-  const atualizar = () => {
-    if (quadroPendente !== null) return;
-    quadroPendente = window.requestAnimationFrame(() => {
-      quadroPendente = null;
-      atualizarEscalaComViewport(game);
-    });
-  };
-
-  window.addEventListener("resize", atualizar, { passive: true });
-  window.addEventListener("orientationchange", atualizar, { passive: true });
-  document.addEventListener("fullscreenchange", atualizar, { passive: true });
-  document.addEventListener("webkitfullscreenchange", atualizar, {
-    passive: true,
-  });
-
-  if (window.visualViewport) {
-    window.visualViewport.addEventListener("resize", atualizar, {
-      passive: true,
-    });
-  }
-
-  return () => {
-    if (quadroPendente !== null) {
-      window.cancelAnimationFrame(quadroPendente);
-      quadroPendente = null;
-    }
-    window.removeEventListener("resize", atualizar);
-    window.removeEventListener("orientationchange", atualizar);
-    document.removeEventListener("fullscreenchange", atualizar);
-    document.removeEventListener("webkitfullscreenchange", atualizar);
-    window.visualViewport?.removeEventListener("resize", atualizar);
-  };
-}
 
 class Game extends Phaser.Game {
   /**
@@ -136,6 +88,7 @@ let jogoIniciado = false;
 function iniciarJogo(jogoRapido = false) {
   if (jogoIniciado) return;
   jogoIniciado = true;
+  void solicitarTelaCheiaMobile();
   const game = new Game(jogoRapido);
   game._viewportCleanup = registrarAtualizacaoDeViewport(game);
   botaoJogar.remove();

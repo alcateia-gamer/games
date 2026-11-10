@@ -12,7 +12,7 @@ from pathlib import Path
 from PIL import Image, ImageChops
 
 RAIZ = Path(__file__).resolve().parents[1]
-PASTA = RAIZ / "assets/PERSONAGENS/INIMIGOS PRINCIPAIS/Boss-test"
+PASTA = RAIZ / "assets/PERSONAGENS/INIMIGOS PRINCIPAIS/BossPrincipal"
 FONTE = PASTA / "disparo-energia.gif"
 DESTINO = PASTA / "derivados"
 GIF = "disparo-energia-transparente.gif"

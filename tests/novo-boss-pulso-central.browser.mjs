@@ -164,10 +164,10 @@ try {
   await sessao.reiniciar({ novoBossConfig: { ...config, fase2: novoBossConfig.fase2 } });
   assert.ok(await page.evaluate(async () => {
     const scene = window.__game.scene.getScene("Level1Parte2"), boss = scene.novoBoss;
-    const { atualizarNovoBoss } = await import("/js/enemies/novoBoss/NovoBoss.js");
-    for (let i = 0; boss.estado !== "vulneravel" && i < 500; i++) atualizarNovoBoss(scene, scene.time.now, 20);
+    const { atualizarBoss } = await import("/js/enemies/BossPrincipal.js");
+    for (let i = 0; boss.estado !== "vulneravel" && i < 500; i++) atualizarBoss(scene, scene.time.now, 20);
     if (!boss.receberDano(501)) return false;
-    for (let i = 0; !boss.sistemaClones.ativo && i < 500; i++) atualizarNovoBoss(scene, scene.time.now, 20);
+    for (let i = 0; !boss.sistemaClones.ativo && i < 500; i++) atualizarBoss(scene, scene.time.now, 20);
     return boss.fase === 2 && boss.sistemaClones.ativo;
   }));
   await posicionar(-680, -5770);

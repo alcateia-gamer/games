@@ -206,11 +206,14 @@ try {
     enemy.destroy(); s.inimigos = [];
     const r = dispararProjetil(s, { direction: { x: Math.SQRT1_2, y: -Math.SQRT1_2 }, damage: 45 });
     const bossSprite = s.add.sprite(r.x + 80, r.y - 80, "walk");
-    s.bossFinal = { active: true, vida: 100, vidaMaxima: 100, sprite: bossSprite,
+    s.multiplayer = false;
+    const encontroAnterior = s.novoBoss;
+    s.novoBoss = { active: true, vida: 100, vidaMaxima: 100, sprite: bossSprite,
+      receberDano(dano) { this.vida -= dano; return true; },
       hitboxDano: new Phaser.Geom.Rectangle(r.x + 70, r.y - 90, 20, 20) };
     atualizarProjeteis(s, 500);
-    const bossLife = s.bossFinal.vida;
-    bossSprite.destroy(); s.bossFinal = null; s.multiplayer = false;
+    const bossLife = s.novoBoss.vida;
+    bossSprite.destroy(); s.novoBoss = encontroAnterior;
     return { wallHit, enemyLife, enemyLifeAfter, bossLife };
   });
   assert.deepEqual(collisions, { wallHit: true, enemyLife: 55, enemyLifeAfter: 55, bossLife: 55 });

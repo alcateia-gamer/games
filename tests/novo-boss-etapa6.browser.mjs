@@ -59,7 +59,7 @@ async function registrarEventos() {
 async function avancarAte(condicao, limite = 30000) {
   const result = await page.evaluate(async ({ condicao, limite }) => {
     const scene = window.__game.scene.getScene("Level1Parte2");
-    const { atualizarNovoBoss } = await import("/js/enemies/novoBoss/NovoBoss.js");
+    const { atualizarBoss } = await import("/js/enemies/BossPrincipal.js");
     const atingiu = () => {
       const boss = scene.novoBoss;
       if (condicao === "vulneravel") return boss.estado === "vulneravel";
@@ -71,7 +71,7 @@ async function avancarAte(condicao, limite = 30000) {
     };
     for (let tempo = 0; tempo <= limite; tempo += 20) {
       if (atingiu()) { scene.children.depthSort(); return { atingiu: true, tempo }; }
-      atualizarNovoBoss(scene, scene.time.now, 20);
+      atualizarBoss(scene, scene.time.now, 20);
     }
     return { atingiu: false, estado: scene.novoBoss.estado };
   }, { condicao, limite });

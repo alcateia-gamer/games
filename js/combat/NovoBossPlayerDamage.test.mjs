@@ -5,10 +5,6 @@ import { EventEmitter } from "node:events";
 import { criarPlayer, atacar } from "../player/Player.js";
 import { dispararProjetil, atualizarProjeteis } from "../player/PlayerProjectiles.js";
 import { criarSistemaEspeciais, atualizarSistemaEspeciais } from "./PlayerSpecialAbilities.js";
-import { criarArmaPersonagemTeste, atualizarArmaPersonagemTeste,
-  obterAlvoArmaTeste, trocarArmaPersonagemTeste } from "../player/ArmaPersonagemTeste.js";
-import { PERSONAGEM_TESTE, PERSONAGEM_TESTE_2, ESPADA_PERSONAGEM_TESTE,
-  FLORETE_PERSONAGEM_TESTE } from "../player/PersonagemTeste.js";
 
 class Rectangle {
   constructor(x, y, width, height) { this.setTo(x, y, width, height); }
@@ -98,13 +94,6 @@ function cena(personagem = "kai-mercer", xBoss = 40, yBoss = 0) {
   return scene;
 }
 
-function avancarArma(scene, ate) {
-  while (scene.time.now < ate) {
-    const delta = Math.min(10, ate - scene.time.now);
-    scene.time.now += delta;
-    atualizarArmaPersonagemTeste(scene, delta);
-  }
-}
 
 test("golpes normais Kai, Magnus e Nyx atingem o contrato do novo boss uma vez", () => {
   for (const personagem of ["kai-mercer", "magnus-force", "nyx"]) {
@@ -242,44 +231,4 @@ test('Kai mantém parry por 5,8s e respeita o raio reduzido em mais 20%',()=>{
   assert.equal(scene.estadoEspecial.parryAte,5800);
   scene.time.now=8000;scene.events.emit('player:especial');
   assert.equal(scene.estadoEspecial.parryAte,13800);
-});
-
-test("rifle de teste mira no novo boss e só causa um acerto por laser", () => {
-  const scene = cena(PERSONAGEM_TESTE.id, 150, 12);
-  criarArmaPersonagemTeste(scene);
-  assert.equal(obterAlvoArmaTeste(scene), scene.novoBoss);
-  assert.equal(atacar(scene), true);
-  atualizarArmaPersonagemTeste(scene, 500);
-  atualizarArmaPersonagemTeste(scene, 500);
-  assert.equal(scene.novoBoss.vida, 1000 - PERSONAGEM_TESTE.arma.danoLaser);
-  assert.equal(scene.novoBoss.acertos.length, 1);
-  assert.equal(scene.armaPersonagemTeste.lasers.length, 0);
-});
-
-test("espada e florete de teste reconhecem boss novo e preservam dano único por golpe", () => {
-  for (const florete of [false, true]) {
-    const scene = cena(PERSONAGEM_TESTE_2.id, florete ? 55 : 40, 14);
-    criarArmaPersonagemTeste(scene);
-    if (florete) assert.equal(trocarArmaPersonagemTeste(scene), true);
-    assert.equal(obterAlvoArmaTeste(scene), scene.novoBoss);
-    assert.equal(atacar(scene), true);
-    avancarArma(scene, 800);
-    const config = florete ? FLORETE_PERSONAGEM_TESTE : ESPADA_PERSONAGEM_TESTE;
-    assert.equal(scene.novoBoss.vida, 1000 - config.dano);
-    assert.equal(scene.novoBoss.acertos.length, 1);
-  }
-});
-
-test("parede barra rifle, espada e florete antes do novo boss", () => {
-  for (const arma of ["rifle", "espada", "florete"]) {
-    const scene = cena(arma === "rifle" ? PERSONAGEM_TESTE.id : PERSONAGEM_TESTE_2.id,
-      arma === "rifle" ? 150 : 55, 14);
-    scene.collisionGroup = { getChildren: () => [{ active: true,
-      body: { x: 27, y: -100, width: 3, height: 200, enable: true } }] };
-    criarArmaPersonagemTeste(scene);
-    if (arma === "florete") trocarArmaPersonagemTeste(scene);
-    assert.equal(atacar(scene), true);
-    avancarArma(scene, 800);
-    assert.equal(scene.novoBoss.acertos.length, 0, arma);
-  }
 });

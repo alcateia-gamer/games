@@ -1,6 +1,6 @@
 /**
  * @file Cena que carrega mapas, personagens, sons, interface e tilesets. Mostra progresso e
- * prepara a textura final do raio antes de entrar na fase.
+ * entra na fase quando os recursos estão prontos.
  */
 
 
@@ -10,7 +10,6 @@ import { carregarSonsPersonagem } from "../sounds/personagem.js";
 import { carregarSomGerador } from "../sounds/gerador.js";
 import { carregarSomLuzFabrica } from "../sounds/luzFabrica.js";
 import { preloadInventoryItemImages } from "../inventory/InventoryItems.js";
-import { PERSONAGEM_TESTE, PERSONAGENS_TESTE, ARMAS_PERSONAGEM_TESTE, carregarPersonagemTeste } from "../player/PersonagemTeste.js";
 import { carregarAssetsNovoBoss } from "../enemies/novoBoss/NovoBossAssets.js";
 import { carregarEfeitosEspeciais } from "../combat/SpecialAbilityEffects.js";
 
@@ -20,275 +19,6 @@ class Preloader extends Phaser.Scene {
    */
   constructor() {
     super("preloader");
-  }
-
-  // =====================================================
-  // NOVA SPRITE SHEET DO RAIO DA BASE
-  // =====================================================
-  //
-  // PNG:
-  // RAIO_BOSS_BASE (1) (1).png
-  //
-  // Dimensão da imagem original: 1789x2048.
-  //
-  // Organização original:
-  // 7 colunas e 4 linhas.
-  // 24 quadros, com 3 na última linha.
-  //
-  // Organização final usada pelo Boss:
-  // 6 colunas e 4 linhas.
-  //
-  // TAMANHO EXATO DOS FRAMES FINAIS:
-  // X = 311
-  // Y = 623
-  //
-  // Não redimensiona o conteúdo dos raios.
-  // Não altera a ordem dos frames.
-  // Não modifica o PNG original.
-  // =====================================================
-
-  /**
-   * Reorganiza em memória os 24 quadros do raio da base em uma folha de frames de 311 × 623
-   * pixels.
-   */
-  prepararNovoRaioBase() {
-    const CHAVE_ORIGINAL = "boss-raio-base-original";
-    const CHAVE_FINAL = "boss-raio-base";
-    const CHAVE_CANVAS = "boss-raio-base-canvas";
-    const CHAVE_CORRECAO = "boss-raio-base-frame-623";
-
-    // ===================================================
-    // CONFIGURAÇÕES DA IMAGEM ORIGINAL
-    // ===================================================
-
-    const TOTAL_FRAMES = 24;
-    const COLUNAS_ORIGEM = 7;
-    const LINHAS_ORIGEM = 4;
-
-    // ===================================================
-    // CONFIGURAÇÕES DOS FRAMES FINAIS
-    // ===================================================
-
-    const FRAME_LARGURA = 311;
-    const FRAME_ALTURA = 623;
-
-    const COLUNAS_DESTINO = 6;
-    const LINHAS_DESTINO = 4;
-
-    // ===================================================
-    // AJUSTES MANUAIS DE CENTRALIZAÇÃO
-    // ===================================================
-
-    const AJUSTE_CENTRO_X = 0;
-    const AJUSTE_CENTRO_Y = 0;
-
-    // ===================================================
-    // VERIFICAR SE A IMAGEM FOI CARREGADA
-    // ===================================================
-
-    if (!this.textures.exists(CHAVE_ORIGINAL)) {
-      console.error(
-        "Boss: imagem original do raio da base não carregada."
-      );
-      return;
-    }
-
-    const texturaOriginal = this.textures.get(CHAVE_ORIGINAL);
-    const imagem = texturaOriginal.getSourceImage();
-
-    if (!imagem?.width || !imagem?.height) {
-      console.error(
-        "Boss: dimensões inválidas para o raio da base."
-      );
-      return;
-    }
-
-    // ===================================================
-    // IDENTIFICAR OS LIMITES REAIS DOS QUADROS
-    // ===================================================
-
-    const larguraOriginal = imagem.width;
-    const alturaOriginal = imagem.height;
-
-    const larguraMediaOrigem =
-      larguraOriginal / COLUNAS_ORIGEM;
-
-    const alturaMediaOrigem =
-      alturaOriginal / LINHAS_ORIGEM;
-
-    if (
-      Math.ceil(larguraMediaOrigem) > FRAME_LARGURA ||
-      Math.ceil(alturaMediaOrigem) > FRAME_ALTURA
-    ) {
-      console.error(
-        "Boss: o tamanho dos quadros originais excede 311x623."
-      );
-      return;
-    }
-
-    // ===================================================
-    // LIMPAR TEXTURAS ANTERIORES
-    // ===================================================
-
-    if (this.textures.exists(CHAVE_CORRECAO)) {
-      this.textures.remove(CHAVE_CORRECAO);
-    }
-
-    if (this.textures.exists(CHAVE_FINAL)) {
-      this.textures.remove(CHAVE_FINAL);
-    }
-
-    if (this.textures.exists(CHAVE_CANVAS)) {
-      this.textures.remove(CHAVE_CANVAS);
-    }
-
-    // ===================================================
-    // CRIAR CANVAS COM A GRADE CORRETA
-    // ===================================================
-
-    const larguraCanvas =
-      COLUNAS_DESTINO * FRAME_LARGURA;
-
-    const alturaCanvas =
-      LINHAS_DESTINO * FRAME_ALTURA;
-
-    const texturaCanvas = this.textures.createCanvas(
-      CHAVE_CANVAS,
-      larguraCanvas,
-      alturaCanvas
-    );
-
-    if (!texturaCanvas) {
-      console.error(
-        "Boss: não foi possível criar a textura do raio."
-      );
-      return;
-    }
-
-    const contexto = texturaCanvas.getContext();
-
-    contexto.imageSmoothingEnabled = false;
-    contexto.clearRect(
-      0,
-      0,
-      larguraCanvas,
-      alturaCanvas
-    );
-
-    // ===================================================
-    // COPIAR OS 24 FRAMES NA ORDEM ORIGINAL
-    // ===================================================
-
-    for (let i = 0; i < TOTAL_FRAMES; i++) {
-      const colunaOrigem = i % COLUNAS_ORIGEM;
-
-      const linhaOrigem =
-        Math.floor(i / COLUNAS_ORIGEM);
-
-      const origemX = Math.round(
-        colunaOrigem * larguraMediaOrigem
-      );
-
-      const origemDireita = Math.round(
-        (colunaOrigem + 1) * larguraMediaOrigem
-      );
-
-      const origemY = Math.round(
-        linhaOrigem * alturaMediaOrigem
-      );
-
-      const origemBaixo = Math.round(
-        (linhaOrigem + 1) * alturaMediaOrigem
-      );
-
-      const larguraRecorte =
-        origemDireita - origemX;
-
-      const alturaRecorte =
-        origemBaixo - origemY;
-
-      const colunaDestino =
-        i % COLUNAS_DESTINO;
-
-      const linhaDestino =
-        Math.floor(i / COLUNAS_DESTINO);
-
-      const margemX = Math.floor(
-        (FRAME_LARGURA - larguraRecorte) / 2
-      );
-
-      const margemY = Math.floor(
-        (FRAME_ALTURA - alturaRecorte) / 2
-      );
-
-      const destinoX =
-        colunaDestino * FRAME_LARGURA +
-        margemX +
-        AJUSTE_CENTRO_X;
-
-      const destinoY =
-        linhaDestino * FRAME_ALTURA +
-        margemY +
-        AJUSTE_CENTRO_Y;
-
-      contexto.drawImage(
-        imagem,
-        origemX,
-        origemY,
-        larguraRecorte,
-        alturaRecorte,
-        destinoX,
-        destinoY,
-        larguraRecorte,
-        alturaRecorte
-      );
-    }
-
-    // ===================================================
-    // ATUALIZAR TEXTURA DO CANVAS
-    // ===================================================
-
-    texturaCanvas.refresh();
-
-    // ===================================================
-    // CRIAR SPRITE SHEET FINAL DE 311x623
-    // ===================================================
-
-    this.textures.addSpriteSheet(
-      CHAVE_FINAL,
-      texturaCanvas.getSourceImage(),
-      {
-        frameWidth: FRAME_LARGURA,
-        frameHeight: FRAME_ALTURA,
-        endFrame: TOTAL_FRAMES - 1,
-      }
-    );
-
-    const texturaFinal =
-      this.textures.get(CHAVE_FINAL);
-
-    const framesCarregados = texturaFinal
-      .getFrameNames()
-      .filter((nome) => /^\d+$/.test(String(nome)));
-
-    if (framesCarregados.length !== TOTAL_FRAMES) {
-      console.error(
-        "Boss: quantidade incorreta de frames.",
-        framesCarregados.length
-      );
-      return;
-    }
-
-    console.log(
-      "Boss: raio da base carregado corretamente.",
-      {
-        frames: framesCarregados.length,
-        larguraFrame: FRAME_LARGURA,
-        alturaFrame: FRAME_ALTURA,
-        larguraSpritesheet: larguraCanvas,
-        alturaSpritesheet: alturaCanvas,
-      }
-    );
   }
 
   // =====================================================
@@ -342,7 +72,6 @@ class Preloader extends Phaser.Scene {
 
     this.load.once("complete", () => {
       this.prepararRenderizacaoPersonagens();
-      this.prepararNovoRaioBase();
       this.finalizarCarregamento();
     });
 
@@ -373,10 +102,6 @@ class Preloader extends Phaser.Scene {
       "personagem2-walk", "personagem2-attack", "personagem2-idle",
       "personagem3-walk", "personagem3-attack",
       "personagem4-walk", "personagem4-attack",
-      ...PERSONAGENS_TESTE.flatMap(p => [p.textura, p.walk?.textura].filter(Boolean)),
-      ...new Set([...ARMAS_PERSONAGEM_TESTE, ...PERSONAGENS_TESTE.flatMap(p => p.armas ?? [])]
-        .map(arma => arma.textura)),
-      PERSONAGEM_TESTE.botaoTroca.textura,
     ];
     for (const chave of texturas) {
       if (this.textures.exists(chave)) {
@@ -419,7 +144,6 @@ class Preloader extends Phaser.Scene {
    */
   carregarAssets() {
     this.load.setPath("./assets/");
-    carregarPersonagemTeste(this);
     carregarAssetsNovoBoss(this);
     carregarEfeitosEspeciais(this);
 
@@ -549,68 +273,6 @@ class Preloader extends Phaser.Scene {
       {
         frameWidth: 192,
         frameHeight: 192,
-      }
-    );
-
-    // =====================================================
-    // BOSS FINAL
-    // =====================================================
-
-    this.load.image(
-      "boss-hud",
-      "PERSONAGENS/INIMIGOS PRINCIPAIS/BOSS_FINAL/BARRA_VIDA_BOSS_2.png",
-    );
-
-    this.load.spritesheet(
-      "boss-ataque-chao",
-      "PERSONAGENS/INIMIGOS PRINCIPAIS/BOSS_FINAL/BOSS_ATAQUE_CHAO.png",
-      {
-        frameWidth: 256,
-        frameHeight: 256,
-        endFrame: 15,
-      }
-    );
-
-    this.load.spritesheet(
-      "boss-raio-chao",
-      "PERSONAGENS/INIMIGOS PRINCIPAIS/BOSS_FINAL/BOSS_RAIO_CHAO.png",
-      {
-        frameWidth: 256,
-        frameHeight: 256,
-      }
-    );
-
-    this.load.spritesheet(
-      "boss-raio-zona",
-      "PERSONAGENS/INIMIGOS PRINCIPAIS/BOSS_FINAL/RAIO_BOSS_1.png",
-      {
-        frameWidth: 311,
-        frameHeight: 623,
-      }
-    );
-
-    this.load.image(
-      "boss-raio-base-original",
-      "PERSONAGENS/INIMIGOS PRINCIPAIS/BOSS_FINAL/RAIO_BOSS_BASE (1) (1).png"
-    );
-
-    this.load.spritesheet(
-      "boss-rec-vida",
-      "PERSONAGENS/INIMIGOS PRINCIPAIS/BOSS_FINAL/BOSS_REC_VIDA.png",
-      {
-        frameWidth: 256,
-        frameHeight: 256,
-        endFrame: 24,
-      }
-    );
-
-    this.load.spritesheet(
-      "boss-tiro-laser",
-      "PERSONAGENS/INIMIGOS PRINCIPAIS/BOSS_FINAL/BOSS_TIRO_LAZER.png",
-      {
-        frameWidth: 256,
-        frameHeight: 256,
-        endFrame: 19,
       }
     );
 
@@ -975,11 +637,6 @@ class Preloader extends Phaser.Scene {
     this.load.image(
       "roboPB",
       "../Tilesets/extras/RoboPB.png"
-    );
-
-    this.load.image(
-      "energiaBoss",
-      "../Tilesets/extras/EnergiaBoss.png"
     );
 
     this.load.image(

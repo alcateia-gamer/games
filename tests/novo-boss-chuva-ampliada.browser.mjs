@@ -140,11 +140,11 @@ try {
   await iniciar();
   const sequencia = await page.evaluate(async () => {
     const scene = window.__game.scene.getScene("Level1Parte2"), b = scene.novoBoss;
-    const { atualizarNovoBoss } = await import("/js/enemies/novoBoss/NovoBoss.js");
+    const { atualizarBoss } = await import("/js/enemies/BossPrincipal.js");
     const quadros = new Map(), objetos = new Set();
     const anunciadas = new Map();
     for (let t = 0; t <= 7900; t += 20) {
-      atualizarNovoBoss(scene, scene.time.now, t ? 20 : 0);
+      atualizarBoss(scene, scene.time.now, t ? 20 : 0);
       for (const objeto of scene.children.list) {
         if (objeto.active && objeto.texture?.key === "novo-boss-heavens-fury") {
           objetos.add(objeto);

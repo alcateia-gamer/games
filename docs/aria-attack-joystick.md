@@ -1,9 +1,10 @@
 # Joystick híbrido de ataque da Aria
 
-> Histórico: o jogo voltou a usar o botão de ataque padrão para a Aria. Pressionar
-> carrega o arco; soltar dispara na direção atual da personagem, que acompanha a
-> caminhada. A implementação de joystick descrita abaixo está desconectada dos
-> controles do jogo; seus testes isolados e o roteiro de navegador ficam como referência.
+> O jogo usa o botão de ataque padrão para a Aria. Pressionar carrega o arco; soltar
+> dispara automaticamente na direção do inimigo visível mais próximo. Sem um alvo
+> desimpedido, a flecha segue a direção atual da personagem. A implementação de joystick
+> descrita abaixo está desconectada dos controles do jogo; seus testes isolados e o roteiro
+> de navegador ficam como referência.
 
 A Aria usa um joystick rosa no centro lógico `(720, 350)`. A base mede 55 px de raio; a área interativa mantém os 46 px do botão anterior para preservar o espaço de dash e holograma. O polegar acompanha o dedo até 45 px. Os outros personagens continuam com o botão de espada.
 

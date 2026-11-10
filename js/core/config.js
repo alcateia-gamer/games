@@ -3,10 +3,12 @@
  * MQTT.
  */
 
+import { dispositivoComToque } from "./MobileDisplay.js";
+
 var config = {
   // WebGL permite os shaders de clima e os efeitos gráficos usados pelo jogo.
   type: Phaser.WEBGL,
-  // Base 16:9 usada pelos menus e controles; FIT mantém toda a área dentro da janela.
+  // Resolução mínima dos menus e controles. No mobile, expande a área conforme a tela.
   width: 800,
   height: 450,
   // Preserva os pixels das imagens, inclusive nos frames de ataque dos personagens.
@@ -39,9 +41,9 @@ var config = {
   dom: {
     createContainer: true,
   },
-  // Ajusta o canvas proporcionalmente e centraliza o jogo nos dois eixos.
+  // EXPAND preenche celulares de qualquer proporção, preservando os pixels e os controles.
   scale: {
-    mode: Phaser.Scale.FIT,
+    mode: dispositivoComToque() ? Phaser.Scale.EXPAND : Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
   // Endereço do broker e prefixo que agrupam os tópicos de rede desta aplicação.

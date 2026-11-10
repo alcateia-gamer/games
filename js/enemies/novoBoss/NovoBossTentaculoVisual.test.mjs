@@ -27,7 +27,7 @@ function cena() {
 }
 
 test("fonte, 140 tempos e atlas conservam dimensões lógicas e agarrão separado", () => {
-  const base = new URL("../../../assets/PERSONAGENS/INIMIGOS PRINCIPAIS/Boss-test/", import.meta.url);
+  const base = new URL("../../../assets/PERSONAGENS/INIMIGOS PRINCIPAIS/BossPrincipal/", import.meta.url);
   const meta = JSON.parse(readFileSync(new URL("derivados/tentaculo/tentaculo.json", base)));
   assert.equal(createHash("sha256").update(readFileSync(new URL(meta.fonte, base))).digest("hex"), meta.sha256Original);
   assert.equal(meta.quadros, 140); assert.equal(meta.duracaoMs, 5600); assert.equal(meta.loop, 0);

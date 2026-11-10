@@ -3,10 +3,10 @@ import { EventEmitter } from "node:events";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import {
-  prepararNovoBoss,
-  atualizarNovoBoss,
-  destruirNovoBoss,
-} from "./NovoBoss.js";
+  prepararBoss,
+  atualizarBoss,
+  destruirBoss,
+} from "../BossPrincipal.js";
 import {
   novoBossConfig,
   jogadorNaArenaNovoBoss,
@@ -139,7 +139,7 @@ test("usa recursos separados e recortes exatos das folhas fornecidas", () => {
   assert.equal(cargas.length, Object.keys(assetsNovoBoss).length);
   assert.deepEqual(cargas[0], [
     "novo-boss-idle",
-    "PERSONAGENS/INIMIGOS PRINCIPAIS/Boss-test/boss-test-idle.png",
+    "PERSONAGENS/INIMIGOS PRINCIPAIS/BossPrincipal/boss-idle.png",
     { frameWidth: 288, frameHeight: 288, startFrame: 0, endFrame: 15 },
   ]);
   assert.deepEqual(cargas[1][2], {
@@ -184,14 +184,14 @@ test("entra na arena uma vez e preserva robôs, boss antigo e estado do jogador"
   const inimigos = scene.inimigos;
   const bossAntigo = scene.boss;
   const playerAntes = { ...scene.player };
-  const encontro = prepararNovoBoss(scene);
+  const encontro = prepararBoss(scene);
   assert.equal(encontro.estado, "aguardando");
   assert.equal(sprites.length, 0);
-  assert.equal(prepararNovoBoss(scene), encontro);
+  assert.equal(prepararBoss(scene), encontro);
   assert.deepEqual(scene.player, playerAntes);
 
   scene.player.y = -5470;
-  atualizarNovoBoss(scene, 1000, 16);
+  atualizarBoss(scene, 1000, 16);
   const sprite = encontro.sprite;
   assert.equal(encontro.estado, "preparando");
   assert.equal(sprite.key, assetsNovoBoss.idle.chave);
@@ -208,9 +208,9 @@ test("entra na arena uma vez e preserva robôs, boss antigo e estado do jogador"
   assert.equal(animacoes.get(sprite.animacao).repeat, -1);
 
   scene.player.y = -5400;
-  atualizarNovoBoss(scene, 2000, 16);
+  atualizarBoss(scene, 2000, 16);
   scene.player.y = -5500;
-  atualizarNovoBoss(scene, 3000, 16);
+  atualizarBoss(scene, 3000, 16);
   assert.equal(sprites.length, 1);
   assert.equal(scene.inimigos, inimigos);
   assert.equal(scene.boss, bossAntigo);
@@ -222,7 +222,7 @@ test("entra na arena uma vez e preserva robôs, boss antigo e estado do jogador"
 
 test("posiciona imediatamente ao preparar uma visita iniciada dentro da arena", () => {
   const { scene, sprites } = criarCena({ dentro: true });
-  assert.equal(prepararNovoBoss(scene).estado, "posicionada");
+  assert.equal(prepararBoss(scene).estado, "posicionada");
   assert.equal(sprites.length, 1);
 });
 
@@ -238,27 +238,27 @@ test("a introdução pausa relógio e dano até a câmera retornar e as duas per
     centerOn(x, y) { this.centro = { x, y }; },
     stopFollow() { this._follow = null; }, startFollow(alvo) { this._follow = alvo; },
     setZoom(x, y = x) { this.zoom = this.zoomX = x; this.zoomY = y; } } };
-  const encontro = prepararNovoBoss(scene);
-  atualizarNovoBoss(scene, 0, 0);
+  const encontro = prepararBoss(scene);
+  atualizarBoss(scene, 0, 0);
   assert.equal(scene.movimentoBloqueado, true);
   assert.equal(encontro.active, false);
   assert.equal(encontro.relogioCombate, 0);
   encontro.estado = "vulneravel";
   assert.equal(encontro.receberDano(25), false);
   encontro.estado = "posicionada";
-  atualizarNovoBoss(scene, 0, 10000);
+  atualizarBoss(scene, 0, 10000);
   assert.ok(portas.every(porta => porta.estado === "fechada"));
   assert.equal(encontro.introducao.snapshot().concluida, true);
   assert.equal(encontro.relogioCombate, 0, "o excedente do frame da introdução não dispara ataques");
   assert.equal(scene.movimentoBloqueado, undefined);
   assert.equal(scene.cameras.main._follow, scene.player);
-  atualizarNovoBoss(scene, 0, 16);
+  atualizarBoss(scene, 0, 16);
   assert.equal(encontro.relogioCombate, 16);
   assert.equal(encontro.active, true);
-  atualizarNovoBoss(scene, 0, encontro.config.combate.preparacaoMs);
+  atualizarBoss(scene, 0, encontro.config.combate.preparacaoMs);
   assert.equal(encontro.receberDano(encontro.vida), true);
   assert.ok(portas.every(porta => porta.estado === "aberta"), "derrotar o boss libera as saídas");
-  destruirNovoBoss(scene);
+  destruirBoss(scene);
   assert.equal(scene.events.listenerCount("novo-boss:derrotada"), 0);
 });
 
@@ -268,27 +268,27 @@ test("ZonaBoss ativa nos três retângulos e sair pausa o combate sem curar ou r
   const { scene, sprites } = criarCena();
   scene.map = { getObjectLayer: name => name === "ZonaBoss" ? { ...layer, visible: false } : null };
   Object.assign(scene.player, { x: -1080, y: -5300 });
-  const encontro = prepararNovoBoss(scene);
+  const encontro = prepararBoss(scene);
   assert.equal(encontro.active, false);
   assert.equal(sprites.length, 0);
   // Começa pela entrada inferior, fora da faixa antiga de ativação.
   for (const rect of [layer.objects[1], layer.objects[2], layer.objects[0]]) {
     Object.assign(scene.player, { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 });
-    atualizarNovoBoss(scene, 0, 16);
+    atualizarBoss(scene, 0, 16);
     assert.equal(encontro.jogadorNaArena, true);
     assert.equal(encontro.active, true);
     assert.equal(encontro.visible, true);
     assert.equal(encontro.body.enable, true);
     assert.equal(sprites.length, 1);
   }
-  atualizarNovoBoss(scene, 0, encontro.config.combate.preparacaoMs);
+  atualizarBoss(scene, 0, encontro.config.combate.preparacaoMs);
   assert.equal(encontro.receberDano(25), true);
   const vida = encontro.vida, relogio = encontro.relogioCombate, sprite = encontro.sprite;
   let ataqueDestruido = false;
   encontro.estado = "atacando";
   encontro.ataqueAtual = { destruir() { ataqueDestruido = true; } };
   Object.assign(scene.player, { x: -500, y: -6300 });
-  atualizarNovoBoss(scene, 0, 5000);
+  atualizarBoss(scene, 0, 5000);
   assert.equal(ataqueDestruido, true);
   assert.equal(encontro.ataqueAtual, null);
   assert.equal(encontro.active, false);
@@ -297,11 +297,11 @@ test("ZonaBoss ativa nos três retângulos e sair pausa o combate sem curar ou r
   assert.equal(encontro.body.enable, false);
   assert.equal(sprite.anims.isPaused, true);
   assert.equal(encontro.receberDano(25), false);
-  atualizarNovoBoss(scene, 0, 10000);
+  atualizarBoss(scene, 0, 10000);
   assert.equal(encontro.relogioCombate, relogio);
   assert.equal(encontro.vida, vida);
   Object.assign(scene.player, { x: -505, y: -5800 });
-  atualizarNovoBoss(scene, 0, 16);
+  atualizarBoss(scene, 0, 16);
   assert.equal(encontro.active, true);
   assert.equal(encontro.suspenso, false);
   assert.equal(encontro.visible, true);
@@ -311,15 +311,15 @@ test("ZonaBoss ativa nos três retângulos e sair pausa o combate sem curar ou r
   assert.equal(encontro.vida, vida);
   assert.equal(encontro.sprite, sprite);
   assert.equal(sprites.length, 1);
-  destruirNovoBoss(scene);
+  destruirBoss(scene);
 });
 
 test("controlador já caminha na fase inicial e sincroniza a hitbox a cada quadro", () => {
   const { scene } = criarCena({ dentro: true });
   scene.novoBossConfig = { ...configIsolada, movimento: novoBossConfig.movimento };
-  const encontro = prepararNovoBoss(scene), sprite = encontro.sprite;
+  const encontro = prepararBoss(scene), sprite = encontro.sprite;
   const origem = { x: sprite.x, y: sprite.y };
-  atualizarNovoBoss(scene, 500, 500);
+  atualizarBoss(scene, 500, 500);
   const distancia = Math.hypot(sprite.x - origem.x, sprite.y - origem.y);
   assert.ok(distancia > 13 && distancia <= 14.001);
   assert.equal(encontro.fase, 1);
@@ -330,21 +330,21 @@ test("controlador já caminha na fase inicial e sincroniza a hitbox a cada quadr
 test("ordena pelos pés do jogador sem atravessar camadas próximas da fábrica", () => {
   const { scene } = criarCena({ dentro: true });
   scene.profundidadePersonagemParte2 = 16.5;
-  const encontro = prepararNovoBoss(scene);
+  const encontro = prepararBoss(scene);
   const sprite = encontro.sprite;
   assert.equal(sprite.body.bottom, encontro.hitbox.y + encontro.hitbox.height);
   // O jogador começa abaixo da boss; seu corpo deve desenhar à frente dela.
   assert.ok(sprite.profundidade < 16.5);
   assert.ok(sprite.profundidade > 16.4995);
   scene.player.body.bottom = sprite.body.bottom - 200;
-  atualizarNovoBoss(scene, 100, 16);
+  atualizarBoss(scene, 100, 16);
   assert.ok(sprite.profundidade > 16.5);
   assert.ok(sprite.profundidade < 16.5005);
   scene.player.body.bottom = sprite.body.bottom;
-  atualizarNovoBoss(scene, 200, 16);
+  atualizarBoss(scene, 200, 16);
   assert.equal(sprite.profundidade, 16.5);
   delete scene.profundidadePersonagemParte2;
-  atualizarNovoBoss(scene, 300, 16);
+  atualizarBoss(scene, 300, 16);
   assert.equal(sprite.profundidade, novoBossConfig.visual.profundidade);
 });
 
@@ -352,8 +352,8 @@ test("não cria durante a morte mesmo que o sprite do jogador continue ativo", (
   for (const estado of [{ morteEmAndamento: true }, { vida: 0 }]) {
     const { scene, sprites } = criarCena({ dentro: true });
     Object.assign(scene, estado);
-    prepararNovoBoss(scene);
-    atualizarNovoBoss(scene, 100, 16);
+    prepararBoss(scene);
+    atualizarBoss(scene, 100, 16);
     assert.equal(sprites.length, 0);
     assert.equal(scene.novoBoss.estado, "aguardando");
   }
@@ -361,17 +361,17 @@ test("não cria durante a morte mesmo que o sprite do jogador continue ativo", (
 
 test("morte oculta a entidade já posicionada, pausa animação e restaura sem duplicar", () => {
   const { scene, sprites } = criarCena({ dentro: true });
-  const encontro = prepararNovoBoss(scene);
+  const encontro = prepararBoss(scene);
   const sprite = encontro.sprite;
   scene.morteEmAndamento = true;
-  atualizarNovoBoss(scene, 100, 16);
+  atualizarBoss(scene, 100, 16);
   assert.equal(encontro.suspenso, true);
   assert.equal(sprite.visible, false);
   assert.equal(sprite.body.enable, false);
   assert.equal(sprite.anims.isPaused, true);
-  atualizarNovoBoss(scene, 200, 16);
+  atualizarBoss(scene, 200, 16);
   scene.morteEmAndamento = false;
-  atualizarNovoBoss(scene, 300, 16);
+  atualizarBoss(scene, 300, 16);
   assert.equal(encontro.suspenso, false);
   assert.equal(sprite.visible, true);
   assert.equal(sprite.body.enable, true);
@@ -381,11 +381,11 @@ test("morte oculta a entidade já posicionada, pausa animação e restaura sem d
 
 test("asset ausente não cria textura de erro e pode ser disponibilizado posteriormente", () => {
   const { scene, recursos, sprites } = criarCena({ dentro: true, assetDisponivel: false });
-  const encontro = prepararNovoBoss(scene);
+  const encontro = prepararBoss(scene);
   assert.equal(encontro.pendencia, "asset-idle-ausente");
   assert.equal(sprites.length, 0);
   recursos.add(assetsNovoBoss.idle.chave);
-  atualizarNovoBoss(scene, 100, 16);
+  atualizarBoss(scene, 100, 16);
   assert.equal(sprites.length, 1);
   assert.equal(encontro.pendencia, null);
 });
@@ -396,22 +396,22 @@ test("não posiciona o corpo dentro de obstáculos ou fora da arena configurada"
     dentro: true,
     blocos: [{ body: { x, y, width, height, enable: true } }],
   });
-  assert.equal(prepararNovoBoss(scene).pendencia, "posicao-inicial-bloqueada");
+  assert.equal(prepararBoss(scene).pendencia, "posicao-inicial-bloqueada");
   assert.equal(sprites.length, 0);
   scene.collisionGroup.getChildren()[0].body.enable = false;
-  atualizarNovoBoss(scene, 100, 16);
+  atualizarBoss(scene, 100, 16);
   assert.equal(sprites.length, 1);
 
   const outra = criarCena({ dentro: true });
   const config = { ...configIsolada, posicaoInicial: { x: -1080, y: -6200 } };
-  assert.equal(prepararNovoBoss(outra.scene, config).pendencia, "posicao-inicial-bloqueada");
+  assert.equal(prepararBoss(outra.scene, config).pendencia, "posicao-inicial-bloqueada");
   assert.equal(outra.sprites.length, 0);
 });
 
 test("shutdown e destroy limpam apenas recursos próprios e permitem uma nova visita", () => {
   for (const evento of ["shutdown", "destroy"]) {
     const { scene, sprites } = criarCena({ dentro: true });
-    const encontro = prepararNovoBoss(scene);
+    const encontro = prepararBoss(scene);
     const primeiro = encontro.sprite;
     scene.events.emit(evento);
     assert.equal(primeiro.destruidos, 1);
@@ -420,13 +420,13 @@ test("shutdown e destroy limpam apenas recursos próprios e permitem uma nova vi
     assert.equal(scene.novoBoss, null);
     assert.equal(scene.events.listenerCount("shutdown"), 0);
     assert.equal(scene.events.listenerCount("destroy"), 0);
-    atualizarNovoBoss(scene, 500, 16);
-    destruirNovoBoss(scene);
+    atualizarBoss(scene, 500, 16);
+    destruirBoss(scene);
     scene.events.emit("shutdown");
     scene.events.emit("destroy");
     assert.equal(sprites.length, 1);
     assert.equal(primeiro.destruidos, 1);
-    prepararNovoBoss(scene);
+    prepararBoss(scene);
     assert.equal(sprites.length, 2);
     assert.equal(scene.novoBoss.estado, "posicionada");
   }
@@ -434,10 +434,10 @@ test("shutdown e destroy limpam apenas recursos próprios e permitem uma nova vi
 
 test("shutdown enquanto aguarda impede criação tardia e remove listeners", () => {
   const { scene, sprites } = criarCena();
-  prepararNovoBoss(scene);
+  prepararBoss(scene);
   scene.events.emit("shutdown");
   scene.player.y = -5500;
-  atualizarNovoBoss(scene, 500, 16);
+  atualizarBoss(scene, 500, 16);
   assert.equal(sprites.length, 0);
   assert.equal(scene.events.listenerCount("shutdown"), 0);
   assert.equal(scene.events.listenerCount("destroy"), 0);
@@ -445,24 +445,24 @@ test("shutdown enquanto aguarda impede criação tardia e remove listeners", () 
 
 test("controlador integra dano, viagem e derrota sem recriar a entidade", () => {
   const { scene, sprites } = criarCena({ dentro: true });
-  const encontro = prepararNovoBoss(scene);
+  const encontro = prepararBoss(scene);
   const hitbox = encontro.hitboxDano;
   const origem = { x: encontro.x, y: encontro.y };
   assert.equal(encontro.receberDano(25), true);
-  atualizarNovoBoss(scene, 0, encontro.config.combate.preparacaoMs);
+  atualizarBoss(scene, 0, encontro.config.combate.preparacaoMs);
   assert.equal(encontro.estado, "vulneravel");
   assert.equal(encontro.receberDano(25), true);
   assert.equal(encontro.vida, encontro.vidaMaxima - 50);
   assert.equal(encontro.body.enable, true);
   for (let i = 0; i < 2; i++) {
-    atualizarNovoBoss(scene, 0, encontro.config.combate.intervaloAcertosMs);
+    atualizarBoss(scene, 0, encontro.config.combate.intervaloAcertosMs);
     assert.equal(encontro.receberDano(25), true);
   }
   assert.equal(encontro.vida, encontro.vidaMaxima - 100);
   assert.equal(encontro.sprite.body.enable, false);
   assert.equal(encontro.body, encontro.hitboxDano);
   assert.equal(encontro.receberDano(25, { ...encontro.hitboxDano }), true);
-  atualizarNovoBoss(scene, 0,
+  atualizarBoss(scene, 0,
     encontro.config.teleporte.desaparecerMs + encontro.config.teleporte.reaparecerMs);
   assert.notDeepEqual({ x: encontro.x, y: encontro.y }, origem);
   assert.equal(encontro.hitboxDano, hitbox);
@@ -472,11 +472,11 @@ test("controlador integra dano, viagem e derrota sem recriar a entidade", () => 
   const vida = encontro.vida;
   const relogio = encontro.relogioCombate;
   scene.player.y = -5300;
-  atualizarNovoBoss(scene, 0, 10000);
+  atualizarBoss(scene, 0, 10000);
   assert.equal(encontro.vida, vida);
   assert.equal(encontro.relogioCombate, relogio);
   scene.player.y = -5500;
-  atualizarNovoBoss(scene, 0, encontro.config.combate.preparacaoMs);
+  atualizarBoss(scene, 0, encontro.config.combate.preparacaoMs);
   let derrotas = 0;
   scene.events.on("novo-boss:derrotada", () => derrotas++);
   assert.equal(encontro.receberDano(encontro.vida), true);
@@ -484,33 +484,33 @@ test("controlador integra dano, viagem e derrota sem recriar a entidade", () => 
   assert.equal(encontro.active, false);
   assert.equal(encontro.body.enable, false);
   assert.equal(encontro.receberDano(25), false);
-  atualizarNovoBoss(scene, 0, 60000);
+  atualizarBoss(scene, 0, 60000);
   assert.equal(derrotas, 1);
   assert.equal(sprites.length, 1);
-  destruirNovoBoss(scene);
+  destruirBoss(scene);
   assert.equal(encontro.receberDano(25), false);
 });
 
 test("multiplayer não instancia combate local e pode retornar ao solo", () => {
   const { scene, sprites } = criarCena({ dentro: true });
   scene.multiplayer = true;
-  const encontro = prepararNovoBoss(scene);
-  atualizarNovoBoss(scene, 0, 10000);
+  const encontro = prepararBoss(scene);
+  atualizarBoss(scene, 0, 10000);
   assert.equal(encontro.sprite, null);
   assert.equal(encontro.relogioCombate, 0);
   assert.equal(sprites.length, 0);
   assert.equal(encontro.receberDano(25), false);
   scene.multiplayer = false;
-  atualizarNovoBoss(scene, 0, 0);
+  atualizarBoss(scene, 0, 0);
   assert.equal(sprites.length, 1);
   assert.equal(encontro.visible, true);
   scene.multiplayer = true;
-  atualizarNovoBoss(scene, 0, 2000);
+  atualizarBoss(scene, 0, 2000);
   assert.equal(encontro.visible, false);
   assert.equal(encontro.body.enable, false);
   assert.equal(encontro.relogioCombate, 0);
   scene.multiplayer = false;
-  atualizarNovoBoss(scene, 0, 0);
+  atualizarBoss(scene, 0, 0);
   assert.equal(encontro.visible, true);
   assert.equal(encontro.body.enable, true);
   assert.equal(sprites.length, 1);

@@ -108,9 +108,12 @@ export class CoopWorld {
     this.transitioning = true; s.transicaoEmAndamento = true;
     s.player.setVelocity(0, 0); s.movimentoBloqueado = true;
     s.cameras.main.fadeOut(250, 0, 0, 0);
-    s.cameras.main.once("camerafadeoutcomplete", () => s.scene.start(data.key, {
-      personagem: s.personagemSelecionada, multiplayer: true, spawnX: data.x, spawnY: data.y,
-      portaAberta: data.key === "Level1", transicao: true }));
+    s.cameras.main.once("camerafadeoutcomplete", () => {
+      if (data.key === "Level1Parte2") s.registry.set("fabricaVisitada", true);
+      s.scene.start(data.key, {
+        personagem: s.personagemSelecionada, multiplayer: true, spawnX: data.x, spawnY: data.y,
+        portaAberta: data.key === "Level1", transicao: true });
+    });
   }
   snapshot() {
     const s = this.scene;

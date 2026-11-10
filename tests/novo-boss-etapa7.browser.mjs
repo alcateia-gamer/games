@@ -65,10 +65,10 @@ function nucleoAlinhado(state) {
 async function esperarEstado(estado, limite = 30000) {
   const atingiu = await page.evaluate(async ({ estado, limite }) => {
     const scene = window.__game.scene.getScene("Level1Parte2");
-    const { atualizarNovoBoss } = await import("/js/enemies/novoBoss/NovoBoss.js");
+    const { atualizarBoss } = await import("/js/enemies/BossPrincipal.js");
     for (let tempo = 0; tempo <= limite; tempo += 20) {
       if (scene.novoBoss.estado === estado) return true;
-      atualizarNovoBoss(scene, scene.time.now, 20);
+      atualizarBoss(scene, scene.time.now, 20);
     }
     return false;
   }, { estado, limite });

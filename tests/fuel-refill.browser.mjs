@@ -100,6 +100,8 @@ try {
   await page.waitForFunction(() => window.__game.scene.getScene("Level1").inventory.getQuantity("gasolina") === 1);
   assert.equal(await nivel(), 0);
   assert.equal(await page.locator("[data-inventory-fuel-label]").textContent(), "0%");
+  await page.waitForFunction(() => /galão está vazio.*enchê-lo/.test(window.__game.scene.getScene("Level1")
+    .children.getByName("fuel-speech-bubble").text));
   assert.match(await page.evaluate(() => window.__game.scene.getScene("Level1")
     .children.getByName("fuel-speech-bubble").text), /galão está vazio.*enchê-lo/);
   await tecla();

@@ -92,6 +92,20 @@ test("a hitbox inteira precisa caber na zona mesmo quando o ponto sorteado está
   assert.ok(region.rejected.every(p => p.x < region.area.x + region.area.width));
 });
 
+test("zona 639 rejeita objeto sob a imagem mesmo quando os pés estão livres", () => {
+  const currentScene = scene();
+  const manager = new EnemySpawnManager(currentScene, map);
+  const region = manager.regions.find(r => r.id === 639);
+  const ponto = region.center;
+  const bloco = { body: { x: ponto.x - 10, y: ponto.y - 40, width: 20, height: 15 } };
+  assert.equal(Phaser.Geom.Intersects.RectangleToRectangle(corpo(ponto, "padrao"),
+    new Rectangle(bloco.body.x, bloco.body.y, bloco.body.width, bloco.body.height)), false);
+  currentScene.collisionGroup = { getChildren: () => [bloco] };
+  assert.equal(manager.isValidPosition(ponto, "padrao", []), false);
+  bloco.body.enable = false;
+  assert.equal(manager.isValidPosition(ponto, "padrao", []), true);
+});
+
 test("rejeita um robô com pés dentro da zona e sprite atravessando a borda superior", t => {
   let i = 0;
   t.mock.method(Math, "random", () => i++ % 2 === 0 ? 0.5 : 0.05);

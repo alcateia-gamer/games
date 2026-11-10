@@ -39,3 +39,28 @@ export function createCollectibleMarker(scene, image) {
   });
   return marker;
 }
+
+/** Aviso de primeira interação, persistente entre visitas ao mapa na mesma partida. */
+export function createInteractionMarker(scene, { x, y, name, stateKey }) {
+  if (scene.registry?.get(stateKey)) return null;
+  const marker = scene.add.graphics().setPosition(x, y).setDepth(100).setName(name);
+  drawCollectibleMarker(marker, 0, 0, 24);
+  scene.tweens.add({ targets: marker, y: y - 6, duration: 700,
+    ease: "Sine.easeInOut", yoyo: true, repeat: -1 });
+  let removido = false;
+  const limpar = () => {
+    if (removido) return;
+    removido = true;
+    scene.tweens.killTweensOf(marker);
+    scene.registry?.events?.off("changedata", aoMudar);
+    scene.events.off("shutdown", remover);
+  };
+  const remover = () => { limpar(); marker.destroy(); };
+  const aoMudar = (_parent, key, value) => {
+    if (key === stateKey && value === true) remover();
+  };
+  scene.registry?.events?.on("changedata", aoMudar);
+  scene.events.once("shutdown", remover);
+  marker.once("destroy", limpar);
+  return marker;
+}

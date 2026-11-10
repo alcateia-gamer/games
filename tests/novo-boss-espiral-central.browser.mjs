@@ -99,7 +99,7 @@ try {
   await posicionar(alvo.x, alvo.y);
   const parado = await page.evaluate(async () => {
     const scene = window.__game.scene.getScene("Level1Parte2"), boss = scene.novoBoss;
-    const { atualizarNovoBoss } = await import("/js/enemies/novoBoss/NovoBoss.js");
+    const { atualizarBoss } = await import("/js/enemies/BossPrincipal.js");
     const { retanguloLivreDoMapa } = await import("/js/enemies/EnemyPathfinding.js");
     if (!retanguloLivreDoMapa(scene, scene.player.body)) throw new Error("Jogador sobre uma parede.");
     const ponto = { x: scene.player.x, y: scene.player.y };
@@ -107,7 +107,7 @@ try {
     for (let t = 720; t <= 5100; t += 20) {
       scene.time.preUpdate();
       scene.time.update(scene.time.now + 20, 20);
-      atualizarNovoBoss(scene, scene.time.now, 20);
+      atualizarBoss(scene, scene.time.now, 20);
       if (t === 3500) vidaPrimeiraVolta = scene.vida;
       if (scene.player.x !== ponto.x || scene.player.y !== ponto.y) throw new Error("Jogador se moveu no teste parado.");
     }
@@ -134,10 +134,10 @@ try {
   await sessao.reiniciar({ novoBossConfig: { ...config, fase2: novoBossConfig.fase2 } });
   assert.ok(await page.evaluate(async () => {
     const scene = window.__game.scene.getScene("Level1Parte2"), boss = scene.novoBoss;
-    const { atualizarNovoBoss } = await import("/js/enemies/novoBoss/NovoBoss.js");
-    for (let i = 0; boss.estado !== "vulneravel" && i < 500; i++) atualizarNovoBoss(scene, scene.time.now, 20);
+    const { atualizarBoss } = await import("/js/enemies/BossPrincipal.js");
+    for (let i = 0; boss.estado !== "vulneravel" && i < 500; i++) atualizarBoss(scene, scene.time.now, 20);
     if (!boss.receberDano(501)) return false;
-    for (let i = 0; !boss.sistemaClones.ativo && i < 500; i++) atualizarNovoBoss(scene, scene.time.now, 20);
+    for (let i = 0; !boss.sistemaClones.ativo && i < 500; i++) atualizarBoss(scene, scene.time.now, 20);
     return boss.fase === 2 && boss.sistemaClones.ativo;
   }));
   await posicionar(-680, -5770);
@@ -145,7 +145,7 @@ try {
   if ((await snapshot()).pendente) await avancar(500);
   const clones = await page.evaluate(async centro => {
     const scene = window.__game.scene.getScene("Level1Parte2"), boss = scene.novoBoss;
-    const { atualizarNovoBoss } = await import("/js/enemies/novoBoss/NovoBoss.js");
+    const { atualizarBoss } = await import("/js/enemies/BossPrincipal.js");
     const maxEmissoes = new Map();
     const posicoes = boss.alvosIlusorios.map(a => ({ x: a.x, y: a.y }));
     let moveu = false, duracao = 0;
@@ -156,7 +156,7 @@ try {
       for (const a of boss.alvosIlusorios) a.sprite.preUpdate(scene.time.now, 20);
       scene.time.preUpdate();
       scene.time.update(scene.time.now + 20, 20);
-      atualizarNovoBoss(scene, scene.time.now, 20);
+      atualizarBoss(scene, scene.time.now, 20);
       for (const [i, a] of boss.alvosIlusorios.entries()) {
         const copia = a.ataquesIlusorios.snapshot();
         if (a.sprite.frame.name !== boss.sprite.frame.name) throw new Error("Animação dessincronizada.");

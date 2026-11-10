@@ -11,6 +11,7 @@ import { obterTemaPersonagem } from "./CharacterTheme.js";
 import { drawCollectibleMarker, COLLECTIBLE_MARKER_COLOR } from "./CollectibleMarker.js";
 import { findGeneratorInteraction } from "../interactions/FactoryGenerator.js";
 import { criarCanvasHUDNitido, GraficosCanvasHUD } from "./HudCanvas.js";
+import { lerAreasGasolina, centroAreaGasolina } from "../interactions/FuelRefill.js";
 
 const WIDTH = MINI_MAP_SIZE, HEIGHT = MINI_MAP_SIZE;
 const VIEW_X = 2, VIEW_Y = 2, VIEW_WIDTH = WIDTH - 4, VIEW_HEIGHT = HEIGHT - 4;
@@ -56,6 +57,7 @@ export default class MiniMapManager {
     if (!entry) return;
     this.geometry = entry.geometry;
     this.atlas = entry.atlas;
+    this.fuelPositions = lerAreasGasolina(map).map(centroAreaGasolina);
     const generator = findGeneratorInteraction(map);
     this.generatorPosition = generator.status === "ok" ? {
       x: generator.object.x + generator.object.width / 2,
@@ -163,6 +165,7 @@ export default class MiniMapManager {
     this.updateShutterDoorMarkers();
     this.updateCardReaderMarker();
     this.updateWeaponShopMarker();
+    this.updateFuelMarkers();
     this.updateSearchMarker();
     const position = worldToMiniMap(this.transform, x, y);
     const inside = x >= bounds.x && y >= bounds.y && x <= bounds.x + bounds.width && y <= bounds.y + bounds.height &&
@@ -308,6 +311,29 @@ export default class MiniMapManager {
       .lineBetween(x - 3, y + 2, x - 6, y + 5);
   }
 
+  /** Bomba de combustível fixa no ponto onde o galão pode ser abastecido. */
+  updateFuelMarkers() {
+    const { bounds } = this.geometry;
+    for (const fuel of this.fuelPositions ?? []) {
+      if (!Number.isFinite(fuel.x) || !Number.isFinite(fuel.y) || fuel.x < bounds.x || fuel.y < bounds.y ||
+          fuel.x > bounds.x + bounds.width || fuel.y > bounds.y + bounds.height) continue;
+      const position = worldToMiniMap(this.transform, fuel.x, fuel.y);
+      if (position.x < 9 || position.y < 9 ||
+          position.x > VIEW_WIDTH - 9 || position.y > VIEW_HEIGHT - 9) continue;
+      const x = VIEW_X + position.x, y = VIEW_Y + position.y, g = this.itemMarkers;
+      // Desenho vetorial: funciona também em celulares sem fontes de símbolos.
+      g.fillStyle(0x30250a, 1).fillRect(x - 6, y - 8, 11, 16)
+        .fillRect(x - 8, y + 6, 15, 3)
+        .fillStyle(COLLECTIBLE_MARKER_COLOR, 1).fillRect(x - 5, y - 7, 9, 14)
+        .fillRect(x - 7, y + 7, 13, 1)
+        .fillStyle(0x30250a, 1).fillRect(x - 3, y - 5, 5, 5);
+      g.lineStyle(3, 0x30250a, 1).lineBetween(x + 4, y, x + 7, y + 3)
+        .lineBetween(x + 7, y + 3, x + 7, y - 4).lineBetween(x + 7, y - 4, x + 4, y - 7)
+        .lineStyle(1.3, COLLECTIBLE_MARKER_COLOR, 1).lineBetween(x + 4, y, x + 7, y + 3)
+        .lineBetween(x + 7, y + 3, x + 7, y - 4).lineBetween(x + 7, y - 4, x + 4, y - 7);
+    }
+  }
+
   /**
    * Mostra a lupa até o jogador passar pelo ponto de investigação.
    */
@@ -407,6 +433,7 @@ export default class MiniMapManager {
       this.updateShutterDoorMarkers();
       this.updateCardReaderMarker();
       this.updateWeaponShopMarker();
+      this.updateFuelMarkers();
       this.updateSearchMarker();
     } finally {
       this.enemyMarkers = enemyMarkers;

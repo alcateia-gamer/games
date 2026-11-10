@@ -1,7 +1,7 @@
 /** Mira e entrada do arco. Um único ponteiro controla tanto o joystick quanto o mouse. */
 import { atacar, soltarAtaque, cancelarAtaqueAria, atualizarDirecaoAtaqueAria } from "../player/Player.js";
 import { ARIA_ATTACK_CONFIG, direcaoVisualAria, tempoEntradaAria } from "./AriaAttackConfig.js";
-import { posicionarBotaoFixo } from "./FixedActionButton.js";
+import { posicionarBotaoAcao, posicaoAcaoNaTela } from "./FixedActionButton.js";
 import { obstaculosFlecha, tempoImpactoFlecha } from "../player/ArrowCollision.js";
 import { iniciarSomTensaoAria, pararSomTensaoAria, tocarSomSoltarFlechaAria } from "../sounds/SOUNDS_PERSONAGENS.js/sounds_Aria.js";
 
@@ -112,8 +112,9 @@ export class AriaAttackJoystick {
   atualizarMira(pointer) {
     const { scene, config } = this;
     const camera = scene.cameras.main;
-    const dx = pointer.x - camera.x - config.centerX;
-    const dy = pointer.y - camera.y - config.centerY;
+    const centro = posicaoAcaoNaTela(camera, config.centerX, config.centerY);
+    const dx = pointer.x - camera.x - centro.x;
+    const dy = pointer.y - camera.y - centro.y;
     const distancia = Math.hypot(dx, dy);
     if (!Number.isFinite(distancia)) return;
     const escala = distancia > config.maxThumbDistance ? config.maxThumbDistance / distancia : 1;
@@ -133,9 +134,9 @@ export class AriaAttackJoystick {
 
   layout() {
     const camera = this.scene.cameras.main, config = this.config;
-    posicionarBotaoFixo(camera, this.base, config.centerX, config.centerY);
-    posicionarBotaoFixo(camera, this.anel, config.centerX, config.centerY);
-    posicionarBotaoFixo(camera, this.thumb, config.centerX + this.deslocamento.x,
+    posicionarBotaoAcao(camera, this.base, config.centerX, config.centerY);
+    posicionarBotaoAcao(camera, this.anel, config.centerX, config.centerY);
+    posicionarBotaoAcao(camera, this.thumb, config.centerX + this.deslocamento.x,
       config.centerY + this.deslocamento.y);
     this.thumb.setAlpha(this.pointer ? 1 : 0.8);
   }

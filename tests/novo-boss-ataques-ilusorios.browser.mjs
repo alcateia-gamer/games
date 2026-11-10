@@ -56,7 +56,7 @@ async function executar(tipo, grupo) {
   return page.evaluate(async ({ tipo, grupo }) => {
     const scene = window.__game.scene.getScene("Level1Parte2");
     const boss = scene.novoBoss;
-    const { atualizarNovoBoss } = await import("/js/enemies/novoBoss/NovoBoss.js");
+    const { atualizarBoss } = await import("/js/enemies/BossPrincipal.js");
     const { atualizarHitboxDanoPlayer } = await import("/js/player/Player.js");
     const hpInicial = scene.vida;
     const efeitos = () => scene.children.list.filter(o => o.active && o.novoBossAtaqueIlusorio);
@@ -77,11 +77,11 @@ async function executar(tipo, grupo) {
       scene.player.body.updateFromGameObject();atualizarHitboxDanoPlayer(scene);
       Object.assign(inicial,{x:scene.player.x,y:scene.player.y});
     }
-    atualizarNovoBoss(scene, scene.time.now, 0);
+    atualizarBoss(scene, scene.time.now, 0);
     for (let preparo = 0; boss.ataquePendente && preparo < 2000; preparo += 20) {
       scene.time.preUpdate();
       scene.time.update(scene.time.now + 20, 20);
-      atualizarNovoBoss(scene, scene.time.now, 20);
+      atualizarBoss(scene, scene.time.now, 20);
     }
     if (!(boss.ataqueAtual || boss.tentaculosAtivos)) throw new Error("Não iniciou o ataque ou as armadilhas após o posicionamento.");
     for (const alvo of boss.alvosIlusorios) {
@@ -144,7 +144,7 @@ async function executar(tipo, grupo) {
       }
       scene.time.preUpdate();
       scene.time.update(scene.time.now + 20, 20);
-      atualizarNovoBoss(scene, scene.time.now, 20);
+      atualizarBoss(scene, scene.time.now, 20);
       tempo += 20;
       // Destruir uma cópia não pode soltar o agarrão aplicado pela verdadeira.
       if (grupo && tipo === "tentaculos" && tempo === 1200) {
@@ -166,7 +166,7 @@ async function executar(tipo, grupo) {
     for (let i = 0; i < 35; i++) {
       scene.time.preUpdate();
       scene.time.update(scene.time.now + 20, 20);
-      atualizarNovoBoss(scene, scene.time.now, 20);
+      atualizarBoss(scene, scene.time.now, 20);
       tempo += 20;
       observar();
     }

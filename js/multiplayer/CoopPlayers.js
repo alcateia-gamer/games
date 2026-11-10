@@ -7,10 +7,7 @@ import { criarCompanionPet, atualizarCompanionPet, atualizarDepthCompanionPet } 
 import { atualizarRestricaoNovoBoss } from "../player/PlayerControlEffects.js";
 
 export function playerVisualObjects(scene) {
-  const a = scene.armaPersonagemTeste;
-  return [a?.sprite, a?.clarao, a?.maoSobreArma, a?.golpeEspada?.efeito, a?.estocada?.efeito,
-    ...(a?.lasers || []).map(l => l.sprite), ...(scene.projeteisPlayer?.getChildren?.() || [])]
-    .filter(o => o?.active);
+  return (scene.projeteisPlayer?.getChildren?.() || []).filter(o => o?.active);
 }
 
 export class CoopPlayers {
@@ -24,7 +21,7 @@ export class CoopPlayers {
     if (visual) { visual.x = 0; visual.y = 0; }
     return { mapKey: r.mapKey, health: round(health), maxHealth: s.vidaMaxima,
       dead: !!s.morteEmAndamento || health <= 0,
-      coop: { visual, compression: supportsCompression(), weapon: s.armaPersonagemTeste?.config.id,
+      coop: { visual, compression: supportsCompression(),
         effects: this.sender.capture(playerVisualObjects(s), true),
         hitbox: s.hitboxDanoPlayer && { dx: round(s.hitboxDanoPlayer.x - s.player.x),
           dy: round(s.hitboxDanoPlayer.y - s.player.y), w: round(s.hitboxDanoPlayer.width), h: round(s.hitboxDanoPlayer.height) },

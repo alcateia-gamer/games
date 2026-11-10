@@ -33,6 +33,22 @@ test("galão vazio ou parcial não libera o gerador e não consome a bateria", (
   }
 });
 
+test("galões podem ser concedidos cheios sem alterar os existentes e notificam uma única vez", () => {
+  const inventory = criar();
+  inventory.addItem("gasolina");
+  inventory.fillFuel(0.25);
+  let notifications = 0;
+  inventory.onChange(() => notifications++);
+  assert.equal(inventory.addItem("gasolina", 2, { fuel: 1 }), true);
+  assert.deepEqual(inventory.getSlots().map(slot => slot.fuel), [0.25, 1, 1]);
+  assert.equal(notifications, 1);
+  const antes = inventory.getSlots();
+  for (const fuel of [-1, 2, NaN, Infinity]) {
+    assert.equal(inventory.addItem("gasolina", 1, { fuel }), false);
+  }
+  assert.deepEqual(inventory.getSlots(), antes);
+});
+
 test("o gerador consome exatamente um galão cheio e uma bateria, preservando o parcial", () => {
   const inventory = criar();
   inventory.addItem("gasolina", 2);

@@ -10,6 +10,7 @@ import { atualizarMovimento } from "./PlayerMovement.js";
 import { iniciarDash, CONFIG_DASH } from "./PlayerDashControls.js";
 import { criarPlayer, respawnPlayer } from "../player/Player.js";
 import { dispararProjetil, atualizarProjeteis } from "../player/PlayerProjectiles.js";
+import { obterDirecaoMiraAutomaticaAria } from "../player/AriaAutoAim.js";
 
 class Vector2 {
   constructor(x = 0, y = 0) { Object.assign(this, { x, y }); }
@@ -124,6 +125,37 @@ test("A/B: toque rápido e carga completa têm dano e velocidade limitados e um 
     assert.equal(scene.ariaAtaqueCarregando, false);
     assert.equal(scene.pointerAtaque, null);
   }
+});
+
+test("o botão da Aria dispara automaticamente na direção do inimigo mais próximo visível", t => {
+  const scene = cena(t, true);
+  scene.inimigos = [{
+    active: true, vida: 100, body: { enable: true },
+    hitboxDano: { x: 390, y: 220, width: 60, height: 40 },
+  }];
+  const pointer = dedo(2);
+  scene.botaoAtaque.emit("pointerdown", pointer);
+  soltar(scene, pointer, 100);
+
+  const flecha = flechas(scene)[0];
+  const distancia = Math.hypot(120, 40);
+  assert.ok(Math.abs(flecha.direcaoDisparo.x - 120 / distancia) < 1e-12);
+  assert.ok(Math.abs(flecha.direcaoDisparo.y - 40 / distancia) < 1e-12);
+});
+
+test("mira automática ignora o alvo mais próximo quando uma parede bloqueia a flecha", () => {
+  const parede = { x: 40, y: -5, width: 10, height: 10, enable: true };
+  const alvo = (x, y) => ({
+    active: true, vida: 100, body: { enable: true },
+    hitboxDano: { x: x - 10, y: y - 10, width: 20, height: 20 },
+  });
+  const scene = {
+    player: { active: true, x: 0, y: 0 },
+    inimigos: [alvo(100, 0), alvo(0, 150)],
+    collisionGroup: { getChildren: () => [{ active: true, body: parede }] },
+  };
+
+  assert.deepEqual(obterDirecaoMiraAutomaticaAria(scene), { x: 0, y: 1 });
 });
 
 test("C/D: mira diagonal exata, caminhada oposta e hitbox estável na carga e soltura", t => {
@@ -359,14 +391,15 @@ test("G: projétil usa o primeiro obstáculo e não atravessa parede fina entre 
   assert.equal(p.distanciaPercorrida, 34);
 });
 
-test("G: dano carregado usa a hitbox original do boss e só é aplicado uma vez", t => {
+test("G: dano carregado usa a hitbox do boss principal e só é aplicado uma vez", t => {
   const scene = cena(t);
   const p = dispararProjetil(scene, { direction: { x: 1, y: 0 }, damage: 45 });
-  scene.bossFinal = { active: true, vida: 100, vidaMaxima: 100,
+  scene.novoBoss = { active: true, vida: 100, vidaMaxima: 100,
+    receberDano(dano) { this.vida -= dano; return true; },
     sprite: visual(scene), hitboxDano: { x: p.x + 60, y: p.y - 10, width: 10, height: 20 } };
   atualizarProjeteis(scene, 500);
   atualizarProjeteis(scene, 500);
-  assert.equal(scene.bossFinal.vida, 55);
+  assert.equal(scene.novoBoss.vida, 55);
 });
 
 test("alcance e velocidade independem de FPS e chamadas antigas continuam cardinais", t => {

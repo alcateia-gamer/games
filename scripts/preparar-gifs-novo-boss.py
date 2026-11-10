@@ -10,7 +10,7 @@ from pathlib import Path
 from PIL import Image
 
 RAIZ = Path(__file__).resolve().parents[1]
-PASTA = RAIZ / "assets/PERSONAGENS/INIMIGOS PRINCIPAIS/Boss-test"
+PASTA = RAIZ / "assets/PERSONAGENS/INIMIGOS PRINCIPAIS/BossPrincipal"
 DESTINO = PASTA / "derivados"
 FONTES = ("escudo-energia.gif", "ataque-explosão.gif")
 

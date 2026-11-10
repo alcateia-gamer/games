@@ -60,6 +60,7 @@ import EnemySpawnManager from "../enemies/EnemySpawnManager.js";
 import { criarRoboBola, atualizarRoboBola } from "../enemies/RoboBola.js";
 import WeatherShader from "../effects/WeatherShader.js";
 import MiniMapManager from "../ui/MiniMapManager.js";
+import { drawCollectibleMarker } from "../ui/CollectibleMarker.js";
 import {
   atualizarSistemaInventario,
   criarSistemaInventario,
@@ -208,6 +209,18 @@ class Level1 extends Phaser.Scene {
     teleporteB.body.setSize(60, 12);
     teleporteB.body.debugShowBody = false;
 
+    let avisoLojaArmas = null;
+    if (!this.registry.get("lojaArmasVisitada")) {
+      avisoLojaArmas = this.add.graphics()
+        .setPosition(teleporteB.x, teleporteB.y - 118)
+        .setDepth(100).setName("weapon-shop-marker");
+      drawCollectibleMarker(avisoLojaArmas, 0, 0, 24);
+      this.tweens.add({
+        targets: avisoLojaArmas, y: avisoLojaArmas.y - 6,
+        duration: 700, ease: "Sine.easeInOut", yoyo: true, repeat: -1,
+      });
+    }
+
     if (DEBUG_TELEPORTES) {
       this.add
         .graphics()
@@ -221,7 +234,7 @@ class Level1 extends Phaser.Scene {
      * Transporta jogador e companheiro após escurecer a tela e usa um intervalo para impedir
      * repetição imediata.
      */
-    const teleportarComFadeNovo = (x, y) => {
+    const teleportarComFadeNovo = (x, y, aoTeleportar) => {
       if (!this.canTeleport) return;
 
       this.canTeleport = false;
@@ -230,6 +243,7 @@ class Level1 extends Phaser.Scene {
       camera.once("camerafadeoutcomplete", () => {
         this.player.setPosition(x, y);
         this.companionPet?.setPosition(x - 45, y + 35);
+        aoTeleportar?.();
         camera.fadeIn(250, 0, 0, 0);
 
         this.time.delayedCall(400, () => {
@@ -246,7 +260,14 @@ class Level1 extends Phaser.Scene {
 
     this.physics.add.overlap(this.player, teleporteB, () => {
       // Chega dentro da loja, antes do gatilho de saída em Y 9000.
-      teleportarComFadeNovo(-436, 8940);
+      teleportarComFadeNovo(-436, 8940, () => {
+        this.registry.set("lojaArmasVisitada", true);
+        if (avisoLojaArmas) {
+          this.tweens.killTweensOf(avisoLojaArmas);
+          avisoLojaArmas.destroy();
+          avisoLojaArmas = null;
+        }
+      });
     });
 
     criarSistemaProjeteis(this);

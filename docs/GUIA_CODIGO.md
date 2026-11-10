@@ -5,7 +5,7 @@ Os comentários nos arquivos estão em português. Cada módulo começa com uma 
 ## Por onde começar
 
 1. [index.html](../index.html) carrega as bibliotecas e o módulo [game.js](../js/core/game.js). O [config.js](../js/core/config.js) define resolução, física, entrada, escala e MQTT.
-2. [start.js](../js/scenes/start.js) apresenta JOGAR, a chuva digital e o menu NULLBORNS. A música começa com o fade do menu. O solo abre a seleção de personagem; o multiplayer passa pelas telas de sala.
+2. [start.js](../js/scenes/start.js) apresenta JOGAR, a chuva digital e o menu NULLBORNS. A música começa com o fade do menu. O solo oferece Kai, Magnus, Aria e Nyx; o multiplayer passa pelas telas de sala.
 3. [preloader.js](../js/scenes/preloader.js) carrega os recursos e abre [Level1.js](../js/scenes/Level1.js), a cidade. A porta de passagem entra em [Level1Parte2.js](../js/scenes/Level1Parte2.js), a fábrica.
 4. As cenas coordenam os módulos especializados: entrada e movimento, status, combate, inimigos, inventário, interações e minimapa.
 
@@ -49,7 +49,7 @@ Os arquivos de teste aparecem junto do sistema que verificam. Os quatro arquivos
 | --- | --- |
 | [js/scenes/start.js](../js/scenes/start.js) | Cena de abertura e menus de NULLBORNS. Fluxo: botão JOGAR → chuva digital → menu → seleção de personagem ou multiplayer. |
 | [js/scenes/DeathScreen.js](../js/scenes/DeathScreen.js) | Sequência visual de morte: bloqueia o jogo, mostra falhas de sistema e recarrega a página ao concluir. |
-| [js/scenes/preloader.js](../js/scenes/preloader.js) | Cena que carrega mapas, personagens, sons, interface e tilesets. Mostra progresso e prepara a textura final do raio antes de entrar na fase. |
+| [js/scenes/preloader.js](../js/scenes/preloader.js) | Carrega mapas, os quatro operadores principais, boss, sons, interface e tilesets antes de entrar na fase. |
 | [js/scenes/MultiplayerMenu.js](../js/scenes/MultiplayerMenu.js) | Tela de criação e entrada em salas. Usa teclado físico ou campo DOM mobile para receber o código. |
 | [js/scenes/MultiplayerLobby.js](../js/scenes/MultiplayerLobby.js) | Lobby de até quatro jogadores. Exibe participantes, escolha de personagem e prontidão antes da partida. |
 | [js/scenes/Level1.js](../js/scenes/Level1.js) | Cena da cidade. Coordena mapa, jogador, companheiro, inimigos, clima, inventário, minimapa e transição para a fábrica. |
@@ -64,7 +64,6 @@ Os arquivos de teste aparecem junto do sistema que verificam. Os quatro arquivos
 | [js/controls/PlayerMovement.js](../js/controls/PlayerMovement.js) | Converte WASD ou joystick em movimento normalizado, respeitando bloqueios, dash e animações. |
 | [js/controls/PlayerInput.js](../js/controls/PlayerInput.js) | Cria WASD, controles de desenvolvedor, joystick e tela cheia; mantém os elementos fixos durante o zoom. |
 | [js/controls/PlayerAttackControls.js](../js/controls/PlayerAttackControls.js) | Entrada do ataque por mouse e toque. Coordena o botão de espada e a carga e soltura do arco da Aria. |
-| [js/controls/PlayerTestActionControls.js](../js/controls/PlayerTestActionControls.js) | Exclusivo do personagem de teste: alterna ataque e mão no botão principal e exibe a troca de arma com a miniatura no centro transparente. |
 | [js/controls/PlayerDashControls.js](../js/controls/PlayerDashControls.js) | Impulso de dash com custo de estamina, recarga e rastro temporal. O movimento normal consulta este módulo antes de aplicar sua velocidade. |
 
 ### Jogador e companheiro
@@ -74,10 +73,6 @@ Os arquivos de teste aparecem junto do sistema que verificam. Os quatro arquivos
 | [js/player/Player.js](../js/player/Player.js) | Sprite e combate do jogador. Mantém separadas as colisões com o chão, a área que recebe dano e a área ofensiva da katana. |
 | [js/player/PlayerAnimations.js](../js/player/PlayerAnimations.js) | Registra animações de caminhada, repouso e ataque para o jogador local e para os personagens remotos. |
 | [js/player/PlayerProjectiles.js](../js/player/PlayerProjectiles.js) | Flechas da Aria: criação, movimento por delta, alcance, colisão com o mapa e dano a inimigos ou boss. |
-| [js/player/PersonagemTeste.js](../js/player/PersonagemTeste.js) | Define as duas personagens de teste, folhas de idle/caminhada, armas permitidas e parâmetros do combo. |
-| [js/player/ArmaPersonagemTeste.js](../js/player/ArmaPersonagemTeste.js) | Mira e armas de teste; encadeia os três golpes da nova personagem pelo botão padrão, com um toque preparado no fim do efeito. |
-| [js/player/EspadaPersonagemTeste.js](../js/player/EspadaPersonagemTeste.js) | Exclusivo do personagem de teste: sincroniza a espada e o dano com os três Slash completos (B/N/M), desenhando o efeito acima da lâmina e removendo-o ao cancelar o golpe. |
-| [js/player/FloretePersonagemTeste.js](../js/player/FloretePersonagemTeste.js) | Guarda, estocada, retorno e rastro do florete da segunda personagem; calcula o pequeno impulso aplicado pela física e limita o dano à direção da ponta. |
 | [js/player/PlayerStatus.js](../js/player/PlayerStatus.js) | Vida, estamina e HUD do personagem. Prepara os recortes da imagem original em cache e desenha a interface em canvas DOM na resolução da tela. |
 | [js/player/CompanionPet.js](../js/player/CompanionPet.js) | Companheiro robótico do modo solo. Segue o jogador com desvio de obstáculos, afastamento de inimigos e recuperação quando fica preso. |
 | [js/player/colisoes/index.mjs](../js/player/colisoes/index.mjs) | Consulta central das hitboxes por personagem. Dimensões e offsets são definidos nos arquivos individuais e o padrão é Kai. |
@@ -153,16 +148,8 @@ são usados tanto na criação direta quanto no spawn por zonas.
 | [js/enemies/EnemyAnimations.js](../js/enemies/EnemyAnimations.js) | Animações e aparência dos robôs. Distingue normal, alerta, ataque da serra e morte por direção. |
 | [js/enemies/EnemyHealth.js](../js/enemies/EnemyHealth.js) | Dano e destruição de inimigos. Encaminha solicitações remotas ao host e coordena alerta, efeitos e animação de morte. |
 | [js/enemies/EnemyLaser.js](../js/enemies/EnemyLaser.js) | Disparos dos robôs e dano ao jogador. Trata recarga, impactos contra cenário, invulnerabilidade temporária e tela de morte. |
-| [js/enemies/BossFinal.js](../js/enemies/BossFinal.js) | Ponto público de importação do boss. Reexporta a integração para que as cenas não dependam da organização interna dos módulos. |
-| [js/enemies/bossFinal/BossFinal.js](../js/enemies/bossFinal/BossFinal.js) | Integra o núcleo do boss ao efeito de rachaduras permanentes no chão e reexporta sua API de combate. |
-| [js/enemies/bossFinal/BossConfig.js](../js/enemies/bossFinal/BossConfig.js) | Constantes e geometria do boss: posição base, vida, tempos, ataques, poses das mãos e áreas de colisão e vulnerabilidade. Distâncias usam pixels; tempos usam milissegundos. |
-| [js/enemies/bossFinal/BossAnimacoes.js](../js/enemies/bossFinal/BossAnimacoes.js) | Sincronização de animações e combate do boss. Eventos de frame controlam mira, impacto, cura e efeitos; a conclusão devolve a IA ao repouso. |
-| [js/enemies/bossFinal/BossHitboxes.js](../js/enemies/bossFinal/BossHitboxes.js) | Áreas físicas e geométricas do boss. A base e as mãos bloqueiam movimento; zonas verdes recebem dano e zonas ofensivas dependem dos frames. |
-| [js/enemies/bossFinal/BossCombate.js](../js/enemies/bossFinal/BossCombate.js) | Resolução de dano entre jogador e boss. Controla invulnerabilidade, janelas de soco e katana, cura por frame e derrota. |
-| [js/enemies/bossFinal/BossIA.js](../js/enemies/bossFinal/BossIA.js) | Escolha de ataques do boss por observação de distância, pressão e movimento do jogador. Usa previsão de mira e memória de esquiva. |
-| [js/enemies/bossFinal/BossFinalCore.js](../js/enemies/bossFinal/BossFinalCore.js) | Núcleo do boss. Monta sprite, IA, vida, estamina, câmera de arena e HUD e coordena atualização e liberação dos sistemas. |
-| [js/enemies/bossFinal/BossChaoQuebrado.js](../js/enemies/bossFinal/BossChaoQuebrado.js) | Rachaduras permanentes dentro da cena da arena. Escuta impactos do boss e avança a sequência visual do chão sem modificar as regras de combate. |
-| [js/enemies/bossFinal/BossRaioZonas.js](../js/enemies/bossFinal/BossRaioZonas.js) | Ataque elétrico por zonas da arena. Mantém separados os retângulos de dano, a imagem principal, a base, as máscaras e as janelas de frames ofensivos. |
+| [js/enemies/BossPrincipal.js](../js/enemies/BossPrincipal.js) | Criação, atualização, suspensão e limpeza do boss principal da fábrica. Integra os subsistemas de `novoBoss/`, usados no solo e no multiplayer. |
+| [js/enemies/novoBoss/NovoBossAssets.js](../js/enemies/novoBoss/NovoBossAssets.js) | Recursos do boss principal, armazenados em `assets/PERSONAGENS/INIMIGOS PRINCIPAIS/BossPrincipal/`. |
 
 ### Efeitos de combate
 
@@ -188,8 +175,7 @@ são usados tanto na criação direta quanto no spawn por zonas.
 | [js/sounds/SOUNDS_PERSONAGENS.js/sounds_Magnus.js](../js/sounds/SOUNDS_PERSONAGENS.js/sounds_Magnus.js) | Arquivo reservado para sons de Magnus. Ainda não contém funções nem configuração de áudio implementadas. |
 | [js/sounds/SOUNDS_PERSONAGENS.js/sounds_Nyx,.js](../js/sounds/SOUNDS_PERSONAGENS.js/sounds_Nyx,.js) | Arquivo reservado para sons de Nyx. Ainda não contém funções nem configuração de áudio implementadas. |
 | [js/sounds/SOUNDS_PERSONAGENS.js/sounds_Pet.js](../js/sounds/SOUNDS_PERSONAGENS.js/sounds_Pet.js) | Arquivo reservado para sons de companheiro robótico. Ainda não contém funções nem configuração de áudio implementadas. |
-| [js/sounds/bossRaio.js](../js/sounds/bossRaio.js) | Som elétrico do boss sincronizado com o raio visível. O volume acompanha o progresso do efeito e a limpeza atende interrupção, derrota e saída da cena. |
-| [js/sounds/inimigos.js](../js/sounds/inimigos.js) | Áudio dos robôs e dos impactos do boss. Centraliza carregamento, passos com volume por distância e limpeza dos sons temporários. |
+| [js/sounds/inimigos.js](../js/sounds/inimigos.js) | Áudio dos robôs. Centraliza carregamento, passos com volume por distância e limpeza dos sons temporários. |
 
 ### Salas multiplayer
 

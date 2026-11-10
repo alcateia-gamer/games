@@ -151,7 +151,7 @@ try {
     await iniciar();
     const copias = await page.evaluate(async ({ pontos, grupo }) => {
       const scene = window.__game.scene.getScene("Level1Parte2"), b = scene.novoBoss;
-      const { atualizarNovoBoss } = await import("/js/enemies/novoBoss/NovoBoss.js");
+      const { atualizarBoss } = await import("/js/enemies/BossPrincipal.js");
       const { atualizarHitboxDanoPlayer } = await import("/js/player/Player.js");
       const anunciados = new Set();
       for (let t = 20; t <= 7900; t += 20) {
@@ -162,7 +162,7 @@ try {
         }
         b.sprite.preUpdate(scene.time.now, 20);
         for (const a of b.alvosIlusorios) a.sprite.preUpdate(scene.time.now, 20);
-        atualizarNovoBoss(scene, scene.time.now, 20);
+        atualizarBoss(scene, scene.time.now, 20);
         const marcas = b.ataqueAtual?.snapshot().marcas;
         if (!marcas) continue;
         if (b.alvosIlusorios.length !== grupo) throw new Error("Perdeu cópias antes do fim.");

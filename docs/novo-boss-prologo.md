@@ -17,7 +17,7 @@ Arquivos desta atualização: `NovoBossPortais.js`, `NovoBossAssets.js`,
 `NovoBossTorres.js`, `NovoBossGeradores.js`, `RoboBola.js`;
 novos módulos `NovoBossBarreiraColisao.js` e `js/enemies/RoboBolaColisao.js`;
 script `scripts/preparar-portal-boss.py`; spritesheet/manifesto em
-`assets/PERSONAGENS/INIMIGOS PRINCIPAIS/Boss-test/derivados/portal/`;
+`assets/PERSONAGENS/INIMIGOS PRINCIPAIS/BossPrincipal/derivados/portal/`;
 testes `RoboBolaColisao.test.mjs`, `NovoBossGeradores.test.mjs`,
 `NovoBossPrologo.test.mjs` e `tests/novo-boss-portais-colisoes.browser.mjs`.
 As alterações anteriores do workspace foram preservadas.
@@ -39,7 +39,8 @@ O registro abaixo descreve a entrega inicial do prólogo; as referências ao
 portal Graphics correspondem à versão anterior, substituída nesta atualização.
 
 Implementação no encontro existente de `Level1Parte2`, em `js/enemies/novoBoss/`.
-O boss antigo (`bossFinal`) e todos os arquivos de arte permanecem intactos.
+O encontro é o boss principal. O código e os recursos exclusivos do boss anterior
+foram removidos; veja a [migração definitiva](boss-principal.md).
 
 ## Sequência integrada
 
@@ -149,7 +150,7 @@ sem instanciar o encontro solo.
 
 | Arquivos | Alteração |
 | --- | --- |
-| `NovoBoss.js`, `NovoBossEstados.js` | Integração do controlador, ciclo de vida e roteamento do dano. |
+| `BossPrincipal.js`, `NovoBossEstados.js` | Integração do controlador, ciclo de vida e roteamento do dano. |
 | `NovoBossConfig.js` | Valores ajustáveis do prólogo. |
 | `NovoBossTorres.js`, `NovoBossGeradores.js` | Recolhimento/subida, seleção de alvos, escudo e colisões seguras. |
 | `NovoBossAtaques.js`, `NovoBossFases.js`, `NovoBossTeleporte.js` | Bloqueio temporário da IA principal durante o prólogo. |
@@ -163,7 +164,7 @@ sem instanciar o encontro solo.
 | `js/combat/CombatTargets.js` | Identidade dos impactos e resolução determinística de dano em área. |
 | `js/combat/PlayerSpecialAbilities.js` | Identidade de especiais/reflexões e impacto de Magnus contra torres. |
 | `js/player/ArrowCollision.js` | Flechas e lâminas atingem a torre exposta sem bater antes na própria base. |
-| `js/player/Player.js`, `PlayerProjectiles.js`, `ArmaPersonagemTeste.js`, `EspadaPersonagemTeste.js`, `FloretePersonagemTeste.js` | Encaminhamento da identidade do golpe/projétil, sem alterar dano, alcance, cadência ou recursos. |
+| `js/player/Player.js`, `PlayerProjectiles.js` | Encaminhamento da identidade do golpe/projétil, sem alterar dano, alcance, cadência ou recursos. |
 | `docs/novo-boss-desenvolvimento.md` | Referência ao checklist e à entrega do prólogo. |
 
 Os nomes `NovoBoss*` da tabela ficam em `js/enemies/novoBoss/`. Nenhum arquivo foi

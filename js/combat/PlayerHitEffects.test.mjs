@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { COMBAT_FEEL } from "./CombatEffects.js";
 import { causarDanoPlayer, verificarLasersNoPlayer } from "../enemies/EnemyLaser.js";
-import { causarDanoJogador } from "../enemies/bossFinal/BossCombate.js";
+import { criarServicosAtaques } from "../enemies/novoBoss/NovoBossServicosAtaques.js";
 import { atualizarMovimento } from "../controls/PlayerMovement.js";
 import { iniciarDash } from "../controls/PlayerDashControls.js";
 
@@ -85,7 +85,8 @@ test("laser usa a trajetória mesmo quando o projétil já passou do centro do j
 
 test("golpe do chefe empurra o jogador para longe dele", () => {
   const scene = criarCena();
-  assert.equal(causarDanoJogador({ scene, x: 0, y: 50 }, 16), true);
+  const servicos = criarServicosAtaques(scene, { jogadorNaArena: true });
+  assert.equal(servicos.danoJogador(16, { x: 0, y: 50 }), true);
   assert.equal(scene.vida, 84);
   assert.equal(scene.player.body.velocity.y, -COMBAT_FEEL.playerKnockback);
   assert.ok(scene.cameras.main.lastShake);

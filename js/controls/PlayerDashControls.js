@@ -5,7 +5,7 @@
 
 import { gastarEstamina } from "../player/PlayerStatus.js";
 import { obterDirecaoMovimento } from "./PlayerMovementInput.js";
-import { posicionarBotaoFixo } from "./FixedActionButton.js";
+import { posicionarBotaoAcao } from "./FixedActionButton.js";
 import { jogadorPresoNovoBoss } from "../player/PlayerControlEffects.js";
 
 // =====================================================
@@ -590,7 +590,7 @@ function criarControlesDash(scene) {
   const escalaX = scene.botaoDash.scaleX;
   const escalaY = scene.botaoDash.scaleY;
   const atualizarPosicaoDash = () => {
-    posicionarBotaoFixo(scene.cameras.main, scene.botaoDash, x, y, escalaX, escalaY);
+    posicionarBotaoAcao(scene.cameras.main, scene.botaoDash, x, y, escalaX, escalaY);
   };
   scene.events.on("prerender", atualizarPosicaoDash);
   atualizarPosicaoDash();

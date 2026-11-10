@@ -3,7 +3,6 @@
  * personagens remotos.
  */
 
-import { personagemTesteAtivo, criarAnimacoesPersonagemTeste } from "./PersonagemTeste.js";
 
 /**
  * Cria as animações do personagem local a partir das folhas e sequências específicas de cada
@@ -101,11 +100,6 @@ function criarAnimacoesPlayer(scene) {
   // =====================================================
   // ANIMAÇÕES DE CAMINHADA
   // =====================================================
-
-  if (personagemTesteAtivo(scene)) {
-    criarAnimacoesPersonagemTeste(scene);
-    return;
-  }
 
   Object.entries(walkFrames).forEach(([direcao, frames]) => {
     scene.anims.create({

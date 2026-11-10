@@ -13,6 +13,8 @@ import { novoBossConfig } from "../js/enemies/novoBoss/NovoBossConfig.js";
 // Mantém o teste de integração da entidade independente das fases posteriores.
 const configIsolada = {
   ...novoBossConfig,
+  cenaEntrada: { ...novoBossConfig.cenaEntrada, ativo: false },
+  movimento: { ...novoBossConfig.movimento, ativo: false },
   ataques: { ...novoBossConfig.ataques, ativo: false },
   geradores: { ...novoBossConfig.geradores, ativo: false },
   ilusoes: { ...novoBossConfig.ilusoes, ativo: false },
@@ -34,9 +36,16 @@ const context = await browser.newContext({ viewport: { width: 1280, height: 720 
 const page = await context.newPage();
 const errors = [];
 const assetErrors = [];
+const recursosAntigos = [];
+page.on("request", request => {
+  const url = decodeURIComponent(request.url());
+  if (/BOSS_FINAL|\/bossFinal\/|\/BossFinal\.js|\/bossRaio\.js|EnergiaBoss\.png|raio_boss\.mp3|soco_boss_[12]\.mp3/i.test(url)) {
+    recursosAntigos.push(url);
+  }
+});
 page.on("pageerror", error => errors.push(error.message));
 page.on("response", response => {
-  if (response.status() >= 400 && /boss-test|HeavensFury|novoBoss/i.test(response.url())) {
+  if (response.status() >= 400 && /BossPrincipal|HeavensFury|novoBoss/i.test(response.url())) {
     assetErrors.push({ status: response.status(), url: response.url() });
   }
 });
@@ -54,7 +63,6 @@ await page.route("**/js/core/game.js*", async route => {
 const state = () => page.evaluate(async idleKey => {
   const scene = window.__game.scene.getScene("Level1Parte2");
   const boss = scene.novoBoss;
-  const { localizarPecasBoss } = await import("/js/enemies/bossFinal/BossConfig.js");
   return {
     estado: boss?.estado,
     sprite: boss?.sprite ? {
@@ -72,10 +80,8 @@ const state = () => page.evaluate(async idleKey => {
       width: boss.hitbox.width, height: boss.hitbox.height,
     } : null,
     oldBoss: !!scene.bossFinal,
-    oldPieces: localizarPecasBoss(scene).map(piece => ({
-      visible: piece.visible,
-      enabled: piece.body?.enable ?? false,
-    })),
+    oldPieces: scene.objetosMapaParte2.filter(piece =>
+      piece.getData("objectLayerName") === "ObjetosBoss"),
     count: scene.children.list.filter(child =>
       child.active && child.texture?.key === idleKey).length,
   };
@@ -99,7 +105,7 @@ try {
     null, { timeout: 60000, polling: 100 });
   await page.evaluate(config => {
     window.__game.scene.getScene("Level1").scene.start("Level1Parte2", {
-      personagem: "kai-mercer", spawnX: -1093, spawnY: -5350,
+      personagem: "kai-mercer", spawnX: -1093, spawnY: -5250,
       novoBossConfig: config,
     });
   }, configIsolada);
@@ -120,9 +126,9 @@ try {
   assert.equal(current.estado, "aguardando");
   assert.equal(current.count, 0);
   assert.equal(current.oldBoss, false);
-  assert.equal(current.oldPieces.length, 6);
-  assert.ok(current.oldPieces.every(piece => !piece.visible && !piece.enabled));
-  console.log("PASS: fábrica carrega as folhas novas e mantém o boss antigo desativado.");
+  assert.equal(current.oldPieces.length, 0);
+  assert.deepEqual(recursosAntigos, [], "nenhum módulo, imagem ou som do boss antigo deve ser solicitado");
+  console.log("PASS: fábrica carrega o boss principal sem solicitar recursos antigos.");
 
   await placePlayer(-1093, -5520);
   await page.waitForFunction(() =>
@@ -147,7 +153,7 @@ try {
   assert.ok(frames.size > 1, "A animação idle precisa avançar no Phaser real.");
   console.log("PASS: entrar na arena cria uma entidade com idle animado e hitbox própria.");
 
-  await placePlayer(-1093, -5350);
+  await placePlayer(-1093, -5250);
   await placePlayer(-1093, -5520);
   assert.equal((await state()).count, 1);
   assert.ok(await page.evaluate(() =>
@@ -179,7 +185,7 @@ try {
 
   await page.evaluate(config => {
     window.__game.scene.getScene("Level1Parte2").scene.restart({
-      personagem: "kai-mercer", spawnX: -1093, spawnY: -5350,
+      personagem: "kai-mercer", spawnX: -1093, spawnY: -5250,
       novoBossConfig: config,
     });
   }, configIsolada);
@@ -198,6 +204,7 @@ try {
   console.log("PASS: reiniciar limpa o sprite antigo e permite uma única criação no reencontro.");
 
   assert.deepEqual(assetErrors, []);
+  assert.deepEqual(recursosAntigos, [], "reiniciar a arena também deve usar somente o boss principal");
   assert.deepEqual(errors, []);
   console.log("PASS: nenhuma falha de recurso do novo boss ou exceção JavaScript.");
 } finally {

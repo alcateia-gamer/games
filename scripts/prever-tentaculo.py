@@ -12,7 +12,7 @@ import math
 from PIL import Image, ImageDraw
 
 RAIZ = Path(__file__).resolve().parents[1]
-PASTA = RAIZ / "assets/PERSONAGENS/INIMIGOS PRINCIPAIS/Boss-test"
+PASTA = RAIZ / "assets/PERSONAGENS/INIMIGOS PRINCIPAIS/BossPrincipal"
 FONTE = PASTA / "tentáculo.gif"
 DESTINO = PASTA / "derivados/tentaculo-previa"
 AMOSTRAS = (0, 10, 25, 45, 110)

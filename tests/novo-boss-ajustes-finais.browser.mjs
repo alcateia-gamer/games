@@ -18,13 +18,13 @@ try {
   await avancar(1950);
   const abertura = await page.evaluate(async () => {
     const scene = window.__game.scene.getScene("Level1Parte2"), b = scene.novoBoss;
-    const { atualizarNovoBoss } = await import("/js/enemies/novoBoss/NovoBoss.js");
+    const { atualizarBoss } = await import("/js/enemies/BossPrincipal.js");
     const { atacar, atualizarHitboxDanoPlayer } = await import("/js/player/Player.js");
     const origem = { x: b.x, y: b.y }, vidaAntes = b.vida;
     const passo = delta => {
       scene.time.preUpdate(); scene.time.update(scene.time.now + delta, delta);
       scene.player.preUpdate(scene.time.now, delta);
-      atualizarNovoBoss(scene, scene.time.now, delta);
+      atualizarBoss(scene, scene.time.now, delta);
     };
     // Reserva tempo para chegar perto depois de esquivar da explosão de raio 310.
     for (let t = 0; t < 2200; t += 20) passo(20);
@@ -51,15 +51,15 @@ try {
   await posicionar(-1080, -5520);
   await page.evaluate(async () => {
     const scene = window.__game.scene.getScene("Level1Parte2"), b = scene.novoBoss;
-    const { atualizarNovoBoss } = await import("/js/enemies/novoBoss/NovoBoss.js");
-    for (let t = 0; b.estado !== "vulneravel" && t < 10000; t += 20) atualizarNovoBoss(scene, scene.time.now, 20);
+    const { atualizarBoss } = await import("/js/enemies/BossPrincipal.js");
+    for (let t = 0; b.estado !== "vulneravel" && t < 10000; t += 20) atualizarBoss(scene, scene.time.now, 20);
     if (!b.receberDano(501)) throw new Error("Não abriu fase 2 pelo contrato.");
-    for (let t = 0; !b.sistemaClones.ativo && t < 15000; t += 20) atualizarNovoBoss(scene, scene.time.now, 20);
+    for (let t = 0; !b.sistemaClones.ativo && t < 15000; t += 20) atualizarBoss(scene, scene.time.now, 20);
     if (!b.sistemaClones.ativo) throw new Error("Não criou onda central.");
   });
   const movimento = await page.evaluate(async () => {
     const scene = window.__game.scene.getScene("Level1Parte2"), b = scene.novoBoss;
-    const { atualizarNovoBoss } = await import("/js/enemies/novoBoss/NovoBoss.js");
+    const { atualizarBoss } = await import("/js/enemies/BossPrincipal.js");
     const { destinoValidoNovoBoss } = await import("/js/enemies/novoBoss/NovoBossTeleporte.js");
     const registro = { passosRapidos: 0, passosSemClones: 0, aberturas: 0, pressao: 0, ondas: [], protegido: false };
     const aoClonar = () => registro.ondas.push({ x: b.x, y: b.y, protecao: b.invulneravelClonesAte - b.relogioCombate });
@@ -68,11 +68,11 @@ try {
     scene.events.on("novo-boss:teleporte-iniciado", aoTeleportar);
     try {
       const ate = b.invulneravelClonesAte;
-      while (b.relogioCombate < ate - 1) atualizarNovoBoss(scene, scene.time.now, Math.min(20, ate - 1 - b.relogioCombate));
+      while (b.relogioCombate < ate - 1) atualizarBoss(scene, scene.time.now, Math.min(20, ate - 1 - b.relogioCombate));
       registro.protegido = !b.receberDano(25);
       for (let t = 0; t < 60000; t += 20) {
         const antes = { x: b.x, y: b.y, estado: b.estado, teleporte: Boolean(b.teleporte), clones: b.sistemaClones.ativo };
-        atualizarNovoBoss(scene, scene.time.now, 20);
+        atualizarBoss(scene, scene.time.now, 20);
         if (!b.teleporte && b.body.enable) {
           if (!destinoValidoNovoBoss(scene, b, b.sprite)) throw new Error("Movimento atravessou obstáculo ou jogador.");
           for (const chave of ["x", "y", "width", "height"]) {
@@ -106,14 +106,14 @@ try {
   for (const tipo of ["pulso", "lasers"]) {
     const resultado = await page.evaluate(async tipo => {
       const scene = window.__game.scene.getScene("Level1Parte2"), b = scene.novoBoss;
-      const { atualizarNovoBoss } = await import("/js/enemies/novoBoss/NovoBoss.js");
-      for (let t = 0; (b.teleporte || b.teleportePendente) && t < 10000; t += 20) atualizarNovoBoss(scene, scene.time.now, 20);
+      const { atualizarBoss } = await import("/js/enemies/BossPrincipal.js");
+      for (let t = 0; (b.teleporte || b.teleportePendente) && t < 10000; t += 20) atualizarBoss(scene, scene.time.now, 20);
       if (!b.executarAtaque(tipo)) throw new Error(`Não iniciou ${tipo}.`);
-      for (let t = 0; b.ataquePendente && t < 2000; t += 20) atualizarNovoBoss(scene, scene.time.now, 20);
+      for (let t = 0; b.ataquePendente && t < 2000; t += 20) atualizarBoss(scene, scene.time.now, 20);
       let amostras = 0;
       while (b.ataqueAtual && amostras < 1000) {
         if (b.x !== -1080 || b.y !== -5810) throw new Error(`Origem ${tipo} saiu do centro.`);
-        atualizarNovoBoss(scene, scene.time.now, 20); amostras++;
+        atualizarBoss(scene, scene.time.now, 20); amostras++;
       }
       return { amostras, estado: b.estado };
     }, tipo);

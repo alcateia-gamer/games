@@ -37,7 +37,7 @@ a ser ativados apenas no multiplayer.
 ## Linha de base dos testes
 
 Antes das alterações: 911 casos em 86 arquivos; 890 passaram e 21 falharam.
-Falhas existentes em `PlayerTestActionControls.test.mjs` (11),
+Falhas históricas em controles exclusivos já removidos (11),
 `FactoryLighting.test.mjs` (4), `ColisoesMapa.test.mjs` (4) e
 `PlayerCollisionConfig.test.mjs` (2). O relatório JSON dessa execução foi um
 artefato temporário fora do repositório; os números acima são mantidos apenas

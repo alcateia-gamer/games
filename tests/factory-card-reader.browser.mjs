@@ -41,6 +41,8 @@ try {
     });
     await page.keyboard.press("e", { delay: 300 });
     await page.waitForFunction(() => window.__game.scene.getScene("Level1Parte2").leitorCartaoFabrica.fala.texto.visible);
+    await page.waitForFunction(() => /energia|gerador/.test(
+      window.__game.scene.getScene("Level1Parte2").leitorCartaoFabrica.fala.texto.text));
     const energia = await page.evaluate(async nome => {
       const s = window.__game.scene.getScene("Level1Parte2");
       const porta = s.portasFabrica.find(p => p.nome === nome), area = porta.area;
@@ -99,6 +101,8 @@ try {
     "os dois trechos da sombra do boss aguardam a abertura das portas");
   await page.keyboard.press("e", { delay: 300 });
   await page.waitForFunction(() => window.__game.scene.getScene("Level1Parte2").leitorCartaoFabrica.fala.texto.visible);
+  await page.waitForFunction(() => window.__game.scene.getScene("Level1Parte2")
+    .leitorCartaoFabrica.fala.texto.text === "Preciso encontrar o cartão de acesso.");
   const speech = await page.evaluate(() => {
     const s = window.__game.scene.getScene("Level1Parte2"), text = s.leitorCartaoFabrica.fala.texto;
     return { message: text.text, color: text.style.color, background: text.style.backgroundColor,
@@ -127,7 +131,7 @@ try {
       xError: Math.abs(rect.left - (canvas.left + point.x * scaleX)),
       yError: Math.abs(rect.bottom - (canvas.top + point.y * scaleY)) };
   });
-  assert.equal(sharpSpeech.fontSize, "11px");
+  assert.equal(sharpSpeech.fontSize, "12px");
   assert.equal(sharpSpeech.weight, "700");
   assert.equal(sharpSpeech.pointerEvents, "none");
   assert.ok(sharpSpeech.xError < 1 && sharpSpeech.yError < 1,

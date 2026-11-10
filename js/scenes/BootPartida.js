@@ -5,6 +5,9 @@ export default class BootPartida extends Phaser.Scene {
   }
 
   create(data) {
+    this.registry.set("lojaArmasVisitada", false);
+    this.registry.set("tanqueCombustivelUsado", false);
+    this.registry.set("fabricaVisitada", false);
     this.cameras.main.setBackgroundColor("#000000");
     const status = this.add.text(400, 225, "PREPARANDO INCURSÃO...", {
       fontFamily: "monospace", fontSize: "16px", color: "#75ff9a",

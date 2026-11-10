@@ -8,14 +8,13 @@ function encontro() {
     body: { enable: true }, hitboxDano: { x: 0, y: 0, width: 32, height: 32 } };
 }
 
-test("encontro usa contrato próprio sem entrar na lista dos robôs nem no boss antigo", () => {
-  const novoBoss = encontro(), inimigos = [{}], bossFinal = {};
-  const scene = { novoBoss, inimigos, bossFinal };
+test("boss principal usa contrato próprio sem entrar na lista dos robôs", () => {
+  const novoBoss = encontro(), inimigos = [{}];
+  const scene = { novoBoss, inimigos };
   assert.deepEqual(alvosAdicionaisCombate(scene), [novoBoss]);
   assert.equal(eAlvoAdicionalCombate(scene, novoBoss), true);
-  assert.equal(eAlvoAdicionalCombate(scene, bossFinal), false);
+  assert.equal(eAlvoAdicionalCombate(scene, inimigos[0]), false);
   assert.equal(scene.inimigos, inimigos);
-  assert.equal(scene.bossFinal, bossFinal);
   assert.deepEqual(alvosAdicionaisCombate({}), []);
 });
 
@@ -48,14 +47,13 @@ test("dano e região de ataque chegam ao encontro e seu resultado é respeitado"
   assert.equal(causarDanoAlvoAdicional(scene, {}, 25), false);
 });
 
-test("apresentação local em multiplayer não intercepta ataques nem altera alvos antigos", () => {
-  const novoBoss = encontro(), inimigos = [{}], bossFinal = {};
-  const scene = { novoBoss, inimigos, bossFinal, multiplayer: true };
+test("apresentação local em multiplayer exige o runtime de combate e preserva os robôs", () => {
+  const novoBoss = encontro(), inimigos = [{}];
+  const scene = { novoBoss, inimigos, multiplayer: true };
   novoBoss.receberDano = () => assert.fail("combate multiplayer ainda não implementado");
   assert.deepEqual(alvosAdicionaisCombate(scene), []);
   assert.equal(causarDanoAlvoAdicional(scene, novoBoss, 25), false);
   assert.equal(scene.inimigos, inimigos);
-  assert.equal(scene.bossFinal, bossFinal);
 });
 
 

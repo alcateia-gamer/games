@@ -42,7 +42,7 @@ page.on("pageerror", error => {
   console.error("PAGEERROR:", error.message);
 });
 page.on("response", response => {
-  if (response.status() >= 400 && /boss-test|HeavensFury|novoBoss/i.test(response.url())) {
+  if (response.status() >= 400 && /BossPrincipal|HeavensFury|novoBoss/i.test(response.url())) {
     assetErrors.push({ status: response.status(), url: response.url() });
   }
 });
@@ -100,11 +100,11 @@ async function placePlayer(x, y) {
 async function advance(ms) {
   await page.evaluate(async ms => {
     const scene = window.__game.scene.getScene("Level1Parte2");
-    const { atualizarNovoBoss } = await import("/js/enemies/novoBoss/NovoBoss.js");
+    const { atualizarBoss } = await import("/js/enemies/BossPrincipal.js");
     let restante = ms;
     do {
       const delta = Math.min(50, restante);
-      atualizarNovoBoss(scene, scene.time.now, delta);
+      atualizarBoss(scene, scene.time.now, delta);
       restante -= delta;
     } while (restante > 0);
   }, ms);
@@ -113,10 +113,10 @@ async function advance(ms) {
 async function advanceUntil(estado, limite = 20000) {
   const result = await page.evaluate(async ({ estado, limite }) => {
     const scene = window.__game.scene.getScene("Level1Parte2");
-    const { atualizarNovoBoss } = await import("/js/enemies/novoBoss/NovoBoss.js");
+    const { atualizarBoss } = await import("/js/enemies/BossPrincipal.js");
     for (let tempo = 0; tempo <= limite; tempo += 50) {
       if (scene.novoBoss.estado === estado) return { encontrou: true, tempo };
-      atualizarNovoBoss(scene, scene.time.now, 50);
+      atualizarBoss(scene, scene.time.now, 50);
     }
     return { encontrou: false, estado: scene.novoBoss.estado };
   }, { estado, limite });

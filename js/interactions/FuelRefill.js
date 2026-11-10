@@ -1,8 +1,10 @@
 /** Abastecimento do galão nas áreas Gasolina do Tiled, com progresso persistente no inventário. */
 import { criarFalaFlutuante } from "../ui/PlayerSpeechBubble.js";
+import { createInteractionMarker } from "../ui/CollectibleMarker.js";
 
 export const FUEL_FILL_DURATION_MS = 4000;
 export const FUEL_INTERACTION_RANGE = 48;
+export const FUEL_USED_KEY = "tanqueCombustivelUsado";
 
 export const FALAS_GALAO = {
   vazio: [
@@ -51,9 +53,26 @@ export function distanciaAreaGasolina(point, area) {
     y - Math.max(0, Math.min(area.height, y)));
 }
 
+export function centroAreaGasolina(area) {
+  const cos = Math.cos(area.rotation), sin = Math.sin(area.rotation);
+  return { x: area.x + (area.width * cos - area.height * sin) / 2,
+    y: area.y + (area.width * sin + area.height * cos) / 2 };
+}
+
 export function criarSistemaCombustivel(scene) {
   const inventory = scene.inventory;
   const areas = lerAreasGasolina(scene.map);
+  const tanque = (scene.tanqueCombustivelObjects ?? []).map(visual => visual.getBounds());
+  for (const [index, area] of areas.entries()) {
+    const centro = centroAreaGasolina(area);
+    createInteractionMarker(scene, {
+      x: areas.length === 1 && tanque.length
+        ? (Math.min(...tanque.map(b => b.left)) + Math.max(...tanque.map(b => b.right))) / 2 : centro.x,
+      y: areas.length === 1 && tanque.length ? Math.min(...tanque.map(b => b.top)) - 22 : area.y - 60,
+      name: index === 0 ? "fuel-tank-marker" : `fuel-tank-marker-${index}`,
+      stateKey: FUEL_USED_KEY,
+    });
+  }
   const fala = criarFalaFlutuante(scene, "fuel-speech-bubble");
   scene.falaCombustivel = fala;
   let abastecendo = null;
@@ -86,6 +105,7 @@ export function criarSistemaCombustivel(scene) {
       return true;
     }
     if (!incompleto()) { fala.mostrar(FALAS_GALAO.jaCheio); return true; }
+    scene.registry?.set(FUEL_USED_KEY, true);
     abastecendo = area;
     fala.ocultar();
     scene.player.setVelocity(0, 0);

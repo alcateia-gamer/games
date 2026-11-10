@@ -4,7 +4,7 @@ import { VisualSender, VisualReceiver } from "./CoopVisuals.js";
 import { soloContext } from "./CoopContext.js";
 import { CoopPlayers, playerVisualObjects } from "./CoopPlayers.js";
 import { BossReplica, describeBoss, describeCombatTarget } from "./CoopBossReplica.js";
-import { prepararNovoBoss, atualizarNovoBoss, destruirNovoBoss } from "../enemies/novoBoss/NovoBoss.js";
+import { prepararBoss, atualizarBoss, destruirBoss } from "../enemies/BossPrincipal.js";
 import { novoBossConfig, jogadorNaArenaNovoBoss } from "../enemies/novoBoss/NovoBossConfig.js";
 import { assetsNovoBoss, criarAnimacoesNovoBoss } from "../enemies/novoBoss/NovoBossAssets.js";
 import { pontosTorresNovoBoss } from "../enemies/novoBoss/NovoBossTorres.js";
@@ -48,7 +48,7 @@ export class CoopRuntime {
     // Limpa a representação antiga antes de instalar a representação atual.
     for (const actor of scene.remotePlayers.values()) actor.destroy();
     scene.remotePlayers.clear();
-    destruirNovoBoss(scene);
+    destruirBoss(scene);
     if (this.mapKey === "Level1Parte2") {
       criarAnimacoesNovoBoss(scene);
       const poses = { summon: assetsNovoBoss.torreSummon, idle: assetsNovoBoss.torreIdle,
@@ -91,7 +91,7 @@ export class CoopRuntime {
       get morteEmAndamento() { return runtime.playerContexts().every(c => c.morteEmAndamento || c.vida <= 0); },
       restricaoControleNovoBoss: null,
     });
-    if (this.mapKey === "Level1Parte2") prepararNovoBoss(this.bossContext, scene.novoBossConfig || novoBossConfig);
+    if (this.mapKey === "Level1Parte2") prepararBoss(this.bossContext, scene.novoBossConfig || novoBossConfig);
     if (!scene.companionPet?.active) criarCompanionPet(this.localContext);
     scene.aliados = this.players.objects();
     Object.defineProperties(scene.player, {
@@ -108,7 +108,7 @@ export class CoopRuntime {
         Math.hypot(b.player.x - (boss?.x || -1080), b.player.y - (boss?.y || -5810)))[0];
   }
   updateBoss(time, delta) {
-    if (this.host) atualizarNovoBoss(this.bossContext, time, delta);
+    if (this.host) atualizarBoss(this.bossContext, time, delta);
     else this.replica.update(delta);
   }
   specialSnapshot(context) {
@@ -236,7 +236,9 @@ export class CoopRuntime {
         vida: data.vida, vidaMaxima: data.vidaMaxima, morto: data.morto,
         direcaoAtual: data.direcaoAtual,
         hitboxDano: data.hitbox && new Phaser.Geom.Rectangle(...Object.values(data.hitbox)),
-        body: data.body && Object.assign(new Phaser.Geom.Rectangle(...Object.values(data.body)), { enable: true }) });
+        // A réplica não simula física. GameObject.body é reservado a corpos
+        // do Phaser, que precisam implementar destroy() ao trocar de cena.
+        coopBody: data.body && new Phaser.Geom.Rectangle(...Object.values(data.body)) });
       return actor;
     }).filter(Boolean);
     s.inimigoTeste = s.inimigos[0] || null;

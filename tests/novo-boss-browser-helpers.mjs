@@ -27,7 +27,7 @@ export async function abrirSessaoNovoBoss(config, opcoes = {}, opcoesContexto = 
     console.error("PAGEERROR:", error.message);
   });
   page.on("response", response => {
-    if (response.status() >= 400 && /boss-test|HeavensFury|novoBoss/i.test(response.url())) {
+    if (response.status() >= 400 && /BossPrincipal|HeavensFury|novoBoss/i.test(response.url())) {
       assetErrors.push({ status: response.status(), url: response.url() });
     }
   });
@@ -43,11 +43,11 @@ export async function abrirSessaoNovoBoss(config, opcoes = {}, opcoesContexto = 
   async function avancar(ms, passo = 20) {
     await page.evaluate(async ({ ms, passo }) => {
       const scene = window.__game.scene.getScene("Level1Parte2");
-      const { atualizarNovoBoss } = await import("/js/enemies/novoBoss/NovoBoss.js");
+      const { atualizarBoss } = await import("/js/enemies/BossPrincipal.js");
       let restante = ms;
       do {
         const delta = Math.min(passo, restante);
-        atualizarNovoBoss(scene, scene.time.now, delta);
+        atualizarBoss(scene, scene.time.now, delta);
         restante -= delta;
       } while (restante > 0);
       // A cena pausada não executa sua ordenação de profundidade de pós-update.

@@ -4,6 +4,7 @@
  */
 
 import { limparGrupoRobos } from "../enemies/EnemyTest.js";
+import { createInteractionMarker } from "../ui/CollectibleMarker.js";
 
 const PORTA_X = 72;
 const PORTA_INFERIOR_Y = -2160;
@@ -108,6 +109,7 @@ function iniciarTransicao(scene) {
   scene.cameras.main.fadeOut(250, 0, 0, 0);
 
   scene.cameras.main.once("camerafadeoutcomplete", () => {
+    scene.registry.set("fabricaVisitada", true);
     limparGrupoRobos(scene);
     scene.scene.start("Level1Parte2", {
       spawnX: 98,
@@ -144,6 +146,8 @@ function criarTransicaoParaParte2(scene) {
 
   // O trigger fica sobre o tile inferior da porta.
   scene.entradaFabrica = scene.add.zone(PORTA_X, PORTA_INFERIOR_Y - 24, 40, 48);
+  createInteractionMarker(scene, { x: PORTA_X, y: PORTA_SUPERIOR_Y - 66,
+    name: "factory-entrance-marker", stateKey: "fabricaVisitada" });
 
   if (scene.portaParte2AbertaAoEntrar) {
     scene.portaParte2Aberta = true;

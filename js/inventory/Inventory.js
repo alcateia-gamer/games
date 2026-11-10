@@ -58,12 +58,15 @@ class Inventory {
 
   /**
    * Adiciona a quantidade inteira solicitada, reutilizando pilhas; se faltar espaço, não
-   * adiciona parcialmente.
+   * adiciona parcialmente. O nível inicial de combustível vale apenas para os novos galões.
    */
-  addItem(itemId, quantity = 1) {
+  addItem(itemId, quantity = 1, { fuel = 0 } = {}) {
     const definition = getInventoryItem(itemId);
 
     if (!definition || !Number.isInteger(quantity) || quantity < 1) {
+      return false;
+    }
+    if (itemId === "gasolina" && (!Number.isFinite(fuel) || fuel < 0 || fuel > 1)) {
       return false;
     }
 
@@ -103,7 +106,7 @@ class Inventory {
     while (remaining > 0) {
       const added = Math.min(remaining, definition.maxStack);
       this.state.slots.push({ itemId, quantity: added,
-        ...(itemId === "gasolina" ? { fuel: 0 } : {}) });
+        ...(itemId === "gasolina" ? { fuel } : {}) });
       remaining -= added;
     }
 

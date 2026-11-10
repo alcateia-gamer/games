@@ -6,7 +6,7 @@ import {criarAvisoNovoBoss} from './NovoBossAvisos.js';
 import {assetsNovoBoss} from './NovoBossAssets.js';
 
 test('109 quadros preservam fonte e tempos; aviso acompanha prazo, raio e limpeza',()=>{
-  const base=new URL('../../../assets/PERSONAGENS/INIMIGOS PRINCIPAIS/Boss-test/',import.meta.url);
+  const base=new URL('../../../assets/PERSONAGENS/INIMIGOS PRINCIPAIS/BossPrincipal/',import.meta.url);
   const m=JSON.parse(readFileSync(new URL('derivados/area-ataque/area-ataque.json',base)));
   assert.equal(createHash('sha256').update(readFileSync(new URL(m.fonte,base))).digest('hex'),m.sha256Original);
   assert.equal(m.quadros,109);assert.deepEqual(m.duracoesMs,assetsNovoBoss.areaAtaque.duracoesMs);

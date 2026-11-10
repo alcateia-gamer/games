@@ -3690,35 +3690,6 @@
                 }, 
                 {
                  "height":0,
-                 "id":507,
-                 "name":"",
-                 "opacity":1,
-                 "point":true,
-                 "properties":[
-                        {
-                         "name":"Cor",
-                         "type":"string",
-                         "value":"0xffdd88"
-                        }, 
-                        {
-                         "name":"Intensidade",
-                         "type":"float",
-                         "value":0.4
-                        }, 
-                        {
-                         "name":"Raio",
-                         "type":"int",
-                         "value":180
-                        }],
-                 "rotation":0,
-                 "type":"",
-                 "visible":true,
-                 "width":0,
-                 "x":1402.25,
-                 "y":-214
-                }, 
-                {
-                 "height":0,
                  "id":508,
                  "name":"",
                  "opacity":1,
@@ -3890,35 +3861,6 @@
                  "width":0,
                  "x":1046.75,
                  "y":167.25
-                }, 
-                {
-                 "height":0,
-                 "id":514,
-                 "name":"",
-                 "opacity":1,
-                 "point":true,
-                 "properties":[
-                        {
-                         "name":"Cor",
-                         "type":"string",
-                         "value":"0xffdd88"
-                        }, 
-                        {
-                         "name":"Intensidade",
-                         "type":"float",
-                         "value":0.4
-                        }, 
-                        {
-                         "name":"Raio",
-                         "type":"int",
-                         "value":180
-                        }],
-                 "rotation":0,
-                 "type":"",
-                 "visible":true,
-                 "width":0,
-                 "x":1045.54545454545,
-                 "y":-217.636363636364
                 }, 
                 {
                  "height":0,
@@ -9739,7 +9681,7 @@
  "nextobjectid":645,
  "orientation":"orthogonal",
  "renderorder":"right-down",
- "tiledversion":"1.12.2",
+ "tiledversion":"1.12.2-2-geb83ddb9",
  "tileheight":48,
  "tilesets":[
         {

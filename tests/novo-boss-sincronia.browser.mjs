@@ -21,7 +21,7 @@ async function verificarAtaque(tipo, quantidade) {
   return page.evaluate(async ({ tipo, quantidade }) => {
     const scene = window.__game.scene.getScene("Level1Parte2");
     const boss = scene.novoBoss;
-    const { atualizarNovoBoss } = await import("/js/enemies/novoBoss/NovoBoss.js");
+    const { atualizarBoss } = await import("/js/enemies/BossPrincipal.js");
     const verificar = (emAtaque, tempo) => {
       const sprite = boss.sprite;
       const alvos = boss.alvosIlusorios.filter(alvo => alvo.active);
@@ -40,10 +40,10 @@ async function verificarAtaque(tipo, quantidade) {
       }
     };
     if (!boss.executarAtaque(tipo)) throw new Error(`Não iniciou ${tipo}`);
-    atualizarNovoBoss(scene, scene.time.now, 0);
+    atualizarBoss(scene, scene.time.now, 0);
     // Ataques centrais só começam após concluir os dois estágios do teleporte.
     for (let preparo = 0; boss.ataquePendente && preparo < 2000; preparo += 20) {
-      atualizarNovoBoss(scene, scene.time.now, 20);
+      atualizarBoss(scene, scene.time.now, 20);
     }
     if (!boss.ataqueAtual) throw new Error("O posicionamento não iniciou o ataque.");
     verificar(true, 0);
@@ -59,7 +59,7 @@ async function verificarAtaque(tipo, quantidade) {
       for (const alvo of boss.alvosIlusorios) {
         if (alvo.active) alvo.sprite.preUpdate(scene.time.now + tempo, delta);
       }
-      atualizarNovoBoss(scene, scene.time.now + tempo, delta);
+      atualizarBoss(scene, scene.time.now + tempo, delta);
       tempo += delta;
       verificar(Boolean(boss.ataqueAtual), tempo);
       if (boss.ataqueAtual) quadros.add(Number(boss.sprite.frame.name));
@@ -81,13 +81,13 @@ try {
       const scene = window.__game.scene.getScene("Level1Parte2");
       const boss = scene.novoBoss;
       if (grupo === "ilusoes") return boss.iniciarIlusoes();
-      const { atualizarNovoBoss } = await import("/js/enemies/novoBoss/NovoBoss.js");
+      const { atualizarBoss } = await import("/js/enemies/BossPrincipal.js");
       for (let i = 0; boss.estado !== "vulneravel" && i < 500; i++) {
-        atualizarNovoBoss(scene, scene.time.now, 20);
+        atualizarBoss(scene, scene.time.now, 20);
       }
       if (!boss.receberDano(501)) throw new Error("Não atingiu a verdadeira na abertura.");
       for (let i = 0; !boss.sistemaClones.ativo && i < 500; i++) {
-        atualizarNovoBoss(scene, scene.time.now, 20);
+        atualizarBoss(scene, scene.time.now, 20);
       }
       return boss.fase === 2 && boss.sistemaClones.ativo;
     }, grupo));

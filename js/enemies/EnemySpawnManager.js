@@ -4,6 +4,7 @@
  */
 
 import { criarInimigoTeste } from "./EnemyTest.js";
+import { areaContemCorpo } from "./EnemySpawnArea.js";
 
 /** Usa exclusivamente as áreas do Tiled; sem zonas não há spawn automático. */
 function zonasDoMapa(map) {
@@ -29,18 +30,6 @@ function zonasDoMapa(map) {
 function pontoNaArea(area, x, y) {
   const cos = Math.cos(area.rotation), sin = Math.sin(area.rotation);
   return { x: area.x + x * cos - y * sin, y: area.y + x * sin + y * cos };
-}
-
-/** Mantém toda a hitbox de spawn dentro da forma desenhada no Tiled. */
-function areaContemCorpo(area, rect) {
-  const cos = Math.cos(area.rotation), sin = Math.sin(area.rotation);
-  return [[rect.left, rect.top], [rect.right, rect.top],
-    [rect.right, rect.bottom], [rect.left, rect.bottom]].every(([x, y]) => {
-    const dx = x - area.x, dy = y - area.y;
-    const localX = dx * cos + dy * sin;
-    const localY = -dx * sin + dy * cos;
-    return localX >= 0 && localX <= area.width && localY >= 0 && localY <= area.height;
-  });
 }
 
 // =====================================================
@@ -608,6 +597,9 @@ class EnemySpawnManager {
 
       if (!enemy) continue;
 
+      enemy.spawnArea = region.area;
+      enemy.spawnWallMargin = this.config.wallMargin;
+
       this.prepararColisoes();
 
       this.enemyGroup?.add(enemy);
@@ -709,7 +701,8 @@ class EnemySpawnManager {
       return false;
     }
 
-    // Colisoes do mapa.
+    // No nascimento, nem a imagem pode aparecer sobre os objetos do cenário.
+    const ocupacao = areaSpawn(candidate.x, candidate.y, tipoRobo, this.config.wallMargin);
     for (const bloco of this.scene.collisionGroup?.getChildren?.() || []) {
       if (!bloco?.body || bloco.body.enable === false) {
         continue;
@@ -722,7 +715,7 @@ class EnemySpawnManager {
         bloco.body.height,
       );
 
-      if (Phaser.Geom.Intersects.RectangleToRectangle(rect, bb)) {
+      if (Phaser.Geom.Intersects.RectangleToRectangle(ocupacao, bb)) {
         return false;
       }
     }

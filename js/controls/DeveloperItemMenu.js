@@ -40,10 +40,11 @@ export function criarMenuColetaveisDev(scene) {
     contadores = [];
   };
 
-  const adicionar = (item, quantidade) => {
+  const adicionar = (item, quantidade, combustivel = 0) => {
     if (!scene.devItemMenuOpen || !autorizado()) { fechar(); return false; }
-    const adicionado = scene.inventory.addItem(item.id, quantidade);
-    mensagem = adicionado ? `+${quantidade} ${item.name}` : "Inventário cheio. Libere espaço para pegar o item.";
+    const adicionado = scene.inventory.addItem(item.id, quantidade, { fuel: combustivel });
+    const estado = item.id === "gasolina" ? combustivel === 1 ? " (cheio)" : " (vazio)" : "";
+    mensagem = adicionado ? `+${quantidade} ${item.name}${estado}` : "Inventário cheio. Libere espaço para pegar o item.";
     feedback.setText(mensagem).setColor(adicionado ? "#86efac" : "#fca5a5");
     return adicionado;
   };
@@ -95,7 +96,12 @@ export function criarMenuColetaveisDev(scene) {
       modal.add(icon);
       texto(-largura / 2 + 58, y - 17, item.name, 14).setWordWrapWidth(Math.max(70, largura - 225));
       contadores.push({ item, texto: texto(-largura / 2 + 58, y + 5, "", 11, "#94a3b8") });
-      botao(largura / 2 - 108, y, 56, "+1", () => adicionar(item, 1), `dev-item:${item.id}:1`);
+      if (item.id === "gasolina") {
+        botao(largura / 2 - 153, y, 86, "+1 vazio", () => adicionar(item, 1), `dev-item:${item.id}:1`);
+        botao(largura / 2 - 57, y, 86, "+1 cheio", () => adicionar(item, 1, 1), `dev-item:${item.id}:1:cheio`);
+      } else {
+        botao(largura / 2 - 108, y, 56, "+1", () => adicionar(item, 1), `dev-item:${item.id}:1`);
+      }
       if (item.maxStack > 1) {
         botao(largura / 2 - 42, y, 56, "+10", () => adicionar(item, 10), `dev-item:${item.id}:10`);
       }

@@ -1,4 +1,4 @@
-/** Alvos de encontros próprios, sem inseri-los nas listas de robôs ou no boss antigo. */
+/** Boss principal, clones e torres usam o contrato de dano do encontro. */
 export function alvosAdicionaisCombate(scene) {
   // O encontro só participa do combate solo até receber protocolo de rede próprio.
   if (scene?.multiplayer && !scene.coopRuntime) return [];

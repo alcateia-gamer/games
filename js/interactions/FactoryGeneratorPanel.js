@@ -107,7 +107,24 @@ export function criarPainelGerador(scene, { onActivate, onClose }) {
   text(205, 94, "UNIDADE DE ENERGIA / G-01", 11, "#9ac5ab").setOrigin(0.5);
   const power = rect(204, 131, 270, 46, 0x072217).setStrokeStyle(1, DIM)
     .setName("generator-power");
-  const powerLabel = text(204, 131, "⏻  LIGAR", 22, "#92b6a0").setOrigin(0.5).setFontStyle("bold");
+  const powerLabel = text(204, 131, "LIGAR", 22, "#92b6a0").setOrigin(0, 0.5).setFontStyle("bold");
+  const powerIcon = add(scene.add.graphics()).setName("generator-power-icon");
+  const drawPowerIcon = color => {
+    // Centraliza ícone e texto juntos, inclusive durante "INICIANDO...".
+    powerLabel.x = 204 - (powerLabel.width + 36) / 2 + 36;
+    const x = powerLabel.x - 24;
+    const start = -Math.PI / 2 + 0.55, end = Math.PI * 1.5 - 0.55;
+    powerIcon.clear().lineStyle(2.5, color, 1);
+    powerIcon.beginPath().arc(x, 131, 9, start, end).strokePath();
+    powerIcon.lineBetween(x, 119, x, 130);
+    display?.drawing(powerIcon, ctx => {
+      ctx.strokeStyle = `#${color.toString(16).padStart(6, "0")}`;
+      ctx.lineWidth = 2.5;
+      ctx.lineCap = "round";
+      ctx.beginPath(); ctx.arc(x, 131, 9, start, end); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x, 119); ctx.lineTo(x, 130); ctx.stroke();
+    });
+  };
   const feedback = text(0, 177, "Arraste a bateria e a gasolina para conectar o circuito.", 12, "#b1dec3")
     .setOrigin(0.5);
   rect(0, 164, 700, 1, DIM, 0.45);
@@ -185,8 +202,9 @@ export function criarPainelGerador(scene, { onActivate, onClose }) {
       .setData("ready", ready() && !activating);
     if (ready() && !activating) power.setInteractive({ useHandCursor: true });
     else power.disableInteractive();
-    powerLabel.setText(activating ? "⏻  INICIANDO..." : "⏻  LIGAR")
+    powerLabel.setText(activating ? "INICIANDO..." : "LIGAR")
       .setColor(ready() || activating ? "#d4ffeb" : "#92b6a0");
+    drawPowerIcon(ready() || activating ? 0xd4ffeb : 0x92b6a0);
     generator.setAlpha(ready() || activating ? 1 : 0.8);
     state.setText(activating ? "● GERADOR INICIANDO" : ready() ? "● CIRCUITO PRONTO" : "● SEM ENERGIA")
       .setColor(ready() || activating ? "#baffd6" : "#a3c5ae");

@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { lerAreasGasolina, distanciaAreaGasolina } from "./FuelRefill.js";
+import { lerAreasGasolina, distanciaAreaGasolina, centroAreaGasolina } from "./FuelRefill.js";
 
 test("o abastecimento lê o retângulo Gasolina real da cidade sem depender do nome do objeto", () => {
   const raw = JSON.parse(readFileSync(new URL("../../assets/map/InicioFase1 (1).json", import.meta.url)));
@@ -19,6 +19,8 @@ test("aceita gasolina em qualquer caixa, camadas ocultas e retângulos rotaciona
     objects: [{ x: -100, y: -200, width: 60, height: 30, rotation: 90 }] }] });
   assert.ok(distanciaAreaGasolina({ x: -115, y: -170 }, area) < 1e-10);
   assert.ok(Math.abs(distanciaAreaGasolina({ x: -115, y: -120 }, area) - 20) < 1e-10);
+  const centro = centroAreaGasolina(area);
+  assert.ok(Math.abs(centro.x + 115) < 1e-10 && Math.abs(centro.y + 170) < 1e-10);
 });
 
 test("ignora formas inválidas e funciona em mapas sem posto", () => {

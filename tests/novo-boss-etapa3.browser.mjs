@@ -43,7 +43,7 @@ page.on("pageerror", error => {
   console.error("PAGEERROR:", error.message);
 });
 page.on("response", response => {
-  if (response.status() >= 400 && /boss-test|HeavensFury|novoBoss/i.test(response.url())) {
+  if (response.status() >= 400 && /BossPrincipal|HeavensFury|novoBoss/i.test(response.url())) {
     assetErrors.push({ status: response.status(), url: response.url() });
   }
 });
@@ -105,11 +105,11 @@ async function placePlayer(x, y) {
 async function advance(ms, passo = 10) {
   await page.evaluate(async ({ ms, passo }) => {
     const scene = window.__game.scene.getScene("Level1Parte2");
-    const { atualizarNovoBoss } = await import("/js/enemies/novoBoss/NovoBoss.js");
+    const { atualizarBoss } = await import("/js/enemies/BossPrincipal.js");
     let restante = ms;
     do {
       const delta = Math.min(passo, restante);
-      atualizarNovoBoss(scene, scene.time.now, delta);
+      atualizarBoss(scene, scene.time.now, delta);
       restante -= delta;
     } while (restante > 0);
     scene.children.depthSort();

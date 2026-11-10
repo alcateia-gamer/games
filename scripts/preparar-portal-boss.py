@@ -9,7 +9,7 @@ from PIL import Image
 
 RAIZ = Path(__file__).resolve().parents[1]
 ORIGINAL = RAIZ / "Tilesets/mechanics/portal.gif"
-SAIDA = RAIZ / "assets/PERSONAGENS/INIMIGOS PRINCIPAIS/Boss-test/derivados/portal"
+SAIDA = RAIZ / "assets/PERSONAGENS/INIMIGOS PRINCIPAIS/BossPrincipal/derivados/portal"
 
 def main():
     SAIDA.mkdir(parents=True, exist_ok=True)

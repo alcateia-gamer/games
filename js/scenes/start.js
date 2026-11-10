@@ -4,7 +4,6 @@
  */
 
 import { criarTextoMenu } from "../ui/MenuText.js";
-import { PERSONAGENS_TESTE } from "../player/PersonagemTeste.js";
 
 class Start extends Phaser.Scene {
   /**
@@ -44,13 +43,7 @@ class Start extends Phaser.Scene {
   }
 
   carregarRetratos() {
-    // Só a pose exibida no cartão; armas e golpes ficam para o preloader da partida.
-    for (const personagem of PERSONAGENS_TESTE.filter(p => p.ativo)) {
-      if (!this.textures.exists(personagem.textura)) this.load.spritesheet(
-        personagem.textura, "assets/" + personagem.arquivo,
-        { frameWidth: personagem.frameSize, frameHeight: personagem.frameSize, endFrame: personagem.totalFrames - 1 },
-      );
-    }
+    // Retratos dos quatro operadores disponíveis no menu.
     this.load.spritesheet(
       "start-character",
       "assets/PERSONAGENS/PERSONAGENS PRICIPAIS/KAI_MERCER 1/KAI_WALK.png",
@@ -89,8 +82,7 @@ class Start extends Phaser.Scene {
   }
 
   retratosProntos() {
-    return ["start-character", "start-character-2", "start-character-3", "start-character-4",
-      ...PERSONAGENS_TESTE.filter(p => p.ativo).map(p => p.textura)]
+    return ["start-character", "start-character-2", "start-character-3", "start-character-4"]
       .every(key => this.textures.exists(key));
   }
 
@@ -115,6 +107,25 @@ class Start extends Phaser.Scene {
     this.selectedCharacter = "kai-mercer";
     this.startingGame = false;
 
+    const ajustarViewport = ({ width, height }) => {
+      if (width === this.width && height === this.height) return;
+      const dx = (width - this.width) / 2, dy = (height - this.height) / 2;
+      for (const layer of [this.menuLayer, this.optionsLayer, this.soloLayer]) {
+        if (!layer?.scene) continue;
+        layer.x += dx;
+        layer.y += dy;
+        layer.list[0].setSize(width, height);
+      }
+      for (const column of this.columns) column.x *= width / this.width;
+      this.width = width;
+      this.height = height;
+      if (this.scanlines?.scene) {
+        this.scanlines.destroy();
+        this.createScanlines();
+      }
+    };
+    this.scale.on("resize", ajustarViewport);
+
     // Disponível desde a tela JOGAR e durante os menus desta cena.
     const quickStart = (event) => {
       if (event.repeat || event.ctrlKey || event.altKey || event.metaKey) return;
@@ -124,6 +135,7 @@ class Start extends Phaser.Scene {
     this.input.keyboard.on("keydown-K", quickStart);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.input.keyboard.off("keydown-K", quickStart);
+      this.scale.off("resize", ajustarViewport);
     });
 
     if (this.scene.settings.data?.abrirMenu) {
@@ -826,23 +838,6 @@ class Start extends Phaser.Scene {
         name: "NYX // 04",
       },
     ];
-
-    for (const personagem of PERSONAGENS_TESTE.filter(p => p.ativo)) {
-      characters.push({
-        id: personagem.id,
-        texture: personagem.textura,
-        frame: 0,
-        scale: 1.5 * personagem.tamanho / personagem.frameSize,
-        name: personagem.nome,
-      });
-    }
-    if (characters.length > 4) {
-      // Seis cartões cabem na tela; desativar os testes restaura o layout original.
-      const espacamento = Math.min(152, (this.width - 160) / (characters.length - 1));
-      characters.forEach((character, index) => {
-        character.x = this.width / 2 + (index - (characters.length - 1) / 2) * espacamento;
-      });
-    }
 
     const characterViews = characters.map((character) => {
       const frame = this.add
