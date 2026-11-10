@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import { ROBO_BOLA_FLUTUACAO } from "../enemies/RoboBolaFlutuacao.js";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { carregarSomPropulsaoRoboBola, configurarSomPropulsaoRoboBola as configurarPropulsao } from "./propulsaoRoboBola.js";
 
 // Os testes de movimento abaixo isolam o comportamento depois do nascimento.
@@ -42,9 +42,10 @@ function fixture(webAudio = false) {
   return { scene, sons, filtros, robo, tick, avancar };
 }
 
-test("carrega o MP3 original e mantém a sustentação mais grave", () => {
+test("carrega o loop recortado e mantém a sustentação mais grave", () => {
   carregarSomPropulsaoRoboBola({ audio(key, path) {
     assert.equal(key, "robo-bola-propulsao");
+    assert.ok(path.endsWith("robo_bola_voando_loop.wav"));
     assert.ok(existsSync(new URL(`../../assets/${path}`, import.meta.url)));
   } });
   const { scene, sons, robo, tick } = fixture();
@@ -52,6 +53,20 @@ test("carrega o MP3 original e mantém a sustentação mais grave", () => {
   configurarSomPropulsaoRoboBola(scene, r); tick();
   assert.equal(sons.length, 1);
   assert.deepEqual(sons[0].plays[0], { volume: 0, loop: true, rate: 1, detune: -600, seek: 1.27, pan: 0 });
+});
+test("loop de 7,15 s preserva estéreo e fecha sem salto de amplitude", () => {
+  const wav = readFileSync(new URL("../../assets/sounds.mp3/SONS PARA BOTAR AINDA/robo_bola_voando_loop.wav", import.meta.url));
+  assert.equal(wav.toString("ascii", 0, 4), "RIFF");
+  assert.equal(wav.toString("ascii", 8, 12), "WAVE");
+  const canais = wav.readUInt16LE(22), frequencia = wav.readUInt32LE(24);
+  assert.equal(canais, 2); assert.equal(frequencia, 44100);
+  assert.equal(wav.readUInt16LE(34), 16);
+  assert.equal(wav.readUInt32LE(40) / (canais * 2 * frequencia), 7.15);
+  for (let canal = 0; canal < canais; canal++) {
+    const primeiro = wav.readInt16LE(44 + canal * 2);
+    const ultimo = wav.readInt16LE(wav.length - canais * 2 + canal * 2);
+    assert.ok(Math.abs(primeiro - ultimo) / 32767 < 0.005, "emenda sem degrau que produza outro tuk");
+  }
 });
 test("sem movimento real não há pulsação artificial, mesmo mudando relógio e fase", () => {
   const { scene, sons, robo, tick, avancar } = fixture();

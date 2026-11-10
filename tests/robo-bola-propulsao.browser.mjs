@@ -13,7 +13,22 @@ try {
     const { criarRoboBola, atualizarRoboBola } = await import("/js/enemies/RoboBola.js");
     const { ROBO_BOLA_FLUTUACAO: flutuacao } = await import("/js/enemies/RoboBolaFlutuacao.js");
     const key = "robo-bola-propulsao";
-    if (!s.cache.audio.exists(key)) throw new Error("MP3 da propulsão não foi carregado");
+    if (!s.cache.audio.exists(key)) throw new Error("Loop da propulsão não foi carregado");
+    const loopBuffer = s.cache.audio.get(key);
+    if (Math.abs(loopBuffer.duration - 7.15) > 0.001) throw new Error("carregou o áudio sem recorte");
+    // Compara o PCM usado pelo jogo com a região preservada do arquivo original.
+    const original = await s.sound.context.decodeAudioData(await (await fetch(
+      "/assets/sounds.mp3/SONS PARA BOTAR AINDA/robo_bola_voando.mp3"
+    )).arrayBuffer());
+    const inicioFonte = Math.round(0.75 * original.sampleRate);
+    let diferenca = 0;
+    for (let canal = 0; canal < loopBuffer.numberOfChannels; canal++) {
+      const fonte = original.getChannelData(canal), loop = loopBuffer.getChannelData(canal);
+      for (let i = 0; i < Math.round(7.1 * loopBuffer.sampleRate); i++) {
+        diferenca = Math.max(diferenca, Math.abs(fonte[inicioFonte + i] - loop[i]));
+      }
+    }
+    if (diferenca > 0.00004) throw new Error(`o recorte alterou a textura do trecho preservado: ${diferenca}`);
     const r = criarRoboBola(s);
     if (!r) throw new Error("Não foi possível criar o robô-bola");
     r.faseFlutuacao = 0; r.spawnProtegidoAte = Infinity;
@@ -72,7 +87,7 @@ try {
   });
   assert.equal(result.inicial.playing, true); assert.equal(result.inicial.detune, -600);
   assert.equal(result.inicial.rate, 1); assert.equal(result.inicial.loop, true);
-  assert.ok(result.inicial.duration > 8);
+  assert.ok(Math.abs(result.inicial.duration - 7.15) < 0.001);
   assert.ok(result.subida > result.quieto * 5, JSON.stringify(result));
   assert.ok(result.depois < result.subida / 10, "altura estática não mantém rajadas artificiais");
   assert.ok(result.arranque > result.depois * 5);
