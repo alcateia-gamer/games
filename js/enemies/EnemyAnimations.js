@@ -85,9 +85,9 @@ function criarAnimacoesInimigo(scene) {
       scene.anims.create({
         key: chave,
         frames: [
-          { key: "robo-morte", frame: direcao.start, duration: 70 },
-          { key: "robo-morte", frame: direcao.start + 1, duration: 90 },
-          { key: "robo-morte", frame: direcao.end, duration: 230 },
+          { key: "robo-morte", frame: direcao.start, duration: 60 },
+          { key: "robo-morte", frame: direcao.start + 1, duration: 75 },
+          { key: "robo-morte", frame: direcao.end, duration: 195 },
         ],
         frameRate: 10,
         repeat: 0,
@@ -96,10 +96,10 @@ function criarAnimacoesInimigo(scene) {
   }
 
   const direcoesSerra = [
-    { key: "up", ataque: [1, 2, 3, 4] },
-    { key: "down", ataque: [6, 7, 8, 9] },
-    { key: "left", ataque: [11, 12, 13, 14] },
-    { key: "right", ataque: [16, 17, 18, 19] },
+    { key: "up", ataque: [1, 2, 3, 4], morte: 4 },
+    { key: "down", ataque: [6, 7, 8, 9], morte: 0 },
+    { key: "left", ataque: [11, 12, 13, 14], morte: 8 },
+    { key: "right", ataque: [16, 17, 18, 19], morte: 12 },
   ];
 
   for (const direcao of direcoesSerra) {
@@ -112,6 +112,20 @@ function criarAnimacoesInimigo(scene) {
           key: "robo-serra",
           frame,
         })),
+        frameRate: 10,
+        repeat: 0,
+      });
+    }
+    const morte = `robo-serra-morte-${direcao.key}`;
+    if (!scene.anims.exists(morte)) {
+      scene.anims.create({
+        key: morte,
+        frames: [
+          { key: "robo-serra-morte", frame: direcao.morte, duration: 76.5 },
+          { key: "robo-serra-morte", frame: direcao.morte + 1, duration: 76.5 },
+          { key: "robo-serra-morte", frame: direcao.morte + 2, duration: 121.5 },
+          { key: "robo-serra-morte", frame: direcao.morte + 3, duration: 261 },
+        ],
         frameRate: 10,
         repeat: 0,
       });
@@ -253,12 +267,24 @@ function tocarAnimacaoAtaqueInimigo(inimigo) {
   inimigo.anims.play(`robo-serra-ataque-${inimigo.direcaoAtual}`, true);
 }
 
+/** A folha viva tem cinco poses por direção; a morte tem quatro quadros por fileira. */
+function obterPoseMorteRoboSerra(inimigo) {
+  const frame = Number(inimigo.frame?.name ?? NaN);
+  const direcoes = ["up", "down", "left", "right"];
+  // A IA pode ter mudado a mira enquanto o ataque ainda desenha a direção anterior.
+  const direcao = Number.isInteger(frame) && frame >= 0 && frame < 20
+    ? direcoes[Math.floor(frame / 5)]
+    : direcoes.includes(inimigo.direcaoAtual) ? inimigo.direcaoAtual : "down";
+  return { direcao, frame: { down: 0, up: 4, left: 8, right: 12 }[direcao] };
+}
+
 // =====================================================
 // TENTA DISPARAR LASER
 // =====================================================
 
 export {
   criarAnimacoesInimigo,
+  obterPoseMorteRoboSerra,
   atualizarEstadoVisualRobo,
   tocarAnimacaoInimigo,
   tocarAnimacaoAtaqueInimigo,

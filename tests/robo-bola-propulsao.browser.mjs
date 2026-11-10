@@ -21,6 +21,11 @@ try {
     const avancar = (n = 30) => { for (let i = 0; i < n; i++) audio(); };
     const tick = time => { atualizarRoboBola(s, time, 0); audio(50); };
     tick(0);
+    for (let i = 0; i < 11; i++) {
+      audio(50);
+      if (s.sound.get(key)) throw new Error("propulsão tocou durante o nascimento");
+    }
+    tick(0);
     const sound = s.sound.get(key);
     const inicial = { playing: sound.isPlaying, rate: sound.rate, detune: sound.detune,
       loop: sound.loop, duration: sound.totalDuration };

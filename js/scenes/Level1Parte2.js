@@ -4,6 +4,7 @@ import { obterBocaMetralhadora, criarMunicaoRobo } from "../enemies/WarRobotProj
  * mudança de sobreposição por região.
  */
 
+import { iniciarMusicaFabrica } from "../sounds/musicaFabrica.js";
 import criarLevel1Parte2Map from "../map/MapaFabrica.js";
 import MiniMapManager from "../ui/MiniMapManager.js";
 import { criarSpawnAreasRoboBola } from "../enemies/RoboBolaSpawnAreas.js";
@@ -304,6 +305,7 @@ class Level1Parte2 extends Phaser.Scene {
     this.inimigoTeste = null;
     this.spawnAreasRoboBola = criarSpawnAreasRoboBola(this);
     criarRuntimeCoop(this);
+    iniciarMusicaFabrica(this);
   }
 
   /**

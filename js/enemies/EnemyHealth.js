@@ -6,6 +6,7 @@
 import { notificarGrupo } from "./EnemyAI.js";
 import { tocarSomMorteRobo } from "../sounds/inimigos.js";
 import { playHitEffects } from "../combat/CombatEffects.js";
+import { obterPoseMorteRoboSerra } from "./EnemyAnimations.js";
 import { obterPoseMorteRoboBola } from "./RoboBola.js";
 
 /**
@@ -67,8 +68,7 @@ function causarDanoInimigo(
 // =====================================================
 
 /**
- * Desativa o combate e a colisão; executa fade da serra ou animação direcional de explosão do
- * robô comum.
+ * Desativa o combate e a colisão e reproduz a explosão direcional de cada tipo de robô.
  */
 function destruirInimigoTeste(scene, inimigo = scene.inimigoTeste) {
   if (!inimigo || !scene || inimigo.morto) {
@@ -76,33 +76,46 @@ function destruirInimigoTeste(scene, inimigo = scene.inimigoTeste) {
   }
 
   if (inimigo.tipoRobo === "serra") {
+    const pose = obterPoseMorteRoboSerra(inimigo);
     inimigo.morto = true;
+    inimigo.direcaoMorte = pose.direcao;
     inimigo.estado = "morto";
+    inimigo.alerta = false;
+    inimigo.combatKnockbackUntil = 0;
     inimigo.setVelocity(0, 0);
     inimigo.hitboxDano = null;
-    if (inimigo.body) {
-      inimigo.body.enable = false;
+    if (inimigo.body) inimigo.body.enable = false;
+
+    // O golpe fatal também cria squash. Cancela-o para a explosão manter o
+    // tamanho normal do robô em todos os quadros, sem animar a escala do cadáver.
+    scene.tweens.killTweensOf(inimigo);
+    if (inimigo.combatSquashBody) {
+      inimigo.setScale(inimigo.baseScaleX ?? inimigo.scaleX, inimigo.baseScaleY ?? inimigo.scaleY);
+      inimigo.combatSquashBody = null;
+    }
+    for (const key of ["debugHitboxDano", "fundoVida", "barraVida", "bordaVida"]) {
+      inimigo[key]?.destroy();
+      inimigo[key] = null;
+    }
+    if (inimigo.somPassoRobo) {
+      inimigo.somPassoRobo.stop();
+      inimigo.somPassoRobo.destroy();
+      inimigo.somPassoRobo = null;
     }
     if (Array.isArray(scene.inimigos)) {
       scene.inimigos = scene.inimigos.filter((robo) => robo !== inimigo);
     }
-    if (scene.inimigoTeste === inimigo) {
-      scene.inimigoTeste = scene.inimigos?.[0] ?? null;
-    }
-    if (inimigo.anims) {
-      inimigo.anims.stop();
-    }
-    scene.tweens.add({
-      targets: [
-        inimigo,
-        inimigo.fundoVida,
-        inimigo.barraVida,
-        inimigo.bordaVida,
-      ].filter(Boolean),
-      alpha: 0,
-      duration: 180,
-      onComplete: () => finalizarDestruicaoInimigo(scene, inimigo),
-    });
+    if (scene.inimigoTeste === inimigo) scene.inimigoTeste = scene.inimigos?.[0] ?? null;
+
+    inimigo.anims.stop();
+    inimigo.clearTint();
+    // As duas folhas têm células idênticas: preserva posição, origem, escala e espelhamento.
+    inimigo.setTexture("robo-serra-morte", pose.frame);
+    inimigo.setAlpha(1);
+    const chave = `robo-serra-morte-${pose.direcao}`;
+    inimigo.once(`animationcomplete-${chave}`, () => finalizarDestruicaoInimigo(scene, inimigo));
+    inimigo.anims.play(chave);
+    tocarSomMorteRobo(scene, inimigo);
     return;
   }
 
@@ -236,12 +249,12 @@ function destruirInimigoTeste(scene, inimigo = scene.inimigoTeste) {
   }
   inimigo.anims.play(`robo-morte-${direcao}`);
   tocarSomMorteRobo(scene, inimigo);
-  scene.time.delayedCall(70, () => {
+  scene.time.delayedCall(60, () => {
     if (inimigo.active && inimigo.morto && inimigo.efeitoCores) {
       inimigo.efeitoCores.reset().saturate(1.8).contrast(0.55).brightness(2.5);
     }
   });
-  scene.time.delayedCall(160, () => {
+  scene.time.delayedCall(135, () => {
     if (inimigo.active && inimigo.morto && inimigo.efeitoCores) {
       inimigo.efeitoCores.reset().saturate(0.5).contrast(0.1).brightness(1.2);
     }

@@ -1,0 +1,39 @@
+/** Trilha de exploração da fábrica, com a mesma entrada gradual da cidade. */
+import { iniciarMusicaAmbiente } from "./musicaAmbiente.js";
+
+const CHAVE = "musica-fabrica";
+const controles = new WeakMap();
+
+export function carregarMusicaFabrica(loader) {
+  loader.audio(CHAVE, "sounds.mp3/SONS AMBIENETE/04. You Will Never Know.mp3");
+}
+
+export function iniciarMusicaFabrica(scene) {
+  if (controles.has(scene)) return controles.get(scene);
+  let musica = null, destruida = false;
+  const sincronizar = () => {
+    const boss = scene.sound.get?.("musica-novo-boss");
+    if (scene.morteEmAndamento || boss?.isPlaying || boss?.isPaused) {
+      musica?.destruir(); musica = null;
+    } else if (!musica) {
+      musica = iniciarMusicaAmbiente(scene, { chave: CHAVE, volumeMaximo: 0.06 });
+    }
+  };
+  const controle = {
+    destruir() {
+      if (destruida) return;
+      destruida = true;
+      scene.events.off("update", sincronizar);
+      scene.events.off("shutdown", controle.destruir);
+      scene.events.off("destroy", controle.destruir);
+      musica?.destruir(); musica = null;
+      controles.delete(scene);
+    },
+  };
+  controles.set(scene, controle);
+  scene.events.on("update", sincronizar);
+  scene.events.once("shutdown", controle.destruir);
+  scene.events.once("destroy", controle.destruir);
+  sincronizar();
+  return controle;
+}

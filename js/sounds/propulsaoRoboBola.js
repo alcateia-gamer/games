@@ -4,18 +4,20 @@ const ALCANCE = 400;
 const AFINACAO = -600; // Sustentação mais grave; deslocamento eleva o tom do motor.
 const VOLUME_MAXIMO = 0.26;
 const LIMITE_CONJUNTO = 0.41;
+const ENTRADA_SUAVE_SEGUNDOS = 0.2;
 const controles = new WeakMap();
 const grupos = new WeakMap();
 const limitar = (valor, min, max) => Math.max(min, Math.min(max, valor));
 
 export function carregarSomPropulsaoRoboBola(loader) {
-  loader.audio(CHAVE, "sounds.mp3/SONS PARA BOTAR AINDA/robo_bola_voando.mp3");
+  loader.audio(CHAVE, "sounds.mp3/SONS PARA BOTAR AINDA/robo_bola_voando_loop.wav");
 }
 
-export function configurarSomPropulsaoRoboBola(scene, robo) {
+export function configurarSomPropulsaoRoboBola(scene, robo, { silencioInicialMs = 600 } = {}) {
   if (robo.tipoRobo !== "bola" || robo.morto || controles.has(robo)) return;
   let som = null, filtro = null, tocando = false, destruido = false, volumeAnterior = null;
-  let anterior = null, forca = 0, liberacao = 0.2, intervalo = Infinity;
+  let anterior = null, forca = 0, liberacao = 0.2, intervalo = Infinity, entrada = 0;
+  let silencioNascimento = silencioInicialMs;
   let direcaoImpulso = null, velocidadeImpulso = 0, pan = null, afinacao = AFINACAO, afinacaoAplicada = AFINACAO;
   const grupo = grupos.get(scene) ?? new Set();
   grupos.set(scene, grupo);
@@ -50,6 +52,8 @@ export function configurarSomPropulsaoRoboBola(scene, robo) {
     if (destruido) return;
     if (!robo.active || robo.morto) { destruir(); return; }
     const dt = limitar(delta, 1, 100) / 1000;
+    const nascendo = silencioNascimento > 0;
+    silencioNascimento = Math.max(0, silencioNascimento - dt * 1000);
     const deslocamento = robo.deslocamentoFlutuacao ??
       (0.5 - (robo.originY ?? 0.5)) * 127 * (robo.scaleY ?? 0.56);
     const ouvinte = scene.player?.body?.center ?? scene.player;
@@ -62,17 +66,22 @@ export function configurarSomPropulsaoRoboBola(scene, robo) {
     const vertical = anterior ? limitar((deslocamento - anterior.deslocamento) / dt, -80, 80) : 0;
     const aceleracao = anterior ? Math.hypot(vx - anterior.vx, vy - anterior.vy) / dt : 0;
     const direcao = velocidade > 18 ? Math.atan2(vy, vx) : null;
+    if (!anterior || nascendo) {
+      direcaoImpulso = direcao;
+      velocidadeImpulso = velocidade;
+    }
     const curva = direcao !== null && direcaoImpulso !== null
       ? Math.abs(Math.atan2(Math.sin(direcao - direcaoImpulso), Math.cos(direcao - direcaoImpulso))) : 0;
     const comecouSubida = anterior && vertical < -2 && anterior.vertical >= -2;
-    const arrancou = velocidade > 25 && (!anterior || anterior.velocidade < 8);
+    // A primeira amostra só estabelece a velocidade: nascer não é um arranque.
+    const arrancou = anterior && velocidade > 25 && anterior.velocidade < 8;
     const manobrou = anterior && ((aceleracao > 220 && anterior.aceleracao < 150) ||
       Math.abs(velocidade - velocidadeImpulso) > 32 || curva > 0.34);
     forca *= Math.exp(-dt / liberacao);
     intervalo += dt;
     // Só a ação medida dispara uma rajada. A trava curta evita ruído da física,
     // sem agendar novos pulsos: cada curva/arranque tem seu próprio instante.
-    if (intervalo >= 0.08 && (comecouSubida || arrancou || manobrou)) {
+    if (!nascendo && intervalo >= 0.08 && (comecouSubida || arrancou || manobrou)) {
       const intensidade = limitar((comecouSubida ? 0.58 : 0.3) +
         velocidade / 175 * 0.26 + Math.min(aceleracao / 700, 1) * 0.34, 0, 1);
       forca = Math.max(forca, intensidade);
@@ -87,6 +96,9 @@ export function configurarSomPropulsaoRoboBola(scene, robo) {
     } : { x: 0, y: 0 };
     anterior = { x: robo.x, y: robo.y, deslocamento, vx, vy, velocidade, vertical, aceleracao,
       ouvinteX: ouvinte?.x ?? 0, ouvinteY: ouvinte?.y ?? 0 };
+    // Silêncio real ao nascer, inclusive nas primeiras subidas e manobras.
+    // Continua medindo o robô para não reproduzir esse jato com atraso.
+    if (nascendo) return;
     if (!ouvinte || scene.player?.active === false || scene.morteEmAndamento ||
       robo.visible === false || robo.alpha === 0) { parar(); return; }
     // O emissor acompanha a imagem que levita; o ouvinte é sempre o jogador local.
@@ -123,13 +135,16 @@ export function configurarSomPropulsaoRoboBola(scene, robo) {
         ? ((robo.faseFlutuacao ?? Math.abs(robo.x) * 0.013) * 1.27) % som.totalDuration : 0;
       tocando = !!som.play({ volume: 0, loop: true, rate: 1, detune: afinacao, seek, pan });
       afinacaoAplicada = afinacao;
+      entrada = 0;
     }
     if (!tocando) return;
     const proximidade = 1 - distancia / ALCANCE;
     const borda = proximidade * proximidade * (3 - 2 * proximidade);
     const atenuacao = borda / (1 + (distancia / 125) ** 2);
     const intensidade = limitar(0.018 + 0.035 * Math.min(velocidade / 175, 1) + 0.947 * forca, 0, 1);
-    fonte.volume = VOLUME_MAXIMO * atenuacao * intensidade * limitar(robo.alpha ?? 1, 0, 1);
+    entrada = Math.min(1, entrada + dt / ENTRADA_SUAVE_SEGUNDOS);
+    const ganhoEntrada = entrada * entrada * (3 - 2 * entrada);
+    fonte.volume = VOLUME_MAXIMO * atenuacao * intensidade * limitar(robo.alpha ?? 1, 0, 1) * ganhoEntrada;
     som.setPan(pan);
     if (Math.abs(afinacao - afinacaoAplicada) >= 1) {
       som.setDetune?.(afinacao);

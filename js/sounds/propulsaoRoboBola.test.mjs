@@ -3,7 +3,11 @@ import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import { ROBO_BOLA_FLUTUACAO } from "../enemies/RoboBolaFlutuacao.js";
 import { existsSync } from "node:fs";
-import { carregarSomPropulsaoRoboBola, configurarSomPropulsaoRoboBola } from "./propulsaoRoboBola.js";
+import { carregarSomPropulsaoRoboBola, configurarSomPropulsaoRoboBola as configurarPropulsao } from "./propulsaoRoboBola.js";
+
+// Os testes de movimento abaixo isolam o comportamento depois do nascimento.
+const configurarSomPropulsaoRoboBola = (scene, robo) =>
+  configurarPropulsao(scene, robo, { silencioInicialMs: 0 });
 
 function fixture(webAudio = false) {
   const sons = [], filtros = [];
@@ -50,12 +54,46 @@ test("carrega o MP3 original e mantém a sustentação mais grave", () => {
   assert.deepEqual(sons[0].plays[0], { volume: 0, loop: true, rate: 1, detune: -600, seek: 1.27, pan: 0 });
 });
 test("sem movimento real não há pulsação artificial, mesmo mudando relógio e fase", () => {
-  const { scene, sons, robo, tick } = fixture();
-  const r = robo(); configurarSomPropulsaoRoboBola(scene, r); tick();
+  const { scene, sons, robo, tick, avancar } = fixture();
+  const r = robo(); configurarSomPropulsaoRoboBola(scene, r); tick(); avancar();
   const volume = sons[0].volume;
   for (let i = 0; i < 180; i++) { r.faseFlutuacaoAtual = i * 0.2; tick(); }
   assert.equal(sons[0].volume, volume);
   assert.equal(sons[0].plays.length, 1);
+});
+test("começar já em movimento não dispara rajada e a propulsão entra suavemente", () => {
+  const { scene, sons, robo, tick, avancar } = fixture();
+  const r = robo(); r.body.velocity.x = 120;
+  configurarSomPropulsaoRoboBola(scene, r); tick();
+  const inicial = sons[0].volume;
+  avancar(15); const cruzeiro = sons[0].volume;
+  assert.ok(inicial < cruzeiro / 20, "entrada discreta, sem impacto de nascimento");
+  assert.ok(cruzeiro < 0.02, "velocidade inicial não inventa uma rajada");
+  avancar(30); assert.equal(sons[0].volume, cruzeiro);
+  r.body.velocity.x = 0; tick(); avancar(50);
+  r.body.velocity.x = 120; tick();
+  assert.ok(sons[0].volume > cruzeiro * 5, "arranque posterior continua audível");
+  assert.deepEqual(sons.map(s => s.key), ["robo-bola-propulsao"]);
+  assert.equal(sons[0].plays.length, 1, "nenhum efeito extra é disparado");
+});
+test("nascimento fica silencioso mesmo com subidas e manobras, sem guardar jato para depois", () => {
+  const { scene, sons, robo, tick, avancar } = fixture();
+  const r = robo();
+  configurarPropulsao(scene, r);
+  for (let i = 0; i < 30; i++) {
+    r.body.velocity.x = i < 15 ? 120 : -120;
+    r.deslocamentoFlutuacao = -i * 0.4;
+    tick();
+    assert.equal(sons.length, 0, "nenhuma voz toca durante os primeiros 600 ms");
+  }
+  tick(); avancar(15);
+  assert.equal(sons.length, 1);
+  assert.ok(sons[0].volume > 0 && sons[0].volume < 0.02, "retoma o motor sem rajada acumulada");
+  const cruzeiro = sons[0].volume;
+  r.body.velocity.x = 0; r.body.velocity.y = 120; tick();
+  assert.ok(sons[0].volume > cruzeiro * 5, "manobras seguintes mantêm o jato normal");
+  r.x = 500; tick(); r.x = 0; tick();
+  assert.equal(sons[0].plays.length, 2, "aproximar de novo não repete o silêncio de nascimento");
 });
 test("rajadas seguem os instantes irregulares de arranque, curva e frenagem", () => {
   const { scene, sons, robo, tick, avancar } = fixture();
@@ -155,12 +193,14 @@ test("teleporte não vira impulso falso e cache ausente é tolerado", () => {
   scene.morteEmAndamento = true; tick(); assert.equal(sons[0].stops, 2);
 });
 test("limita motores juntos e limpa áudio, filtros e listeners na morte/saída", () => {
-  const { scene, sons, filtros, robo, tick } = fixture(true);
+  const { scene, sons, filtros, robo, tick, avancar } = fixture(true);
   const robos = Array.from({ length: 6 }, () => {
-    const r = robo(); r.body.velocity.x = 175;
+    const r = robo();
     configurarSomPropulsaoRoboBola(scene, r); return r;
   });
-  tick(); const total = sons.reduce((soma, s) => soma + s.volume, 0);
+  tick(); avancar();
+  robos.forEach(r => { r.body.velocity.x = 175; }); tick();
+  const total = sons.reduce((soma, s) => soma + s.volume, 0);
   assert.ok(total > 0.3 && total <= 0.41000001);
   scene.events.emit("pause"); assert.ok(sons.every(s => s.paused));
   scene.events.emit("resume"); assert.ok(sons.every(s => !s.paused));

@@ -11,6 +11,7 @@ import { carregarSonsPersonagem } from "../sounds/personagem.js";
 import { carregarSomGerador } from "../sounds/gerador.js";
 import { carregarSomLuzFabrica } from "../sounds/luzFabrica.js";
 import { carregarMusicaNovoBoss } from "../sounds/novoBoss.js";
+import { carregarMusicaFabrica } from "../sounds/musicaFabrica.js";
 import { carregarMusicaCidade } from "../sounds/musicaCidade.js";
 import { carregarSonsLeitorCartao } from "../sounds/leitorCartao.js";
 import { carregarSomPortaFabrica } from "../sounds/portaFabrica.js";
@@ -156,6 +157,7 @@ class Preloader extends Phaser.Scene {
     this.load.setPath("./assets/");
     carregarMusicaNovoBoss(this.load);
     carregarMusicaCidade(this.load);
+    carregarMusicaFabrica(this.load);
     carregarAssetsNovoBoss(this);
     carregarEfeitosEspeciais(this);
 
@@ -340,6 +342,12 @@ class Preloader extends Phaser.Scene {
         frameWidth: 278,
         frameHeight: 270,
       }
+    );
+
+    this.load.spritesheet(
+      "robo-serra-morte",
+      "PERSONAGENS/INIMIGOS PRINCIPAIS/ROBO_DE_SERRA/robo_serra_morte.png",
+      { frameWidth: 278, frameHeight: 270 },
     );
 
     // =====================================================
