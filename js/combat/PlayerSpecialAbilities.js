@@ -540,20 +540,23 @@ function invocarHolograma(scene, estado, agora) {
 
   // Cópia visual da Aria.
   const holo = scene.add
-    .sprite(inicio.x, inicio.y, player.texture.key, player.frame.name)
-    .setOrigin(player.originX, player.originY)
-    .setDisplaySize(player.displayWidth, player.displayHeight)
-    .setFlip(player.flipX, player.flipY)
+    .sprite(inicio.x, inicio.y, "personagem3-walk", 18)
+    .setOrigin(0.5, 0.5)
+    .setScale(player.scaleX, player.scaleY)
     .setTint(0xff9bd5)
     .setAlpha(0.65)
     .setDepth((player.depth ?? 50) - 0.01);
 
-  // Usar animação de caminhada que já existe.
-  const animacao = `walk-${scene.direcaoAtual}`;
-
-  if (scene.anims.exists(animacao)) {
-    holo.play(animacao);
+  // O holograma usa quadros próprios da Aria, independentemente do personagem do host.
+  const direcao = scene.direcaoAtual || "down";
+  const animacao = `aria-holograma-walk-${direcao}`;
+  if (!scene.anims.exists(animacao)) {
+    const inicioFrame = { up: 0, left: 9, down: 18, right: 27 }[direcao] ?? 18;
+    scene.anims.create({ key: animacao,
+      frames: scene.anims.generateFrameNumbers("personagem3-walk", { start: inicioFrame, end: inicioFrame + 8 }),
+      frameRate: 20, repeat: -1 });
   }
+  holo.play(animacao);
 
   holo.especialHolograma = true;
   holo.integridade = 2;
@@ -958,6 +961,7 @@ function criarSistemaEspeciais(scene) {
   // ===================================================
 
   const ativar = () => {
+    if (scene.morteEmAndamento || scene.vida <= 0 || scene.player?.morto) return false;
     if (scene.multiplayer && scene.coopRuntime && !scene.isMultiplayerHost) return scene.coopRuntime.requestSpecial();
     if (
       (scene.multiplayer && !scene.coopRuntime && scene.personagemSelecionada !== 'nyx') ||

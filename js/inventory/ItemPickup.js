@@ -81,6 +81,24 @@ function preparePickupTexture(scene, item, displaySize) {
   return { key, frame: undefined };
 }
 
+/** Cria coletáveis do mapa e itens largados com o mesmo visual e interação. */
+export function criarItemColetavel(scene, dados) {
+  const item = getInventoryItem(dados.itemId);
+  if (!item || !scene.textures.exists(item.image.key)) return null;
+  const displaySize = dados.itemId === "gasolina" ? 36.4 : 28;
+  const texture = preparePickupTexture(scene, item, displaySize);
+  const image = scene.add.image(dados.x, dados.y, texture.key, texture.frame)
+    .setDisplaySize(displaySize, displaySize)
+    .setDepth(dados.itemId === "card" ? (scene.player?.depth ?? 30) - 0.01
+      : scene.calcularDepthMundo?.(dados.y) ?? 30);
+  const marker = createCollectibleMarker(scene, image);
+  // Cada cliente desenha os drops a partir do progresso compartilhado.
+  if (dados.dropped) { image.coopLocalVisual = true; marker.coopLocalVisual = true; }
+  const pickup = { ...dados, image, marker, range: dados.range ?? DEFAULT_PICKUP_RANGE, name: item.name };
+  scene.itensColetaveis.push(pickup);
+  return pickup;
+}
+
 /**
  * Cria o botão de mão fixo na tela, inicialmente oculto.
  */
@@ -199,28 +217,7 @@ function criarSistemaInventario(scene) {
     }
 
     const position = getItemPosition(object);
-    const displaySize = itemId === "gasolina" ? 36.4 : 28;
-    const texture = preparePickupTexture(scene, item, displaySize);
-    const image = scene.add
-      .image(position.x, position.y, texture.key, texture.frame)
-      .setDisplaySize(displaySize, displaySize)
-      .setDepth(
-        itemId === "card"
-          ? (scene.player?.depth ?? 30) - 0.01
-          : scene.calcularDepthMundo?.(position.y) ?? 30,
-      );
-
-    scene.itensColetaveis.push({
-      uniqueId,
-      itemId,
-      quantity,
-      image,
-      marker: createCollectibleMarker(scene, image),
-      x: position.x,
-      y: position.y,
-      range,
-      name: item.name,
-    });
+    criarItemColetavel(scene, { uniqueId, itemId, quantity, ...position, range });
   }
 
   /**
@@ -228,7 +225,7 @@ function criarSistemaInventario(scene) {
    * ou porta selecionados.
    */
   const coletarItemProximo = () => {
-    if (scene.generatorMenuOpen || scene.devItemMenuOpen) return false;
+    if (scene.morteEmAndamento || scene.vida <= 0 || scene.generatorMenuOpen || scene.devItemMenuOpen) return false;
     if (interagirComMundo) {
       const interagiu = interagirComMundo();
       if (interagiu) {
@@ -246,7 +243,7 @@ function criarSistemaInventario(scene) {
     if (scene.inventory.hasCollected(pickup.uniqueId)) return false;
     if (scene.coopRuntime) return scene.coopRuntime.world.collect(pickup);
 
-    if (!scene.inventory.addItem(pickup.itemId, pickup.quantity)) {
+    if (!scene.inventory.addItem(pickup.itemId, pickup.quantity, { fuel: pickup.fuel ?? 0 })) {
       scene.mostrarAvisoInventarioCheio?.();
       return false;
     }
@@ -272,7 +269,7 @@ function criarSistemaInventario(scene) {
    */
   scene.atualizarColetaItens = () => {
     interagirComMundo = null;
-    if (scene.generatorMenuOpen || scene.devItemMenuOpen) {
+    if (scene.morteEmAndamento || scene.vida <= 0 || scene.generatorMenuOpen || scene.devItemMenuOpen) {
       // Descarta E durante os menus para não interagir com o mundo ao fechá-los.
       Phaser.Input.Keyboard.JustDown(scene.teclaColetarItem);
       scene.itemColetavelProximo = null;

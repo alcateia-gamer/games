@@ -1,3 +1,4 @@
+import { carregarQuedasCoop } from "../multiplayer/CoopRevival.js";
 /**
  * @file Cena que carrega mapas, personagens, sons, interface e tilesets. Mostra progresso e
  * entra na fase quando os recursos estão prontos.
@@ -164,6 +165,7 @@ class Preloader extends Phaser.Scene {
     preloadInventoryItemImages(this);
     this.load.image("hand_icon", "../Tilesets/extras/Hand_icon.png");
 
+    carregarQuedasCoop(this.load);
     carregarSonsPersonagem(this.load);
     carregarSonsKatana(this.load);
     carregarSonsInimigos(this.load);

@@ -28,9 +28,10 @@ export function obterDirecaoMiraAutomaticaAria(scene) {
     const distancia = Math.hypot(dx, dy);
     if (!(distancia > 0) || distancia > ALCANCE_MAXIMO_MIRA) return [];
     const direcao = { x: dx / distancia, y: dy / distancia };
+    const impactoAlvo = tempoImpactoFlecha(jogador, centro, direcao, alvo.hitboxDano ?? alvo.body);
     const bloqueado = obstaculosFlecha(scene, jogador, centro, 16).some(corpo => {
       const impacto = tempoImpactoFlecha(jogador, centro, direcao, corpo);
-      return impacto !== null && impacto < 1;
+      return impacto !== null && impacto < (impactoAlvo ?? 1);
     });
     return bloqueado ? [] : [{ direcao, distancia }];
   }).sort((a, b) => a.distancia - b.distancia);

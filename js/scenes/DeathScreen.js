@@ -3,6 +3,8 @@
  * um botão para jogar novamente após a animação.
  */
 
+import { droparInventarioAoMorrer } from "../inventory/InventoryDrops.js";
+
 /**
  * Substitui os erros animados pela tela de derrota e aguarda o clique para recarregar o jogo.
  */
@@ -57,12 +59,14 @@ function mostrarOpcaoJogarNovamente(scene, camada) {
 /**
  * Inicia a morte uma única vez, para sons e física e monta o overlay com a sequência de falha.
  */
-function mostrarTelaMorte(scene) {
-  if (scene.coopRuntime) return scene.coopRuntime.downPlayer();
-  if (scene.morteEmAndamento) {
+function mostrarTelaMorte(scene, { equipeDerrotada = false } = {}) {
+  if (scene.coopRuntime && !equipeDerrotada) return scene.coopRuntime.downPlayer();
+  if (scene.telaMorteMostrada || (scene.morteEmAndamento && !equipeDerrotada)) {
     return;
   }
 
+  scene.telaMorteMostrada = true;
+  droparInventarioAoMorrer(scene);
   scene.morteEmAndamento = true;
   scene.movimentoBloqueado = true;
   scene.sound?.stopAll();

@@ -43,7 +43,7 @@ export function criarPainelGerador(scene, { onActivate, onClose }) {
   const visuals = [];
   const hideDOM = () => {
     // Há HUDs tanto no container DOM do Phaser quanto diretamente sobre o jogo.
-    for (const element of [scene.game.domContainer, scene.hudStatus?.elemento]) {
+    for (const element of [scene.game.domContainer, scene.hudStatus?.elemento, scene.hudAliados?.elemento]) {
       if (!element || hiddenDOM.has(element)) continue;
       hiddenDOM.set(element, element.style.display);
       element.style.display = "none";

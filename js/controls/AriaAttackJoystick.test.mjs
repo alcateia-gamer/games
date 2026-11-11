@@ -413,3 +413,20 @@ test("alcance e velocidade independem de FPS e chamadas antigas continuam cardin
     assert.equal(p.active, false);
   }
 });
+
+
+test("mira prende na torre antes da colisão de sua base, mas respeita paredes à frente", () => {
+  for (const multiplayer of [false, true]) {
+    const base = { x: 100, y: -10, width: 20, height: 20, enable: true };
+    const torre = { id: 1, torre: true, active: true, vida: 120, body: { enable: true },
+      hitboxDano: { x: 80, y: -20, width: 60, height: 40 } };
+    const scene = { multiplayer, coopRuntime: multiplayer ? {} : null,
+      player: { active: true, x: 0, y: 0 }, novoBoss: { geradores: [torre] },
+      collisionGroup: { getChildren: () => [{ active: true, body: base }] } };
+    assert.deepEqual(obterDirecaoMiraAutomaticaAria(scene), { x: 1, y: 0 });
+    base.x = 30;
+    assert.equal(obterDirecaoMiraAutomaticaAria(scene), null);
+    base.x = 100; torre.active = false;
+    assert.equal(obterDirecaoMiraAutomaticaAria(scene), null);
+  }
+});

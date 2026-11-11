@@ -336,3 +336,24 @@ test("factory ordering follows movement and changes to the player's configured d
   assert.ok(scene.inimigos[0].depth < scene.player.depth);
   assert.ok(scene.inimigos[0].depth > 25.499);
 });
+
+
+test("robôs bola ficam acima das torres no solo e nas réplicas multiplayer", () => {
+  for (const remoteOnly of [false, true]) {
+    const player = { ...criarVisual("", -6000), body: { bottom: -6000 } };
+    const bola = { ...criarVisual("", -6100), tipoRobo: "bola", remoteOnly };
+    const serra = { ...criarVisual("", -6100), tipoRobo: "serra" };
+    const visual = { active: true, visible: true, depth: 16.5002 };
+    const scene = { player, inimigos: [bola, serra], profundidadePersonagemParte2: 16.5,
+      novoBoss: { geradores: [{ torre: true, visual }] } };
+    atualizarDepthAtores(scene);
+    assert.ok(bola.depth > visual.depth);
+    assert.ok(serra.depth < player.depth);
+    visual.depth = 16.5004;
+    atualizarDepthAtores(scene);
+    assert.ok(bola.depth > visual.depth, "acompanha mudanças de profundidade da torre");
+    visual.visible = false;
+    atualizarDepthAtores(scene);
+    assert.equal(bola.depth, serra.depth, "sem torre visível volta à ordem dos pés");
+  }
+});

@@ -216,7 +216,7 @@ test("perda de quadro pede keyframe, ignora deltas incompletos e recupera o mund
   Object.assign(r, { mapKey: "Level1", scene: {}, host: false,
     manager: { playerId: "client", sendCoopAction: kind => requests.push(kind) },
     receiver: { receive: v => applied.push(v), get() {}, destroy() {} },
-    replica: { receive() {}, destroy() {} }, world: { receiveFrame() {} } });
+    replica: { receive() {}, destroy() {} }, revival: { receive() {} }, world: { receiveFrame() {} } });
   const packet = (sequence, full) => ({ sequence, streamId: "visit", mapKey: "Level1",
     visuals: { full, changed: [], removed: [] }, players: [], targets: [] });
   r.receiveFrame(packet(1, true));
@@ -257,4 +257,27 @@ test("sair do mapa encerra a réplica do boss e libera referências para a próx
   assert.equal(replica.shield, null);
   assert.equal(replica.shieldCollision, null);
   replica.destroy();
+});
+
+
+test("música acompanha o host mesmo quando o cliente ainda está no mapa anterior", () => {
+  const recebidas = [];
+  const runtime = { host: false, mapKey: "Level1", music: { receive: (...args) => recebidas.push(args) } };
+  const music = { key: "musica-fabrica" };
+  CoopRuntime.prototype.receiveFrame.call(runtime, { mapKey: "Level1Parte2", music, streamId: "fabrica" });
+  assert.deepEqual(recebidas, [[music, "fabrica"]]);
+});
+
+test("equipe não troca de mapa para contornar o resgate de um aliado caído", () => {
+  const { scene, manager, world } = worldFixture();
+  manager.playerId = "host"; manager.publishState = () => {};
+  world.r.host = true;
+  world.r.players = { remotes: new Map([["client", {
+    actor: { active: true, x: 0, y: 0 }, data: { coop: { developer: true } },
+  }]]) };
+  world.r.revival = { participants: () => [{ dead: true }] };
+  world.receive({ playerId: "client", kind: "map", payload: { key: "Level1Parte2", from: "Level1", boss: true } });
+  assert.equal(scene.started, undefined);
+  assert.equal(world.transitioning, false);
+  world.destroy();
 });

@@ -31,6 +31,20 @@ function depthFromWorldY(y) {
  * Usa a mesma ordenação pelos pés para personagens e robôs, respeitando a faixa da fábrica.
  */
 function calcularDepthAtor(scene, footY, ator = null) {
+  const depth = calcularDepthPelosPes(scene, footY, ator);
+  if (ator?.tipoRobo !== "bola") return depth;
+  // Os robôs flutuam à frente das torres, inclusive nas réplicas do multiplayer.
+  let frente = depth;
+  for (const torre of scene.novoBoss?.geradores ?? []) {
+    const visual = torre.torre && torre.visual;
+    if (visual?.active && visual.visible !== false && Number.isFinite(visual.depth)) {
+      frente = Math.max(frente, visual.depth + 1e-8);
+    }
+  }
+  return frente;
+}
+
+function calcularDepthPelosPes(scene, footY, ator) {
   if (Number.isFinite(scene.profundidadePersonagemParte2)) {
     const player = scene.player;
     const playerFootY = player?.body?.bottom ?? player?.getBounds?.().bottom ?? footY;

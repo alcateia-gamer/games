@@ -46,7 +46,9 @@ export class CoopMusic {
     if (!state) { this.state = null; this.stopReplica(); return; }
     if (!KEYS.includes(state.key) || ![state.position, state.at, state.start, state.end, state.volume, state.rate]
       .every(Number.isFinite) || state.end <= state.start || state.rate <= 0) return;
-    this.state = { ...state, identity: `${stream}:${state.id}` };
+    this.state = { ...state, identity: `${stream}:${state.id}:${state.key}:${state.marker ?? ""}:${state.start}:${state.end}` };
+    // Encerra a faixa anterior mesmo se o áudio estiver suspenso ou a nova ainda carregar.
+    if (this.replica && this.identity !== this.state.identity) this.stopReplica();
     this.receivedAt = now();
     this.update();
   }

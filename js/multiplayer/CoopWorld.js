@@ -86,6 +86,8 @@ export class CoopWorld {
       this.manager.publishState();
     } else if (action.kind === "map" && !this.transitioning && p.from === r.mapKey &&
         COOP.maps.includes(p.key) && p.key !== r.mapKey) {
+      // A equipe precisa resgatar os caídos antes de mudar de mapa.
+      if (r.revival?.participants().some(p => p.dead)) return;
       const boss = !!(p.boss && developer && p.key === "Level1Parte2");
       const target = { ...(boss ? { key: p.key, x: -1085, y: -5169 } : p.key === "Level1Parte2" ? { key: p.key, x: 98, y: -1040 } :
         { key: p.key, x: 72, y: -2160 }), from: r.mapKey,

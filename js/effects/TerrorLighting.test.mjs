@@ -176,4 +176,13 @@ test("neon fica atrás do boss e das cópias mesmo sem jogador visível, com cla
   copia.frame = { ...copia.frame, cutX: 288 };
   render();
   assert.equal(uploads, antes + 2, "o recorte acompanha a animação das cópias");
+  const imagemBola = {};
+  const bola = { ...sprite(imagemBola), tipoRobo: "bola" };
+  scene.inimigos = [bola]; chamadas.length = 0;
+  render();
+  assert.ok(chamadas.some(ch => ch.context === corContext && ch.args[0] === imagemBola && ch.op === "destination-out"));
+  const comBola = uploads;
+  render(); assert.equal(uploads, comBola, "bola parada preserva o cache");
+  bola.y += 2; render(); assert.equal(uploads, comBola + 1, "recorte acompanha a flutuação");
+  bola.active = false; render(); assert.equal(uploads, comBola + 2, "remoção limpa a silhueta antiga");
 });

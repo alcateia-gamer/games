@@ -132,6 +132,7 @@ class Level1 extends Phaser.Scene {
     this.portaAbertaAoEntrar = data.portaAberta === true;
     this.entradaComFade = data.transicao === true;
     this.morteEmAndamento = false;
+    this.telaMorteMostrada = false;
     this.coopParryUntil = 0;
     this.coopHologram = false;
     this.inimigos = [];
@@ -380,7 +381,7 @@ class Level1 extends Phaser.Scene {
       },
     });
 
-    this.textoCoordenadas.setScrollFactor(0).setDepth(200);
+    this.textoCoordenadas.setScrollFactor(0).setDepth(200).setVisible(!this.multiplayer);
 
     // =====================================================
     // TECLA R

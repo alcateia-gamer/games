@@ -129,6 +129,7 @@ class Level1Parte2 extends Phaser.Scene {
         this.multiplayerManager?.playerId;
 
     this.morteEmAndamento = false;
+    this.telaMorteMostrada = false;
     this.coopParryUntil = 0;
     this.coopHologram = false;
     this.inimigos = [];
@@ -294,7 +295,7 @@ class Level1Parte2 extends Phaser.Scene {
       },
     });
 
-    this.textoCoordenadas.setScrollFactor(0).setDepth(200);
+    this.textoCoordenadas.setScrollFactor(0).setDepth(200).setVisible(!this.multiplayer);
 
     // Compensa o zoom sem modificar o visual.
     this.configurarCoordenadasFixas();

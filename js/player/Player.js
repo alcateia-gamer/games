@@ -224,6 +224,7 @@ function criarPlayer(scene) {
   // =====================================================
 
   scene.player.on("animationcomplete", (animation) => {
+    if (scene.morteEmAndamento || scene.vida <= 0 || scene.player.morto) return;
     if (animation.key.startsWith("aria-charge-")) {
       if (scene.ariaAtaqueCarregando) {
         scene.player.anims.stop();
@@ -585,6 +586,7 @@ function criarHitboxKatana(scene) {
     loop: true,
 
     callback: () => {
+      if (scene.morteEmAndamento || scene.vida <= 0 || scene.player?.morto) return;
       atualizarHitboxKatana();
 
       // ===============================================
@@ -677,6 +679,7 @@ function criarHitboxKatana(scene) {
  * houver ataque em andamento. Retorna se um novo ataque foi iniciado.
  */
 function atacar(scene) {
+  if (scene.morteEmAndamento || scene.vida <= 0 || scene.player?.morto) return false;
   if (jogadorPresoNovoBoss(scene)) return false;
   // A arma é independente do idle: atacar não troca a folha nem bloqueia a caminhada.
   // =====================================================
@@ -798,6 +801,7 @@ function atacar(scene) {
  * Encerra a carga da Aria, cria a flecha e executa a animação de soltura na direção escolhida.
  */
 function soltarAtaque(scene, agora = scene.time.now) {
+  if (scene.morteEmAndamento || scene.vida <= 0 || scene.player?.morto) return false;
   if (jogadorPresoNovoBoss(scene)) {
     if (personagem3Ativa(scene)) cancelarAtaqueAria(scene);
     return false;
@@ -844,7 +848,7 @@ function soltarAtaque(scene, agora = scene.time.now) {
  * Reposiciona o jogador no respawn e restaura textura, colisão, direção, vida, estamina e
  * estados de ataque.
  */
-function respawnPlayer(scene) {
+function respawnPlayer(scene, posicao = null) {
   scene.ariaAttackJoystick?.cancelar();
   if (personagem3Ativa(scene)) cancelarAtaqueAria(scene);
   scene.player.combatKnockbackUntil = 0;
@@ -882,7 +886,7 @@ function respawnPlayer(scene) {
   // POSIÇÃO
   // =====================================================
 
-  scene.player.setPosition(scene.respawnX, scene.respawnY);
+  scene.player.setPosition(posicao?.x ?? scene.respawnX, posicao?.y ?? scene.respawnY);
 
   // =====================================================
   // RESTAURA HITBOX WALK

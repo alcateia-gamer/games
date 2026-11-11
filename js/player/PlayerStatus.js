@@ -3,6 +3,7 @@
  * desenha a interface em canvas DOM na resolução da tela.
  */
 
+import { AllyStatusHud } from "../ui/AllyStatusHud.js";
 import { playPlayerHitEffects } from "../combat/CombatEffects.js";
 import { obterTemaPersonagem } from "../ui/CharacterTheme.js";
 import { colorirContornoEstaminaHUD, colorirMolduraHUD, colorirPixelHUD } from "../ui/HudTheme.js";
@@ -693,6 +694,9 @@ function montarHUD(scene) {
  */
 function iniciarHUD(scene) {
   scene.limparPainelStatusFixo?.();
+  const aliadosHUD = new AllyStatusHud(scene, personagem =>
+    prepararHUDOriginal(scene, HUD_FRAME_PERSONAGEM[personagem] ?? 0));
+  scene.hudAliados = aliadosHUD;
 
   let encerrado = false;
   let falhou = false;
@@ -823,6 +827,7 @@ function iniciarHUD(scene) {
       ultimoDpr = dpr;
     }
     atualizarBarrasHUD(scene);
+    aliadosHUD.atualizar();
   }
 
   // ===================================================
@@ -854,6 +859,8 @@ function iniciarHUD(scene) {
     scene.events.off(Phaser.Scenes.Events.SHUTDOWN, limpar);
 
     scene.hudStatus?.elemento?.remove();
+    aliadosHUD.destruir();
+    if (scene.hudAliados === aliadosHUD) scene.hudAliados = null;
 
     scene.hudStatus = null;
     scene.hudStatusDados = null;

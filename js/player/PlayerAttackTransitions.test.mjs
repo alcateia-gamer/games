@@ -119,6 +119,24 @@ function criarCena(personagem, estamina) {
   return scene;
 }
 
+test("morte bloqueia novos ataques e soltura da Aria sem consumir estamina ou trocar pose", () => {
+  for (const personagem of Object.keys(PERSONAGENS)) {
+    for (const estado of [{ morteEmAndamento: true }, { vida: 0 }, { morto: true }]) {
+      const s = criarCena(personagem, 100);
+      Object.assign(s, estado);
+      s.player.morto = estado.morto;
+      const textura = s.player.texture.key;
+      assert.equal(atacar(s), false);
+      assert.equal(s.estamina, 100);
+      assert.equal(s.atacando, false);
+      s.atacando = true; s.ariaAtaqueCarregando = true;
+      assert.equal(soltarAtaque(s), false);
+      assert.equal(s.player.texture.key, textura);
+      assert.equal(s.projeteis?.children.entries.length ?? 0, 0);
+    }
+  }
+});
+
 function mover(scene, x, y) {
   for (const [tecla, pressionada] of Object.entries({
     cima: y < 0, baixo: y > 0, esquerda: x < 0, direita: x > 0,

@@ -21,6 +21,7 @@ export function ocultarHUDDuranteCena(scene, camera) {
     }
     // Vida/estamina usam um canvas HTML fora da lista de objetos do Phaser.
     ocultarElemento(scene.hudStatus?.elemento);
+    ocultarElemento(scene.hudAliados?.elemento);
   }
 
   atualizar();

@@ -76,7 +76,7 @@ export function criarPainelLeitorCartao(scene, { onRead, onClose, onSwipe }) {
   let animation = null, pressed = null;
   const hiddenDOM = new Map();
   const hideDOM = () => {
-    for (const element of [scene.game.domContainer, scene.hudStatus?.elemento]) {
+    for (const element of [scene.game.domContainer, scene.hudStatus?.elemento, scene.hudAliados?.elemento]) {
       if (!element || hiddenDOM.has(element)) continue;
       hiddenDOM.set(element, element.style.display);
       element.style.display = "none";

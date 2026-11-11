@@ -326,6 +326,7 @@ function criarIluminacaoTerror(scene) {
   const brilhoContext = brilhoCanvas.getContext("2d");
   const brilhoAnterior = { frame: null };
   const oclusaoAnterior = { frame: null };
+  const posesBolas = new Map();
   const camadasAnteriores = new Map();
   let paredeAnterior = null;
   let regiaoAnterior = null;
@@ -421,7 +422,21 @@ function criarIluminacaoTerror(scene) {
     const personagemSobreBrilho = !!(temBrilho && player?.active !== false && player?.visible !== false &&
       (player?.alpha ?? 1) > 0 && player?.frame?.source?.image && Number.isFinite(player.x) && Number.isFinite(player.y));
     const bossSobreBrilho = fontesEnergiaBoss.some(fonte => fonte.vermelha && fonte.emissor?.frame?.source?.image);
-    const separarBrilho = personagemSobreBrilho || bossSobreBrilho;
+    const bolasSobreBrilho = temBrilho ? (scene.inimigos ?? []).filter(robo =>
+      robo?.tipoRobo === "bola" && robo.active && robo.visible !== false && robo.frame?.source?.image) : [];
+    // A flutuação e a animação mudam a silhueta mesmo com a câmera parada.
+    const bolasAtuais = new Set(bolasSobreBrilho);
+    for (const robo of posesBolas.keys()) if (!bolasAtuais.has(robo)) {
+      posesBolas.delete(robo); invalidada = true;
+    }
+    for (const robo of bolasSobreBrilho) {
+      let anterior = posesBolas.get(robo);
+      if (!anterior) { anterior = {}; posesBolas.set(robo, anterior); invalidada = true; }
+      for (const campo of ["frame", ...CAMPOS_OCLUSAO]) {
+        if (anterior[campo] !== robo[campo]) { anterior[campo] = robo[campo]; invalidada = true; }
+      }
+    }
+    const separarBrilho = personagemSobreBrilho || bossSobreBrilho || bolasSobreBrilho.length > 0;
     const frameBrilho = personagemSobreBrilho ? player.frame : null;
     if (brilhoAnterior.frame !== frameBrilho) { brilhoAnterior.frame = frameBrilho; invalidada = true; }
     if (personagemSobreBrilho) {
@@ -611,6 +626,7 @@ function criarIluminacaoTerror(scene) {
       desenharLuminaria(corContext, obterPerfilEnergia(fonte).cor, fonte.luz, paredesLanterna);
     }
     if (personagemSobreBrilho) ocultarBrilhoAtrasPersonagem(corContext, player);
+    for (const robo of bolasSobreBrilho) ocultarBrilhoAtrasPersonagem(corContext, robo);
     // Recorta também neons, arandelas e luzes de outras cópias, antes de juntar a cor à sombra.
     // O clareamento do sprite continua separado, sem deixar as faixas do piso atravessarem o corpo.
     if (bossSobreBrilho) for (const fonte of fontesEnergiaBoss) {

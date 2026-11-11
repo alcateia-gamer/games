@@ -1,3 +1,4 @@
+import { CoopRevival, animarQuedaCoop } from "./CoopRevival.js";
 /** Integração cooperativa dos dois mapas; uma simulação, réplicas interpoladas. */
 import { COOP, round, sameMap } from "./CoopProtocol.js";
 import { VisualSender, VisualReceiver } from "./CoopVisuals.js";
@@ -16,7 +17,6 @@ import { configurarSomPropulsaoRoboBola } from "../sounds/propulsaoRoboBola.js";
 import { atualizarRoboBola } from "../enemies/RoboBola.js";
 import { causarDanoAlvoAdicional, alvosAdicionaisCombate } from "../combat/CombatTargets.js";
 import { recuperarVida } from "../player/PlayerStatus.js";
-import { criarCompanionPet, atualizarCompanionPet, atualizarDepthCompanionPet } from "../player/CompanionPet.js";
 import { registrarApertoLibertacaoNovoBoss, atualizarRestricaoNovoBoss } from "../player/PlayerControlEffects.js";
 import { iniciarAnimacaoMarreta } from "../combat/SpecialAbilityEffects.js";
 import { respawnPlayer } from "../player/Player.js";
@@ -26,6 +26,8 @@ import { obterFilhosGrupoSeguro } from "../enemies/EnemyPathfinding.js";
 import { executarSpawnDev } from "../controls/DeveloperSpawns.js";
 import { playReplicatedHitEffects } from "../combat/CombatEffects.js";
 import { CoopMusic } from "./CoopMusic.js";
+import mostrarTelaMorte from "../scenes/DeathScreen.js";
+import { droparInventarioAoMorrer } from "../inventory/InventoryDrops.js";
 
 export function criarRuntimeCoop(scene) {
   if (!scene.multiplayer || !scene.multiplayerManager?.room) return null;
@@ -49,6 +51,7 @@ export class CoopRuntime {
     this.localContext = soloContext(scene);
     this.world = new CoopWorld(this);
     this.music = new CoopMusic(this);
+    this.revival = new CoopRevival(this);
     this.replica = new BossReplica(this);
     this.lastInput = this.lastFrame = this.lastKeyframe = -Infinity;
     this.forceKeyframe = true; this.disposed = false;
@@ -73,7 +76,7 @@ export class CoopRuntime {
     this.onFrame = packet => this.receiveFrame(packet);
     this.onAction = action => this.receiveAction(action);
     this.onRoom = room => this.receiveRoom(room);
-    this.onInput = () => this.players.receive(this.manager.room.players);
+    this.onInput = () => { if (!this.teamDefeated) this.players.receive(this.manager.room.players); };
     this.onPost = (time, delta) => this.update(time, delta);
     this.onShutdown = () => this.destroy();
     this.onPointer = (pointer, objects = []) => {
@@ -102,7 +105,6 @@ export class CoopRuntime {
       restricaoControleNovoBoss: null,
     });
     if (this.mapKey === "Level1Parte2") prepararBoss(this.bossContext, scene.novoBossConfig || novoBossConfig);
-    if (!scene.companionPet?.active) criarCompanionPet(this.localContext);
     scene.aliados = this.players.objects();
     Object.defineProperties(scene.player, {
       vida: { configurable: true, get: () => scene.vida, set: value => { scene.vida = value; } },
@@ -127,7 +129,7 @@ export class CoopRuntime {
       hologram: !!e?.holograma?.active };
   }
   requestSpecial() {
-    if (this.scene.morteEmAndamento) return false;
+    if (this.teamDefeated || this.scene.morteEmAndamento || this.scene.vida <= 0) return false;
     return this.manager.sendCoopAction("special", {});
   }
   escape() {
@@ -135,6 +137,7 @@ export class CoopRuntime {
     return this.manager.sendCoopAction("escape", {});
   }
   requestDamage(target, amount, area = null, attack = null) {
+    if (this.teamDefeated || this.scene.morteEmAndamento || this.scene.vida <= 0) return false;
     if (!(amount > 0) || !Number.isFinite(amount)) return false;
     let attackId = null;
     if (attack && typeof attack === "object") {
@@ -171,7 +174,7 @@ export class CoopRuntime {
     this.manager.sendCoopAction("control", { state }, { authority: true, targetId: id });
   }
   receiveRoom(room) {
-    if (this.disposed || !room) return;
+    if (this.disposed || this.teamDefeated || !room) return;
     const host = room.hostId === this.manager.playerId;
     if (host !== this.host) this.changeAuthority(host);
     this.scene.isMultiplayerHost = host;
@@ -181,6 +184,8 @@ export class CoopRuntime {
   }
   receiveAction(action) {
     if (this.disposed) return;
+    if (action.authority && action.kind === "teamDefeated") { this.finishTeamGame(); return; }
+    if (this.teamDefeated) return;
     if (action.kind === "musicClock") { this.music.receiveClock(action); return; }
     const s = this.scene, p = action.payload || {};
     if (action.authority) {
@@ -188,6 +193,7 @@ export class CoopRuntime {
         playReplicatedHitEffects(s, this.receiver.get(p.visual), p);
       } else if (action.kind === "hurt") causarDanoPlayer(s, p.amount, p.origin);
       else if (action.kind === "heal" && s.vida > 0 && !s.morteEmAndamento) recuperarVida(s, p.amount);
+      else if (action.kind === "revive") this.revivePlayer(p.downId);
       else if (action.kind === "teleport") this.teleport(p.x, p.y);
       else if (action.kind === "specialPose") {
         if (s.personagemSelecionada === "magnus-force") iniciarAnimacaoMarreta(s);
@@ -198,6 +204,8 @@ export class CoopRuntime {
       return;
     }
     if (!this.host) return;
+    // A queda já bloqueou o jogador; seus itens ainda precisam chegar ao mundo.
+    if (action.kind === "inventoryDrop") { this.world.receive(action); return; }
     const context = action.playerId === this.manager.playerId ? this.localContext : this.players.remotes.get(action.playerId)?.context;
     if (action.kind === "keyframe") { this.forceKeyframe = true; return; }
     if (!context || context.morteEmAndamento || context.vida <= 0) return;
@@ -247,8 +255,10 @@ export class CoopRuntime {
     return target.torre ? `torre:${target.id}` : `copia:${this.sender.id(target.sprite)}`;
   }
   receiveFrame(packet) {
-    if (this.host || packet.mapKey !== this.mapKey) return;
+    if (this.host || this.teamDefeated) return;
     if (Object.prototype.hasOwnProperty.call(packet, "music")) this.music.receive(packet.music, packet.streamId);
+    if (packet.mapKey !== this.mapKey) return;
+    this.revival.receive(packet.revivals);
     if (this.receivedStream !== packet.streamId) {
       this.receivedStream = packet.streamId;
       this.receiver.destroy(); this.replica.destroy();
@@ -307,14 +317,16 @@ export class CoopRuntime {
     return objects;
   }
   update(time, delta) {
-    if (this.disposed || !this.manager.room || !Number.isFinite(delta)) return;
+    if (this.disposed || this.teamDefeated || !this.manager.room || !Number.isFinite(delta)) return;
+    if (this.host) this.world.syncInventoryDrops();
+    if (this.checkTeamDefeat()) return;
     const s = this.scene;
     this.players.update(time, delta);
     this.music.update();
+    this.revival.update(delta);
     if (this.host) {
       atualizarRestricaoNovoBoss(this.localContext, delta);
       if (s.morteEmAndamento) { atualizarInimigoTeste(s, time); atualizarRoboBola(s, time, delta); }
-      if (!s.morteEmAndamento) { atualizarCompanionPet(this.localContext, time, delta); atualizarDepthCompanionPet(this.localContext); }
       this.checkRemoteProjectiles();
     } else { this.receiver.update(delta); this.replica.update(delta); this.world.update(delta); }
     if (time - this.lastInput >= 1000 / COOP.inputHz) {
@@ -335,7 +347,7 @@ export class CoopRuntime {
         if (data?.coop) data.coop.special = this.specialSnapshot(e.context);
       }
       const packet = { mapKey: this.mapKey, streamId: this.streamId,
-        music: this.music.snapshot(),
+        music: this.music.snapshot(), revivals: this.revival.snapshot(),
         visuals: this.sender.capture(this.worldObjects(), full),
         targets: (s.inimigos || []).filter(e => e.active && !e.morto).map(e => describeCombatTarget(e, e.networkId, this.sender)),
         boss: describeBoss(s, this.sender), ...this.world.snapshot() };
@@ -369,20 +381,52 @@ export class CoopRuntime {
     if (![x, y].every(Number.isFinite)) return;
     const p = this.scene.player; p.body.reset(x, y); p.body.updateFromGameObject(); p.setVelocity(0, 0);
   }
+  checkTeamDefeat() {
+    if (!this.host || this.teamDefeated) return false;
+    const players = this.manager.room?.players ?? [];
+    if (!players.length || !players.every(p => p.id === this.manager.playerId
+      ? this.scene.morteEmAndamento || this.scene.vida <= 0
+      : p.dead || (Number.isFinite(p.health) && p.health <= 0))) return false;
+    this.manager.sendCoopAction("teamDefeated", {}, { authority: true });
+    this.finishTeamGame();
+    return true;
+  }
+  finishTeamGame() {
+    if (this.teamDefeated) return;
+    this.teamDefeated = true;
+    this.scene.ariaAttackJoystick?.cancelar();
+    this.scene.atacando = false;
+    this.scene.attackBufferedUntil = 0;
+    this.scene.ariaAtaqueCarregando = false;
+    this.revival.destroy();
+    mostrarTelaMorte(this.scene, { equipeDerrotada: true });
+  }
   downPlayer() {
     const s = this.scene;
     if (s.morteEmAndamento) return;
-    s.morteEmAndamento = true; s.player.morto = true;
+    s.ariaAttackJoystick?.cancelar();
+    s.morteEmAndamento = true; s.vida = 0; s.player.morto = true;
+    s.coopDownId = `${this.manager.playerId}:${Date.now()}:${this.downSequence = (this.downSequence || 0) + 1}`;
+    droparInventarioAoMorrer(s);
+    s.atacando = false; s.attackBufferedUntil = 0; s.attackPhase = "normal";
+    s.ariaAtaqueCarregando = false; s.ariaCargaInicio = null;
+    if (s.estadoDash) s.estadoDash.ativo = false;
     s.player.setVelocity(0, 0); s.player.body.enable = false;
     s.restricaoControleNovoBoss = null;
-    const text = s.add.text(400, 190, "OPERADOR ABATIDO\nRETORNANDO EM 5 s", {
-      fontFamily: "monospace", fontSize: "20px", align: "center", color: "#ff849d", backgroundColor: "#10101d" })
-      .setOrigin(0.5).setScrollFactor(0).setDepth(999999);
-    s.time.delayedCall(5000, () => {
-      if (this.disposed) return;
-      s.morteEmAndamento = false; s.player.morto = false; s.player.body.enable = true;
-      s.player.invulneravel = false; respawnPlayer(s); s.player.body.updateFromGameObject(); text.destroy();
-    });
+    s.somCorrida?.stop();
+    animarQuedaCoop(s);
+    this.lastInput = -Infinity;
+  }
+  revivePlayer(downId) {
+    const s = this.scene;
+    if (this.teamDefeated) return false;
+    if (!s.morteEmAndamento || !downId || downId !== s.coopDownId) return false;
+    const posicao = { x: s.player.x, y: s.player.y };
+    s.morteEmAndamento = false; s.player.morto = false; s.player.body.enable = true;
+    s.player.invulneravel = false; s.restricaoControleNovoBoss = null;
+    respawnPlayer(s, posicao); s.player.body.updateFromGameObject();
+    s.coopDownId = null; this.lastInput = -Infinity;
+    return true;
   }
   changeAuthority(host) {
     this.host = host;
@@ -406,7 +450,7 @@ export class CoopRuntime {
     this.manager.off("playerInput", this.onInput);
     this.scene.events.off("postupdate", this.onPost); this.scene.events.off("shutdown", this.onShutdown);
     this.scene.input.off("pointerdown", this.onPointer);
-    this.players.destroy(); this.replica.destroy(); this.receiver.destroy(); this.world.destroy(); this.music.destroy();
+    this.players.destroy(); this.replica.destroy(); this.receiver.destroy(); this.world.destroy(); this.music.destroy(); this.revival.destroy();
     if (this.scene.coopRuntime === this) this.scene.coopRuntime = null;
   }
 }

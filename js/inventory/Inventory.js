@@ -39,6 +39,16 @@ class Inventory {
     return this.state.slots.map((slot) => ({ ...slot }));
   }
 
+  /** Retira todos os itens de uma vez, preservando os IDs já coletados no mapa. */
+  dropAll() {
+    const slots = this.getSlots();
+    if (slots.length) {
+      this.state.slots = [];
+      this.notifyChanged();
+    }
+    return slots;
+  }
+
   /**
    * Soma a quantidade de um item em todas as suas pilhas.
    */

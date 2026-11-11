@@ -3,7 +3,6 @@ import { describeVisual, applyVisual, createVisual, VisualSender, VisualReceiver
 import { COOP, sameMap, round } from "./CoopProtocol.js";
 import { supportsCompression } from "./CoopCompression.js";
 import { criarSistemaEspeciais, atualizarSistemaEspeciais } from "../combat/PlayerSpecialAbilities.js";
-import { criarCompanionPet, atualizarCompanionPet, atualizarDepthCompanionPet } from "../player/CompanionPet.js";
 import { atualizarRestricaoNovoBoss } from "../player/PlayerControlEffects.js";
 import { criarFalaFlutuante } from "../ui/PlayerSpeechBubble.js";
 import { atualizarPoseLanterna } from "../effects/FlashlightPose.js";
@@ -25,7 +24,8 @@ export class CoopPlayers {
     if (visual) { visual.x = 0; visual.y = 0; }
     return { mapKey: r.mapKey, health: round(health), maxHealth: s.vidaMaxima,
       dead: !!s.morteEmAndamento || health <= 0,
-      coop: { visual, compression: supportsCompression(),
+      coop: { visual, downId: s.coopDownId ?? null, compression: supportsCompression(),
+        inventoryDrop: s.coopInventoryDrop ?? null,
         developer: !!s.developerMode,
         flashlight: { angle: round(this.flashlightPose.angulo, 10000) },
         speech: [...(s.coopSpeechBubbles?.values() || [])].map(b => b.snapshot()).filter(Boolean),
@@ -72,6 +72,9 @@ export class CoopPlayers {
       const actor = entry.actor;
       actor.coopTargetX = data.x; actor.coopTargetY = data.y;
       actor.morto = !!data.dead;
+      if (data.dead && entry.context) {
+        entry.context.atacando = false; entry.context.restricaoControleNovoBoss = null;
+      }
       actor.coopFlashlightAngle = Number.isFinite(data.coop?.flashlight?.angle) ? data.coop.flashlight.angle : null;
       actor.direcaoAtual = data.direction;
       // Nunca substitui o movimento autoritativo do puxão pela posição anterior do cliente.
@@ -126,7 +129,6 @@ export class CoopPlayers {
       input: { ...s.input, keyboard: null }, coopRemotePlayerId: entry.data.id };
     const ctx = entry.context = soloContext(s, fields, true, entry.data.id);
     criarSistemaEspeciais(ctx);
-    criarCompanionPet(ctx);
     actor.on("animationcomplete", () => { ctx.atacando = false; });
   }
   update(time, delta) {
@@ -139,7 +141,6 @@ export class CoopPlayers {
         if (!entry.data.dead) {
           atualizarRestricaoNovoBoss(c, delta);
           atualizarSistemaEspeciais(c, delta);
-          atualizarCompanionPet(c, time, delta); atualizarDepthCompanionPet(c);
         }
         c.events.emit("postupdate", time, delta);
         if (c.restricaoControleNovoBoss) r.sendControl(c);

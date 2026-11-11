@@ -239,11 +239,11 @@ function criarControlesAtaque(scene) {
     pararSomTensaoAria(scene);
 
     // Executa o disparo original.
-    soltarAtaque(scene);
+    const disparou = soltarAtaque(scene);
 
     // Som de disparo sincronizado com
     // o instante em que a flecha é criada.
-    if (flechaVaiSerDisparada) {
+    if (flechaVaiSerDisparada && disparou) {
       tocarSomSoltarFlechaAria(scene);
     }
 

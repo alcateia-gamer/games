@@ -149,3 +149,16 @@ test("reinício da mesma faixa e shutdown limpam a réplica sem acumular sons", 
   music.destroy(); music.destroy();
   assert.equal(second.pendingRemove, true); assert.equal(music.state, null);
 });
+
+
+test("troca de faixa com mesmo ID para a anterior mesmo enquanto áudio está bloqueado", t => {
+  const { clock, music, scene } = fixture(t);
+  music.receive(track(clock), "stream");
+  const anterior = music.replica;
+  scene.sound.locked = true;
+  music.receive(track(clock, { key: "musica-novo-boss" }), "stream");
+  assert.equal(anterior.pendingRemove, true);
+  scene.sound.locked = false;
+  music.update();
+  assert.equal(music.replica.key, "musica-novo-boss");
+});
