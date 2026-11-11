@@ -17,6 +17,11 @@ export function criarTeleporteDevBoss(scene) {
       return;
     }
 
+    if (scene.coopRuntime) {
+      scene.coopRuntime.world.requestMap("Level1Parte2", { boss: true, developer: true });
+      return;
+    }
+
     scene.transicaoEmAndamento = true;
     scene.physics.pause();
     limparGrupoRobos(scene);

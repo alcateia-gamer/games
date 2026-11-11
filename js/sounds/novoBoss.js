@@ -17,9 +17,12 @@ export function prepararMusicaNovoBoss(scene, encontro) {
   let volumeAtual = 0;
 
   function iniciar() {
+    if (scene.coopRuntime && !scene.coopRuntime.host) return;
     if (musica || destruida || !scene.cache?.audio?.exists(CHAVE_MUSICA)) return;
 
     musica = scene.sound.add(CHAVE_MUSICA, { volume: 0 });
+    musica.coopMusicStop = parar;
+    musica.coopMusicVolume = () => volumeAtual;
     const duracao = musica.totalDuration;
 
     if (Number.isFinite(duracao) && duracao > 2) {

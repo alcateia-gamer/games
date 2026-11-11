@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { atualizarPoseLanterna } from "./FlashlightPose.js";
+import { atualizarPoseLanterna, atualizarLanternasAliadas } from "./FlashlightPose.js";
 
 function cena() {
   return { direcaoAtual: "down", player: {
@@ -8,6 +8,25 @@ function cena() {
     texture: { key: "walk" }, frame: { name: 18 }, body: { velocity: { x: 0, y: 0 } },
   } };
 }
+
+test("lanterna do aliado usa mira transmitida, posição visual e some com energia, morte ou saída", () => {
+  const { player } = cena();
+  Object.assign(player, { active: true, coopFlashlightAngle: -Math.PI / 4, direcaoAtual: "up" });
+  const scene = { remotePlayers: new Map([["ally", player]]) }, lanternas = new Map();
+  assert.equal(atualizarLanternasAliadas(scene, lanternas), true);
+  assert.equal(lanternas.get(player).pose.angulo, -Math.PI / 4);
+  assert.equal(atualizarLanternasAliadas(scene, lanternas), false);
+  player.x += 24;
+  assert.equal(atualizarLanternasAliadas(scene, lanternas), true);
+  assert.equal(lanternas.get(player).pose.x, player.x);
+  assert.equal(atualizarLanternasAliadas(scene, lanternas, true), true);
+  assert.equal(lanternas.size, 0);
+  player.morto = true; atualizarLanternasAliadas(scene, lanternas);
+  assert.equal(lanternas.size, 0);
+  player.morto = false; atualizarLanternasAliadas(scene, lanternas);
+  scene.remotePlayers.clear(); atualizarLanternasAliadas(scene, lanternas);
+  assert.equal(lanternas.size, 0);
+});
 
 test("barriga permanece centralizada em cada pose cardinal e mantém o feixe nas oito direções ao parar", () => {
   for (const [direcao, frame, barriga] of [

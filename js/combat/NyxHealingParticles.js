@@ -4,11 +4,13 @@ import { criarEfeitoEspecial, atualizarEfeitoEspecial, deslocamentoChao } from '
 export function criarParticulasCuraNyx(scene,alvo) {
   const animacao=criarEfeitoEspecial(scene,'nyx-cura',28);
   if (animacao) {
+    animacao.sprite.coopAnchor = alvo;
     animacao.sprite.setName?.('nyx-cura-particulas');
     return {alvo,grafico:animacao.sprite,animacao};
   }
   // Implementação anterior preservada para indisponibilidade do recurso.
   const grafico=scene.add.graphics();
+  grafico.coopAnchor = alvo;
   if (!grafico.fillRect) { grafico.destroy();return null; }
   grafico.setName?.('nyx-cura-particulas');
   return {alvo,grafico};

@@ -9,11 +9,13 @@ export function carregarMusicaFabrica(loader) {
 }
 
 export function iniciarMusicaFabrica(scene) {
+  if (scene.coopRuntime && !scene.coopRuntime.host) return null;
   if (controles.has(scene)) return controles.get(scene);
   let musica = null, destruida = false;
   const sincronizar = () => {
+    if (scene.coopRuntime && !scene.coopRuntime.host) { musica?.destruir(); musica = null; return; }
     const boss = scene.sound.get?.("musica-novo-boss");
-    if (scene.morteEmAndamento || boss?.isPlaying || boss?.isPaused) {
+    if ((scene.morteEmAndamento && !scene.coopRuntime) || boss?.isPlaying || boss?.isPaused) {
       musica?.destruir(); musica = null;
     } else if (!musica) {
       musica = iniciarMusicaAmbiente(scene, { chave: CHAVE, volumeMaximo: 0.06 });

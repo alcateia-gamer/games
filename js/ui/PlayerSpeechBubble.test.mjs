@@ -108,3 +108,23 @@ test("a fala acompanha a cabeça durante a digitação e mantém a alternância 
   assert.equal(fala.texto.text, "Segunda");
   fala.destroy();
 });
+
+test("estado remoto conserva digitação, acompanha o falante e não reinicia a cada pacote", () => {
+  const origem = fixture(), destino = fixture();
+  const replica = criarFalaFlutuante(destino.scene, "aliado", { replica: true });
+  origem.fala.mostrar("Olá, operador!"); origem.avancar(180);
+  const state = origem.fala.snapshot();
+  replica.aplicarEstadoRede(state);
+  assert.equal(replica.texto.text, origem.fala.texto.text);
+  destino.scene.time.now += 180;
+  destino.scene.player.x += 32;
+  replica.aplicarEstadoRede(state); replica.atualizar();
+  assert.ok(replica.texto.text.length > origem.fala.texto.text.length);
+  assert.equal(replica.texto.x, destino.scene.player.x + 16);
+  assert.equal(destino.scene.coopSpeechBubbles.has("aliado"), false, "réplica não retransmite a fala");
+  replica.aplicarEstadoRede(null);
+  assert.equal(replica.texto.visible, false);
+  origem.fala.destroy();
+  assert.equal(origem.scene.coopSpeechBubbles.size, 0);
+  replica.destroy();
+});

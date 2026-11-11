@@ -157,6 +157,7 @@ test("WebAudioSound real começa com ganho zero mesmo se o navegador liberar o �
   };
   const controle = iniciarMusicaCidade(scene);
   assert.equal(musica.volumeNode.gain.value, 0);
+  assert.equal(musica.coopMusicVolume(), 0);
   assert.equal(musica.source.inicio[1], 0, "o arquivo começa na introdução");
   scene.events.emit("update", 10000, 10000);
   assert.equal(musica.volumeNode.gain.value, 0, "tempo de jogo não consome a entrada com áudio suspenso");
@@ -167,6 +168,7 @@ test("WebAudioSound real começa com ganho zero mesmo se o navegador liberar o �
   assert.ok(musica.volumeNode.gain.value > 0 && musica.volumeNode.gain.value < 0.0015);
   contexto.currentTime = 3.5;
   assert.equal(musica.volumeNode.gain.value, 0.03);
+  assert.equal(musica.coopMusicVolume(), 0.03);
   musica.pause();
   musica.resume();
   assert.equal(musica.volumeNode.gain.value, 0.03, "retomar não salta para o teto");

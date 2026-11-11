@@ -3,7 +3,7 @@
  * ações, presença e atualizações de movimento.
  */
 
-import { COOP, RecentActions, validPlayerState } from "./CoopProtocol.js";
+import { COOP, RecentActions, validPlayerState, mergeCoopProgress } from "./CoopProtocol.js";
 
 const ROOM_CODE = /^[A-Z0-9]{4,6}$/;
 const CHARACTER_IDS = ["kai-mercer", "magnus-force", "aria-kade", "nyx"];
@@ -44,6 +44,7 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
     this.heartbeatTimer = null;
     this.coopActions = new RecentActions();
     this.coopSequence = 0;
+    this.coopStreamSequence = 0;
     this.coopReceivedSequence = -1;
     this.actionSequence = 0;
     /**
@@ -129,6 +130,8 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
     this.coopActions.clear();
     this.coopWorld = null;
     this.roomTopic = `room/${code}`;
+    this.coopMapAppliedId = 0;
+    this.localVitals = null;
     ["state", "action", "presence", "frame"].forEach((suffix) =>
       this.mqtt.subscribe(`${this.roomTopic}/${suffix}`),
     );
@@ -176,9 +179,18 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
     )
       return;
     if (!this.room || data.revision > (this.room.revision || 0)) {
+      const seen = new Map((this.room?.players || []).map(p => [p.id, p.lastSeen]));
+      if (data.status === "PLAYING" && this.room?.status !== "PLAYING")
+        this.coopTransitionUntil = Date.now() + COOP.transitionGraceMs;
       this.room = {
         ...data,
-        players: data.players.map((player) => this.normalizePlayer(player)),
+        coopProgress: mergeCoopProgress(this.room?.coopProgress, data.coopProgress),
+        players: data.players.map(p => {
+          const player = this.normalizePlayer(p);
+          player.lastSeen = p.id === data.hostId ? Date.now() :
+            Math.max(player.lastSeen || 0, seen.get(p.id) || 0);
+          return player;
+        }),
       };
       this.emit("roomUpdated", this.room);
       if (this.room.status === "PLAYING") this.emit("gameStarted", this.room);
@@ -294,6 +306,7 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
       player.ready = Boolean(action.ready) && Boolean(player.character);
       this.publishState();
     } else if (action.type === "start_game" && this.canStart()) {
+      this.coopTransitionUntil = Date.now() + COOP.transitionGraceMs;
       this.room.status = "PLAYING";
       this.publishState();
       this.emit("gameStarted", this.room);
@@ -472,6 +485,7 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
           .filter(
             (player) =>
               player.id !== this.playerId &&
+              now > (this.coopTransitionUntil || 0) &&
               now - player.lastSeen > PLAYER_TIMEOUT_MS,
           )
           .forEach((player) => this.removePlayer(player.id));
@@ -479,7 +493,7 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
         const host = this.room.players.find(
           (player) => player.id === this.room.hostId,
         );
-        if (host && Date.now() - host.lastSeen > PLAYER_TIMEOUT_MS) {
+        if (host && Date.now() > (this.coopTransitionUntil || 0) && Date.now() - host.lastSeen > PLAYER_TIMEOUT_MS) {
           const nextHost = [...this.room.players].sort((left, right) =>
             left.id.localeCompare(right.id),
           )[0];
@@ -646,9 +660,18 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
         !Array.isArray(packet.players) || packet.players.length > MAX_PLAYERS) return;
     this.coopReceivedSequence = packet.sequence;
     this.coopWorld = packet;
-    this.room.players = packet.players.map(p => this.normalizePlayer(p));
+    const seen = new Map(this.room.players.map(p => [p.id, p.lastSeen]));
+    this.room.players = packet.players.map(p => {
+      const player = this.normalizePlayer(p);
+      // Receber um frame válido prova presença do host, mesmo se o timestamp
+      // veio de um relógio diferente ou de um snapshot anterior ao heartbeat.
+      player.lastSeen = p.id === packet.hostId ? Date.now() :
+        Math.max(player.lastSeen || 0, seen.get(p.id) || 0);
+      return player;
+    });
     this.room.enemies = packet.enemies || [];
     this.room.serverTime = packet.serverTime;
+    if (packet.map) this.room.coopMap = packet.map;
     this.emit("coopFrame", packet);
     this.emit("roomUpdated", this.room);
   }

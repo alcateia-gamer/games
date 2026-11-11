@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { COMBAT_FEEL } from "./CombatEffects.js";
+import { COMBAT_FEEL, playHitEffects } from "./CombatEffects.js";
 import { causarDanoPlayer, verificarLasersNoPlayer } from "../enemies/EnemyLaser.js";
 import { criarServicosAtaques } from "../enemies/novoBoss/NovoBossServicosAtaques.js";
 import { atualizarMovimento } from "../controls/PlayerMovement.js";
@@ -109,6 +109,34 @@ test("multiplayer preserva o comportamento anterior sem recuo ou tremor adiciona
   assert.equal(scene.cameras.main.lastShake, undefined);
   assert.equal(scene.combatHitStopRemaining, undefined);
   assert.equal(scene.estadoDash.ativo, true);
+});
+
+test("runtime cooperativo reproduz recuo, cancelamento de dash e tremor do solo sem pausar o mundo", () => {
+  const scene = criarCena();
+  scene.multiplayer = true;
+  scene.coopRuntime = {};
+  causarDanoPlayer(scene, 10, { x: -50, y: 0 });
+  assert.equal(scene.vida, 90);
+  assert.equal(scene.player.body.velocity.x, COMBAT_FEEL.playerKnockback);
+  assert.equal(scene.estadoDash.ativo, false);
+  assert.deepEqual(scene.cameras.main.lastShake, [COMBAT_FEEL.shakeDuration, 0.001]);
+  assert.equal(scene.combatHitStopUntil, scene.time.now + COMBAT_FEEL.hitStopDuration);
+  assert.equal(scene.combatHitStopRemaining, undefined);
+  scene.teclasWASD.esquerda.isDown = true;
+  atualizarMovimento(scene);
+  assert.equal(scene.player.body.velocity.x, COMBAT_FEEL.playerKnockback);
+  assert.equal(iniciarDash(scene), false);
+});
+
+test("golpe de habilidade do aliado envia feedback ao dono sem sacudir a câmera do host", () => {
+  const scene = criarCena();
+  scene.coopRemotePlayerId = "client";
+  scene.coopRuntime = { broadcastHit(enemy, damage, options) { scene.sent = { damage, options }; } };
+  playHitEffects(scene, scene.player, { active: true, vida: 50 }, 10, { particles: 0 });
+  assert.equal(scene.cameras.main.lastShake, undefined);
+  assert.equal(scene.combatHitStopUntil, undefined);
+  assert.equal(scene.sent.damage, 10);
+  assert.equal(scene.sent.options.playerId, "client");
 });
 /**
  * @file Verifica o impacto no jogador e sua integração com dano, movimento e dash.

@@ -82,3 +82,14 @@ test("morte e saída encerram a música e seus listeners; retorno não acumula s
   iniciarMusicaFabrica(scene); assert.equal(sons.length, 2);
   scene.events.emit("destroy"); assert.ok(sons.every(s => s.destruido));
 });
+
+test("morte individual no cooperativo não interrompe a trilha compartilhada", () => {
+  const { scene, sons } = fixture();
+  scene.coopRuntime = { host: true };
+  const controle = iniciarMusicaFabrica(scene);
+  scene.morteEmAndamento = true; scene.events.emit("update");
+  assert.equal(sons.length, 1);
+  assert.equal(sons[0].destruido, false);
+  controle.destruir();
+  assert.equal(sons[0].destruido, true);
+});

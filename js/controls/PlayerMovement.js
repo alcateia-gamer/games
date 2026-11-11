@@ -53,7 +53,7 @@ function atualizarMovimento(scene) {
   }
 
   // Preserva o impulso de dano antes de consultar o dash ou a entrada normal.
-  if (!scene.multiplayer && scene.player.combatKnockbackUntil > scene.time.now) {
+  if ((!scene.multiplayer || scene.coopRuntime) && scene.player.combatKnockbackUntil > scene.time.now) {
     atualizarSomCorrida(scene, false);
     return;
   }

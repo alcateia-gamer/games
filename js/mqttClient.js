@@ -4,6 +4,7 @@
  */
 
 import { encodeFrame, decodeFrame } from "./multiplayer/CoopCompression.js";
+import { mergePendingFrame } from "./multiplayer/CoopVisuals.js";
 
 const CLIENT_ID_LETTERS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
@@ -104,8 +105,8 @@ class MqttClient extends Phaser.Events.EventEmitter {
     const publishOptions = { qos: options.qos ?? 1, retain: options.retain ?? false };
     if (options.compress && topic.endsWith("/frame")) {
       // Uma codificação em andamento e apenas o quadro seguinte: nunca acumula atraso.
-      if (!this.pendingFrame?.full || data.visuals?.full) this.pendingFrame = {
-        json, topic: fullTopic, options: publishOptions, full: !!data.visuals?.full };
+      const merged = mergePendingFrame(this.pendingFrame?.data, envelope);
+      this.pendingFrame = { data: merged, json: JSON.stringify(merged), topic: fullTopic, options: publishOptions };
       void this.flushFrame();
     } else {
       this.client.publish(fullTopic, json, publishOptions);

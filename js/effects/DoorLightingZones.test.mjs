@@ -10,6 +10,22 @@ const zona = (id = 1, x = 0) => ({ id, x, y: 0, width: 100, height: 100 });
 const porta = (nome = "a", x = 0, estado = "fechada") => ({ nome, estado,
   area: { x, y: 100, width: 100, height: 20 } });
 
+test("cliente mantém a sala revelada após a cutscene fechar a porta do boss", () => {
+  const host = new DoorLightingZones(mapa([zona()]));
+  const client = new DoorLightingZones(mapa([zona()]));
+  const a = porta("porta03"), b = porta("porta03");
+  host.revelarPortas([a], 100);
+  assert.equal(host.zonas[0].opacidade, 0);
+  client.aplicarEstadoRede(host.snapshotRede(200), 1200, [b], false);
+  client.atualizar(1300, [b], false);
+  assert.equal(b.estado, "fechada");
+  assert.equal(client.zonas[0].opacidade, 0);
+  assert.equal(client.zonas[0].liberada, true);
+  const revisao = client.revisao;
+  client.aplicarEstadoRede(host.snapshotRede(300), 1300, [b], false);
+  assert.equal(client.revisao, revisao, "o snapshot repetido não reinicia a revelação");
+});
+
 test("as seis zonas reais associam suas portas, incluindo os dois trechos novos do boss", () => {
   const raw = JSON.parse(readFileSync(new URL("../../assets/map/parte2-fase1.json", import.meta.url)));
   const map = { tileWidth: raw.tilewidth, getObjectLayer: name => raw.layers.find(l => l.name === name) };

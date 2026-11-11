@@ -2,6 +2,20 @@
 import { COOP, round } from "./CoopProtocol.js";
 
 const TYPES = new Set(["Sprite", "Image", "Graphics", "Arc", "Rectangle", "Ellipse", "Line", "Polygon", "Triangle", "Container"]);
+
+/** Junta quadros ainda não enviados: descartar um delta perderia criações e remoções. */
+export function mergePendingFrame(previous, next) {
+  if (!previous || next.visuals?.full || previous.streamId !== next.streamId ||
+      previous.mapKey !== next.mapKey || !previous.visuals || !next.visuals) return next;
+  const changed = new Map(previous.visuals.changed.map(n => [n.id, n.s]));
+  const removed = new Set(previous.visuals.removed);
+  for (const id of next.visuals.removed) { changed.delete(id); removed.add(id); }
+  for (const node of next.visuals.changed) {
+    changed.set(node.id, { ...changed.get(node.id), ...node.s }); removed.delete(node.id);
+  }
+  return { ...next, visuals: { full: previous.visuals.full,
+    changed: [...changed].map(([id, s]) => ({ id, s })), removed: [...removed] } };
+}
 export function describeVisual(o) {
   if (!o?.active || !TYPES.has(o.type)) return null;
   const state = { t: o.type, x: round(o.x), y: round(o.y), d: round(o.depth, 1000),
@@ -9,6 +23,12 @@ export function describeVisual(o) {
     a: round(o.alpha, 100), v: o.visible !== false, ox: round(o.originX ?? 0.5, 10000),
     oy: round(o.originY ?? 0.5, 10000), fx: !!o.flipX, fy: !!o.flipY,
     blend: o.blendMode || 0, tint: o.tintTopLeft ?? 0xffffff, tf: !!o.tintFill };
+  if (o.novoBossDisparoEnergia) state.bossProjectile = true;
+  if (o.coopAnchor?.active) {
+    const p = o.coopAnchor;
+    state.anchor = { id: p.id || o.scene?.multiplayerManager?.playerId,
+      x: round(p.x), y: round(p.y) };
+  }
   if (o.texture && o.frame) {
     state.k = o.texture.key; state.f = o.frame.name;
     // Alguns frames (armas recortadas e marreta) são cadastrados sob demanda.
@@ -20,8 +40,12 @@ export function describeVisual(o) {
   } else if (!o.texture && o.type !== "Container") {
     state.w = round(o.width); state.h = round(o.height);
     state.fill = o.fillColor; state.fa = round(o.fillAlpha, 100);
+    state.filled = !!o.isFilled; state.stroked = !!o.isStroked;
     state.stroke = o.strokeColor; state.sa = round(o.strokeAlpha, 100); state.lw = o.lineWidth || 0;
-    if (o.type === "Arc") state.radius = round(o.radius);
+    if (o.type === "Arc") {
+      state.radius = round(o.radius);
+      state.start = o.startAngle; state.end = o.endAngle; state.close = o.closePath;
+    }
     if (o.type === "Line") state.geom = [o.geom.x1, o.geom.y1, o.geom.x2, o.geom.y2];
     if (o.type === "Polygon") state.geom = o.geom.points.flatMap(p => [p.x, p.y]);
     if (o.type === "Triangle") state.geom = [o.geom.x1, o.geom.y1, o.geom.x2, o.geom.y2, o.geom.x3, o.geom.y3];
@@ -45,14 +69,25 @@ export function applyVisual(scene, o, s, interpolate = true) {
   else o.setPosition(s.x, s.y);
   o.setScale(s.sx, s.sy).setRotation(s.r).setDepth(s.d).setAlpha(s.a).setVisible(s.v);
   o.setOrigin?.(s.ox, s.oy); o.setFlip?.(s.fx, s.fy); o.setBlendMode?.(s.blend);
-  if (o.setTint && o.tintTopLeft !== s.tint) o.setTint(s.tint);
-  if (o.setTintFill && s.tf) o.setTintFill(s.tint);
+  // setTint também restaura MULTIPLY depois de um flash branco em FILL.
+  if (s.tf && o.setTintFill) o.setTintFill(s.tint);
+  else o.setTint?.(s.tint);
+  o.novoBossDisparoEnergia = !!s.bossProjectile;
   if (s.t === "Graphics" && Array.isArray(s.g) && s.g.length <= COOP.maxCommands) {
     o.commandBuffer = [...s.g]; o.dirty = true;
   } else if (!s.k && s.t !== "Container") {
     o.setFillStyle?.(s.fill, s.fa); o.setStrokeStyle?.(s.lw, s.stroke, s.sa);
-    if (s.t === "Arc") o.setRadius(s.radius);
+    if (s.filled !== undefined) o.isFilled = s.filled;
+    if (s.stroked !== undefined) o.isStroked = s.stroked;
+    if (s.t === "Arc") {
+      o.setRadius(s.radius);
+      if (Number.isFinite(s.start)) o.setStartAngle?.(s.start);
+      if (Number.isFinite(s.end)) o.setEndAngle?.(s.end);
+      if (s.close !== undefined) o.setClosePath?.(s.close);
+    }
     else if (s.t === "Rectangle" || s.t === "Ellipse") o.setSize(s.w, s.h);
+    else if ((s.t === "Line" || s.t === "Triangle") && Array.isArray(s.geom)) o.setTo?.(...s.geom);
+    else if (s.t === "Polygon" && Array.isArray(s.geom)) o.setTo?.(s.geom);
   }
   return o;
 }
@@ -113,10 +148,12 @@ export class VisualReceiver {
     for (const node of packet.changed) {
       if (typeof node.id !== "string" || !node.s || this.entries.size >= COOP.maxNodes && !this.entries.has(node.id)) continue;
       const before = this.entries.get(node.id);
-      const s = { ...before?.state, ...node.s };
+      const s = packet.full ? { ...node.s } : { ...before?.state, ...node.s };
       if (Array.isArray(s.g) && s.g.length > COOP.maxCommands) continue;
       let object = before?.object;
-      if (!object || object.type !== s.t && !(s.k && object.type === "Sprite")) {
+      // Um delta sem a criação anterior só pode ser reconstruído pelo keyframe.
+      if (!s.t) continue;
+      if (!object?.active || object.type !== s.t && !(s.k && object.type === "Sprite")) {
         object?.destroy(); object = createVisual(this.scene, s);
       } else applyVisual(this.scene, object, s);
       if (object) this.entries.set(node.id, { object, state: s });
@@ -129,13 +166,20 @@ export class VisualReceiver {
   get(id) { return this.entries.get(id)?.object; }
   update(delta) {
     const alpha = 1 - Math.exp(-Math.min(100, Math.max(0, delta)) / 65);
-    for (const { object: o } of this.entries.values()) {
+    for (const { object: o, state } of this.entries.values()) {
+      const anchor = state.anchor;
+      const player = anchor && (anchor.id === this.scene.multiplayerManager?.playerId
+        ? this.scene.player : this.scene.remotePlayers?.get(anchor.id));
+      if (o.active && player?.active && Number.isFinite(anchor.x) && Number.isFinite(anchor.y)) {
+        o.setPosition(state.x + player.x - anchor.x, state.y + player.y - anchor.y);
+        continue;
+      }
       if (!o.active || !Number.isFinite(o.coopTargetX)) continue;
       const distance = Math.hypot(o.coopTargetX - o.x, o.coopTargetY - o.y);
       const factor = distance > 180 ? 1 : alpha;
       o.setPosition(o.x + (o.coopTargetX - o.x) * factor, o.y + (o.coopTargetY - o.y) * factor);
     }
   }
-  remove(id) { this.entries.get(id)?.object.destroy(); this.entries.delete(id); }
+  remove(id) { this.entries.get(id)?.object?.destroy(); this.entries.delete(id); }
   destroy() { for (const id of [...this.entries.keys()]) this.remove(id); }
 }

@@ -68,6 +68,15 @@ test("o listener de O é removido ao sair da cena", () => {
   assert.equal(tecla.listenerCount("down"), 0);
 });
 
+test("O cooperativo solicita viagem compartilhada sem parar a física ou iniciar uma cena local", () => {
+  const { scene, press } = fixture("Level1");
+  scene.coopRuntime = { world: { requestMap(key, options) { scene.requested = { key, options }; } } };
+  press();
+  assert.deepEqual(scene.requested, { key: "Level1Parte2", options: { boss: true, developer: true } });
+  assert.equal(scene.physics.paused, undefined);
+  assert.equal(scene.scene.destination, undefined);
+});
+
 test("a fábrica recebe o destino e ativa DEV antes de criar os controles", async () => {
   const { default: Level1Parte2 } = await import("../scenes/Level1Parte2.js");
   const { scene, press } = fixture("Level1");

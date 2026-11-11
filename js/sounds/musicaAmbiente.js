@@ -4,6 +4,7 @@ const DURACAO_ENTRADA_MS = 6000;
 const controles = new WeakMap();
 
 export function iniciarMusicaAmbiente(scene, { chave, volumeMaximo = 0.06, trechoLoop = null }) {
+  if (scene.coopRuntime && !scene.coopRuntime.host) return null;
   const sonsCena = controles.get(scene) ?? new Map();
   if (sonsCena.has(chave)) return sonsCena.get(chave);
   if (!scene.cache?.audio?.exists(chave)) return null;
@@ -69,6 +70,15 @@ export function iniciarMusicaAmbiente(scene, { chave, volumeMaximo = 0.06, trech
     },
   };
   sonsCena.set(chave, controle);
+  musica.coopMusicControl = controle;
+  musica.coopMusicVolume = () => {
+    const context = musica.manager?.context;
+    if (context && inicioEntradaAudio !== null) {
+      const p = Math.max(0, Math.min(1, (context.currentTime - inicioEntradaAudio) / (DURACAO_ENTRADA_MS / 1000)));
+      return volumeMaximo * p * p * (3 - 2 * p);
+    }
+    return musica.volume;
+  };
   controles.set(scene, sonsCena);
   scene.events.once("shutdown", controle.destruir);
   scene.events.once("destroy", controle.destruir);

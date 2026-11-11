@@ -45,7 +45,7 @@ function criarControles(scene) {
 
 function atualizarControles(scene) {
   // Movimento normal e dash.
-  atualizarMovimento(scene);
+  if (!scene.coopRuntime || !(scene.combatHitStopUntil > scene.time.now)) atualizarMovimento(scene);
 
   // Delta real do loop do Phaser.
   const delta = scene.game?.loop?.delta ?? 16.67;

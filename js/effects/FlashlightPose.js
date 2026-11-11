@@ -41,3 +41,27 @@ export function atualizarPoseLanterna(scene, pose) {
   pose.y = player.y + x * sin + y * cos;
   return pose;
 }
+
+/** Usa a mira enviada pelo dono e a posição interpolada vista nesta tela. */
+export function atualizarLanternasAliadas(scene, lanternas, energia = false) {
+  const presentes = new Set();
+  let alteradas = false;
+  for (const player of scene.remotePlayers?.values() || []) {
+    if (energia || !player.active || player.morto || player.visible === false ||
+        !Number.isFinite(player.coopFlashlightAngle)) continue;
+    presentes.add(player);
+    let entrada = lanternas.get(player);
+    if (!entrada) { entrada = { player, pose: {} }; lanternas.set(player, entrada); alteradas = true; }
+    const { pose } = entrada, x = pose.x, y = pose.y, angulo = pose.angulo;
+    atualizarPoseLanterna({ player, direcaoAtual: player.direcaoAtual }, pose);
+    pose.angulo = player.coopFlashlightAngle;
+    if (x !== pose.x || y !== pose.y || angulo !== pose.angulo || entrada.frame !== player.frame) alteradas = true;
+    for (const key of ["scaleX", "scaleY", "flipX", "flipY", "rotation", "originX", "originY", "alpha"]) {
+      if (entrada[key] !== player[key]) alteradas = true;
+      entrada[key] = player[key];
+    }
+    entrada.frame = player.frame;
+  }
+  for (const player of lanternas.keys()) if (!presentes.has(player)) { lanternas.delete(player); alteradas = true; }
+  return alteradas;
+}

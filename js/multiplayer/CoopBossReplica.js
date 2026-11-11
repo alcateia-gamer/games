@@ -3,6 +3,7 @@ import { prepararCameraNovoBoss } from "../enemies/novoBoss/NovoBossCamera.js";
 import { criarColisaoBarreiraNovoBoss } from "../enemies/novoBoss/NovoBossBarreiraColisao.js";
 import { jogadorNaArenaNovoBoss } from "../enemies/novoBoss/NovoBossConfig.js";
 import { invalidarCacheNavegacao } from "../enemies/EnemyPathfinding.js";
+import BossIntroLighting from "../effects/BossIntroLighting.js";
 
 const box = rect => rect && { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
 export function describeCombatTarget(target, id, sender) {
@@ -22,12 +23,16 @@ export function describeBoss(scene, sender) {
     fase: e.fase, estado: e.estado, suspenso: e.suspenso, morto: e.morto,
     relogioCombate: e.relogioCombate, barreiraAtiva: e.barreiraAtiva,
     prologo: e.prologo?.snapshot(), intro: e.introducao?.snapshot(),
+    introLighting: e.introducao?.iluminacao && Object.fromEntries(
+      ["ativa", "progresso", "aura", "ambiente", "topo", "base", "revisao"].map(k => [k, e.introducao.iluminacao[k]])),
+    shieldCharge: e.sistemaGeradores?.cargaEscudo,
     introAtiva: !!scene.cenaEntradaBossAtiva,
     shield: shield && { x: shield.x, y: shield.y, radius: shield.body?.radius,
       enabled: shield.body?.enable === true },
     alvos: (e.alvosIlusorios || []).map((a, i) => describeCombatTarget(a, `copia:${sender.id(a.sprite) || i}`, sender)),
     geradores: (e.geradores || []).map(g => ({ ...describeCombatTarget(g, `torre:${g.id}`, sender),
       idTiled: g.id, ligado: g.ligado, estadoGerador: g.estadoGerador,
+      luzChoqueIdle: g.luzChoqueIdle,
       colisoes: (g.colisaoMapa?.corpos || []).map(b => ({ id: b.gameObject?.tiledCollisionId, enable: b.enable })) })),
     ilusoesAtivas: !!e.sistemaIlusoes?.ativo, clonesAtivos: !!e.sistemaClones?.ativo };
 }
@@ -55,6 +60,7 @@ export class BossReplica {
       s.novoBoss = this.encounter;
       criarHudNovoBoss(this.runtime.localContext, this.encounter);
       this.camera = prepararCameraNovoBoss(this.runtime.localContext, this.encounter);
+      this.lighting = new BossIntroLighting(data.config.arena);
     }
     const e = this.encounter;
     for (const [key, value] of Object.entries(target)) {
@@ -64,12 +70,18 @@ export class BossReplica {
       barreiraAtiva: data.barreiraAtiva, suspenso: data.suspenso,
       relogioCombate: data.relogioCombate,
       geradores: data.geradores.map(g => ({ ...this.target(g), id: g.idTiled,
+        visual: this.runtime.receiver.get(g.visual), luzChoqueIdle: g.luzChoqueIdle,
         ligado: g.ligado, estadoGerador: g.estadoGerador })),
       alvosIlusorios: data.alvos.map(a => this.target(a)),
       sistemaIlusoes: { ativo: data.ilusoesAtivas },
       sistemaClones: { ativo: data.clonesAtivos, alvos: data.alvos },
       prologo: data.prologo ? { bloqueiaCombatePrincipal: data.prologo.estado !== "COMBATE_PRINCIPAL",
         estado: data.prologo.estado, snapshot: () => data.prologo } : null });
+    if (data.introLighting) Object.assign(this.lighting, data.introLighting);
+    else this.lighting.restaurar();
+    e.introducao = { iluminacao: this.lighting, snapshot: () => data.intro };
+    e.sistemaGeradores = { cargaEscudo: data.shieldCharge,
+      corpoBarreira: { enable: data.shield?.enabled } };
     e.x = e.sprite?.x; e.y = e.sprite?.y;
     let changed = false;
     const collisions = new Map(s.collisionGroup?.getChildren().map(o => [o.tiledCollisionId, o.body]));
@@ -95,12 +107,17 @@ export class BossReplica {
     if (!e) return;
     e.x = e.sprite?.x; e.y = e.sprite?.y;
     e.jogadorNaArena = jogadorNaArenaNovoBoss(this.scene.player, e.config.arena);
-    this.camera?.atualizar(delta);
+    if (!this.scene.cenaEntradaBossAtiva && !this.runtime.world.introCamera) this.camera?.atualizar(delta);
     atualizarHudNovoBoss(this.runtime.localContext, e);
   }
   destroy() {
     this.shieldCollision?.destruir(); this.shield?.destroy(); this.camera?.destruir();
-    if (this.encounter) destruirHudNovoBoss(this.encounter);
+    if (this.encounter) {
+      this.encounter.encerrado = true;
+      destruirHudNovoBoss(this.encounter);
+      if (this.scene.novoBoss === this.encounter) this.scene.novoBoss = null;
+    }
+    this.shieldCollision = this.shield = this.camera = this.lighting = null;
     this.encounter = null;
   }
 }

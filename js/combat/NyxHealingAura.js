@@ -9,8 +9,9 @@ let sequencia = 0;
 const mapa = scene => scene.sys?.settings?.key || scene.scene?.key;
 
 function criarAura(scene, id, inicio, dono = null) {
-  return { id, inicio, dono,
-    efeito:criarEfeitoEspecial(scene,'nyx',NYX_AURA.raio), encerrada:false };
+  const efeito = criarEfeitoEspecial(scene,'nyx',NYX_AURA.raio);
+  if (efeito) efeito.sprite.coopAnchor = scene.player;
+  return { id, inicio, dono, efeito, encerrada:false };
 }
 
 export function prepararAuraNyx(scene, estado) {
@@ -59,7 +60,11 @@ export function prepararAuraNyx(scene, estado) {
     }
   };
   scene.events.on('preupdate',estado.verificarVidaAura);
-  estado.atualizarVisuaisCuraNyx = () => atualizarVisuaisCura(scene,estado);
+  estado.atualizarVisuaisCuraNyx = () => {
+    atualizarVisuaisCura(scene,estado);
+    if (estado.auraNyx && scene.player?.active)
+      posicionarAura(scene,estado.auraNyx,scene.player,Math.max(0,scene.time.now-estado.auraNyx.inicio));
+  };
   scene.events.on('postupdate',estado.atualizarVisuaisCuraNyx);
   if (scene.multiplayer) {
     scene.multiplayerManager?.on('roomUpdated',receber);
@@ -157,6 +162,12 @@ function atualizarCuras(scene,estado) {
   }
 }
 
+function posicionarAura(scene, aura, centro, elapsed) {
+  const depth = (centro.depth ?? scene.player.depth ?? 10)-.06;
+  const yChao = centro.y+deslocamentoChao(scene);
+  atualizarEfeitoEspecial(aura.efeito,centro.x,yChao,elapsed,depth+.01);
+}
+
 function atualizarAura(scene, estado, aura, centro) {
   const elapsed = Math.max(0,scene.time.now-aura.inicio);
   if (elapsed >= NYX_AURA.animacao) {
@@ -164,9 +175,7 @@ function atualizarAura(scene, estado, aura, centro) {
     destruirAura(aura);
     return false;
   }
-  const depth = (centro.depth ?? scene.player.depth ?? 10)-.06;
-  const yChao = centro.y+deslocamentoChao(scene);
-  atualizarEfeitoEspecial(aura.efeito,centro.x,yChao,elapsed,depth+.01);
+  posicionarAura(scene,aura,centro,elapsed);
   return true;
 }
 

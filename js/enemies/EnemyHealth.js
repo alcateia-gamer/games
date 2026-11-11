@@ -56,7 +56,7 @@ function causarDanoInimigo(
   }
 
   notificarGrupo(scene, alvo);
-  playHitEffects(scene, scene.player, alvo, quantidade, options);
+  playHitEffects(scene, options.attacker || scene.player, alvo, quantidade, options);
 
   if (alvo.vida <= 0) {
     destruirInimigoTeste(scene, alvo);

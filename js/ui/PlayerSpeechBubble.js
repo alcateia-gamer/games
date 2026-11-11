@@ -6,7 +6,7 @@ const TEMPO_LEITURA_MS = 3200;
 const OPACIDADE_FUNDO = 0.78;
 const RAIO_CAIXA = 9;
 
-export function criarFalaFlutuante(scene, nome = "player-speech-bubble") {
+export function criarFalaFlutuante(scene, nome = "player-speech-bubble", { replica = false } = {}) {
   const tema = obterTemaPersonagem(scene.personagemSelecionada);
   const texto = scene.add.text(0, 0, "", {
     fontFamily: "monospace", fontSize: "12px", fontStyle: "bold", color: tema.label, resolution: 3,
@@ -15,6 +15,8 @@ export function criarFalaFlutuante(scene, nome = "player-speech-bubble") {
   }).setOrigin(0, 1).setDepth(501).setName(nome).setVisible(false);
   const ponta = scene.add.graphics().setDepth(500).setVisible(false);
   const nativo = criarTextoNitido(scene, texto, ponta, nome, tema);
+  // Texto e fundo viajam juntos pelo estado de fala, inclusive quando usamos DOM.
+  texto.coopLocalVisual = ponta.coopLocalVisual = true;
   let visivel = false, destruido = false, timer = null;
   let ultimaFrase = "", ultimaEm = -Infinity;
   let letras = [], reveladas = 0, largura = 0, altura = 0;
@@ -70,12 +72,13 @@ export function criarFalaFlutuante(scene, nome = "player-speech-bubble") {
     ponta.setPosition(x, y).setVisible(true);
     nativo?.setPosition(x, y).setVisible(true);
   };
-  return {
+  let versao = 0;
+  const fala = {
     texto,
     mostrar(frases) {
       if (destruido) return;
       const instante = agora();
-      if (visivel && instante - ultimaEm < 500) return;
+      if (!replica && visivel && instante - ultimaEm < 500) return;
       const opcoes = Array.isArray(frases) ? frases : [frases];
       if (!opcoes.length) return;
       const anterior = ultimasPorGrupo.get(opcoes) ?? ultimaFrase;
@@ -83,6 +86,7 @@ export function criarFalaFlutuante(scene, nome = "player-speech-bubble") {
       ultimasPorGrupo.set(opcoes, ultimaFrase);
       ocultar();
       ultimaEm = instante;
+      versao++;
       letras = segmentador ? [...segmentador.segment(ultimaFrase)].map(p => p.segment) : Array.from(ultimaFrase);
       reveladas = 0; largura = 0; altura = 0;
       if (nativo) {
@@ -94,12 +98,29 @@ export function criarFalaFlutuante(scene, nome = "player-speech-bubble") {
     },
     atualizar,
     ocultar,
+    snapshot() {
+      return visivel ? { nome, frase: ultimaFrase, versao, decorrido: Math.max(0, agora() - ultimaEm) } : null;
+    },
+    aplicarEstadoRede(estado) {
+      if (!estado) { ocultar(); return; }
+      if (estado.versao === versao && estado.frase === ultimaFrase) return;
+      fala.mostrar(estado.frase);
+      versao = estado.versao;
+      ultimaEm = agora() - Math.max(0, Math.min(10000, estado.decorrido || 0));
+      atualizar();
+    },
     destroy() {
       if (destruido) return;
       ocultar(); destruido = true;
       texto.destroy(); ponta.destroy(); nativo?.destroy();
+      if (!replica && scene.coopSpeechBubbles?.get(nome) === fala) scene.coopSpeechBubbles.delete(nome);
     },
   };
+  if (!replica) {
+    scene.coopSpeechBubbles ||= new Map();
+    scene.coopSpeechBubbles.set(nome, fala);
+  }
+  return fala;
 }
 
 /** O navegador mantém as letras nítidas no zoom e em telas de alta densidade. */

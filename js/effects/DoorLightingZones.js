@@ -160,6 +160,29 @@ export default class DoorLightingZones {
     }
   }
 
+  snapshotRede(agora) {
+    return this.zonas.filter(z => z.liberada).map(z => ({ id: z.id, restaurada: z.restaurada,
+      revelacao: z.inicioRevelacao === null ? null : agora - z.inicioRevelacao,
+      lampadas: z.inicioLampadas === null ? null : agora - z.inicioLampadas }));
+  }
+
+  aplicarEstadoRede(dados, agora, portas, energia) {
+    if (!Array.isArray(dados)) return;
+    // Associa as portas antes de restaurar a liberação, inclusive no primeiro frame.
+    this.atualizar(agora, portas, energia);
+    for (const d of dados) {
+      const z = this.zonas.find(zona => zona.id === d.id);
+      if (!z) continue;
+      let mudou = !z.liberada || z.restaurada !== d.restaurada;
+      z.liberada = true; z.restaurada = d.restaurada;
+      for (const [campo, idade] of [["inicioRevelacao", d.revelacao], ["inicioLampadas", d.lampadas]]) {
+        if (z[campo] === null && Number.isFinite(idade)) { z[campo] = agora - idade; mudou = true; }
+      }
+      if (z.restaurada && z.opacidade !== 0) { z.opacidade = 0; mudou = true; }
+      if (mudou) this.revisao++;
+    }
+  }
+
   fatorLuz(luz, agora) {
     let fator = 1;
     for (const zona of this.porLuz.get(luz) ?? []) {

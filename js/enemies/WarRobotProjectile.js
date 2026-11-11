@@ -54,7 +54,7 @@ export function obterBocaMetralhadora(robo) {
   };
 }
 
-export function criarMunicaoRobo(scene, x, y, angulo, boca = {}) {
+export function prepararTexturaMunicaoRobo(scene) {
   const chave = "municao-vermelha-metralhadora-robo";
   if (!scene.textures.exists(chave)) {
     const g = scene.make.graphics({ x: 0, y: 0, add: false });
@@ -67,6 +67,11 @@ export function criarMunicaoRobo(scene, x, y, angulo, boca = {}) {
     g.generateTexture(chave, LARGURA_MUNICAO, 8);
     g.destroy();
   }
+  return chave;
+}
+
+export function criarMunicaoRobo(scene, x, y, angulo, boca = {}) {
+  const chave = prepararTexturaMunicaoRobo(scene);
   // O centro avança meia munição: a traseira coincide com a boca e todo o
   // projétil aparece à frente dela, inclusive após girar. A física fica centrada.
   const centroX = x + Math.cos(angulo) * LARGURA_MUNICAO / 2;

@@ -1,3 +1,4 @@
+import { atualizarSpawnsDev } from "../controls/DeveloperSpawns.js";
 import { obterBocaMetralhadora, criarMunicaoRobo } from "../enemies/WarRobotProjectile.js";
 /**
  * @file Cena da fábrica. Integra iluminação, gerador, porta interativa, inventário e
@@ -128,7 +129,10 @@ class Level1Parte2 extends Phaser.Scene {
         this.multiplayerManager?.playerId;
 
     this.morteEmAndamento = false;
+    this.coopParryUntil = 0;
+    this.coopHologram = false;
     this.inimigos = [];
+    this.lasersInimigo = null;
     this.grupoRobosAtivado = false;
     this.inimigoTeste = null;
     this.teleporteRetornoLiberado = false;
@@ -315,6 +319,7 @@ class Level1Parte2 extends Phaser.Scene {
   acenderLuzFabrica(obterProgressoPartida = null) {
     if (this.luzFabricaAcesa) return;
 
+    if (this.coopRuntime) obterProgressoPartida = this.coopRuntime.world.generatorProgress();
     this.luzFabricaAcesa = true;
     this.game.registry.set(FACTORY_GENERATOR_STATE_KEY, true);
     this.definirIluminacaoFabrica(true, obterProgressoPartida);
@@ -377,32 +382,7 @@ class Level1Parte2 extends Phaser.Scene {
     atualizarDepthGarras(this);
     atualizarDepthComputadoresPcAdm(this);
 
-    if (
-      (!this.multiplayer || this.isMultiplayerHost) &&
-      Phaser.Input.Keyboard.JustDown(this.teclaSpawnRobo1)
-    ) {
-      criarRobos(this, 1);
-    } else if (
-      (!this.multiplayer || this.isMultiplayerHost) &&
-      Phaser.Input.Keyboard.JustDown(this.teclaSpawnRobo2)
-    ) {
-      criarRobos(this, 2);
-    } else if (
-      (!this.multiplayer || this.isMultiplayerHost) &&
-      Phaser.Input.Keyboard.JustDown(this.teclaSpawnRobo3)
-    ) {
-      criarRobos(this, 3);
-    }
-
-    if ((!this.multiplayer || this.isMultiplayerHost) && Phaser.Input.Keyboard.JustDown(this.teclaSpawnRoboSerra)) {
-      criarRoboSerra(this);
-    }
-    if (
-      (!this.multiplayer || this.isMultiplayerHost) &&
-      Phaser.Input.Keyboard.JustDown(this.teclaSpawnRoboBola)
-    ) {
-      criarRoboBola(this);
-    }
+    atualizarSpawnsDev(this);
 
     this.spawnAreasRoboBola?.atualizar(delta);
     atualizarInimigoTeste(this, time);
@@ -518,8 +498,7 @@ class Level1Parte2 extends Phaser.Scene {
 
     manager.on("playerDamage", this.onPlayerDamage, this);
 
-    this.atualizarJogadoresRemotos(manager.room);
-    this.atualizarInimigosRemotos(manager.room);
+    // CoopRuntime cria as representações depois que os sistemas da cena estão prontos.
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       manager.off("roomUpdated", this.onMultiplayerRoomUpdated, this);

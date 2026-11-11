@@ -176,12 +176,14 @@ function iniciarParry(scene, estado, agora) {
   estado.parryGrafico?.destroy();
   estado.parryEfeito?.sprite.destroy();
   estado.parryEfeito = criarEfeitoEspecial(scene,'kai',CONFIG.kaiRaio);
+  if (estado.parryEfeito) estado.parryEfeito.sprite.coopAnchor = scene.player;
   estado.parryColisao?.destruir();
   estado.parryColisao = criarColisaoDomoKai(scene,estado,CONFIG.kaiRaio,CONFIG.kaiDuracao);
 
   estado.parryGrafico = scene.add
     .graphics()
     .setDepth((scene.player.depth ?? 50) + 0.15);
+  estado.parryGrafico.coopAnchor = scene.player;
 
 }
 
@@ -1139,7 +1141,7 @@ function atualizarSistemaEspeciais(scene, delta = 16.67) {
 
     // A Aria pode utilizar a troca mesmo
     // que a habilidade esteja em recarga.
-    const trocaDisponivel = nome === "aria-kade" && estado.holograma?.active;
+    const trocaDisponivel = nome === "aria-kade" && (estado.holograma?.active || scene.coopHologram);
 
     scene.botaoEspecial.setAlpha(esperando && !trocaDisponivel ? 0.35 : 0.75);
   }

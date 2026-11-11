@@ -32,6 +32,24 @@ function rede() {
   return {nyx,kai};
 }
 
+test('a aura acompanha a posição final da física no mesmo quadro sem adiantar a cura',()=>{
+  const s=scene('nyx');
+  s.textures={exists:()=>true};
+  s.cache={json:{get:()=>({duracoesMs:[1200]})}};
+  s.hitboxDanoPlayer={bottom:26};
+  s.add.image=()=>({scaleX:1,active:true,
+    setOrigin(){return this;},setScale(){return this;},setDepth(){return this;},setFrame(){return this;},
+    setPosition(x,y){this.x=x;this.y=y;return this;},destroy(){this.active=false;}});
+  criarSistemaEspeciais(s);s.events.emit('player:especial');
+  s.time.now=100;atualizarSistemaEspeciais(s);
+  s.player.x=40;s.player.y=30;s.events.emit('postupdate');
+  assert.equal(s.estadoEspecial.auraNyx.efeito.sprite.x,40);
+  assert.equal(s.estadoEspecial.auraNyx.efeito.sprite.y,56);
+  assert.equal(s.vida,20);
+  assert.equal(s.estadoEspecial.curasNyx.size,0);
+  s.limparSistemaEspeciais();
+});
+
 test('Nyx seleciona ao fim do GIF e concede dez pulsos, mesmo após os aliados saírem',()=>{
   const s=scene('nyx');
   const aliado={active:true,x:100,y:0,vida:40,vidaMaxima:200};

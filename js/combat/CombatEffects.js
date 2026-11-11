@@ -1,6 +1,6 @@
 /**
  * @file Efeitos de impacto do combate: partículas, flash, recuo, deformação, pausa breve e
- * tremor. Os efeitos coordenados são aplicados no modo solo.
+ * tremor. O cooperativo transmite os impactos e mantém o feedback de cada jogador local.
  */
 
 const COMBAT_FEEL = {
@@ -33,6 +33,10 @@ const COMBAT_FEEL_DEBUG = false;
  */
 function isSoloMode(scene) {
   return scene?.multiplayer !== true;
+}
+
+function supportsCombatEffects(scene) {
+  return isSoloMode(scene) || !!scene?.coopRuntime;
 }
 
 /**
@@ -78,6 +82,7 @@ function spawnHitParticles(scene, enemy, quantity = COMBAT_FEEL.particles.quanti
       .rectangle(enemy.x, enemy.y - 20, 4, 4, 0xffd166, 1)
       .setDepth(particleDepth)
       .setRotation(angle);
+    if (scene.coopRuntime) particle.coopLocalVisual = true;
 
     scene.tweens.add({
       targets: particle,
@@ -96,9 +101,14 @@ function spawnHitParticles(scene, enemy, quantity = COMBAT_FEEL.particles.quanti
 }
 
 /**
- * Prolonga a pausa breve de combate sem somar pausas menores; não altera o multiplayer.
+ * Prolonga a pausa breve de combate; no cooperativo, afeta só a entrada local.
  */
 function applyHitStop(scene, duration = COMBAT_FEEL.hitStopDuration) {
+  if (scene.coopRuntime) {
+    // A pausa de entrada pertence ao operador; a simulação compartilhada continua.
+    scene.combatHitStopUntil = Math.max(scene.combatHitStopUntil || 0, scene.time.now + duration);
+    return;
+  }
   if (!isSoloMode(scene)) {
     return;
   }
@@ -118,7 +128,7 @@ function applyCombatShake(
   damage,
   duration = COMBAT_FEEL.shakeDuration,
 ) {
-  if (!isSoloMode(scene) || !scene.cameras?.main) {
+  if (!supportsCombatEffects(scene) || !scene.cameras?.main) {
     return;
   }
 
@@ -142,7 +152,7 @@ function applyKnockback(
   force = COMBAT_FEEL.knockback,
   duration = COMBAT_FEEL.knockbackDuration,
 ) {
-  if (!isSoloMode(scene) || !enemy?.active || !enemy.body || !attacker) {
+  if (!supportsCombatEffects(scene) || !enemy?.active || !enemy.body || !attacker) {
     return;
   }
 
@@ -162,7 +172,7 @@ function applyKnockback(
  */
 function playPlayerHitEffects(scene, attacker, damage) {
   const player = scene.player;
-  if (!isSoloMode(scene) || !player?.active) {
+  if (!supportsCombatEffects(scene) || !player?.active) {
     return;
   }
 
@@ -235,7 +245,7 @@ function applySquash(enemy) {
  * Toca o som de impacto disponível no cache durante o modo solo.
  */
 function playHitSound(scene) {
-  if (!isSoloMode(scene) || !scene.sound?.play) {
+  if (!supportsCombatEffects(scene) || !scene.sound?.play) {
     return;
   }
 
@@ -248,7 +258,7 @@ function playHitSound(scene) {
  * Emite partículas extras e tremor de câmera para destacar a derrota de um inimigo.
  */
 function playDeathEffect(scene, enemy) {
-  if (!isSoloMode(scene) || !enemy?.active) {
+  if (!supportsCombatEffects(scene) || !enemy?.active) {
     return;
   }
 
@@ -260,25 +270,46 @@ function playDeathEffect(scene, enemy) {
  * Coordena os efeitos de um acerto e, se a vida chegou a zero, acrescenta o efeito de derrota.
  */
 function playHitEffects(scene, attacker, enemy, damage, options = {}) {
-  if (!isSoloMode(scene) || !enemy?.active) {
+  if (!supportsCombatEffects(scene) || !enemy?.active) {
     return;
   }
 
+  const localFeedback = options.localFeedback !== false && !scene.coopRemotePlayerId;
   playHitFlash(enemy);
   spawnHitParticles(scene, enemy, options.particles ?? COMBAT_FEEL.particles.quantity);
   applyKnockback(scene, attacker, enemy, options.knockback ?? COMBAT_FEEL.knockback);
   applySquash(enemy);
-  applyHitStop(scene, options.hitStop ?? COMBAT_FEEL.hitStopDuration);
-  applyCombatShake(scene, damage, options.shakeDuration ?? COMBAT_FEEL.shakeDuration);
+  if (localFeedback) {
+    applyHitStop(scene, options.hitStop ?? COMBAT_FEEL.hitStopDuration);
+    applyCombatShake(scene, damage, options.shakeDuration ?? COMBAT_FEEL.shakeDuration);
+  }
   if (options.playSound) {
     playHitSound(scene);
   }
 
   if (enemy.vida <= 0) {
-    playDeathEffect(scene, enemy);
+    spawnHitParticles(scene, enemy, 8);
+    if (localFeedback) applyCombatShake(scene, 25, 70);
   }
 
+  scene.coopRuntime?.broadcastHit?.(enemy, damage, {
+    ...options, playerId: options.playerId || scene.coopRemotePlayerId || scene.multiplayerManager?.playerId });
+
   debugCombat("HIT", { damage });
+}
+
+/** Não simula dano ou recuo na réplica; refaz efeitos menores que um frame de rede. */
+export function playReplicatedHitEffects(scene, enemy, impact) {
+  const visual = enemy?.active ? enemy : { active: true, x: impact.x, y: impact.y, depth: impact.depth };
+  if (enemy?.active) { playHitFlash(enemy); applySquash(enemy); }
+  spawnHitParticles(scene, visual, impact.particles ?? COMBAT_FEEL.particles.quantity);
+  if (impact.dead) spawnHitParticles(scene, visual, 8);
+  if (impact.playerId === scene.multiplayerManager?.playerId) {
+    applyHitStop(scene, impact.hitStop ?? COMBAT_FEEL.hitStopDuration);
+    applyCombatShake(scene, impact.dead ? 25 : impact.damage,
+      impact.dead ? 70 : impact.shakeDuration ?? COMBAT_FEEL.shakeDuration);
+    if (impact.playSound) playHitSound(scene);
+  }
 }
 
 export {

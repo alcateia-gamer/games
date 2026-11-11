@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
-import { RecentActions } from "./CoopProtocol.js";
+import { RecentActions, mergeCoopProgress } from "./CoopProtocol.js";
 import { VisualSender } from "./CoopVisuals.js";
 globalThis.Phaser = { Events: { EventEmitter } };
 const { default: Manager } = await import("./multiplayerManager.js");
@@ -36,6 +36,30 @@ test("entradas de jogadores não provocam broadcast da sala por comando", () => 
   host.publishCoopFrame({ mapKey: "Level1", visuals: { full: true, changed: [], removed: [] } });
   assert.equal(sent.filter(s => s.topic.endsWith("/frame")).length, 1);
   assert.equal(client.room.players[1].x, 19);
+});
+
+test("snapshot atrasado não apaga progresso já confirmado nem reinicia o gerador", () => {
+  const { host, client } = pair();
+  const progress = { flags: { factoryGeneratorPowered: true }, generatorStartedAt: 1000,
+    collected: { fuel: { uid: "fuel", playerId: "client" } } };
+  client.room.coopProgress = progress;
+  const stale = { flags: {}, collected: {} };
+  assert.deepEqual(mergeCoopProgress(progress, stale), progress);
+  client.receiveState({ ...host.room, revision: host.room.revision + 1, coopProgress: stale });
+  assert.deepEqual(client.room.coopProgress, progress);
+});
+
+test("frames e sala recebidos provam presença do host sem regredir o heartbeat", () => {
+  const { host, client } = pair();
+  host.room.players.forEach(p => { p.lastSeen = 1; });
+  const receivedAt = Date.now();
+  host.publishCoopFrame({ mapKey: "Level1" });
+  assert.ok(client.room.players.find(p => p.id === "host").lastSeen >= receivedAt);
+  const heartbeat = Date.now();
+  client.room.players.find(p => p.id === "client").lastSeen = heartbeat;
+  client.receiveState({ ...host.room, revision: host.room.revision + 1 });
+  assert.ok(client.room.players.find(p => p.id === "host").lastSeen >= receivedAt);
+  assert.equal(client.room.players.find(p => p.id === "client").lastSeen, heartbeat);
 });
 
 test("host atualiza sua entrada local sem viagem ao broker e ignora estado parado repetido", () => {
@@ -82,6 +106,20 @@ test("destruição do gerenciador encerra a conexão MQTT", () => {
   const { host } = pair();
   host.destroy();
   assert.equal(host.mqtt.disconnected, true);
+});
+
+test("carregamento do mapa tem tolerância antes de expulsar um jogador sem heartbeat", t => {
+  const { host } = pair(); let tick;
+  t.mock.method(globalThis, "setInterval", callback => { tick = callback; return 1; });
+  host.startHeartbeat();
+  host.room.players[1].lastSeen = Date.now() - 20000;
+  host.coopTransitionUntil = Date.now() + 60000;
+  tick();
+  assert.equal(host.room.players.length, 2);
+  host.coopTransitionUntil = Date.now() - 1;
+  tick();
+  assert.equal(host.room.players.length, 1);
+  host.stopHeartbeat();
 });
 
 test("sprites estáticos não são reenviados; mudanças, remoção e keyframes reconstroem o estado", () => {

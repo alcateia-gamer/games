@@ -5,7 +5,7 @@
 
 import FactoryLighting, { ESCURIDAO_AMBIENTE_FABRICA, MULTIPLICADOR_ALCANCE_FABRICA, QUEDAS_LUZ_FABRICA } from "./FactoryLighting.js";
 import { criarSomLuzFabrica, criarSomPiscadasAmbiente } from "../sounds/luzFabrica.js";
-import { atualizarPoseLanterna } from "./FlashlightPose.js";
+import { atualizarPoseLanterna, atualizarLanternasAliadas } from "./FlashlightPose.js";
 import FlashlightWalls from "./FlashlightWalls.js";
 import { ocultarLanternaAtrasCamada, ocultarLanternaAtrasSala, obterRegiaoFrenteLanterna } from "./FlashlightTileOcclusion.js";
 import { camadaEhPisoFabrica } from "../map/TrocaCamada.js";
@@ -169,8 +169,7 @@ function desenharFonteDirecional(context, canvas, fonte, paredes, estatuas, oclu
 }
 
 /** A camada e o jogador ocultam só a lanterna, conservando a ordem visual do mapa. */
-function ocultarLanterna(context, lanterna, scene, pose, atrasPlayer, regiao) {
-  const player = scene.player;
+function ocultarLanterna(context, lanterna, scene, pose, atrasPlayer, regiao, player = scene.player) {
   const camera = scene.cameras.main;
   context.setTransform(1, 0, 0, 1, 0, 0);
   context.globalAlpha = 1;
@@ -346,6 +345,7 @@ function criarIluminacaoTerror(scene) {
     }
   };
   const poseLanterna = { x: 0, y: 0, angulo: null, direcao: null };
+  const lanternasAliadas = scene.lanternasAliadas = new Map();
   const lanternaAnterior = { x: null, y: null, angulo: null };
   const coresCanvas = new Map();
   const areasCanvas = new Map();
@@ -431,8 +431,9 @@ function criarIluminacaoTerror(scene) {
     }
     const lanternaAtiva = !iluminacao.energia && player?.active !== false &&
       !!player && Number.isFinite(player.x) && Number.isFinite(player.y);
+    if (atualizarLanternasAliadas(scene, lanternasAliadas, iluminacao.energia)) invalidada = true;
     let angulo = null;
-    if (lanternaAtiva || giroflex.length || fontesParede.length || fontesEnergiaBoss.length) {
+    if (lanternaAtiva || lanternasAliadas.size || giroflex.length || fontesParede.length || fontesEnergiaBoss.length) {
       paredesLanterna.atualizarPortas();
       if (revisaoParedes !== paredesLanterna.revisao) {
         invalidada = true;
@@ -549,6 +550,19 @@ function criarIluminacaoTerror(scene) {
       context.drawImage(usarOclusao ? lanternaOclusaoCanvas : lanternaCanvas, -100, -160, 460, 320);
       context.restore();
     }
+    for (const { player: aliado, pose } of lanternasAliadas.values()) {
+      const regiao = obterRegiaoFrenteLanterna(scene, aliado);
+      const atras = Math.sin(pose.angulo) < -0.001 && !!aliado.frame?.source?.image;
+      const oclusao = atras || !!camadaFrenteLanterna || !!regiao;
+      if (oclusao) ocultarLanterna(oclusaoContext, lanternaCanvas, scene, pose, atras, regiao, aliado);
+      context.save();
+      context.globalAlpha = 1;
+      paredesLanterna.recortar(context, pose.x, pose.y, regiao);
+      const cos = Math.cos(pose.angulo), sin = Math.sin(pose.angulo);
+      context.transform(cos, sin, -sin, cos, pose.x, pose.y);
+      context.drawImage(oclusao ? lanternaOclusaoCanvas : lanternaCanvas, -100, -160, 460, 320);
+      context.restore();
+    }
     context.restore();
     // Reintroduz a sombra mínima em coordenadas de tela, antes da coloração.
     // source-in escala o campo e destination-over estabelece seu piso de opacidade.
@@ -651,6 +665,8 @@ function criarIluminacaoTerror(scene) {
     estatuasGiroflex.destroy();
     oclusaoEmissorBoss.destroy();
     paredesLanterna.destroy();
+    lanternasAliadas.clear();
+    if (scene.lanternasAliadas === lanternasAliadas) scene.lanternasAliadas = null;
     limitesLampadas?.destroy();
     overlay.destroy();
     if (scene.textures.exists(TEXTURA_ESCURIDAO_PARTE2)) scene.textures.remove(TEXTURA_ESCURIDAO_PARTE2);

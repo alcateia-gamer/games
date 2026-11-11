@@ -166,12 +166,17 @@ try {
       host.normalizePlayer({id:host.playerId,character:'nyx',x:-1093,y:-5520}),
       host.normalizePlayer({id:aliado.playerId,character:'kai-mercer',x:-1093,y:-5520})],enemies:[]};
     host.publishState();window.__game.registry.set('multiplayer',aliado);
+    // Este trecho cobre o fallback legado; o runtime atual é validado em
+    // multiplayer-atualizacao.browser.mjs com dois navegadores e broker real.
+    window.__salaAuraLegada = aliado.room;
+    aliado.room = null;
   });
   await sessao.reiniciar({personagem:'kai-mercer',multiplayer:true});
   const coop=await page.evaluate(async()=>{
     const s=window.__game.scene.getScene('Level1Parte2');
     const {atualizarSistemaEspeciais}=await import('/js/combat/PlayerSpecialAbilities.js');
     const host=window.__auraHost;
+    s.multiplayerManager.room = window.__salaAuraLegada;
     host.publishAction({type:'nyx_aura',playerId:host.playerId,id:'browser-nyx',mapKey:'Level1Parte2'});
     const aura=s.estadoEspecial.aurasRemotas.get(host.playerId),inicio=s.time.now;
     if(!aura?.efeito)throw Error('Aura remota não foi criada com o asset real.');

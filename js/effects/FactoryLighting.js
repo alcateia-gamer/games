@@ -224,6 +224,10 @@ class FactoryLighting {
 
   /** Cada fonte tem seu relógio, permitindo falhas simultâneas em qualquer região. */
   atualizarFalha(estado, agora, camera) {
+    if (this.coopReplica) {
+      if (estado.falha) this.registrarEstalos(estado, agora, camera);
+      return;
+    }
     if (estado.luz.piscando) {
       // Um único perfil por luminária, repetido sem pausas nem novas alocações.
       if (!estado.perfilContinuo) estado.perfilContinuo = this.criarFalha(agora, true);
@@ -277,6 +281,27 @@ class FactoryLighting {
       return anterior + (intensidade - anterior) * suavizar((tempo - inicio) / (fim - inicio));
     }
     return 1;
+  }
+
+  snapshotRede(agora) {
+    return { agora, falhas: this.estados.filter(e => e.falha).map(e => ({ indice: e.indice,
+      inicio: e.falha.inicio, duracao: e.falha.duracao, pontos: e.falha.pontos,
+      estalos: e.falha.estalos.map(s => ({ tempo: s.tempo, duracaoQueda: s.duracaoQueda })) })) };
+  }
+
+  aplicarEstadoRede(dados, agora) {
+    if (!dados || !Array.isArray(dados.falhas) || !Number.isFinite(dados.agora)) return;
+    this.coopReplica = true;
+    const ativos = new Set();
+    for (const f of dados.falhas) {
+      const e = this.estados[f.indice];
+      if (!e) continue;
+      ativos.add(f.indice);
+      if (e.falha?.inicioRede === f.inicio) continue;
+      e.falha = { ...f, inicioRede: f.inicio, inicio: agora + f.inicio - dados.agora,
+        proximoEstalo: 0, estalos: f.estalos.map(s => ({ ...s, luz: e.luz, inicio: 0 })) };
+    }
+    for (const e of this.estados) if (!ativos.has(e.indice)) e.falha = null;
   }
 
   atualizar(agora, camera, zonas = null) {

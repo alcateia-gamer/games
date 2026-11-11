@@ -213,6 +213,10 @@ function criarControlesInput(scene) {
   scene.botaoLuzFabrica.on("pointerdown", () => {
     if (!scene.developerMode || scene.generatorMenuOpen || scene.devItemMenuOpen ||
         scene.morteEmAndamento) return;
+    if (scene.coopRuntime) {
+      scene.coopRuntime.manager.sendCoopAction("devLighting", { on: !scene.luzFabricaAcesa });
+      return;
+    }
     if (scene.luzFabricaAcesa) scene.apagarLuzFabrica?.();
     else scene.acenderLuzFabrica?.();
     atualizarEstadoBotaoDesenvolvedor();
