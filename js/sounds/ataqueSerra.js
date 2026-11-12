@@ -1,3 +1,4 @@
+import { cenaSomCompartilhado } from "../multiplayer/CoopAudio.js";
 /** O motor acompanha o ataque visual, inclusive interrupções e pausa da cena. */
 const CHAVE = "robo-serra-ataque";
 const PREFIXO = "robo-serra-ataque-";
@@ -8,6 +9,7 @@ export function carregarSomAtaqueSerra(loader) {
 }
 
 export function configurarSomAtaqueSerra(scene, robo) {
+  scene = cenaSomCompartilhado(scene, robo, { range: 700 });
   if (robo.tipoRobo !== "serra") return;
   let som = null, ativo = false, destruido = false;
   const volumeLocal = () => {

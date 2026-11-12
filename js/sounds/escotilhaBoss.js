@@ -1,3 +1,4 @@
+import { cenaSomCompartilhado } from "../multiplayer/CoopAudio.js";
 const CHAVE = "boss-escotilha";
 // Quadros 0–8 do summon: a tampa abre e fecha enquanto a torre atravessa o piso.
 // O restante do summon monta a cabeça da torre, sem movimento da escotilha.
@@ -9,11 +10,12 @@ export function carregarSomEscotilhaBoss(loader) {
 }
 
 export function criarSomEscotilhaBoss(scene, ponto, duracaoAnimacao) {
+  scene = cenaSomCompartilhado(scene, ponto, { curve: "hatch" });
   let som = null;
   let tocando = false;
   let destruido = false;
-  const grupo = grupos.get(scene) ?? new Map();
-  grupos.set(scene, grupo);
+  const grupo = grupos.get(scene.coopSoundRoot ?? scene) ?? new Map();
+  grupos.set(scene.coopSoundRoot ?? scene, grupo);
   const distribuirVolume = () => {
     let total = 0;
     for (const volume of grupo.values()) total += volume;

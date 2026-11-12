@@ -1,3 +1,4 @@
+import { configurarBalanceamentoBoss } from "./EnemyBalance.js";
 import { prepararLibertacaoNovoBoss } from "./novoBoss/NovoBossLibertacao.js";
 /**
  * @file Ciclo do encontro, vida e integração dos estados e teletransportes.
@@ -119,7 +120,7 @@ function atualizarSuspensao(scene, encontro) {
 export function prepararBoss(scene, config = scene?.novoBossConfig ?? novoBossConfig) {
   if (!scene) return null;
   if (scene.novoBoss && !scene.novoBoss.encerrado) return scene.novoBoss;
-  config = configurarZonasNovoBoss(scene.map, config);
+  config = configurarBalanceamentoBoss(scene, configurarZonasNovoBoss(scene.map, config));
 
   const encontro = {
     config,

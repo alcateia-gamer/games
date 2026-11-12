@@ -585,14 +585,8 @@ class EnemySpawnManager {
 
         distanciaGrupo: 220,
 
-        vidaMaxima: tipo === "serra" ? 120 : 100,
-
-        danoContato: 12,
-
         // Robos atiradores mais perigosos.
         tempoEntreTiros: tipo === "padrao" ? 600 : 720,
-
-        danoLaser: tipo === "padrao" ? 6 : 5,
       });
 
       if (!enemy) continue;

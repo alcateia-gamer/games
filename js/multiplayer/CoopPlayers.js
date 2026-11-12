@@ -33,7 +33,7 @@ export class CoopPlayers {
     atualizarPoseLanterna(s, this.flashlightPose);
     // Posição segue no envelope; não invalida novamente a comparação da pose.
     if (visual) { visual.x = 0; visual.y = 0; }
-    return { mapKey: r.mapKey, health: round(health), maxHealth: s.vidaMaxima,
+    return { mapKey: r.mapKey, health: round(health, 100), maxHealth: s.vidaMaxima,
       stamina: round(s.estamina), maxStamina: s.estaminaMaxima,
       dead: !!s.morteEmAndamento || health <= 0,
       coop: { visual, downId: s.coopDownId ?? null, compression: supportsCompression(),

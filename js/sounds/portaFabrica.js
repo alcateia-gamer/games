@@ -1,3 +1,4 @@
+import { cenaSomCompartilhado } from "../multiplayer/CoopAudio.js";
 const CHAVE = "porta-fabrica";
 const VELOCIDADE = 5700 / 2500;
 // O ciclo original de 5700 ms termina em 2500 ms; áudio e animação usam o mesmo fator.
@@ -14,6 +15,7 @@ export function carregarSomPortaFabrica(loader) {
 }
 
 export function criarSomPortaFabrica(scene, area, animada) {
+  scene = cenaSomCompartilhado(scene, () => ({ x: area.x + area.width / 2, y: area.y + area.height / 2 }), { range: 720 });
   let som = null;
   const parar = () => som?.stop();
   return {

@@ -1,3 +1,4 @@
+import { prepararAudioCoop } from "./CoopAudio.js";
 import { obterBalanceamento } from "../combat/CharacterBalance.js";
 import { ARIA_ATTACK_CONFIG } from "../controls/AriaAttackConfig.js";
 import { CoopRevival, animarQuedaCoop } from "./CoopRevival.js";
@@ -49,6 +50,7 @@ export class CoopRuntime {
     prepararTexturaMunicaoRobo(scene);
     this.manager.enableCoop();
     scene.coopRuntime = this;
+    this.audio = scene.coopAudio ?? prepararAudioCoop(scene);
     this.sender = new VisualSender(); this.receiver = new VisualReceiver(scene);
     this.baseline = new Set(scene.children.list);
     this.players = new CoopPlayers(this);
@@ -191,6 +193,7 @@ export class CoopRuntime {
     if (this.disposed) return;
     if (action.authority && action.kind === "teamDefeated") { this.finishTeamGame(); return; }
     if (this.teamDefeated) return;
+    if (action.kind === "audio") { this.audio?.receive(action); return; }
     if (action.kind === "musicClock") { this.music.receiveClock(action); return; }
     const s = this.scene, p = action.payload || {};
     if (action.authority) {
@@ -268,7 +271,8 @@ export class CoopRuntime {
       attack.targets.add(payload.target);
     }
     if (target.tipoRobo) causarDanoInimigo(s, target, amount, {
-      attacker: context.player, playerId, localFeedback: playerId === this.manager.playerId });
+      attacker: context.player, playerId, localFeedback: playerId === this.manager.playerId,
+      playSound: !!payload.basic && context.personagemSelecionada === "aria-kade" });
     else causarDanoAlvoAdicional(this.localContext, target, amount, payload.area, attack);
   }
   broadcastHit(enemy, damage, options = {}) {
@@ -352,6 +356,7 @@ export class CoopRuntime {
     const s = this.scene;
     this.players.update(time, delta);
     this.music.update();
+    this.audio?.update();
     this.revival.update(delta);
     if (this.host) {
       atualizarRestricaoNovoBoss(this.localContext, delta);
@@ -472,6 +477,7 @@ export class CoopRuntime {
   }
   destroy() {
     if (this.disposed) return;
+    this.audio?.destroy();
     this.disposed = true;
     this.manager.localVitals = { health: this.scene.vida, stamina: this.scene.estamina };
     this.manager.off("coopFrame", this.onFrame); this.manager.off("coopAction", this.onAction);

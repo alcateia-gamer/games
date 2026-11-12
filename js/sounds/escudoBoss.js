@@ -1,3 +1,4 @@
+import { cenaSomCompartilhado } from "../multiplayer/CoopAudio.js";
 const CHAVE = "boss-escudo-quebrado";
 
 export function carregarSomEscudoBoss(loader) {
@@ -5,6 +6,8 @@ export function carregarSomEscudoBoss(loader) {
 }
 
 export function criarSomEscudoBoss(scene) {
+  const originalScene = scene;
+  scene = cenaSomCompartilhado(scene, () => originalScene.novoBoss?.sprite ?? originalScene.player, { range: 1400 });
   let som = null;
   let destruido = false;
   return {

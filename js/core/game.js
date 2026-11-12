@@ -1,3 +1,4 @@
+import { registrarDesbloqueioAudio } from "./AudioUnlock.js";
 /**
  * @file Ponto de entrada do jogo. Registra as cenas e compartilha os serviços de rede pelo
  * registry do Phaser.
@@ -23,40 +24,7 @@ class Game extends Phaser.Game {
       ? { ...config, audio: { ...config.audio, context: contextoAudio } }
       : config);
 
-    /**
-     * Tenta liberar o áudio após a primeira interação do usuário com a página.
-     */
-    this._unlockAudio = () => {
-      const soundManager = this.sound;
-
-      /**
-       * Retoma o contexto de áudio e os sons suspensos, tratando falhas do navegador.
-       */
-      const resumeAudio = async () => {
-        try {
-          if (soundManager?.context && soundManager.context.state === "suspended") {
-            await soundManager.context.resume();
-          }
-
-          if (typeof soundManager?.resumeAll === "function") {
-            soundManager.resumeAll();
-          }
-        } catch (error) {
-          console.warn("Audio não pôde ser desbloqueado:", error);
-        }
-      };
-
-      void resumeAudio();
-    };
-    this._audioUnlockEvents = ["pointerdown", "touchstart", "keydown"];
-
-    this._audioUnlockEvents.forEach((nomeEvento) => {
-      window.addEventListener(
-        nomeEvento,
-        this._unlockAudio,
-        { once: true, passive: true },
-      );
-    });
+    this._audioUnlockCleanup = registrarDesbloqueioAudio(this);
 
     // As chaves registradas aqui devem coincidir com os nomes usados em scene.start.
     this.scene.add("Start", Start);
@@ -71,10 +39,8 @@ class Game extends Phaser.Game {
   destroy(...args) {
     this._viewportCleanup?.();
     this._viewportCleanup = null;
-    this._audioUnlockEvents?.forEach((nomeEvento) => {
-      window.removeEventListener(nomeEvento, this._unlockAudio);
-    });
-    this._audioUnlockEvents = null;
+    this._audioUnlockCleanup?.();
+    this._audioUnlockCleanup = null;
     return super.destroy(...args);
   }
 }

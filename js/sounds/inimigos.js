@@ -1,3 +1,4 @@
+import { cenaSomCompartilhado } from "../multiplayer/CoopAudio.js";
 /**
  * @file Áudio dos robôs. Centraliza carregamento, passos com volume por
  * distância e limpeza dos sons temporários.
@@ -40,6 +41,7 @@ function atualizarSomPassoRobo(
   distancia,
   estaSeMovendo,
 ) {
+  scene = cenaSomCompartilhado(scene, inimigo, { range: DISTANCIA_SOM_PASSOS_ROBOS });
   const ehSerra = inimigo?.tipoRobo === "serra";
 
   if (scene.morteEmAndamento) {
@@ -89,6 +91,7 @@ function atualizarSomPassoRobo(
  * da cena.
  */
 function configurarSomPassoRobo(scene, inimigo) {
+  scene = cenaSomCompartilhado(scene, inimigo, { range: DISTANCIA_SOM_PASSOS_ROBOS });
   const chaveSomPasso =
     inimigo?.tipoRobo === "serra" ? "walk-robo-serra" : "robot-walk";
 
@@ -112,7 +115,8 @@ function configurarSomPassoRobo(scene, inimigo) {
 /**
  * Reproduz o som de disparo dos robôs se a morte do jogador não está em andamento.
  */
-function tocarSomTiroLaser(scene) {
+function tocarSomTiroLaser(scene, inimigo = scene.player) {
+  scene = cenaSomCompartilhado(scene, inimigo, { range: 900 });
   if (scene.morteEmAndamento) {
     return;
   }
@@ -130,6 +134,7 @@ function tocarSomTiroLaser(scene) {
  * Toca a explosão de um robô apenas uma vez, evitando repetições durante sua destruição.
  */
 function tocarSomMorteRobo(scene, inimigo) {
+  scene = cenaSomCompartilhado(scene, inimigo, { range: 900 });
   if (
     !scene?.sound ||
     scene.morteEmAndamento ||

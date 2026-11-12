@@ -1,3 +1,4 @@
+import { obterBalanceamentoInimigos } from "./EnemyBalance.js";
 import { atorRelevante, atualizarDecisaoAtor, atualizarBarrasDistantes } from "../core/ActorActivity.js";
 /**
  * @file Construção e atualização dos robôs comuns e de serra. Integra IA, vida, som, hitboxes,
@@ -28,6 +29,7 @@ function criarInimigoTeste(scene, config = {}) {
   const y = Number(config.y ?? scene.respawnY);
 
   const tipoRobo = config.tipoRobo === "serra" ? "serra" : "padrao";
+  const balanceamento = obterBalanceamentoInimigos(scene)[tipoRobo];
   const textura = tipoRobo === "serra" ? "robo-serra" : "robo-teste-normal";
 
   const inimigo = scene.physics.add.sprite(x, y, textura, 0);
@@ -81,7 +83,7 @@ function criarInimigoTeste(scene, config = {}) {
     config.distanciaAtaque ?? (tipoRobo === "serra" ? 68 : 330),
   );
   inimigo.distanciaGrupo = Number(config.distanciaGrupo ?? 180);
-  inimigo.danoBase = Number(config.danoLaser ?? 5);
+  inimigo.danoBase = balanceamento.dano;
   const direcoes = ["down", "left", "right", "up"];
   const direcaoAleatoria =
     direcoes[Math.floor(Math.random() * direcoes.length)];
@@ -95,14 +97,15 @@ function criarInimigoTeste(scene, config = {}) {
   inimigo.tempoEntreTiros = Number(config.tempoEntreTiros ?? 720);
   inimigo.ultimoTiro = 0;
   inimigo.velocidadeLaser = Number(config.velocidadeLaser ?? 250);
-  inimigo.danoLaser = inimigo.danoBase * 1.3 * 0.8;
+  inimigo.danoLaser = balanceamento.dano;
   inimigo.ultimoLadoTiro = Math.random() > 0.5 ? "right" : "left";
 
-  inimigo.vidaMaxima = Number(config.vidaMaxima ?? 100);
+  inimigo.vidaMaxima = inimigo.remoteOnly && Number.isFinite(config.vidaMaxima)
+    ? config.vidaMaxima : balanceamento.vida;
   inimigo.vida = inimigo.vidaMaxima;
   inimigo.tempoEntreAtaques = Number(config.tempoEntreAtaques ?? 1000);
   inimigo.ultimoAtaque = Number.NEGATIVE_INFINITY;
-  inimigo.danoContato = Number(config.danoContato ?? 12);
+  inimigo.danoContato = balanceamento.dano;
 
   inimigo.alerta = false;
   inimigo.foiFerido = false;
@@ -167,8 +170,6 @@ function criarRoboSerra(scene) {
     distanciaDeteccao: 820,
     distanciaAtaque: 68,
     distanciaGrupo: 180,
-    vidaMaxima: 120,
-    danoContato: 12,
     tempoEntreAtaques: 1000,
   });
   robo.alerta = true;

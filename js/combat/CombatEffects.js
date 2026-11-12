@@ -308,7 +308,7 @@ export function playReplicatedHitEffects(scene, enemy, impact) {
     applyHitStop(scene, impact.hitStop ?? COMBAT_FEEL.hitStopDuration);
     applyCombatShake(scene, impact.dead ? 25 : impact.damage,
       impact.dead ? 70 : impact.shakeDuration ?? COMBAT_FEEL.shakeDuration);
-    if (impact.playSound) playHitSound(scene);
+    if (impact.playSound && !scene.coopAudio) playHitSound(scene);
   }
 }
 

@@ -1,3 +1,4 @@
+import { obterBalanceamentoInimigos } from "./EnemyBalance.js";
 import { atorRelevante, atualizarDecisaoAtor, atualizarBarrasDistantes } from "../core/ActorActivity.js";
 /**
  * IA exclusiva do Robo Bola: inimigo voador que orbita o jogador, flutua em uma
@@ -171,7 +172,7 @@ function criarProjetil(scene, robo, alvo) {
   criarRastroPlasma(scene, projetil);
   const expiracao = scene.time.delayedCall(2200, () => projetil.active && projetil.destroy());
   projetil.once("destroy", () => expiracao?.remove(false));
-  tocarSomTiroLaser(scene);
+  tocarSomTiroLaser(scene, robo);
 }
 
 function criarRoboBola(scene, posicao = null) {
@@ -216,9 +217,10 @@ function criarRoboBola(scene, posicao = null) {
   robo.ultimoTiro = scene.time.now;
   robo.sentidoOrbita = Math.random() < 0.5 ? -1 : 1;
   robo.proximaManobra = scene.time.now + 3200 + Math.random() * 1600;
-  robo.vidaMaxima = 85;
+  const balanceamento = obterBalanceamentoInimigos(scene).bola;
+  robo.vidaMaxima = balanceamento.vida;
   robo.vida = robo.vidaMaxima;
-  robo.danoLaser = CONFIG.dano;
+  robo.danoLaser = balanceamento.dano;
   robo.velocidadeLaser = CONFIG.velocidadeProjetil;
   robo.direcaoAtual = direcaoParaAlvo(robo, scene.player);
   robo.hitboxDano = new Phaser.Geom.Rectangle(0, 0, 0, 0);

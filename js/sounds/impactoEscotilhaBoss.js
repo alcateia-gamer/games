@@ -1,3 +1,4 @@
+import { cenaSomCompartilhado } from "../multiplayer/CoopAudio.js";
 const CHAVE = "boss-impacto-escotilha";
 const CHAVE_EXPLOSAO = "boss-explosao-escotilha";
 
@@ -18,6 +19,7 @@ export function criarSomExplosaoEscotilhaBoss(scene, ponto) {
 }
 
 function criarSomLocalizadoEscotilha(scene, ponto, chave, volumeBase, alcance = 400) {
+  scene = cenaSomCompartilhado(scene, ponto, { range: alcance, curve: "rational" });
   let som = null;
   let destruido = false;
   return {

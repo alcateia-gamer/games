@@ -55,6 +55,7 @@ function dispararLaser(scene, inimigo = scene.inimigoTeste) {
   // Identificação para habilidades especiais.
   laser.especialLaserInimigo = true;
   laser.especialAtirador = inimigo;
+  laser.danoLaser = inimigo.danoLaser;
   laser.especialRefletido = false;
   laser.danoEspecial = 0;
 
@@ -70,7 +71,7 @@ function dispararLaser(scene, inimigo = scene.inimigoTeste) {
 
   scene.lasersInimigo.add(laser);
 
-  tocarSomTiroLaser(scene);
+  tocarSomTiroLaser(scene, inimigo);
 
   scene.physics.velocityFromRotation(
     angulo,
@@ -219,11 +220,7 @@ function acertarPlayerComLaser(scene, laser) {
 
   laser.destroy();
 
-  const danoLaser = laser.danoLaser ?? (
-    Array.isArray(scene.inimigos) && scene.inimigos.length > 0
-      ? scene.inimigos[0].danoLaser
-      : (scene.inimigoTeste?.danoLaser ?? 5)
-  );
+  const danoLaser = laser.danoLaser ?? laser.especialAtirador?.danoLaser ?? 5;
 
   causarDanoPlayer(scene, danoLaser, atacante);
 }

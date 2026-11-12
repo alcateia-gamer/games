@@ -55,6 +55,26 @@ function criarSomGerador(scene) {
       volume = GENERATOR_MAX_VOLUME * proximity * proximity;
       sound.setVolume(volume);
 
+      // O motor usa a mesma fase da partida, inclusive para quem se aproxima depois.
+      const startedAt = scene.multiplayerManager?.room?.coopProgress?.generatorStartedAt;
+      if ((scene.multiplayer || scene.coopRuntime) && Number.isFinite(startedAt)) {
+        if (sound.isPaused || !sound.isPlaying && volume === 0) return;
+        const agora = scene.coopAudio?.hostTime() ?? Date.now();
+        const tempo = Math.max(0, (agora - startedAt) / 1000);
+        const motor = tempo >= loopStart;
+        const duracao = sound.totalDuration - loopStart;
+        const seek = motor && duracao > 0 ? (tempo - loopStart) % duracao : tempo;
+        const noMotor = sound.currentMarker?.name === "motor";
+        let desvio = Math.abs(sound.seek - seek);
+        if (motor && noMotor && duracao > 0) desvio = Math.min(desvio, Math.abs(duracao - desvio));
+        if (!sound.isPlaying || noMotor !== motor || desvio > 0.15) {
+          const tocou = motor ? sound.play("motor", { volume, seek })
+            : sound.play({ volume, loop: false, seek });
+          if (tocou) playStartup = false;
+        }
+        return;
+      }
+
       // Mantém a reprodução silenciosa à distância, sem reiniciar ao voltar.
       if (sound.isPlaying || sound.isPaused || volume === 0) return;
       if (playStartup) {

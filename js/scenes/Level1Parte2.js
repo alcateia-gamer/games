@@ -1,3 +1,4 @@
+import { prepararAudioCoop } from "../multiplayer/CoopAudio.js";
 import { descarregarCidade, descarregarFabricaParaBoss } from "../map/ProgressaoMapa.js";
 import { atualizarSpawnsDev } from "../controls/DeveloperSpawns.js";
 import { obterBocaMetralhadora, criarMunicaoRobo } from "../enemies/WarRobotProjectile.js";
@@ -207,6 +208,7 @@ class Level1Parte2 extends Phaser.Scene {
    * Monta mapa, jogador, controles, inventário, interações e retorno à cidade.
    */
   create() {
+    prepararAudioCoop(this);
     this.physics.resume();
     this.physics.world.resume();
 

@@ -1,3 +1,4 @@
+import { cenaSomCompartilhado } from "../multiplayer/CoopAudio.js";
 const CHAVE = "boss-raio-escotilha";
 const grupos = new WeakMap();
 
@@ -19,6 +20,8 @@ function ajustarVolumeSuave(som, volume) {
 
 /** Um único loop para o conjunto de feixes, crescendo junto da energia visível. */
 export function criarSomCargaEscudoBoss(scene) {
+  const originalScene = scene;
+  scene = cenaSomCompartilhado(scene, () => originalScene.novoBoss?.sprite ?? originalScene.player, { range: 1400 });
   let som = null, tocando = false, destruido = false, ultimoVolume = null;
   function parar() {
     if (!tocando) return;
@@ -49,9 +52,10 @@ export function criarSomCargaEscudoBoss(scene) {
 }
 
 export function criarSomRaioEscotilhaBoss(scene, ponto) {
+  scene = cenaSomCompartilhado(scene, ponto, { range: 650 });
   let som = null, tocando = false, destruido = false, ultimoVolume = null;
-  const grupo = grupos.get(scene) ?? new Set();
-  grupos.set(scene, grupo);
+  const grupo = grupos.get(scene.coopSoundRoot ?? scene) ?? new Set();
+  grupos.set(scene.coopSoundRoot ?? scene, grupo);
   const fonte = { volume: 0, aplicar(volume) {
     if (!som || volume === ultimoVolume) return;
     ultimoVolume = volume;

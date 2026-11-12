@@ -204,7 +204,7 @@ function criarPorta(scene, layer, area, fala) {
 
   // O host transmite também o progresso das persianas e seu bloqueio temporário.
   porta.aplicarEstadoRede = estado => {
-    if (estado.estado === "abrindo" && porta.estado !== "abrindo") som.tocar(estado.progresso);
+    if (estado.estado === "abrindo" && porta.estado !== "abrindo" && !scene.coopAudio) som.tocar(estado.progresso);
     else if (estado.estado === "fechada" || estado.estado === "fechando") som.parar();
     porta.estado = estado.estado;
     porta.progresso = estado.progresso;

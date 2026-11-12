@@ -1,3 +1,4 @@
+import { prepararAudioCoop } from "../multiplayer/CoopAudio.js";
 import { atualizarSpawnsDev } from "../controls/DeveloperSpawns.js";
 import { obterBocaMetralhadora, criarMunicaoRobo } from "../enemies/WarRobotProjectile.js";
 /**
@@ -150,6 +151,7 @@ class Level1 extends Phaser.Scene {
    * interface.
    */
   create() {
+    prepararAudioCoop(this);
     this.physics.resume();
     this.physics.world.resume();
     if (this.entradaComFade) {
