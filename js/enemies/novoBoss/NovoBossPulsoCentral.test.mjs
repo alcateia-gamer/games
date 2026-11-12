@@ -282,7 +282,7 @@ test("invocar cinco tentáculos inicia outro ataque no mesmo turno e conserva os
   const c = preparar();
   c.encontro.config.ataques = { ...c.encontro.config.ataques,
     automatico: true, sequencia: ["tentaculos", "chuva"] };
-  c.atualizar(1500);
+  c.atualizar(c.encontro.config.combate.preparacaoMs);
   const armadilhas = c.encontro.tentaculosAtivos;
   assert.equal(armadilhas.snapshot().armadilhas.length, 5);
   assert.equal(armadilhas.snapshot().decorrido, 0);

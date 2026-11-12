@@ -221,7 +221,7 @@ test("raio maior realmente atinge além de 48 px e continua sem dano antes do qu
   c.ataque.atualizar(1399);
   assert.equal(c.eventos.length, 1);
   c.ataque.atualizar(1);
-  assert.deepEqual(c.eventos[1], { dano: 16, origem: { x: 0, y: 0 } });
+  assert.deepEqual(c.eventos[1], { dano: 40, origem: { x: 0, y: 0 } });
   c.ataque.atualizar(150);
   assert.equal(c.eventos.length, 2);
   const fora = preparar({ config: { ...novoBossConfig.ataques.chuvaRaios, quantidade: 1 }, raioPlayer: 0 });
@@ -237,7 +237,7 @@ test("sequência ampliada conserva quinze impactos e limpeza com deltas grandes 
   assert.equal(a.ataque.atualizar(7900), true);
   for (let i = 0; i < 395; i++) b.ataque.atualizar(20);
   for (const c of [a, b]) {
-    assert.equal(c.eventos.filter(e => e.dano === 16).length, 15);
+    assert.equal(c.eventos.filter(e => e.dano === 40).length, 15);
     assert.equal(c.avisos.length, 15);
     assert.equal(c.visuais.length, 15);
     assert.ok(c.avisos.every(o => o.destruidos === 1));

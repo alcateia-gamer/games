@@ -292,11 +292,11 @@ test("o áudio de formação inicial segue o alcance dos feixes e sua dissipaç�
   avancarAte(f, "carregando-escudo");
   f.sistema.atualizar(500);
   const feixe = sons.at(-1);
-  assert.equal(feixe.volume, 0.25);
+  assert.equal(feixe.volume, 0.375);
   assert.equal(feixe.reproducoes.length, 1);
   avancarAte(f, "dissipando-raios");
   f.sistema.atualizar(175);
-  assert.ok(feixe.volume > 0 && feixe.volume < 0.25);
+  assert.ok(feixe.volume > 0 && feixe.volume < 0.375);
   avancarAte(f, "voltando");
   assert.equal(feixe.tocando, false);
   assert.equal(feixe.destruido, true);

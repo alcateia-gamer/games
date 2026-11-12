@@ -19,7 +19,7 @@ function criarEncontro(opcoes = {}) {
   const config = {
     ...novoBossConfig,
     // Casos de viagem isolam o limite configurável de um acerto; combos usam a configuração de produção abaixo.
-    combate: { ...novoBossConfig.combate, janelaVulneravelMs: 2500, acertosPorAbertura: 1, intervaloAcertosMs: 0, ...opcoes.combate },
+    combate: { ...novoBossConfig.combate, preparacaoMs: 1500, janelaVulneravelMs: 2500, acertosPorAbertura: 1, intervaloAcertosMs: 0, ...opcoes.combate },
     teleporte: { ...novoBossConfig.teleporte, ...opcoes.teleporte },
   };
   const scene = {
@@ -117,6 +117,18 @@ test("somente a barreira bloqueia dano; pendência dos geradores não cria prote
   c.encontro.pendencia = null;
   assert.equal(causarDanoNovoBoss(c.scene, c.encontro, 25), true);
   assert.equal(c.encontro.vida, 950);
+});
+
+test("preparação de produção termina em 1,3 s e preserva a abertura de quatro segundos", () => {
+  const c = criarEncontro({ combate: novoBossConfig.combate });
+  c.atualizar(1299);
+  assert.equal(c.encontro.estado, "preparando");
+  c.atualizar(1);
+  assert.equal(c.encontro.estado, "vulneravel");
+  c.atualizar(3999);
+  assert.equal(c.encontro.estado, "vulneravel");
+  c.atualizar(1);
+  assert.equal(c.encontro.estado, "preparando");
 });
 
 test("vida e estados têm abertura temporizada e não iniciam fase 2 abaixo de 50%", () => {

@@ -127,7 +127,7 @@ test("espiral emite cem projéteis por dez segundos sem corpos, parry ou registr
   assert.deepEqual([primeiro.x, primeiro.y, primeiro.dx, primeiro.dy], [0, 0, 1, 0]);
   avancar(100);
   assert.equal(sistema.snapshot().execucao.emitidos, 2);
-  assert.ok(Math.abs(sistema.snapshot().execucao.projeteis[0].x - 14.5) < 0.001);
+  assert.ok(Math.abs(sistema.snapshot().execucao.projeteis[0].x - 16) < 0.001);
   // Mesmo uma marcação externa indevida de reflexão não libera serviços de dano.
   const laser = objetos.find(o => o.name.includes("novo-boss-laser"));
   assert.equal(laser.especialLaserInimigo, false);

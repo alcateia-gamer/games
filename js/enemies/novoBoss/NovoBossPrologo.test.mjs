@@ -76,9 +76,9 @@ test("as três recargas após a formação inicial tocam somente enquanto seus f
     assert.equal(prologo.receberDanoBoss(1, {}), true);
     assert.equal(prologo.estado, "ESCUDO_RECARREGANDO");
     prologo.atualizar(600);
-    assert.equal(sons[0].volume, 0.15625);
+    assert.equal(sons[0].volume, 0.234375);
     prologo.atualizar(400);
-    assert.equal(sons[0].volume, 0.25);
+    assert.equal(sons[0].volume, 0.375);
     prologo.atualizar(200);
     assert.equal(sons[0].tocando, false, "terminar a recarga interrompe o áudio");
     assert.equal(sons[0].reproducoes.length, ciclo + 1);

@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { criarPulsoRepulsao } from "./PulsoRepulsao.js";
+import { novoBossConfig } from "../NovoBossConfig.js";
 
-function preparar({ distancia = 100, danoAceito = true } = {}) {
+function preparar({ distancia = 100, danoAceito = true, config = {} } = {}) {
   const eventos = [];
   const graficos = [];
   const avisos = [];
@@ -32,9 +33,23 @@ function preparar({ distancia = 100, danoAceito = true } = {}) {
       return danoAceito;
     },
   };
-  const ataque = criarPulsoRepulsao(scene, encontro, {}, servicos);
+  const ataque = criarPulsoRepulsao(scene, encontro, config, servicos);
   return { ataque, scene, encontro, eventos, graficos, avisos };
 }
+
+test("pulso de produção causa 30 de dano e permite sair até o fim do aviso", () => {
+  const config = novoBossConfig.ataques.pulsoRepulsao;
+  const parado = preparar({ config });
+  parado.ataque.atualizar(1499);
+  assert.deepEqual(parado.eventos, ["aviso"]);
+  parado.ataque.atualizar(1);
+  assert.equal(parado.eventos[1].dano, 30);
+  const esquivando = preparar({ config });
+  esquivando.ataque.atualizar(1499);
+  esquivando.scene.player.x = 311;
+  esquivando.ataque.atualizar(1);
+  assert.deepEqual(esquivando.eventos, ["aviso"]);
+});
 
 test("pulso resolve todo o raio no zero do aviso, antes da cauda visual", () => {
   for (const distancia of [0, 72, 100, 144, 145]) {

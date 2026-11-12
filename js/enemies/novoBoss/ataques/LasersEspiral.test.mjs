@@ -72,6 +72,20 @@ test("agenda do prólogo emite anéis simultâneos e mantém as varreduras exist
   assert.equal(c.ataque.atualizar(10000), true);
 });
 
+test("lasers de produção aceleram sem dano durante o aviso e acertam com dano multiplicado", () => {
+  for (const config of [novoBossConfig.ataques.lasersEspiral, novoBossConfig.prologo.lasers]) {
+    const c = preparar(config);
+    c.ataque.atualizar(config.avisoMs - 1);
+    assert.deepEqual(c.danos, []);
+    assert.equal(c.ataque.snapshot().emitidos, 0);
+    c.ataque.atualizar(1);
+    c.ataque.atualizar(100);
+    assert.ok(Math.abs(c.ataque.snapshot().projeteis[0].x - config.velocidade * 0.1) < 1e-9);
+    c.ataque.atualizar(800);
+    assert.equal(c.danos[0], 20);
+  }
+});
+
 test("espiral avisa antes de emitir e não causa perigo durante o aviso", () => {
   const c = preparar();
   assert.equal(c.avisos.length, 1);

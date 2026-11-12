@@ -12,7 +12,7 @@ import { prepararAtaquesNovoBoss } from "./NovoBossAtaques.js";
 function preparar(opcoes = {}) {
   const config = { ...novoBossConfig,
     // Isola a ordem dos eventos da fase com o limite mínimo configurável.
-    combate: { ...novoBossConfig.combate, janelaVulneravelMs: 2500, acertosPorAbertura: 1, intervaloAcertosMs: 0 },
+    combate: { ...novoBossConfig.combate, preparacaoMs: 1500, janelaVulneravelMs: 2500, acertosPorAbertura: 1, intervaloAcertosMs: 0 },
     ataques: { ...novoBossConfig.ataques, ativo: false },
     geradores: { ...novoBossConfig.geradores, ativo: false },
     fase2: { ativo: true, limiarVida: 0.5, ...opcoes.fase2 },
