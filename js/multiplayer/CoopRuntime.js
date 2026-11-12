@@ -1,4 +1,6 @@
 import { CoopRevival, animarQuedaCoop } from "./CoopRevival.js";
+import { tocarSomAuraNyx, pararSomAuraNyx } from "../sounds/SOUNDS_PERSONAGENS.js/sounds_Nyx,.js";
+import { NYX_AURA } from "../combat/NyxHealingAura.js";
 /** Integração cooperativa dos dois mapas; uma simulação, réplicas interpoladas. */
 import { COOP, round, sameMap } from "./CoopProtocol.js";
 import { VisualSender, VisualReceiver } from "./CoopVisuals.js";
@@ -191,6 +193,12 @@ export class CoopRuntime {
     if (action.authority) {
       if (action.kind === "combatHit" && !this.host) {
         playReplicatedHitEffects(s, this.receiver.get(p.visual), p);
+      } else if (action.kind === "nyxAuraSound") {
+        if (!this.host && p.mapKey === this.mapKey) {
+          if (p.stop) pararSomAuraNyx(s, p.id);
+          else tocarSomAuraNyx(s, { id: p.id, fase: p.fase, duracaoMs: p.fase === "cura" ? NYX_AURA.duracao : NYX_AURA.animacao,
+            idadeMs: Number.isFinite(p.startedAt) ? Math.max(0, Date.now() - p.startedAt) : 0 });
+        }
       } else if (action.kind === "hurt") causarDanoPlayer(s, p.amount, p.origin);
       else if (action.kind === "heal" && s.vida > 0 && !s.morteEmAndamento) recuperarVida(s, p.amount);
       else if (action.kind === "revive") this.revivePlayer(p.downId);

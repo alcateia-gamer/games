@@ -1,4 +1,5 @@
 import { recuperarVida } from '../player/PlayerStatus.js';
+import { tocarSomAuraNyx } from '../sounds/SOUNDS_PERSONAGENS.js/sounds_Nyx,.js';
 import { criarEfeitoEspecial, atualizarEfeitoEspecial, deslocamentoChao } from './SpecialAbilityEffects.js';
 import { criarParticulasCuraNyx, atualizarParticulasCuraNyx, destruirParticulasCuraNyx } from './NyxHealingParticles.js';
 
@@ -8,10 +9,23 @@ export const NYX_AURA = Object.freeze({ raio:120, raioY:36, animacao:1200,
 let sequencia = 0;
 const mapa = scene => scene.sys?.settings?.key || scene.scene?.key;
 
+function iniciarSomSincronizado(scene, id, fase, inicio) {
+  const idadeMs = Math.max(0, scene.time.now - inicio);
+  const duracaoMs = fase === 'cura' ? NYX_AURA.duracao : NYX_AURA.animacao;
+  if (idadeMs >= duracaoMs) return;
+  const parar = tocarSomAuraNyx(scene, { id, duracaoMs, idadeMs, fase });
+  if (!scene.coopRuntime?.host) return parar;
+  const enviar = stop => scene.coopRuntime.manager.sendCoopAction('nyxAuraSound',
+    { mapKey: mapa(scene), id, fase, startedAt: Date.now() - idadeMs, stop }, { authority: true });
+  enviar(false);
+  return () => { parar?.(); enviar(true); };
+}
+
 function criarAura(scene, id, inicio, dono = null) {
+  const pararSom = iniciarSomSincronizado(scene, id, 'invocacao', inicio);
   const efeito = criarEfeitoEspecial(scene,'nyx',NYX_AURA.raio);
   if (efeito) efeito.sprite.coopAnchor = scene.player;
-  return { id, inicio, dono, efeito, encerrada:false };
+  return { id, inicio, dono, efeito, pararSom, encerrada:false };
 }
 
 export function prepararAuraNyx(scene, estado) {
@@ -55,7 +69,7 @@ export function prepararAuraNyx(scene, estado) {
         cura.alvos.delete(scene.player);
         cura.visuais.get(scene.player)?.grafico.destroy();
         cura.visuais.delete(scene.player);
-        if (!cura.alvos.size && !cura.visuais.size) estado.curasNyx.delete(id);
+        if (!cura.alvos.size && !cura.visuais.size) encerrarCura(estado,id,cura);
       }
     }
   };
@@ -80,6 +94,8 @@ export function iniciarAuraNyx(scene, estado) {
 }
 
 function destruirAura(aura) {
+  aura?.pararSom?.();
+  if (aura) aura.pararSom = null;
   aura?.efeito?.sprite.destroy();
   if (aura) { aura.efeito = null; aura.encerrada = true; }
 }
@@ -123,8 +139,17 @@ function concederCura(scene,estado,aura,centro) {
     const efeito = criarParticulasCuraNyx(scene,alvo);
     if (efeito) visuais.set(alvo,efeito);
   }
-  if (alvos.size || visuais.size) estado.curasNyx.set(aura.id,{alvos,visuais,
-    inicio:aura.inicio+NYX_AURA.animacao,ultimoPulso:0});
+  if (alvos.size || visuais.size) {
+    const inicio = aura.inicio + NYX_AURA.animacao;
+    const pararSom = iniciarSomSincronizado(scene, `${aura.id}:cura`, 'cura', inicio);
+    estado.curasNyx.set(aura.id,{alvos,visuais,inicio,ultimoPulso:0,pararSom});
+  }
+}
+
+function encerrarCura(estado,id,cura) {
+  cura.pararSom?.();
+  destruirParticulasCuraNyx(cura);
+  estado.curasNyx.delete(id);
 }
 
 function atualizarVisuaisCura(scene,estado) {
@@ -133,7 +158,7 @@ function atualizarVisuaisCura(scene,estado) {
     for (const [alvo,efeito] of cura.visuais) {
       if (!atualizarParticulasCuraNyx(scene,efeito,elapsed)) cura.visuais.delete(alvo);
     }
-    if (!cura.alvos.size && !cura.visuais.size) estado.curasNyx.delete(id);
+    if (!cura.alvos.size && !cura.visuais.size) encerrarCura(estado,id,cura);
   }
 }
 
@@ -156,8 +181,7 @@ function atualizarCuras(scene,estado) {
     }
     cura.ultimoPulso = pulso;
     if (elapsed >= NYX_AURA.duracao || (!cura.alvos.size && !cura.visuais.size)) {
-      destruirParticulasCuraNyx(cura);
-      estado.curasNyx.delete(id);
+      encerrarCura(estado,id,cura);
     }
   }
 }
@@ -203,6 +227,6 @@ export function limparAuraNyx(scene,estado) {
   encerrarLocal(scene,estado);
   for (const aura of estado.aurasRemotas.values()) destruirAura(aura);
   estado.aurasRemotas.clear();
-  for (const cura of estado.curasNyx.values()) destruirParticulasCuraNyx(cura);
+  for (const [id,cura] of estado.curasNyx) encerrarCura(estado,id,cura);
   estado.curasNyx.clear();
 }

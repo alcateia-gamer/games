@@ -9,6 +9,7 @@ import { carregarSomColocando } from "../sounds/colocando.js";
 import { carregarSonsInimigos } from "../sounds/inimigos.js";
 import { carregarSonsKatana } from "../sounds/katana.js";
 import { carregarSonsPersonagem } from "../sounds/personagem.js";
+import { carregarSomAuraNyx } from "../sounds/SOUNDS_PERSONAGENS.js/sounds_Nyx,.js";
 import { carregarSomGerador } from "../sounds/gerador.js";
 import { carregarSomLuzFabrica } from "../sounds/luzFabrica.js";
 import { carregarMusicaNovoBoss } from "../sounds/novoBoss.js";
@@ -181,6 +182,7 @@ class Preloader extends Phaser.Scene {
     carregarSomImpactoEscotilhaBoss(this.load);
     carregarSomExplosaoEscotilhaBoss(this.load);
     carregarSomRaioEscotilhaBoss(this.load);
+    carregarSomAuraNyx(this.load);
 
     // =====================================================
     // MAPAS
