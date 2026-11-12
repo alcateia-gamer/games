@@ -1,5 +1,5 @@
 /** Desenha o painel na densidade da tela; os objetos Phaser mantêm a interação. */
-export function criarDisplayGerador(scene, width, height, dataset = "generatorDisplay") {
+export function criarDisplayGerador(scene, width, height, dataset = "generatorDisplay", { manualInvalidation = false } = {}) {
   const gameCanvas = scene.game.canvas;
   if (!gameCanvas?.parentElement) return null;
 
@@ -16,6 +16,7 @@ export function criarDisplayGerador(scene, width, height, dataset = "generatorDi
   const drawings = new Map();
   let revision = 0;
   let lastSignature = "";
+  let layoutKey = "", layout = null;
   const color = (value, alpha = 1) =>
     `rgba(${value >> 16 & 255},${value >> 8 & 255},${value & 255},${alpha})`;
 
@@ -27,26 +28,33 @@ export function criarDisplayGerador(scene, width, height, dataset = "generatorDi
       return object;
     },
     drawing(object, draw) { drawings.set(object, draw); revision++; },
-    hide() { canvas.style.display = "none"; },
+    invalidate() { revision++; },
+    hide() { canvas.style.display = "none"; layoutKey = ""; },
     render(camera, scale, visible) {
       if (!visible) { canvas.style.display = "none"; return; }
-      const bounds = gameCanvas.getBoundingClientRect();
-      const parentBounds = canvas.parentElement.getBoundingClientRect();
-      const cssX = bounds.width / scene.scale.gameSize.width;
-      const cssY = bounds.height / scene.scale.gameSize.height;
-      const cssWidth = width * scale * cssX;
-      const cssHeight = height * scale * cssY;
-      const density = window.devicePixelRatio || 1;
-      const pixelWidth = Math.max(1, Math.round(cssWidth * density));
-      const pixelHeight = Math.max(1, Math.round(cssHeight * density));
-      Object.assign(canvas.style, {
-        display: "block", width: `${cssWidth}px`, height: `${cssHeight}px`,
-        left: `${bounds.left - parentBounds.left + (camera.x + camera.width / 2) * cssX - cssWidth / 2}px`,
-        top: `${bounds.top - parentBounds.top + (camera.y + camera.height / 2) * cssY - cssHeight / 2}px`,
-      });
+      // Leitura do DOM só quando a área de exibição muda; arrastar peças não precisa de reflow.
+      const density = Math.min(window.devicePixelRatio || 1,
+        scene.sys?.game?.device?.os?.desktop === false || scene.sys?.game?.device?.input?.touch ? 1.5 : 2);
+      const nextLayout = [camera.x, camera.y, camera.width, camera.height, scale, density,
+        scene.scale.gameSize.width, scene.scale.gameSize.height, window.innerWidth, window.innerHeight].join(":");
+      if (layoutKey !== nextLayout) {
+        layoutKey = nextLayout;
+        const bounds = gameCanvas.getBoundingClientRect();
+        const parentBounds = canvas.parentElement.getBoundingClientRect();
+        const cssX = bounds.width / scene.scale.gameSize.width;
+        const cssY = bounds.height / scene.scale.gameSize.height;
+        const cssWidth = width * scale * cssX, cssHeight = height * scale * cssY;
+        layout = { pixelWidth: Math.max(1, Math.round(cssWidth * density)),
+          pixelHeight: Math.max(1, Math.round(cssHeight * density)) };
+        Object.assign(canvas.style, { width: `${cssWidth}px`, height: `${cssHeight}px`,
+          left: `${bounds.left - parentBounds.left + (camera.x + camera.width / 2) * cssX - cssWidth / 2}px`,
+          top: `${bounds.top - parentBounds.top + (camera.y + camera.height / 2) * cssY - cssHeight / 2}px` });
+      }
+      canvas.style.display = "block";
+      const { pixelWidth, pixelHeight } = layout;
       const resized = canvas.width !== pixelWidth || canvas.height !== pixelHeight;
       if (resized) { canvas.width = pixelWidth; canvas.height = pixelHeight; }
-      const signature = `${revision}:` + objects.map(o => [o.visible, o.alpha, o.x, o.y,
+      const signature = manualInvalidation ? `${revision}` : `${revision}:` + objects.map(o => [o.visible, o.alpha, o.x, o.y,
         o.displayWidth, o.displayHeight, o.originX, o.originY, o.text, o.style?.color,
         o.style?.fontStyle, o.fillColor, o.strokeColor, o.texture?.key].join(",")).join(";");
       if (!resized && signature === lastSignature) return;

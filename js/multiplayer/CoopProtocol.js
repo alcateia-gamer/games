@@ -10,6 +10,9 @@ export function mergeCoopProgress(previous = {}, next = {}) {
   for (const [key, value] of Object.entries(next?.flags || {})) if (value === true) flags[key] = true;
   return { ...previous, ...next, flags,
     collected: { ...previous?.collected, ...next?.collected },
+    ...((previous?.inventoryDrops || next?.inventoryDrops) ? {
+      inventoryDrops: { ...previous?.inventoryDrops, ...next?.inventoryDrops },
+    } : {}),
     generatorStartedAt: Number.isFinite(next?.generatorStartedAt)
       ? next.generatorStartedAt : previous?.generatorStartedAt };
 }

@@ -139,6 +139,7 @@ class Level1Parte2 extends Phaser.Scene {
     this.inimigoTeste = null;
     this.cidadeDescarregada = false;
     this.fabricaDescarregada = false;
+    this.limiteFabricaDescarregadaY = null;
     this.teleporteRetornoLiberado = false;
     this.transicaoRetornoEmAndamento = false;
     this.regiaoTrocaCamada = null;

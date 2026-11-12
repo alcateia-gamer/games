@@ -1,3 +1,4 @@
+import { atorRelevante, atualizarDecisaoAtor, atualizarBarrasDistantes } from "../core/ActorActivity.js";
 /**
  * IA exclusiva do Robo Bola: inimigo voador que orbita o jogador, flutua em uma
  * onda vertical e dispara pelo olho na direção atual do alvo.
@@ -362,23 +363,27 @@ function atualizarRoboBola(scene, time, delta) {
     if (!robo?.active || robo.tipoRobo !== "bola" || robo.morto || robo.remoteOnly) continue;
     const protegendoSpawn = time < Math.max(robo.prologoProtegidoAte ?? -Infinity,
       robo.spawnProtegidoAte ?? -Infinity);
-    atualizarFlutuacao(robo, time, delta);
+    const relevante = atorRelevante(scene, robo);
+    atualizarBarrasDistantes(robo, relevante);
+    const decidir = atualizarDecisaoAtor(scene, robo, time);
+    if (relevante) atualizarFlutuacao(robo, time, delta);
     let combateVisivel = false;
     if (!atualizarEmergenciaRoboBola(scene, robo, delta)) {
       if (protegendoSpawn) robo.setVelocity(0, 0);
-      else atualizarIAInimigo(scene, time, robo, (_scene, _robo, alvo) => {
+      else if (decidir) atualizarIAInimigo(scene, time, robo, (_scene, _robo, alvo) => {
         combateVisivel = true;
         atualizarCombateRoboBola(scene, robo, alvo, time, delta);
       });
     }
-    if (!combateVisivel) {
+    if (decidir && !combateVisivel) {
       robo.inicioCarga = null;
       robo.cargaTiro = 0;
       robo.recuando = false;
       robo.estadoBola = robo.iaEstado || "patrulha";
     }
-    atualizarFrame(robo, time < (robo.olhoAzulAte || 0));
     atualizarHitboxRoboBola(robo);
+    if (!relevante) continue;
+    atualizarFrame(robo, time < (robo.olhoAzulAte || 0));
     const yBarra = robo.y + robo.deslocamentoFlutuacao - ALTURA_BARRA_VIDA;
     robo.fundoVida?.setPosition(robo.x, yBarra);
     robo.barraVida?.setPosition(robo.x - 27, yBarra);

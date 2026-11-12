@@ -8,7 +8,8 @@ export function criarTeleporteDevBoss(scene) {
   const teleportar = () => {
     if (!scene.developerMode || scene.morteEmAndamento ||
         scene.transicaoEmAndamento || scene.transicaoRetornoEmAndamento ||
-        !scene.player?.active) return;
+        !scene.player?.active || scene.generatorMenuOpen || scene.devItemMenuOpen ||
+        scene.cenaEntradaBossAtiva) return;
 
     if (scene.sys.settings.key === "Level1Parte2") {
       if (scene.estadoDash) scene.estadoDash.ativo = false;
@@ -34,8 +35,10 @@ export function criarTeleporteDevBoss(scene) {
     });
   };
 
+  scene.teleportarDevBoss = teleportar;
   tecla.on("down", teleportar);
   scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
     tecla.off("down", teleportar);
+    if (scene.teleportarDevBoss === teleportar) scene.teleportarDevBoss = null;
   });
 }

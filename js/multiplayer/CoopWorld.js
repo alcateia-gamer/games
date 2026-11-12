@@ -3,7 +3,9 @@ import { tocarSomColocando } from "../sounds/colocando.js";
 import { COOP, mergeCoopProgress } from "./CoopProtocol.js";
 import { localizarTelasSupercomputador } from "../enemies/novoBoss/NovoBossSupercomputador.js";
 import { novoBossConfig } from "../enemies/novoBoss/NovoBossConfig.js";
-import { Inventory } from "../inventory/Inventory.js";
+import { Inventory, MAX_INVENTORY_SLOTS } from "../inventory/Inventory.js";
+import { criarDropsInventario } from "../inventory/InventoryDrops.js";
+import { getInventoryItem } from "../inventory/InventoryItems.js";
 import { GENERATOR_LOOP_START_SECONDS } from "../sounds/gerador.js";
 import { ocultarHUDDuranteCena } from "../ui/HudCinematic.js";
 
@@ -25,10 +27,40 @@ export class CoopWorld {
     this.screens = localizarTelasSupercomputador(this.scene.map, novoBossConfig.arena)
       .flatMap(t => t.celulas.map(c => c.tile));
   }
+  dropInventory(drop) {
+    if (this.r.host) return this.acceptInventoryDrop(drop, this.manager.playerId);
+    return this.manager.sendCoopAction("inventoryDrop", { drop });
+  }
+  acceptInventoryDrop(drop, playerId) {
+    if (!this.r.host || typeof drop?.id !== "string" || !drop.id.startsWith(`${playerId}:`) ||
+        !COOP.maps.includes(drop.mapKey) || ![drop.x, drop.y].every(n => Number.isFinite(n) && Math.abs(n) < 100000) ||
+        !Array.isArray(drop.slots) || !drop.slots.length || drop.slots.length > MAX_INVENTORY_SLOTS) return false;
+    if (drop.slots.some(slot => {
+      const item = getInventoryItem(slot?.itemId);
+      return !item || !Number.isInteger(slot.quantity) || slot.quantity < 1 || slot.quantity > item.maxStack ||
+        (slot.itemId === "gasolina" && (!Number.isFinite(slot.fuel) || slot.fuel < 0 || slot.fuel > 1));
+    })) return false;
+    const progress = this.manager.room.coopProgress;
+    progress.inventoryDrops ??= {};
+    if (progress.inventoryDrops[drop.id]) return false;
+    progress.inventoryDrops[drop.id] = { id: drop.id, mapKey: drop.mapKey, x: drop.x, y: drop.y,
+      slots: drop.slots.map(slot => ({ ...slot })) };
+    criarDropsInventario(this.scene, progress.inventoryDrops[drop.id], progress.collected);
+    this.manager.sendCoopAction("progressState", { progress }, { authority: true });
+    this.manager.publishState();
+    return true;
+  }
+  syncInventoryDrops() {
+    if (!this.r.host) return;
+    this.acceptInventoryDrop(this.scene.coopInventoryDrop, this.manager.playerId);
+    for (const player of this.manager.room.players ?? []) {
+      if (player.id !== this.manager.playerId) this.acceptInventoryDrop(player.coop?.inventoryDrop, player.id);
+    }
+  }
   collect(pickup) {
     if (this.pending.has(pickup.uniqueId)) return false;
     const preview = new Inventory({ slots: this.scene.inventory.getSlots(), collectedItemIds: [] });
-    if (!preview.addItem(pickup.itemId, pickup.quantity)) {
+    if (!preview.addItem(pickup.itemId, pickup.quantity, { fuel: pickup.fuel ?? 0 })) {
       this.scene.mostrarAvisoInventarioCheio?.(); return false;
     }
     this.pending.add(pickup.uniqueId);
@@ -42,7 +74,8 @@ export class CoopWorld {
       else if (action.kind === "progressState") {
         if (p.devLighting === null || typeof p.devLighting === "boolean") this.manager.room.coopDevLighting = p.devLighting;
         this.manager.room.coopProgress = mergeCoopProgress(this.manager.room.coopProgress, p.progress);
-        this.applyFlags(p.flags || p.progress?.flags);
+        this.restore();
+        if (p.flags) this.applyFlags(p.flags);
       }
       else if (action.kind === "map") this.applyMap(p);
       else if (action.kind === "bossIntro") {
@@ -58,6 +91,12 @@ export class CoopWorld {
       return;
     }
     if (!r.host) return;
+    if (action.kind === "inventoryDrop") {
+      if (action.playerId === this.manager.playerId || this.manager.room.players?.some(p => p.id === action.playerId)) {
+        this.acceptInventoryDrop(p.drop, action.playerId);
+      }
+      return;
+    }
     const player = action.playerId === this.manager.playerId ? s.player : r.players.remotes.get(action.playerId)?.actor;
     if (!player?.active) return;
     const progress = this.manager.room.coopProgress;
@@ -68,7 +107,8 @@ export class CoopWorld {
       if (!pickup || progress.collected[p.uid] || Math.hypot(player.x - pickup.x, player.y - pickup.y) > pickup.range + 32) {
         this.manager.sendCoopAction("pickupRejected", { uid: p.uid }, { authority: true, targetId: action.playerId }); return;
       }
-      const grant = { uid: pickup.uniqueId, itemId: pickup.itemId, quantity: pickup.quantity, playerId: action.playerId };
+      const grant = { uid: pickup.uniqueId, itemId: pickup.itemId, quantity: pickup.quantity, playerId: action.playerId,
+        ...(pickup.itemId === "gasolina" ? { fuel: pickup.fuel ?? 0 } : {}) };
       progress.collected[p.uid] = grant;
       this.applyCollected(grant);
       this.manager.sendCoopAction("collected", grant, { authority: true });
@@ -114,7 +154,7 @@ export class CoopWorld {
     const coletaLocalPendente = this.pending.has(grant.uid);
     this.pending.delete(grant.uid);
     if (s.inventory.hasCollected(grant.uid)) return;
-    if (grant.playerId === this.manager.playerId && !s.inventory.addItem(grant.itemId, grant.quantity)) return;
+    if (grant.playerId === this.manager.playerId && !s.inventory.addItem(grant.itemId, grant.quantity, { fuel: grant.fuel ?? 0 })) return;
     s.inventory.markCollected(grant.uid);
     // Restauração de progresso e coletas de outros jogadores não são novas coletas locais.
     if (coletaLocalPendente && grant.playerId === this.manager.playerId) tocarSomColocando(s);
@@ -148,6 +188,7 @@ export class CoopWorld {
     const progress = this.manager.room.coopProgress;
     this.applyFlags(progress?.flags);
     for (const grant of Object.values(progress?.collected || {})) this.applyCollected(grant);
+    for (const drop of Object.values(progress?.inventoryDrops || {})) criarDropsInventario(this.scene, drop, progress.collected);
   }
   generatorProgress() {
     const progress = this.manager.room.coopProgress;

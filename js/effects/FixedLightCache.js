@@ -26,8 +26,46 @@ export default class FixedLightCache {
     this.refazerTudo = true;
   }
 
+  /** A fábrica anterior já não é renderizada: encolhe o atlas ao cenário que permanece. */
+  descartarAbaixo(limiteY) {
+    this.fontes = this.fontes.filter(fonte => {
+      if (fonte.luz.y - fonte.luz.raio * MULTIPLICADOR_ALCANCE_FABRICA <= limiteY) return true;
+      this.liberarCarimbos(fonte);
+      return false;
+    });
+    this.areaSuja = this.sujo = this.refazerTudo = true;
+    this.regiaoSuja = null;
+    this.revisao++;
+  }
+
+  liberarCarimbos(fonte) {
+    for (const canvas of fonte.carimbos ?? []) if (canvas) canvas.width = canvas.height = 0;
+    fonte.carimbos = null;
+  }
+
+  /** Guarda os três recortes pequenos de cada neon; intensidade só participa da composição. */
+  desenharPerfil(context, fonte, indice) {
+    const raio = fonte.luz.raio * MULTIPLICADOR_ALCANCE_FABRICA;
+    if (!fonte.luz.neon || raio > 128) {
+      this.pintar(context, fonte.perfis[indice], fonte);
+      return;
+    }
+    fonte.carimbos ??= [];
+    let canvas = fonte.carimbos[indice];
+    if (!canvas) {
+      canvas = fonte.carimbos[indice] = document.createElement("canvas");
+      canvas.width = canvas.height = Math.ceil(raio * 2);
+      const c = canvas.getContext("2d");
+      c.setTransform(1, 0, 0, 1, raio - fonte.luz.x, raio - fonte.luz.y);
+      c.globalAlpha = 1;
+      this.pintar(c, fonte.perfis[indice], fonte);
+    }
+    context.drawImage(canvas, fonte.luz.x - raio, fonte.luz.y - raio);
+  }
+
   atualizar(agora, zonas, paredes, estatuas, oclusao) {
     let mudou = false;
+    const recortesAlterados = this.versoes[0] !== paredes.revisao || this.versoes[1] !== estatuas.revisao;
     const versoes = [paredes.revisao, estatuas.revisao, oclusao.revisao];
     for (let i = 0; i < versoes.length; i++) {
       if (this.versoes[i] !== versoes[i]) {
@@ -38,6 +76,8 @@ export default class FixedLightCache {
       const luz = fonte.luz;
       const intensidade = luz.ligada ? luz.intensidade * (luz.cor?.alpha ?? 1) * zonas.fatorLuz(luz, agora) : 0;
       const angulo = luz.neon ? luz.fase : luz.angulo;
+      if (recortesAlterados || fonte.x !== luz.x || fonte.y !== luz.y ||
+          fonte.raio !== luz.raio || fonte.angulo !== angulo) this.liberarCarimbos(fonte);
       if (fonte.x !== luz.x || fonte.y !== luz.y || fonte.raio !== luz.raio) {
         fonte.x = luz.x; fonte.y = luz.y; fonte.raio = luz.raio;
         this.areaSuja = mudou = this.refazerTudo = true;
@@ -89,12 +129,12 @@ export default class FixedLightCache {
       }
       if (!cor) {
         context.globalAlpha = fonte.intensidade;
-        this.pintar(context, fonte.perfis[0], fonte);
+        this.desenharPerfil(context, fonte, 0);
       } else {
         context.globalAlpha = fonte.intensidade * (fonte.luz.neon ? 0.55 : 0.35);
-        this.pintar(context, fonte.perfis[1], fonte);
+        this.desenharPerfil(context, fonte, 1);
         context.globalAlpha = fonte.intensidade * 0.95;
-        this.pintar(context, fonte.perfis[2], fonte);
+        this.desenharPerfil(context, fonte, 2);
       }
     }
   }
@@ -140,6 +180,7 @@ export default class FixedLightCache {
   destroy() {
     this.canvasMascara.width = this.canvasMascara.height = 0;
     this.canvasCor.width = this.canvasCor.height = 0;
+    for (const fonte of this.fontes) this.liberarCarimbos(fonte);
     this.fontes.length = this.versoes.length = 0;
     this.pintar = null;
   }

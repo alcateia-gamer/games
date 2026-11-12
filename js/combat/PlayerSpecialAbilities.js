@@ -1040,6 +1040,7 @@ function criarSistemaEspeciais(scene) {
 
   // Evento já emitido pelo botão especial.
   scene.events.on("player:especial", ativar);
+  scene.executarHabilidadeEspecial = ativar;
 
   // ===================================================
   // INTEGRAR COM LASERS E IA
@@ -1070,6 +1071,7 @@ function criarSistemaEspeciais(scene) {
 
   const limpar = () => {
     scene.events.off("player:especial", ativar);
+    if (scene.executarHabilidadeEspecial === ativar) scene.executarHabilidadeEspecial = null;
     scene.events.off('postupdate',sincronizarDomo);
 
     scene.events.off(Phaser.Scenes.Events.SHUTDOWN, limpar);

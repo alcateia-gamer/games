@@ -232,5 +232,5 @@ function atualizarTransicaoParaParte2(scene) {
   }
 }
 
-export { atualizarTransicaoParaParte2 };
+export { atualizarTransicaoParaParte2, iniciarTransicao };
 export default criarTransicaoParaParte2;

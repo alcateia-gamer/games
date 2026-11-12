@@ -2,7 +2,9 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import { VisualSender, VisualReceiver, mergePendingFrame, describeVisual, applyVisual } from "./CoopVisuals.js";
-import { playerVisualObjects } from "./CoopPlayers.js";
+import { CoopPlayers, playerVisualObjects } from "./CoopPlayers.js";
+import { CoopRevival } from "./CoopRevival.js";
+import { Inventory } from "../inventory/Inventory.js";
 import { CoopWorld } from "./CoopWorld.js";
 import FactoryLighting from "../effects/FactoryLighting.js";
 import { BossReplica } from "./CoopBossReplica.js";
@@ -374,5 +376,85 @@ test("gerador ligado bloqueia o retorno à cidade sem remover a regra de resgate
   assert.equal(world.transitioning, false);
   assert.equal(scene.started, undefined);
   assert.equal(sent.length, 0);
+  world.destroy();
+});
+
+
+test("host atualiza repetidamente com CoopWorld real sem erros e continua publicando os quadros", () => {
+  const { world, scene, manager } = worldFixture();
+  const runtime = Object.setPrototypeOf(world.r, CoopRuntime.prototype);
+  Object.assign(scene, { vida: 100, time: { now: 0 }, direcaoAtual: "down", personagemSelecionada: "kai-mercer" });
+  manager.room.players = [{ id: manager.playerId, health: 100 }];
+  let inputs = 0, frames = 0;
+  manager.sendPlayerState = () => { inputs++; };
+  manager.publishCoopFrame = () => { frames++; };
+  Object.assign(runtime, { host: true, world, localContext: scene,
+    players: new CoopPlayers(runtime), revival: new CoopRevival(runtime),
+    music: { update() {}, snapshot: () => null }, sender: new VisualSender(), baseline: new Set(),
+    lastInput: -Infinity, lastFrame: -Infinity, lastKeyframe: -Infinity,
+    forceKeyframe: true, metrics: { frames: 0, bytes: 0, maxBytes: 0 } });
+  for (let frame = 0; frame < 120; frame++) {
+    scene.time.now = frame * 16;
+    assert.doesNotThrow(() => runtime.update(scene.time.now, 16));
+  }
+  assert.ok(inputs > 0);
+  assert.ok(frames > 0);
+  assert.equal(runtime.metrics.frames, frames);
+  runtime.revival.destroy(); world.destroy();
+});
+
+function prepararDrops(scene) {
+  scene.sys = { settings: { key: "Level1" } };
+  scene.inventory = new Inventory({ slots: [], collectedItemIds: [] });
+  scene.itensColetaveis = [];
+  scene.textures = { exists: () => true, getFrame: () => ({ cutWidth: 16, cutHeight: 16 }) };
+  const visual = (x, y) => Object.assign(new EventEmitter(), {
+    x, y, active: true, displayHeight: 28,
+    setDisplaySize() { return this; }, setDepth() { return this; },
+    setPosition(x, y) { Object.assign(this, { x, y }); return this; },
+    fillStyle() { return this; }, fillRect() { return this; },
+    destroy() { this.active = false; this.emit("destroy"); },
+  });
+  scene.add = { image: visual, graphics: () => visual(0, 0) };
+  scene.tweens = { add() {}, killTweensOf() {} };
+}
+
+test("itens de uma queda chegam pela ação ou snapshot uma única vez e conservam combustível na coleta", () => {
+  const { world, scene, manager, sent } = worldFixture();
+  world.r.host = true;
+  prepararDrops(scene);
+  manager.room.players = [{ id: "ally", coop: {} }];
+  manager.publishState = () => {};
+  const drop = { id: "ally:1", mapKey: "Level1", x: 0, y: 0,
+    slots: [{ itemId: "gasolina", quantity: 1, fuel: 0.75 }, { itemId: "bateria", quantity: 1 }] };
+  world.receive({ kind: "inventoryDrop", playerId: "ally", payload: { drop } });
+  assert.equal(scene.itensColetaveis.length, 2);
+  manager.room.players[0].coop.inventoryDrop = drop;
+  world.syncInventoryDrops(); world.restore();
+  assert.equal(scene.itensColetaveis.length, 2, "ação, snapshots e restauração não duplicam os itens");
+  assert.equal(sent.filter(a => a[0] === "progressState").length, 1);
+  world.receive({ kind: "pickup", playerId: manager.playerId, payload: { uid: "drop:ally:1:0" } });
+  assert.equal(scene.inventory.getSlots()[0].fuel, 0.75);
+  world.restore();
+  assert.equal(scene.itensColetaveis.length, 1, "restaurar progresso não recria o item já coletado");
+  const next = { ...drop, id: "ally:2" };
+  manager.room.players[0].coop.inventoryDrop = next;
+  world.syncInventoryDrops();
+  assert.equal(scene.itensColetaveis.length, 3, "o snapshot recupera uma ação de queda perdida");
+  world.destroy();
+});
+
+test("drop local do host é publicado e cliente solicita o drop sem autoridade própria", () => {
+  const { world, scene, manager, sent } = worldFixture();
+  world.r.host = true; prepararDrops(scene); manager.publishState = () => {};
+  const drop = { id: `${manager.playerId}:1`, mapKey: "Level1", x: 0, y: 0,
+    slots: [{ itemId: "bateria", quantity: 1 }] };
+  assert.equal(world.dropInventory(drop), true);
+  assert.equal(scene.itensColetaveis.length, 1);
+  assert.equal(world.dropInventory(drop), false);
+  world.r.host = false;
+  world.dropInventory({ ...drop, id: `${manager.playerId}:2` });
+  assert.equal(sent.at(-1)[0], "inventoryDrop");
+  assert.equal(scene.itensColetaveis.length, 1);
   world.destroy();
 });

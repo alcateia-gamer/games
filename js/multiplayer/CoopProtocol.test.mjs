@@ -134,3 +134,11 @@ test("sprites estáticos não são reenviados; mudanças, remoção e keyframes 
   assert.equal(sender.capture([object], true).changed[0].s.k, "boss");
   assert.deepEqual(sender.capture([]).removed, [first.changed[0].id]);
 });
+
+
+test("quadros atrasados não apagam os itens derrubados já confirmados", () => {
+  const progress = { flags: {}, collected: {}, inventoryDrops: { "host:1": { id: "host:1" } } };
+  const stale = { flags: {}, collected: {}, inventoryDrops: {} };
+  assert.deepEqual(mergeCoopProgress(progress, stale).inventoryDrops, progress.inventoryDrops);
+  assert.equal(Object.keys(mergeCoopProgress(progress, { inventoryDrops: { "ally:1": { id: "ally:1" } } }).inventoryDrops).length, 2);
+});

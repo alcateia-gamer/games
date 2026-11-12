@@ -1,5 +1,5 @@
 /**
- * @file Cria WASD, controles de desenvolvedor, joystick e tela cheia; mantém os elementos
+ * @file Cria WASD, controles de desenvolvedor, joystick e teleportes de desenvolvimento; mantém os elementos
  * fixos durante o zoom.
  */
 
@@ -7,6 +7,7 @@ import { aplicarEstaminaInfinitaDev } from "../player/PlayerStatus.js";
 import { criarJoystick } from "./PlayerJoystick.js";
 import { criarBotaoHUDNitido } from "../ui/HudCanvas.js";
 import { criarTeleporteDevBoss } from "./DeveloperTeleport.js";
+import { criarBotoesTeleporteDev } from "./DeveloperTeleportButtons.js";
 import { criarMenuColetaveisDev } from "./DeveloperItemMenu.js";
 
 // =====================================================
@@ -75,13 +76,6 @@ function configurarControlesFixos(scene) {
     textoLuzFabrica.setPosition(luzX, luzY);
     botaoLuzFabrica.setScale(1 / zoomX, 1 / zoomY);
     textoLuzFabrica.setScale(1 / zoomX, 1 / zoomY);
-
-    if (scene.botaoFullscreen?.scene) {
-      const fullscreenTelaX = camera.width - (botaoLuzFabrica.visible ? 210 : 100);
-      const fullscreenX = origemX + (fullscreenTelaX - origemX) / zoomX;
-      scene.botaoFullscreen.setPosition(fullscreenX, devY).setScale(1 / zoomX, 1 / zoomY);
-      scene.textoBotaoFullscreen?.setPosition(fullscreenX, devY).setScale(1 / zoomX, 1 / zoomY);
-    }
 
     // =================================================
     // ANALÓGICO
@@ -232,112 +226,11 @@ function criarControlesInput(scene) {
   // ANALÓGICO
   criarJoystick(scene);
 
-  criarControleFullscreen(scene);
+  criarBotoesTeleporteDev(scene);
   configurarControlesFixos(scene);
   criarBotaoHUDNitido(scene, scene.botaoDesenvolvedor, scene.textoBotaoDesenvolvedor);
   criarBotaoHUDNitido(scene, scene.botaoLuzFabrica, scene.textoBotaoLuzFabrica);
-  criarBotaoHUDNitido(scene, scene.botaoFullscreen, scene.textoBotaoFullscreen);
-}
 
-/**
- * Cria o botão de tela cheia para dispositivos com toque e detecta suporte do navegador.
- */
-function criarControleFullscreen(scene) {
-  const eTouch =
-    typeof window !== "undefined" &&
-    ("ontouchstart" in window || navigator.maxTouchPoints > 0);
-
-  if (!eTouch) {
-    return;
-  }
-
-  /**
-   * Retorna o elemento da página que será apresentado em tela cheia.
-   */
-  const elementoFullscreen = () => document.documentElement;
-  /**
-   * Consulta o elemento atualmente em tela cheia, incluindo a variante WebKit.
-   */
-  const obterElementoFullscreen = () =>
-    document.fullscreenElement || document.webkitFullscreenElement;
-  /**
-   * Verifica se o navegador oferece uma das APIs de entrada em tela cheia.
-   */
-  const podeEntrarFullscreen = () => {
-    const elemento = elementoFullscreen();
-    return !!(elemento.requestFullscreen || elemento.webkitRequestFullscreen);
-  };
-
-  /**
-   * Solicita tela cheia e trata a rejeição da API do navegador.
-   */
-  const entrarFullscreen = async () => {
-    const elemento = elementoFullscreen();
-
-    try {
-      if (elemento.requestFullscreen) {
-        await elemento.requestFullscreen({ navigationUI: "hide" });
-      } else {
-        await elemento.webkitRequestFullscreen?.();
-      }
-    } catch (erro) {
-      console.warn("Fullscreen não disponível:", erro);
-    }
-  };
-
-  /**
-   * Encerra a tela cheia usando a API disponível no navegador.
-   */
-  const sairFullscreen = async () => {
-    try {
-      if (document.exitFullscreen) {
-        await document.exitFullscreen();
-      } else {
-        await document.webkitExitFullscreen?.();
-      }
-    } catch (erro) {
-      console.warn("Não foi possível sair do fullscreen:", erro);
-    }
-  };
-
-  /**
-   * Alterna entre entrar e sair de tela cheia conforme o estado atual.
-   */
-  const alternarFullscreen = async () => {
-    if (obterElementoFullscreen()) {
-      await sairFullscreen();
-    } else {
-      await entrarFullscreen();
-    }
-  };
-
-  scene.botaoFullscreen = scene.add
-    .rectangle(700, 24, 40, 30, 0x1f2937, 0.9)
-    .setStrokeStyle(2, 0x6ee7b7, 1)
-    .setScrollFactor(0)
-    .setDepth(200)
-    .setInteractive();
-
-  scene.textoBotaoFullscreen = scene.add
-    .text(700, 24, "[]", {
-      fontSize: "14px",
-      color: "#e5e7eb",
-      fontStyle: "bold",
-      fontFamily: "monospace",
-    })
-    .setOrigin(0.5)
-    .setScrollFactor(0)
-    .setDepth(201);
-
-  scene.botaoFullscreen.on("pointerdown", (pointer) => {
-    pointer.event?.preventDefault?.();
-    void alternarFullscreen();
-  });
-
-  if (!podeEntrarFullscreen()) {
-    scene.botaoFullscreen.setAlpha(0.45);
-    scene.textoBotaoFullscreen.setAlpha(0.45);
-  }
 }
 
 export { criarControlesInput };

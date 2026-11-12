@@ -1,3 +1,4 @@
+import { atorRelevante } from "../core/ActorActivity.js";
 /**
  * @file Regras de sobreposição visual da cidade e fábrica. Ajusta depth pelo Y ou pela posição
  * relativa ao personagem.
@@ -79,7 +80,7 @@ function atualizarDepthAtores(scene) {
   const atores = new Set([scene.player, scene.companionPet, ...(scene.inimigos ?? []),
     ...(scene.remotePlayers?.values?.() ?? [])]);
   for (const ator of atores) {
-    if (ator?.active) ator.setDepth(calcularDepthAtor(scene, obterFootYAtor(ator), ator));
+    if (ator?.active && atorRelevante(scene, ator)) ator.setDepth(calcularDepthAtor(scene, obterFootYAtor(ator), ator));
   }
 }
 

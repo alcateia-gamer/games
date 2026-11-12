@@ -24,7 +24,7 @@ export function criarPainelGerador(scene, { onActivate, onClose }) {
   const instructions = () => inventory.getQuantity("gasolina") > 0 && !availableQuantity("gasolina")
     ? "Encha o galão no ponto de gasolina antes de conectar ao gerador."
     : "Arraste a bateria e o galão cheio para conectar o circuito.";
-  const display = criarDisplayGerador(scene, WIDTH, HEIGHT);
+  const display = criarDisplayGerador(scene, WIDTH, HEIGHT, "generatorDisplay", { manualInvalidation: true });
   const root = scene.add.container(0, 0).setDepth(1000).setScrollFactor(0)
     .setName("generator-modal").setVisible(false);
   const backdrop = scene.add.rectangle(0, 0, camera.width, camera.height, 0x010805, 0.82)
@@ -37,6 +37,8 @@ export function criarPainelGerador(scene, { onActivate, onClose }) {
   let drag = null;
   let pressed = null;
   let signature = "";
+  let inventoryDirty = true;
+  let lastUIState = "";
   let destroyed = false;
   const hiddenDOM = new Map();
   const installed = new Set();
@@ -172,12 +174,17 @@ export function criarPainelGerador(scene, { onActivate, onClose }) {
 
   const ready = () => installed.size === 2 && ROWS.every(row => availableQuantity(row.id) >= 1);
   const refresh = (force = false) => {
+    const uiState = `${activating}:${[...installed]}:${drag?.id}:${drag?.hover}`;
+    if (!force && inventory.onChange && !inventoryDirty && uiState === lastUIState) return;
+    inventoryDirty = false;
+    lastUIState = uiState;
     if (!activating) {
       for (const row of ROWS) if (availableQuantity(row.id) < 1) installed.delete(row.id);
     }
     const next = `${activating}:${[...installed]}:${ROWS.map(row => availableQuantity(row.id))}:${fuelLevel()}:${inventory.getQuantity("gasolina")}:${drag?.id}:${drag?.hover}`;
     if (!force && next === signature) return;
     signature = next;
+    display?.invalidate();
     for (const visual of visuals) {
       const connected = installed.has(visual.id);
       const available = availableQuantity(visual.id) >= 1;
@@ -212,7 +219,8 @@ export function criarPainelGerador(scene, { onActivate, onClose }) {
       .setColor(ready() || activating ? "#baffd6" : "#a3c5ae");
   };
   const layout = () => {
-    if (opened) hideDOM();
+    if (!opened) return;
+    hideDOM();
     const zoomX = camera.zoomX || camera.zoom || 1;
     const zoomY = camera.zoomY || camera.zoom || 1;
     const originX = camera.width * camera.originX;
@@ -240,6 +248,7 @@ export function criarPainelGerador(scene, { onActivate, onClose }) {
     if (!availableQuantity("gasolina") && inventory.getQuantity("gasolina") > 0 &&
       inside(p, -267, combustivel.sourceY, 144, 65)) {
       feedback.setText(instructions()).setColor("#e3b891");
+      display?.invalidate();
       return;
     }
     const visual = visuals.find(v => availableQuantity(v.id) >= 1 &&
@@ -256,6 +265,7 @@ export function criarPainelGerador(scene, { onActivate, onClose }) {
     const visual = visuals.find(v => v.id === drag.id);
     drag.hover = inside(p, -82, visual.y, 144, 88);
     ghost.setPosition(p.x, p.y);
+    display?.invalidate();
     refresh();
   };
   const up = pointer => {
@@ -291,6 +301,7 @@ export function criarPainelGerador(scene, { onActivate, onClose }) {
   scene.input.on("gameout", blur);
   scene.game.events.on("blur", blur);
   scene.events.on(Phaser.Scenes.Events.PRE_RENDER, layout);
+  const unsubscribeInventory = inventory.onChange?.(() => { inventoryDirty = true; });
   layout();
   refresh(true);
   const restoreDOM = () => {
@@ -305,11 +316,12 @@ export function criarPainelGerador(scene, { onActivate, onClose }) {
       installed.clear(); activating = false; opened = true; cancelDrag(); layout();
       hideDOM();
       feedback.setText(instructions()).setColor("#b1dec3");
+      display?.invalidate();
       root.setVisible(true);
       tocarSomColocando(scene, "acesso");
     },
     close() { opened = false; cancelDrag(); installed.clear(); root.setVisible(false); display?.hide(); restoreDOM(); },
-    message(label) { feedback.setText(label).setColor("#d4a17c"); },
+    message(label) { feedback.setText(label).setColor("#d4a17c"); display?.invalidate(); },
     start() {
       activating = true; drag = null; pressed = null; ghost.setVisible(false); refresh(true);
       feedback.setText("Motor iniciando. A energia está estabilizando...").setColor("#8dffbf");
@@ -318,6 +330,7 @@ export function criarPainelGerador(scene, { onActivate, onClose }) {
     destroy() {
       if (destroyed) return;
       destroyed = true;
+      unsubscribeInventory?.();
       display?.destroy();
       restoreDOM();
       scene.input.off("pointerdown", down);

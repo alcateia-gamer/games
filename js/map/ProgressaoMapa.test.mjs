@@ -84,12 +84,10 @@ test("remove robôs nascidos fora mesmo que tenham seguido o jogador até a aren
   const nativo = objeto(-5800, { x: -1080, origemSpawn: { x: -1080, y: -5800 } });
   const invocado = objeto(-5800, { x: -1080, prologoEncontroId: "boss-1" });
   scene.inimigos = [invasor, invasorLateral, nativo, invocado];
-  scene.iluminacaoEmergencia = { desligarGiroflex() { scene.giroflexDesligado = true; } };
   descarregarFabricaParaBoss(scene);
   assert.deepEqual(scene.inimigos, [nativo, invocado]);
   assert.equal(invasor.active, false);
   assert.equal(invasorLateral.active, false);
   assert.equal(nativo.active, true);
   assert.equal(invocado.active, true);
-  assert.equal(scene.giroflexDesligado, true);
 });

@@ -150,14 +150,8 @@ como complemento discreto.
   `camera.preRender`, preservando alinhamento durante movimento, zoom e resize.
 - Quadros sem mudança na câmera ou intensidade reutilizam a textura. Não há
   novos shaders, canvas de tela inteira adicionais ou processamento de pixels por frame.
-- O giroflex em aparelhos com toque ou sistema móvel atualiza a orientação a 30 Hz,
-  sem alterar a duração da volta. Câmera, portas e zonas continuam reagindo a cada quadro.
-- `GiroflexLightCache.js` guarda os recortes de paredes e estátuas por luz visível.
-  A máscara e a cor compartilham o mesmo carimbo: girar só redesenha o feixe,
-  sem refazer as silhuetas. O cache é invalidado ao mudar portas, estátuas ou a fonte.
-- Os três canvases locais de cada giroflex têm até 256 × 256 pixels no celular
-  (512 × 512 no desktop), mesmo com raios grandes. São liberados quando a fonte
-  sai da tela. Estátuas fora do alcance são descartadas antes do desenho.
+- As luzes giratórias foram removidas, incluindo pontos do mapa, perfis e cache exclusivo.
+  A camada de emergência contém apenas neons fixos.
 - O encerramento remove listener, overlay, textura e canvases temporários.
 
 ## Comparação com o GitHub
@@ -178,7 +172,7 @@ sem substituir arquivos por versões remotas ou publicar alterações.
 
 ```sh
 node --test js/effects/FactoryLighting.test.mjs
-node --test js/effects/EmergencyLighting.test.mjs js/effects/GiroflexLightCache.test.mjs
+node --test js/effects/EmergencyLighting.test.mjs
 node --test
 ```
 

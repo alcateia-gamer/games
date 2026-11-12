@@ -4,7 +4,7 @@ import { ocultarBrilhoAtrasSprite } from "./SpriteLightOcclusion.js";
 const CAMPOS = ["x", "y", "scaleX", "scaleY", "rotation", "flipX", "flipY",
   "displayOriginX", "displayOriginY", "alpha", "visible", "active", "frame"];
 
-/** Oculta apenas a contribuição do giroflex atrás dos pixels das estátuas. */
+/** Oculta apenas a contribuição das luzes fixas atrás dos pixels das estátuas. */
 export default class EmergencyStatueOcclusion {
   constructor(scene, luzes) {
     this.estatuas = (scene.objetosMapaParte2 ?? [])
@@ -58,7 +58,7 @@ export default class EmergencyStatueOcclusion {
     return true;
   }
 
-  /** A silhueta é estática enquanto a luz gira; também atende ao cache do giroflex. */
+  /** A silhueta acompanha mudanças das estátuas e invalida o cache das luzes fixas. */
   recortar(context, luz, raio) {
     for (const estatua of this.estatuas) {
       const frame = estatua.frame;

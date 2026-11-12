@@ -60,7 +60,11 @@ test("flashlight updates on movement and direction changes only while factory po
   const stationaryUploads = uploads;
   for (let i = 0; i < 120; i++) render();
   assert.equal(uploads, stationaryUploads);
+  scene.generatorMenuOpen = true;
   scene.player.body.velocity.x = 100;
+  render();
+  assert.equal(uploads, stationaryUploads, "o menu conserva a iluminação já desenhada");
+  scene.generatorMenuOpen = false;
   render();
   assert.equal(uploads, stationaryUploads + 1, "mudar direção atualiza o cone");
   const recortesSemEnergia = recortes;
@@ -224,4 +228,10 @@ test("neon fica atrás do boss, cópias, Robô Bola e NOVA, acompanhando suas po
   render();
   assert.equal(uploads, parado + 5, "saída do aliado remove a silhueta antiga");
   assert.ok(!chamadas.some(ch => ch.args[0] === imagemAliado));
+  const antesDaLimpeza = uploads;
+  scene.limiteFabricaDescarregadaY = 150;
+  render();
+  assert.equal(uploads, antesDaLimpeza + 1, "descarregar a fábrica atualiza o cache das luzes");
+  render();
+  assert.equal(uploads, antesDaLimpeza + 1, "a limpeza não é refeita a cada quadro");
 });

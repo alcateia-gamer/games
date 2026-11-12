@@ -670,86 +670,6 @@ test("olhar para cima de dentro da fachada ilumina o interior sem mostrar a luz 
   assert.ok(alpha(426, 185) < 0.5, "reentrar atualiza o recorte mesmo com a origem visual parada");
 });
 
-test("o giroflex vermelho gira com a câmera parada, funciona sem gerador e acompanha zoom e rotação", t => {
-  const point = { id: 1, point: true, x: 400, y: 225, properties: { Lateral: true, Cima: true } };
-  const map = { getObjectLayer: name => ({ objects: name === "Luzedeemergencia" ? [point] : [] }) };
-  const { scene, render, texture, canvases, cleanup } = cenaComMascara(t, [], false, { map });
-  scene.player = { active: true, x: 100, y: 330 };
-  const camera = scene.cameras.main;
-  const rgba = (x, y) => {
-    const m = camera.matrix;
-    return texture.canvas.rgbaEm(m.a*x + m.c*y + m.e, m.b*x + m.d*y + m.f);
-  };
-  const alpha = (x, y) => rgba(x, y)[3];
-  for (const [zoom, rotacao] of [[1, 0], [1.4, 0.15]]) {
-    camera.setZoom(zoom).setRotation(rotacao);
-    scene.time.now = 0;
-    render();
-    assert.ok(alpha(490, 225) < alpha(400, 315) - 0.08, "o feixe começa na horizontal");
-    assert.ok(alpha(200, 340) < 0.6, "a lanterna continua acesa junto do giroflex");
-    const red = rgba(490, 225);
-    assert.ok(red[0] > red[1] + 0.1 && red[0] > red[2] + 0.1, "o feixe tinge o cenário de vermelho");
-    const uploads = texture.refreshes;
-    scene.time.now = 500;
-    render();
-    assert.equal(texture.refreshes, uploads + 1, "o giro atualiza a luz sem mover jogador ou câmera");
-    assert.ok(alpha(400, 315) < alpha(490, 225) - 0.08, "um quarto de volta leva o feixe à vertical");
-  }
-  const uploads = texture.refreshes, quantidade = canvases.length;
-  render();
-  assert.equal(texture.refreshes, uploads, "o mesmo instante reutiliza a composição");
-  scene.definirIluminacaoFabrica(true);
-  render();
-  assert.ok(rgba(400, 225)[0] > 0.2, "ligar o gerador conserva a iluminação de emergência");
-  scene.time.now = 750;
-  render();
-  assert.ok(scene.iluminacaoEmergencia.fontesVisiveis[0].angulo > Math.PI / 2);
-  assert.equal(canvases.length, quantidade, "a rotação usa as mesmas texturas");
-  cleanup();
-  assert.equal(scene.iluminacaoEmergencia, null);
-  assert.ok(canvases.slice(1).every(canvas => canvas.width === 0 && canvas.height === 0));
-});
-
-test("no celular o giroflex compartilha máscara e cor em 256px sem atrasar câmera ou portas", t => {
-  const body = { x: 460, y: 100, width: 6, height: 250, enable: false };
-  const map = { getObjectLayer: name => ({ objects: name === "Luzedeemergencia"
-    ? [ponto({}, 400, 225)] : [] }) };
-  const { scene, render, texture, canvases } = cenaComMascara(t, [], true, {
-    map, sys: { game: { device: { input: { touch: true } } } },
-    portasFabrica: [{ colisao: { body } }],
-  });
-  render();
-  const locais = canvases.slice(-2), quantidade = canvases.length;
-  assert.ok(locais.every(canvas => canvas.width === 256 && canvas.height === 256));
-  const uploads = texture.refreshes;
-  for (let quadro = 1; quadro <= 60; quadro++) {
-    scene.time.now = quadro * 1000 / 60;
-    render();
-  }
-  const atualizacoes = texture.refreshes - uploads;
-  assert.ok(atualizacoes >= 25 && atualizacoes <= 30, `uploads do giro em 1s: ${atualizacoes}`);
-  assert.equal(canvases.length, quantidade, "o giro reutiliza os mesmos carimbos");
-  const desenhos = () => locais.reduce((soma, canvas) => soma + canvas.context.operacoes.length, 0);
-  const antes = desenhos();
-  scene.cameras.main.setScroll(10, 0);
-  render();
-  assert.equal(desenhos(), antes, "mover a câmera apenas reposiciona os carimbos");
-  assert.ok(texture.refreshes > uploads + atualizacoes, "a câmera atualiza a composição imediatamente");
-  scene.cameras.main.setScroll(0, 0);
-  scene.time.now = 2000;
-  render();
-  assert.ok(texture.canvas.rgbaEm(490, 225)[0] > 0.1);
-  body.enable = true;
-  scene.time.now = 2001;
-  render();
-  assertSombraAmbiente(texture.canvas.alphaEm(490, 225), "a porta invalida o cache dentro do intervalo do giro");
-  assert.equal(texture.canvas.rgbaEm(490, 225)[0], 0);
-  scene.cameras.main.setScroll(5000, 0);
-  render();
-  assert.ok(locais.every(canvas => canvas.width === 0 && canvas.height === 0), "libera o cache fora da tela");
-  t.diagnostic(`uploads do giroflex em 60 quadros: ${atualizacoes}; carimbos locais: 2 × 256 × 256`);
-});
-
 test("no celular a máscara usa um quarto dos pixels e mantém luz, câmera, zoom e resize alinhados", t => {
   const { scene, render, texture, images } = cenaComMascara(t, [ponto()], true, {
     sys: { game: { device: { os: { desktop: false }, input: { touch: true } } } },
@@ -776,211 +696,6 @@ test("no celular a máscara usa um quarto dos pixels e mantém luz, câmera, zoo
   render();
   assert.deepEqual([texture.canvas.width, texture.canvas.height], [401, 226]);
   assert.ok(alpha(400, 225) < 0.3, "dimensões ímpares não deslocam a máscara após resize");
-});
-
-test("giroflex lateral varre acima e abaixo sem projetar luz ou halo para fora da sala", async t => {
-  for (const lado of ["Esquerda", "Direita"]) {
-    await t.test(lado, t => {
-      const sentido = lado === "Esquerda" ? 1 : -1;
-      const body = { x: lado === "Esquerda" ? 460 : 334, y: 100, width: 6, height: 250, enable: false };
-      const map = { getObjectLayer: name => ({ objects: name === "Luzedeemergencia"
-        ? [ponto({ Lateral: true, [lado]: true }, 400, 225)] : [] }) };
-      const { scene, render, texture, canvases, cleanup } = cenaComMascara(t, [], false,
-        { map, portasFabrica: [{ colisao: { body } }] });
-      const camera = scene.cameras.main;
-      const rgba = (x, y) => {
-        const m = camera.matrix;
-        return texture.canvas.rgbaEm(m.a*x + m.c*y + m.e, m.b*x + m.d*y + m.f);
-      };
-      render(); // Os carimbos locais são alocados apenas quando a fonte aparece.
-      const quantidade = canvases.length;
-      for (const [zoom, rotacao] of [[1, 0], [1.4, 0.15]]) {
-        camera.setZoom(zoom).setRotation(rotacao);
-        scene.time.now = 0;
-        render();
-        assert.ok(rgba(400 + sentido * 90, 225)[0] > 0.1, "o facho aponta para o interior");
-        assertSombraAmbiente(rgba(400 - sentido * 90, 225)[3], "o exterior continua escuro");
-        assert.equal(rgba(400 - sentido * 90, 225)[0], 0, "nenhum vermelho sai pelo lado errado");
-        scene.time.now = 500;
-        render();
-        const cima = rgba(400 + sentido * 8, 145)[0], baixo = rgba(400 + sentido * 8, 305)[0];
-        assert.ok(cima > baixo + 0.08, "um quarto do ciclo aponta para cima");
-        scene.time.now = 1500;
-        render();
-        assert.ok(rgba(400 + sentido * 8, 305)[0] > rgba(400 + sentido * 8, 145)[0] + 0.08,
-          "três quartos do ciclo apontam para baixo");
-        for (const y of [145, 225, 305]) assert.equal(rgba(400 - sentido * 8, y)[0], 0);
-      }
-      const uploads = texture.refreshes;
-      render();
-      assert.equal(texture.refreshes, uploads);
-      scene.time.now = 0;
-      body.enable = true;
-      render();
-      assert.ok(rgba(400 + sentido * 40, 225)[0] > 0.1, "ilumina antes da porta fechada");
-      assertSombraAmbiente(rgba(400 + sentido * 90, 225)[3], "a porta também recorta o giro lateral");
-      assert.equal(rgba(400 + sentido * 90, 225)[0], 0);
-      body.enable = false;
-      render();
-      assert.ok(rgba(400 + sentido * 90, 225)[0] > 0.1);
-      assert.equal(canvases.length, quantidade, "os perfis laterais são reutilizados");
-      cleanup();
-      assert.ok(canvases.slice(1).every(canvas => canvas.width === 0 && canvas.height === 0));
-    });
-  }
-});
-
-test("colisões recortam o feixe e a cor vermelha do giroflex, respeitando Luzatravessa", async t => {
-  for (const atravessa of [false, true]) {
-    await t.test(`Luzatravessa=${atravessa}`, t => {
-      const source = { id: 1, point: true, x: 400, y: 225 };
-      const map = { getObjectLayer: name => ({ objects: name === "Luzedeemergencia" ? [source]
-        : name === "collision" ? [
-          { x: 390, y: 215, width: 20, height: 20 },
-          { x: 460, y: 100, width: 6, height: 250,
-            properties: [{ name: "Luzatravessa", type: "bool", value: atravessa }] },
-        ] : [] }) };
-      const { scene, render, texture } = cenaComMascara(t, [], false, { map });
-      const camera = scene.cameras.main;
-      const rgba = (x, y) => {
-        const m = camera.matrix;
-        return texture.canvas.rgbaEm(m.a*x + m.c*y + m.e, m.b*x + m.d*y + m.f);
-      };
-      for (const [zoom, rotacao] of [[1, 0], [1.5, 0.15]]) {
-        camera.setZoom(zoom).setRotation(rotacao);
-        scene.time.now = 0;
-        render();
-        assert.ok(rgba(440, 225)[0] > 0.1, "o giroflex na parede ilumina antes do obstáculo");
-        if (atravessa) assert.ok(rgba(490, 225)[0] > 0.1, "a exceção do Tiled deixa passar luz vermelha");
-        else {
-          assertSombraAmbiente(rgba(490, 225)[3], "não há claridade atrás da colisão");
-          assert.equal(rgba(490, 225)[0], 0, "a cor vermelha também fica bloqueada");
-        }
-        scene.time.now = 500;
-        render();
-        assert.ok(rgba(400, 145)[0] > 0.1, "o feixe continua girando nas direções livres");
-        if (!atravessa) assert.equal(rgba(490, 225)[0], 0, "o halo vermelho não vaza ao girar");
-      }
-    });
-  }
-});
-
-test("portas bloqueiam o giroflex mesmo com gerador ligado e a lanterna apagada", t => {
-  const map = { getObjectLayer: name => ({ objects: name === "Luzedeemergencia"
-    ? [{ id: 1, point: true, x: 400, y: 225 }] : [] }) };
-  const body = { x: 460, y: 100, width: 6, height: 250, enable: true };
-  const { scene, render, texture } = cenaComMascara(t, [], true,
-    { map, portasFabrica: [{ colisao: { body } }] });
-  render();
-  assertSombraAmbiente(texture.canvas.alphaEm(490, 225));
-  body.enable = false;
-  render();
-  assert.ok(texture.canvas.rgbaEm(490, 225)[0] > 0.1, "abrir a porta ilumina sem avançar o relógio");
-  body.enable = true;
-  render();
-  assertSombraAmbiente(texture.canvas.alphaEm(490, 225), "fechar bloqueia luz e cor novamente");
-});
-
-test("giroflex com Raio grande não é cortado pelo alcance da lanterna e respeita colisões distantes", t => {
-  const map = { getObjectLayer: name => ({ objects: name === "Luzedeemergencia"
-    ? [{ id: 1, point: true, x: 200, y: 225, properties: { Raio: 400 } }]
-    : name === "collision" ? [{ x: 600, y: 0, width: 6, height: 450 }] : [] }) };
-  const { render, texture } = cenaComMascara(t, [], false, { map });
-  render();
-  assert.ok(texture.canvas.rgbaEm(590, 225)[0] > 0.05, "a luz alcança além de 360 pixels");
-  assertSombraAmbiente(texture.canvas.alphaEm(650, 225), "a colisão distante bloqueia a claridade");
-  assert.equal(texture.canvas.rgbaEm(650, 225)[0], 0, "a colisão distante também bloqueia o vermelho");
-});
-
-test("giroflex passa atrás das estátuas pelo alpha do sprite sem apagar o cenário ou outras luzes", t => {
-  const estatua = { active: true, visible: true, alpha: 1, x: 462, y: 249, depth: 15,
-    scaleX: 1, scaleY: 1, displayOriginX: 24, displayOriginY: 48,
-    getData: name => name === "objectLayerName" ? "EstátuaRobos" : undefined,
-    setDepth() { assert.fail("a sobreposição da luz não deve reordenar as estátuas"); } };
-  const outro = { ...estatua, x: 532,
-    getData: name => name === "objectLayerName" ? "Objetos1" : undefined };
-  const map = { getObjectLayer: name => ({ objects: name === "Luzedeemergencia"
-    ? [{ id: 1, point: true, x: 400, y: 225 }]
-    : name === "LuzesFabrica" ? [ponto({}, 470, 225)] : [] }) };
-  const { scene, render, texture, canvases, cleanup } = cenaComMascara(t, [], false,
-    { map, objetosMapaParte2: [estatua, outro] });
-  const sheet = document.createElement("canvas");
-  sheet.width = 96;
-  sheet.height = 48;
-  sheet.getContext("2d").fillRect(48, 0, 48, 48);
-  sheet.getContext("2d").clearRect(48 + 8, 20, 8, 8);
-  estatua.frame = outro.frame = { source: { image: sheet }, cutX: 48, cutY: 0,
-    cutWidth: 48, cutHeight: 48, realWidth: 48, realHeight: 48 };
-  const camera = scene.cameras.main;
-  const rgba = (x, y) => {
-    const m = camera.matrix;
-    return texture.canvas.rgbaEm(m.a*x + m.c*y + m.e, m.b*x + m.d*y + m.f);
-  };
-  for (const [zoom, rotacao] of [[1, 0], [1.4, 0.15]]) {
-    camera.setZoom(zoom).setRotation(rotacao);
-    render();
-    assertSombraAmbiente(rgba(470, 225)[3], "o corpo opaco oculta a claridade do giroflex");
-    assert.equal(rgba(470, 225)[0], 0, "o brilho vermelho também passa atrás da estátua");
-    assert.ok(rgba(450, 225)[0] > 0.1, "a transparência do sprite deixa a luz passar");
-    assert.ok(rgba(430, 225)[0] > 0.1 && rgba(540, 225)[0] > 0.05,
-      "o cenário ao redor e os objetos de outras camadas continuam iluminados");
-    assert.equal(estatua.depth, 15);
-  }
-  const count = canvases.length, uploads = texture.refreshes;
-  render();
-  assert.equal(texture.refreshes, uploads, "a estátua parada reutiliza a composição");
-  estatua.flipX = true;
-  render();
-  assert.ok(rgba(474, 225)[0] > 0.1, "o recorte acompanha os sprites espelhados");
-  assert.equal(rgba(450, 225)[0], 0);
-  estatua.frame = { ...estatua.frame, cutX: 0 };
-  render();
-  assert.ok(rgba(470, 225)[0] > 0.1, "trocar o frame atualiza o recorte com o relógio parado");
-  estatua.frame = { ...estatua.frame, cutX: 48 };
-  Object.assign(estatua, { flipX: false, scaleX: 1.5, scaleY: 1.2, rotation: Math.PI / 2 });
-  render();
-  assert.ok(rgba(490.8, 231)[0] > 0.05, "a transparência acompanha escala, origem e rotação do objeto");
-  assert.equal(rgba(490.8, 261)[0], 0);
-  Object.assign(estatua, { scaleX: 1, scaleY: 1, rotation: 0, visible: false });
-  render();
-  const livre = rgba(470, 225)[0];
-  assert.ok(livre > 0.1, "uma estátua invisível não oculta o giroflex");
-  Object.assign(estatua, { visible: true, alpha: 0.5 });
-  render();
-  assert.ok(rgba(470, 225)[0] > 0 && rgba(470, 225)[0] < livre, "o recorte respeita a opacidade da estátua");
-  estatua.alpha = 1;
-  scene.player = { active: true, x: 400, y: 215 };
-  render();
-  assert.ok(rgba(470, 225)[3] < 0.5, "a lanterna conserva sua iluminação independente do giroflex");
-  scene.definirIluminacaoFabrica(true);
-  render();
-  assert.ok(rgba(470, 225)[3] < 0.5, "as lâmpadas normais continuam iluminando as estátuas");
-  assert.equal(canvases.length, count, "o giro usa um único carimbo reutilizável");
-  const carimbo = canvases.find(canvas => canvas.width === 480 && canvas.height === 480);
-  assert.ok(carimbo);
-  cleanup();
-  assert.equal(carimbo.width, 0);
-  assert.equal(sheet.width, 96, "encerrar a luz não destrói a textura das estátuas");
-});
-
-test("giroflex lateral mantém a luz atrás dos pixels opacos das estátuas", t => {
-  const estatua = { active: true, visible: true, alpha: 1, x: 470, y: 249,
-    scaleX: 1, scaleY: 1, displayOriginX: 24, displayOriginY: 48,
-    getData: name => name === "objectLayerName" ? "EstátuaRobos" : undefined };
-  const map = { getObjectLayer: name => ({ objects: name === "Luzedeemergencia"
-    ? [ponto({ Lateral: true, Esquerda: true }, 400, 225)] : [] }) };
-  const { render, texture } = cenaComMascara(t, [], false, { map, objetosMapaParte2: [estatua] });
-  const sheet = document.createElement("canvas");
-  sheet.width = sheet.height = 48;
-  sheet.getContext("2d").fillRect(0, 0, 48, 48);
-  estatua.frame = { source: { image: sheet }, cutX: 0, cutY: 0,
-    cutWidth: 48, cutHeight: 48, realWidth: 48, realHeight: 48 };
-  render();
-  assert.ok(texture.canvas.rgbaEm(430, 225)[0] > 0.1, "ilumina antes da estátua");
-  assertSombraAmbiente(texture.canvas.alphaEm(470, 225), "o corpo oculta a claridade lateral");
-  assert.equal(texture.canvas.rgbaEm(470, 225)[0], 0);
-  assert.ok(texture.canvas.rgbaEm(540, 225)[0] > 0.05, "continua iluminando o cenário ao redor");
-  assert.equal(texture.canvas.rgbaEm(370, 225)[0], 0, "o carimbo das estátuas preserva o recorte da parede");
 });
 
 test("personagem aparece acima dos brilhos, preservando transparência, animação e depth do mapa", async t => {
@@ -1422,8 +1137,8 @@ test("faixas Cima da IluminaçãoBoss e seu halo ficam atrás das bordas e pared
   }
 });
 
-test("LimitaLuz bloqueia lanterna, giroflex, luminárias, pulsos e áreas luminosas", async t => {
-  for (const tipo of ["lanterna", "giroflex", "luminaria", "pulso", "area"]) {
+test("LimitaLuz bloqueia lanterna, luminárias, pulsos e áreas luminosas", async t => {
+  for (const tipo of ["lanterna", "luminaria", "pulso", "area"]) {
     await t.test(tipo, t => {
       const gerador = ["luminaria", "pulso", "area"].includes(tipo);
       const objeto = tipo === "area"
@@ -1433,7 +1148,6 @@ test("LimitaLuz bloqueia lanterna, giroflex, luminárias, pulsos e áreas lumino
         name === "LimitaLuz" ? [{ x: 460, y: 100, width: 16, height: 250,
           properties: [{ name: "Luzatravessa", type: "bool", value: true }] }]
         : name === "LuzesFabrica" && gerador ? [objeto]
-        : name === "Luzedeemergencia" && tipo === "giroflex" ? [objeto]
         : name === "collision" && gerador ? [{ x: 420, y: 100, width: 4, height: 250 }]
         : [] }) };
       const { scene, render, texture } = cenaComMascara(t, [], gerador, { map });
@@ -1466,7 +1180,7 @@ test("LuzApagada oculta no Tiled cobre todas as luzes e revela só a sala aberta
   const lampadas = [ponto({}, 200, 150), ponto({}, 580, 150), ponto({}, 400, 225)];
   const map = { getObjectLayer: name => ({ visible: name !== "LuzApagada", objects: name === "LuzApagada" ? areas
     : name === "LuzesFabrica" ? lampadas
-    : name === "Luzedeemergencia" ? [ponto({}, 320, 150)] : [] }) };
+    : name === "Luzedeemergencia" ? [ponto({ Neon: true }, 320, 150)] : [] }) };
   const { scene, render, texture, cleanup } = cenaComMascara(t, [], true, { map, portasFabrica: portas });
   const camera = scene.cameras.main;
   const rgba = (x, y) => {
@@ -1476,7 +1190,7 @@ test("LuzApagada oculta no Tiled cobre todas as luzes e revela só a sala aberta
   for (const [zoom, rotation] of [[1, 0], [1.3, 0.1]]) {
     camera.setZoom(zoom).setRotation(rotation);
     render();
-    assert.deepEqual(rgba(200, 150), [0, 0, 0, 1], "a sombra cobre inclusive o giroflex externo");
+    assert.deepEqual(rgba(200, 150), [0, 0, 0, 1], "a sombra cobre inclusive o neon externo");
     assert.deepEqual(rgba(580, 150), [0, 0, 0, 1]);
     assert.ok(rgba(400, 225)[3] < ESCURIDAO_AMBIENTE_FABRICA, "as lâmpadas externas continuam ligadas");
   }
@@ -2152,4 +1866,18 @@ test("falhas seguem fora da tela sem áudio e não acumulam ao suspender o jogo"
   lights.atualizar(150000, camera);
   lights.atualizar(150958, camera);
   assert.deepEqual(lights.falhasIniciadas.map(estalo => estalo.luz.x), [900]);
+});
+
+
+test("pontos antigos de luz rotativa não criam fontes, brilho ou atualizações pelo relógio", t => {
+  const point = ponto({ Periodo: 2000, Lateral: true, Esquerda: true }, 400, 225);
+  const map = { getObjectLayer: name => ({ objects: name === "Luzedeemergencia" ? [point] : [] }) };
+  const { scene, render, texture } = cenaComMascara(t, [], false, { map });
+  render();
+  const uploads = texture.refreshes;
+  assert.equal(scene.iluminacaoEmergencia.luzes.length, 0);
+  assert.equal(scene.iluminacaoEmergencia.fontesVisiveis.length, 0);
+  assertSombraAmbiente(texture.canvas.rgbaEm(400, 225)[3], "o ponto antigo não ilumina o cenário");
+  for (let time = 0; time < 2000; time += 16) { scene.time.now = time; render(); }
+  assert.equal(texture.refreshes, uploads, "o relógio não gera composições de feixes");
 });

@@ -224,7 +224,7 @@ export default class FlashlightWalls {
       if (!atingiu) {
         // A origem pode já estar na parede ao encostar nela com a barriga.
         if (delta < 0) {
-          // Um giroflex montado na parede emite para fora do seu próprio suporte.
+          // Uma luz montada na parede emite para fora do seu próprio suporte.
           if (sairOrigem) continue;
           return distancia;
         }

@@ -134,7 +134,7 @@ export class CoopPlayers {
       personagemSelecionada: entry.data.character, direcaoAtual: entry.data.direction,
       get developerMode() { return !!entry.data.coop?.developer; },
       estadoEspecial: null, companionPet: null, restricaoControleNovoBoss: null,
-      limparSistemaEspeciais: null,
+      limparSistemaEspeciais: null, executarHabilidadeEspecial: null,
       botaoEspecial: null, atacando: false, estadoDash: null, generatorMenuOpen: false, movimentoBloqueado: false,
       get vida() { return entry.health; }, set vida(value) { actor.vida = value; },
       get vidaMaxima() { return actor.vidaMaxima; },

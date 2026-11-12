@@ -1,3 +1,4 @@
+import { atorRelevante, atualizarDecisaoAtor, atualizarBarrasDistantes } from "../core/ActorActivity.js";
 /**
  * @file Construção e atualização dos robôs comuns e de serra. Integra IA, vida, som, hitboxes,
  * profundidade e lasers.
@@ -379,6 +380,10 @@ function atualizarHitboxDanoInimigo(inimigo) {
   inimigo.hitboxDano.setTo(offsetX, offsetY, largura, altura);
 
   if (inimigo.debugHitboxDano) {
+    if (!inimigo.scene?.game?.config?.physics?.arcade?.debug) {
+      inimigo.debugHitboxDano.setVisible(false);
+      return;
+    }
     inimigo.debugHitboxDano.clear();
     inimigo.debugHitboxDano.lineStyle(2, 0x00ff00, 1);
     inimigo.debugHitboxDano.fillStyle(0x00ff00, 0.18);
@@ -417,11 +422,14 @@ function atualizarInimigoTeste(scene, time) {
     }
 
     if (!inimigo.remoteOnly) {
-      if (inimigo.tipoRobo !== "bola") {
+      if (inimigo.tipoRobo !== "bola" && atualizarDecisaoAtor(scene, inimigo, time)) {
         atualizarIAInimigo(scene, time, inimigo);
       }
     }
     atualizarHitboxDanoInimigo(inimigo);
+    const relevante = atorRelevante(scene, inimigo);
+    atualizarBarrasDistantes(inimigo, relevante);
+    if (!relevante) continue;
     atualizarDepthInimigo(inimigo, scene);
 
     const x = inimigo.x;

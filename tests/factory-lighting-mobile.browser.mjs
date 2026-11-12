@@ -62,8 +62,8 @@ try {
     "zoom e rotação preservam o bloqueio");
   assert.deepEqual(result.odd.size, [401, 226]);
   assert.ok(Math.abs(result.odd.shadow - 0.75) < 2/255, "resize ímpar não desloca sombras");
-  assert.ok(result.angles.length > 0);
-  assert.notDeepEqual(result.angles, result.later, "os giroflex continuam girando");
+  assert.deepEqual(result.angles, [], "não existem fontes giratórias");
+  assert.deepEqual(result.later, []);
   await session.posicionar(-1100, -4800);
   await page.evaluate(() => {
     const s = window.__game.scene.getScene("Level1Parte2");
@@ -80,5 +80,5 @@ try {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.screenshot({ path: "/tmp/factory-lighting-mobile-portrait.png" });
   assert.deepEqual(session.errors, []);
-  console.log("PASS: Android, máscara 400×225, jogo 800×450, lanterna, paredes, zoom, rotação, resize, giroflex e movimento real.");
+  console.log("PASS: Android, máscara 400×225, jogo 800×450, lanterna, paredes, zoom, rotação, resize e movimento real.");
 } finally { await session.fechar(); }

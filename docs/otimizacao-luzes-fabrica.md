@@ -1,7 +1,10 @@
 # Iluminação da fábrica em celulares
 
-A composição da luz de emergência era o trecho mais caro da iluminação. O mapa atual
-tem 192 pontos nessa camada: 182 neons fixos e 10 giroflex. Os neons já possuíam cache;
+> Relatório histórico de medições anteriores. As luzes giratórias e seu cache foram
+> removidos do código e do mapa. Atualmente, os 182 pontos de emergência são neons fixos.
+
+A composição da luz de emergência era o trecho mais caro da iluminação. O mapa medido
+tinha 192 pontos nessa camada: 182 neons fixos e 10 giroflex. Os neons já possuíam cache;
 o custo aumentava principalmente quando os feixes giratórios exigiam novas composições
 e envios da máscara inteira para a GPU.
 

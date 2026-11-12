@@ -9,9 +9,8 @@ import { atualizarPoseLanterna, atualizarLanternasAliadas } from "./FlashlightPo
 import FlashlightWalls from "./FlashlightWalls.js";
 import { ocultarLanternaAtrasCamada, ocultarLanternaAtrasSala, obterRegiaoFrenteLanterna } from "./FlashlightTileOcclusion.js";
 import { camadaEhPisoFabrica } from "../map/TrocaCamada.js";
-import EmergencyLighting, { calcularPerfilGiroflex, calcularPerfilNeon } from "./EmergencyLighting.js";
+import EmergencyLighting, { calcularPerfilNeon } from "./EmergencyLighting.js";
 import EmergencyStatueOcclusion from "./EmergencyStatueOcclusion.js";
-import GiroflexLightCache from "./GiroflexLightCache.js";
 import DoorLightingZones from "./DoorLightingZones.js";
 import BossWallLighting, { calcularPerfilLuzParede, calcularEmissorLuzParede } from "./BossWallLighting.js";
 import BossEmitterOcclusion from "./BossEmitterOcclusion.js";
@@ -127,18 +126,6 @@ function criarMascaraLanterna() {
   return criarMascaraLuminaria(perfil);
 }
 
-function criarPerfilGiroflex(lateral = false) {
-  const perfil = new Uint8Array(TAMANHO_MASCARA ** 2);
-  for (let y = 0; y < TAMANHO_MASCARA; y++) {
-    for (let x = 0; x < TAMANHO_MASCARA; x++) {
-      perfil[y * TAMANHO_MASCARA + x] = Math.round(calcularPerfilGiroflex(
-        (x + 0.5) / TAMANHO_MASCARA * 2 - 1,
-        (y + 0.5) / TAMANHO_MASCARA * 2 - 1, lateral) * 255);
-    }
-  }
-  return perfil;
-}
-
 function criarPerfilParede(calcular) {
   const perfil = new Uint8Array(TAMANHO_MASCARA ** 2);
   for (let y = 0; y < TAMANHO_MASCARA; y++) {
@@ -228,7 +215,7 @@ function criarIluminacaoTerror(scene) {
     const sx = larguraMascara / width, sy = alturaMascara / height;
     ctx.setTransform(a * sx, b * sy, c * sx, d * sy, e * sx, f * sy);
   };
-  const emergencia = new EmergencyLighting(scene.map, { quadrosPorSegundo: celular ? 30 : 60 });
+  const emergencia = new EmergencyLighting(scene.map);
   const arandelas = new BossWallLighting(scene.map);
   const energiaBoss = new BossEnergyLighting(scene);
   const luzesIndependentes = [...emergencia.luzes, ...arandelas.luzes];
@@ -263,11 +250,6 @@ function criarIluminacaoTerror(scene) {
   const luminariaPulsoCanvas = criarMascaraLuminaria(perfilPulso);
   const corPulsoCanvas = criarMascaraLuminaria(perfilPulso, 0xFF0000);
   const lanternaCanvas = criarMascaraLanterna();
-  const perfilGiroflex = emergencia.luzes.some(luz => !luz.neon) ? criarPerfilGiroflex() : null;
-  // destination-out só lê o alpha: o mesmo carimbo vermelho atende máscara e brilho.
-  const giroflexCanvas = perfilGiroflex ? criarMascaraLuminaria(perfilGiroflex, 0xFF0000) : null;
-  const perfilGiroflexLateral = emergencia.luzes.some(luz => luz.parede) ? criarPerfilGiroflex(true) : null;
-  const giroflexLateralCanvas = perfilGiroflexLateral ? criarMascaraLuminaria(perfilGiroflexLateral, 0xFF0000) : null;
   const perfilNeon = emergencia.luzes.some(luz => luz.neon) ? criarPerfilParede(calcularPerfilNeon) : null;
   const neonCanvas = perfilNeon ? criarMascaraLuminaria(perfilNeon) : null;
   const perfilEmissorNeon = perfilNeon ? criarPerfilParede((x, y) => calcularPerfilNeon(x, y, true)) : null;
@@ -303,11 +285,11 @@ function criarIluminacaoTerror(scene) {
     coresParedeCanvas.set(luz.cor.css, { halo: criarMascaraLuminaria(perfilParede, luz.cor.phaser),
       emissor: criarMascaraLuminaria(perfilEmissorParede, clara) });
   }
-  const estatuasGiroflex = new EmergencyStatueOcclusion(scene, luzesIndependentes);
-  const carimbosGiroflex = new GiroflexLightCache(paredesLanterna, estatuasGiroflex, celular ? 256 : 512);
+  const oclusaoEstatuas = new EmergencyStatueOcclusion(scene, luzesIndependentes);
   const oclusaoEmissorBoss = new BossEmitterOcclusion(scene, arandelas.luzes);
+  let limiteLuzesDescartadas = null;
   const luzesFixas = new FixedLightCache((c, perfil, fonte) => desenharFonteDirecional(c, perfil, fonte,
-    paredesLanterna, estatuasGiroflex, fonte.luz.direcao ? oclusaoEmissorBoss : null));
+    paredesLanterna, oclusaoEstatuas, fonte.luz.direcao ? oclusaoEmissorBoss : null));
   for (const luz of emergencia.luzes) {
     if (!luz.neon) continue;
     const cor = coresNeonCanvas.get(luz.cor.css);
@@ -398,6 +380,8 @@ function criarIluminacaoTerror(scene) {
    */
   const atualizarIluminacao = (cenaRenderizada, cameraRenderizada) => {
     if (encerrada || cenaRenderizada !== scene || cameraRenderizada !== camera) return;
+    // O painel cobre a tela e bloqueia a câmera; a partida do gerador retoma a luz imediatamente.
+    if (scene.generatorMenuOpen && !scene.luzFabricaAcesa && !scene.cenaEntradaBossAtiva) return;
     if (width !== Math.ceil(camera.width) || height !== Math.ceil(camera.height)) {
       width = Math.ceil(camera.width);
       height = Math.ceil(camera.height);
@@ -409,18 +393,23 @@ function criarIluminacaoTerror(scene) {
       invalidada = true;
     }
     posicionarOverlay();
+    const limite = scene.limiteFabricaDescarregadaY;
+    if (Number.isFinite(limite) && limiteLuzesDescartadas !== limite) {
+      luzesFixas.descartarAbaixo(limite);
+      limiteLuzesDescartadas = limite;
+      invalidada = true;
+    }
     zonas.atualizar(scene.time.now, scene.portasFabrica ?? [], iluminacao.energia);
     const luzesIntroducao = obterLuzesIntroducao();
     const fontes = iluminacao.atualizar(scene.time.now, camera, zonasCena);
-    const giroflex = emergencia.atualizar(scene.time.now, camera, zonasCena);
+    const fontesNeon = emergencia.atualizar(scene.time.now, camera, zonasCena);
     const fontesParede = arandelas.atualizar(scene.time.now, camera, zonasCena);
     const fontesEnergiaBoss = energiaBoss.atualizar(camera);
     auraBoss.sincronizar(fontesEnergiaBoss);
     if (fontesParede.some(fonte => fonte.luz.direcao === "Cima") && oclusaoEmissorBoss.atualizar(camera)) invalidada = true;
-    if ((giroflex.length || fontesParede.length) && estatuasGiroflex.atualizar()) invalidada = true;
-    carimbosGiroflex.sincronizar(giroflex);
+    if ((fontesNeon.length || fontesParede.length) && oclusaoEstatuas.atualizar()) invalidada = true;
     const player = scene.player;
-    const temBrilho = giroflex.length || fontesParede.length || fontesEnergiaBoss.length ||
+    const temBrilho = fontesNeon.length || fontesParede.length || fontesEnergiaBoss.length ||
       luzesFixas.fontes.length || fontes.some(fonte => fonte.luz.pulsando);
     const atoresSobreBrilho = new Set();
     if (temBrilho) {
@@ -458,14 +447,14 @@ function criarIluminacaoTerror(scene) {
       !!player && Number.isFinite(player.x) && Number.isFinite(player.y);
     if (atualizarLanternasAliadas(scene, lanternasAliadas, iluminacao.energia)) invalidada = true;
     let angulo = null;
-    if (lanternaAtiva || lanternasAliadas.size || giroflex.length || fontesParede.length || fontesEnergiaBoss.length) {
+    if (lanternaAtiva || lanternasAliadas.size || fontesNeon.length || fontesParede.length || fontesEnergiaBoss.length) {
       paredesLanterna.atualizarPortas();
       if (revisaoParedes !== paredesLanterna.revisao) {
         invalidada = true;
         revisaoParedes = paredesLanterna.revisao;
       }
     }
-    luzesFixas.atualizar(scene.time.now, zonasCena, paredesLanterna, estatuasGiroflex, oclusaoEmissorBoss);
+    luzesFixas.atualizar(scene.time.now, zonasCena, paredesLanterna, oclusaoEstatuas, oclusaoEmissorBoss);
     if (lanternaAtiva) {
       atualizarPoseLanterna(scene, poseLanterna);
       angulo = poseLanterna.angulo;
@@ -552,11 +541,6 @@ function criarIluminacaoTerror(scene) {
       context.globalAlpha = intensidade;
       desenharLuminaria(context, areasCanvas.get(luz)?.mascara ?? (luz.pulsando ? luminariaPulsoCanvas : luminariaCanvas), luz, limitesLampadas);
     }
-    for (const fonte of giroflex) {
-      if (fonte.luz.neon) continue;
-      context.globalAlpha = fonte.intensidade;
-      carimbosGiroflex.desenhar(context, fonte, fonte.luz.parede ? giroflexLateralCanvas : giroflexCanvas);
-    }
     luzesFixas.desenhar(context, false, camera);
     if (energiaReduzida) campoEnergiaBoss.desenhar(context, false, larguraMascara, alturaMascara);
     else for (const fonte of fontesEnergiaBoss) {
@@ -624,11 +608,6 @@ function criarIluminacaoTerror(scene) {
       corContext.globalAlpha = intensidade * 0.45;
       desenharLuminaria(corContext, areasCanvas.get(luz)?.cor ?? corPulsoCanvas, luz, limitesLampadas);
     }
-    for (const fonte of giroflex) {
-      if (fonte.luz.neon) continue;
-      corContext.globalAlpha = fonte.intensidade * 0.55;
-      carimbosGiroflex.desenhar(corContext, fonte, fonte.luz.parede ? giroflexLateralCanvas : giroflexCanvas);
-    }
     luzesFixas.desenhar(corContext, true, camera);
     if (energiaReduzida) campoEnergiaBoss.desenhar(corContext, true, larguraMascara, alturaMascara);
     else for (const fonte of fontesEnergiaBoss) {
@@ -687,8 +666,7 @@ function criarIluminacaoTerror(scene) {
     salaBoss.destroy();
     luzesFixas.destroy();
     zonas.destroy();
-    carimbosGiroflex.destroy();
-    estatuasGiroflex.destroy();
+    oclusaoEstatuas.destroy();
     oclusaoEmissorBoss.destroy();
     paredesLanterna.destroy();
     brilhoAtoresAnteriores.clear();
@@ -698,8 +676,7 @@ function criarIluminacaoTerror(scene) {
     overlay.destroy();
     if (scene.textures.exists(TEXTURA_ESCURIDAO_PARTE2)) scene.textures.remove(TEXTURA_ESCURIDAO_PARTE2);
     for (const canvas of [luminariaCanvas, luminariaPulsoCanvas, corPulsoCanvas, lanternaCanvas,
-      lanternaOclusaoCanvas, brilhoCanvas, giroflexCanvas,
-      giroflexLateralCanvas, neonCanvas,
+      lanternaOclusaoCanvas, brilhoCanvas, neonCanvas,
       paredeCanvas, ...coresCanvas.values()]) {
       if (!canvas) continue;
       canvas.width = canvas.height = 0;

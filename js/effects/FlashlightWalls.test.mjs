@@ -243,7 +243,7 @@ function contextoRecorte() {
     closePath() {}, clip() {} };
 }
 
-test("giroflex na parede emite do suporte e continua bloqueado pela próxima colisão", () => {
+test("luz fixa na parede emite do suporte e continua bloqueado pela próxima colisão", () => {
   const walls = new FlashlightWalls(cena([
     { x: -10, y: -10, width: 20, height: 20 },
     { x: 60, y: -80, width: 4, height: 160 },
@@ -251,7 +251,7 @@ test("giroflex na parede emite do suporte e continua bloqueado pela próxima col
   const context = contextoRecorte();
   assert.equal(visivel(walls.obterPoligono(0, 0), 40, 0), false, "a regra de origem da lanterna é preservada");
   walls.recortarFonte(context, { x: 0, y: 0 }, 240);
-  assert.equal(visivel(context.pontos, 40, 0), true, "o giroflex ilumina fora do próprio suporte");
+  assert.equal(visivel(context.pontos, 40, 0), true, "o luz fixa ilumina fora do próprio suporte");
   assert.equal(visivel(context.pontos, 100, 0), false, "não atravessa a próxima parede");
 });
 
@@ -278,7 +278,7 @@ test("fontes fixas guardam polígonos independentes e recalculam ao abrir portas
   assert.equal(visivel(context.pontos, 50, 0), true, "abrir a porta devolve a iluminação");
 });
 
-test("o bloqueio acompanha o alcance de um giroflex maior que a lanterna", () => {
+test("o bloqueio acompanha o alcance de um luz fixa maior que a lanterna", () => {
   const walls = new FlashlightWalls(cena([{ x: 450, y: -100, width: 4, height: 200 }]));
   const context = contextoRecorte();
   walls.recortarFonte(context, { x: 0, y: 0 }, 600);
@@ -299,7 +299,7 @@ test("LimitaLuz corta já na borda mesmo com Luzatravessa=true ou a exceção da
   }
   const context = contextoRecorte();
   walls.recortarFonte(context, { x: 0, y: 0 }, 240);
-  assert.equal(visivel(context.pontos, 65, 0), false, "giroflex respeita o mesmo limite");
+  assert.equal(visivel(context.pontos, 65, 0), false, "luz fixa respeita o mesmo limite");
 });
 
 test("LimitaLuz aceita polígonos, linhas e retângulos rotacionados", () => {

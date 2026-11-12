@@ -1,3 +1,4 @@
+import { atorRelevante } from "../core/ActorActivity.js";
 /** Renderização local do Robo Bola: suavização, carga no olho e plasma com rastro. */
 function suavizarTexturasRoboBola(scene) {
   for (const key of ["robo-bola", "robo-bola-morte"]) {
@@ -11,13 +12,20 @@ function suavizarTexturasRoboBola(scene) {
 function acompanhar(scene, dono, desenhar) {
   const grafico = scene.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
   let removido = false;
+  let desenhado = false;
   const atualizar = () => {
     if (!dono.active || dono.morto) {
       remover();
       return;
     }
+    if (!atorRelevante(scene, dono)) {
+      if (desenhado) grafico.clear();
+      desenhado = false;
+      return;
+    }
     grafico.clear();
     desenhar(grafico);
+    desenhado = true;
   };
   const remover = () => {
     if (removido) return;

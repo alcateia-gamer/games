@@ -281,3 +281,53 @@ test("absorção do boss encerra o impacto também no cooperativo, sem atingir o
     assert.equal(scene.vida, 100);
   }
 });
+
+test("Magnus online aplica impacto contra robôs comuns tanto no host quanto pelo comando do cliente", async () => {
+  globalThis.Phaser.Scene ??= class {};
+  globalThis.Phaser.Events ??= { EventEmitter };
+  const { CoopRuntime } = await import("../multiplayer/CoopRuntime.js");
+  const { CoopPlayers } = await import("../multiplayer/CoopPlayers.js");
+  const { soloContext } = await import("../multiplayer/CoopContext.js");
+  for (const remoto of [false, true]) {
+    const scene = cena(remoto ? "kai-mercer" : "magnus-force", 500, 0);
+    scene.textures.exists = key => key === "magnus-especial-marreta";
+    scene.anims = { exists: () => false, create() {} };
+    scene.player.body.offset = { x: 0, y: 0 };
+    const enviados = [];
+    scene.multiplayer = true; scene.isMultiplayerHost = true;
+    const robo = Object.assign(objeto(50, 0), { vida: 100, vidaMaxima: 100, tipoRobo: "padrao",
+      hitboxDano: new Rectangle(40, -10, 20, 20) });
+    scene.inimigos = [robo];
+    const runtime = scene.coopRuntime = Object.assign(Object.create(CoopRuntime.prototype), {
+      scene, host: true, manager: { playerId: "host", sendCoopAction(...args) { enviados.push(args); } },
+      localContext: soloContext(scene), broadcastHit() {},
+    });
+    runtime.players = new CoopPlayers(runtime);
+    criarSistemaEspeciais(scene);
+    let contexto = scene;
+    if (remoto) {
+      const actor = objeto(0, 0);
+      actor.body.offset = { x: 0, y: 0 };
+      const entry = { actor, data: { id: "client", character: "magnus-force", direction: "right", health: 100 },
+        health: 100, hitbox: new Rectangle(-15, 0, 30, 15), speeches: new Map() };
+      runtime.players.remotes.set("client", entry);
+      runtime.players.prepareContext(entry);
+      contexto = entry.context;
+      runtime.receiveAction({ kind: "special", playerId: "client", payload: {} });
+    } else scene.events.emit("player:especial");
+    assert.ok(contexto.estadoEspecial.onda, "comando inicia a onda autoritativa");
+    if (remoto) {
+      const onda = contexto.estadoEspecial.onda;
+      assert.equal(enviados.filter(a => a[0] === "specialPose").length, 1);
+      runtime.receiveAction({ kind: "special", playerId: "client", payload: {} });
+      assert.equal(enviados.filter(a => a[0] === "specialPose").length, 1,
+        "recusar durante a marreta não envia outra animação sem impacto");
+      assert.equal(contexto.estadoEspecial.onda, onda);
+    }
+    scene.time.now = 390;
+    if (remoto) runtime.players.update(390, 16);
+    else atualizarSistemaEspeciais(scene, 16);
+    assert.equal(robo.vida, 82);
+    assert.ok(robo.especialEmpurraoAte > 390);
+  }
+});

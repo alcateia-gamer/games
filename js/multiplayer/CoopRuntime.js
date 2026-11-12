@@ -211,7 +211,7 @@ export class CoopRuntime {
     if (!context || context.morteEmAndamento || context.vida <= 0) return;
     if (action.kind === "special") {
       const before = { x: context.player.x, y: context.player.y };
-      context.events.emit("player:especial");
+      if (context.executarHabilidadeEspecial?.() !== true) return;
       if (context.coopRemotePlayerId && context.atacando && context.personagemSelecionada === "magnus-force") {
         this.manager.sendCoopAction("specialPose", {}, { authority: true, targetId: action.playerId });
       }

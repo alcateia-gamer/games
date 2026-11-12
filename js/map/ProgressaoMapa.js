@@ -23,9 +23,9 @@ export function descarregarFabricaParaBoss(scene) {
   const entradas = (scene.portasFabrica ?? []).filter(p => ["porta02", "porta03"].includes(p.nome));
   const limiteY = entradas.length ? Math.max(...entradas.map(p => p.area.y + p.area.height)) : -5232;
   scene.fabricaDescarregada = true;
+  scene.limiteFabricaDescarregadaY = limiteY;
   const fora = objeto => objeto.y - (objeto.displayHeight ?? objeto.height ?? 0) > limiteY;
   scene.spawnAreasRoboBola?.destruir();
-  scene.iluminacaoEmergencia?.desligarGiroflex();
   // A origem é fixa: perseguir o jogador até a arena não transforma um robô externo
   // em participante do encontro. Os invocados pelo boss continuam na luta.
   const nasceuNaArena = inimigo => {

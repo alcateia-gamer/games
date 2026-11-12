@@ -15,7 +15,7 @@ try {
  await cdp.send("Emulation.setCPUThrottlingRate", {rate: 4});
  await page.evaluate(async () => {
   const names = ["FactoryLighting", "EmergencyLighting", "BossWallLighting", "FixedLightCache",
-   "GiroflexLightCache", "FlashlightWalls", "EmergencyStatueOcclusion"];
+   "FlashlightWalls", "EmergencyStatueOcclusion"];
   window.__lightingPerf = {};
   for (const name of names) {
    const cls = (await import(`/js/effects/${name}.js`)).default;
@@ -44,7 +44,7 @@ try {
  const report=[];
  for(const config of [
   {name:"arena-neons",x:-1093,y:-5770,power:false},
-  {name:"giroflex",x:-1100,y:-5200,power:false},
+  {name:"fabrica-sem-energia",x:-1100,y:-5200,power:false},
   {name:"fabrica-ligada",x:-1093,y:-5770,power:true},
   {name:"andando",x:-1100,y:-5200,power:false,moving:true},
  ]) {
