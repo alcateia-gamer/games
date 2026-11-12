@@ -5,6 +5,7 @@ import { carregarQuedasCoop } from "../multiplayer/CoopRevival.js";
  */
 
 import { carregarSomPropulsaoRoboBola } from "../sounds/propulsaoRoboBola.js";
+import { prepararTexturaLaserOlhao } from "../enemies/RoboOlhao.js";
 import { carregarSomColocando } from "../sounds/colocando.js";
 import { carregarSonsInimigos } from "../sounds/inimigos.js";
 import { carregarSonsKatana } from "../sounds/katana.js";
@@ -84,6 +85,8 @@ class Preloader extends Phaser.Scene {
     });
 
     this.load.once("complete", () => {
+      // Também disponível no cliente cooperativo que só recebe o feixe do host.
+      prepararTexturaLaserOlhao(this);
       this.prepararRenderizacaoPersonagens();
       this.finalizarCarregamento();
     });
@@ -370,6 +373,18 @@ class Preloader extends Phaser.Scene {
     // =====================================================
     // ROBO BOLA
     // =====================================================
+
+    this.load.spritesheet(
+      "robo-olhao",
+      "PERSONAGENS/INIMIGOS PRINCIPAIS/ROBO_OLHAO/robo_olhao.png",
+      { frameWidth: 280, frameHeight: 280 },
+    );
+
+    this.load.spritesheet(
+      "robo-olhao-morte",
+      "PERSONAGENS/INIMIGOS PRINCIPAIS/ROBO_OLHAO/robo_olhao_morte.png",
+      { frameWidth: 280, frameHeight: 280 },
+    );
 
     this.load.spritesheet(
       "robo-bola",

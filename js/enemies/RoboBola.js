@@ -42,8 +42,8 @@ const TAMANHO_HITBOX = 60; // Pixels da folha, antes da escala visual de 0,56.
 const ALTURA_BARRA_VIDA = 36; // Mantém uma pequena folga acima da antena.
 
 function atualizarHitboxRoboBola(robo) {
-  const largura = TAMANHO_HITBOX * Math.abs(robo.scaleX);
-  const altura = TAMANHO_HITBOX * Math.abs(robo.scaleY);
+  const largura = (robo.perfilVoador?.hitbox ?? TAMANHO_HITBOX) * Math.abs(robo.scaleX);
+  const altura = (robo.perfilVoador?.hitbox ?? TAMANHO_HITBOX) * Math.abs(robo.scaleY);
   robo.hitboxDano?.setTo(robo.x - largura / 2, robo.y + (robo.deslocamentoFlutuacao || 0) - altura / 2, largura, altura);
 }
 
@@ -56,15 +56,16 @@ function atualizarFlutuacao(robo, time, delta = 0) {
   const progresso = saida ? Math.min(1, (saida.tempo + Math.max(0, delta)) / EMERGENCIA_ROBO_BOLA.duracaoMs) : 1;
   robo.deslocamentoFlutuacao = Math.sin(robo.faseFlutuacaoAtual) * ROBO_BOLA_FLUTUACAO.amplitude * progresso;
   const deslocamentoLocal = robo.deslocamentoFlutuacao / robo.scaleY;
-  robo.setOrigin(0.5, 0.5 - deslocamentoLocal / 127);
-  const offset = (127 - TAMANHO_HITBOX) / 2;
+  const tamanho = robo.perfilVoador?.tamanho ?? 127;
+  robo.setOrigin(0.5, 0.5 - deslocamentoLocal / tamanho);
+  const offset = (tamanho - (robo.perfilVoador?.hitbox ?? TAMANHO_HITBOX)) / 2;
   robo.body.setOffset(offset, offset - deslocamentoLocal);
 }
 
-function escolherSpawn(scene) {
+function escolherSpawn(scene, perfil) {
   const anguloInicial = Math.random() * Math.PI * 2;
-  const tamanho = TAMANHO_HITBOX * 0.56;
-  for (const raio of [CONFIG.distanciaIdeal, 180, 225, 270]) {
+  const tamanho = (perfil?.hitbox ?? TAMANHO_HITBOX) * (perfil?.escala ?? 0.56);
+  for (const raio of [perfil?.config.distanciaIdeal ?? CONFIG.distanciaIdeal, 180, 225, 270]) {
     for (let i = 0; i < 24; i++) {
       const angulo = anguloInicial + i * Math.PI / 12;
       const x = scene.player.x + Math.cos(angulo) * raio;
@@ -111,6 +112,7 @@ function direcaoParaAlvo(robo, alvo) {
 }
 
 function atualizarFrame(robo, atirando = false) {
+  if (robo.perfilVoador?.atualizarFrame) return robo.perfilVoador.atualizarFrame(robo, atirando);
   robo.setFlipX(false);
   robo.anims.stop();
   // O único frame de disparo é o frontal. Nas outras direções o olho não pisca.
@@ -128,6 +130,7 @@ function obterPoseMorteRoboBola(robo) {
 }
 
 function obterPosicaoOlho(robo) {
+  if (robo.perfilVoador?.obterOlho) return robo.perfilVoador.obterOlho(robo);
   // Os perfis mostram o olho na borda externa (não na fenda central do casco).
   // Olhando para cima, a origem é a projeção do olho na face oculta pela carcaça.
   const olho = POSES[robo.direcaoAtual].olho;
@@ -139,6 +142,7 @@ function obterPosicaoOlho(robo) {
 }
 
 function criarProjetil(scene, robo, alvo) {
+  if (robo.perfilVoador?.criarProjetil) return robo.perfilVoador.criarProjetil(scene, robo, alvo);
   const olho = obterPosicaoOlho(robo);
   const angulo = Phaser.Math.Angle.Between(olho.x, olho.y, alvo.x, alvo.y);
   const comprimento = 16;
@@ -175,12 +179,12 @@ function criarProjetil(scene, robo, alvo) {
   tocarSomTiroLaser(scene, robo);
 }
 
-function criarRoboBola(scene, posicao = null) {
+function criarRoboBola(scene, posicao = null, perfil = null) {
   if (!scene?.player?.active) return null;
-  const spawn = posicao ?? escolherSpawn(scene);
+  const spawn = posicao ?? escolherSpawn(scene, perfil);
   if (!spawn) return null;
   if (posicao) {
-    const tamanho = TAMANHO_HITBOX * 0.56;
+    const tamanho = (perfil?.hitbox ?? TAMANHO_HITBOX) * (perfil?.escala ?? 0.56);
     if (![spawn.x, spawn.y].every(Number.isFinite) ||
         !retanguloLivreDoMapa(scene, { x: spawn.x - tamanho / 2, y: spawn.y - tamanho / 2,
           width: tamanho, height: tamanho }) ||
@@ -189,26 +193,30 @@ function criarRoboBola(scene, posicao = null) {
           Math.hypot(outro.x - spawn.x, outro.y - spawn.y) < 50)) return null;
   }
 
-  registrarAnimacoes(scene);
+  if (perfil) perfil.registrarAnimacoes(scene);
+  else registrarAnimacoes(scene);
   suavizarTexturasRoboBola(scene);
+  if (perfil) scene.textures.get(perfil.textura).setFilter(Phaser.Textures.FilterMode.LINEAR);
   const robo = scene.physics.add.sprite(
     spawn.x,
     spawn.y,
-    "robo-bola",
+    perfil?.textura ?? "robo-bola",
     0,
   );
   robo.origemSpawn = { x: spawn.x, y: spawn.y };
-  robo.tipoRobo = "bola";
+  robo.perfilVoador = perfil;
+  robo.tipoRobo = perfil?.tipo ?? "bola";
   robo.morto = false;
-  // 127 px × 0,56 ≈ 71 px: mesma largura visual do robo-pet em escala 0,2.
-  robo.setScale(0.56);
+  // Cada perfil conserva o porte pequeno com sua própria resolução de folha.
+  robo.setScale(perfil?.escala ?? 0.56);
   robo.body.setAllowGravity(false);
-  const offsetHitbox = (127 - TAMANHO_HITBOX) / 2;
-  robo.body.setSize(TAMANHO_HITBOX, TAMANHO_HITBOX).setOffset(offsetHitbox, offsetHitbox);
-  robo.configBola = { ...CONFIG };
-  robo.velocidade = CONFIG.velocidade;
+  const hitbox = perfil?.hitbox ?? TAMANHO_HITBOX;
+  const offsetHitbox = ((perfil?.tamanho ?? 127) - hitbox) / 2;
+  robo.body.setSize(hitbox, hitbox).setOffset(offsetHitbox, offsetHitbox);
+  robo.configBola = { ...CONFIG, ...perfil?.config };
+  robo.velocidade = robo.configBola.velocidade;
   robo.distanciaDeteccao = 760;
-  robo.distanciaAtaque = CONFIG.alcanceTiro;
+  robo.distanciaAtaque = robo.configBola.alcanceTiro;
   robo.patrolCenter = { ...spawn };
   robo.formacaoIndex = scene.inimigos?.length || 0;
   robo.faseFlutuacao = Math.random() * Math.PI * 2;
@@ -221,17 +229,18 @@ function criarRoboBola(scene, posicao = null) {
   robo.vidaMaxima = balanceamento.vida;
   robo.vida = robo.vidaMaxima;
   robo.danoLaser = balanceamento.dano;
-  robo.velocidadeLaser = CONFIG.velocidadeProjetil;
+  robo.velocidadeLaser = robo.configBola.velocidadeProjetil;
   robo.direcaoAtual = direcaoParaAlvo(robo, scene.player);
   robo.hitboxDano = new Phaser.Geom.Rectangle(0, 0, 0, 0);
   atualizarHitboxRoboBola(robo);
   robo.larguraBarra = 54;
-  robo.fundoVida = scene.add.rectangle(robo.x, robo.y - ALTURA_BARRA_VIDA, 54, 5, 0x111111, 0.9).setDepth(61);
-  robo.barraVida = scene.add.rectangle(robo.x - 27, robo.y - ALTURA_BARRA_VIDA, 54, 5, 0xe52b2b, 1)
+  const alturaBarra = perfil?.alturaBarra ?? ALTURA_BARRA_VIDA;
+  robo.fundoVida = scene.add.rectangle(robo.x, robo.y - alturaBarra, 54, 5, 0x111111, 0.9).setDepth(61);
+  robo.barraVida = scene.add.rectangle(robo.x - 27, robo.y - alturaBarra, 54, 5, 0xe52b2b, 1)
     .setOrigin(0, 0.5).setDepth(62);
-  robo.bordaVida = scene.add.rectangle(robo.x, robo.y - ALTURA_BARRA_VIDA, 54, 5).setStrokeStyle(1, 0xffffff, 0.7).setDepth(63);
+  robo.bordaVida = scene.add.rectangle(robo.x, robo.y - alturaBarra, 54, 5).setStrokeStyle(1, 0xffffff, 0.7).setDepth(63);
   atualizarFrame(robo);
-  criarBrilhoOlho(scene, robo, obterPosicaoOlho);
+  if (!perfil) criarBrilhoOlho(scene, robo, obterPosicaoOlho);
   configurarSomPropulsaoRoboBola(scene, robo);
   // O Phaser destrói o grupo antes de alguns listeners de shutdown; a cena pode ser reutilizada.
   if (!scene.lasersInimigo || ("scene" in scene.lasersInimigo && !scene.lasersInimigo.scene)) {
@@ -362,7 +371,7 @@ function atualizarCombateRoboBola(scene, robo, alvo, time, delta) {
 
 function atualizarRoboBola(scene, time, delta) {
   for (const robo of scene.inimigos || []) {
-    if (!robo?.active || robo.tipoRobo !== "bola" || robo.morto || robo.remoteOnly) continue;
+    if (!robo?.active || !["bola", "olhao"].includes(robo.tipoRobo) || robo.morto || robo.remoteOnly) continue;
     const protegendoSpawn = time < Math.max(robo.prologoProtegidoAte ?? -Infinity,
       robo.spawnProtegidoAte ?? -Infinity);
     const relevante = atorRelevante(scene, robo);
@@ -386,7 +395,7 @@ function atualizarRoboBola(scene, time, delta) {
     atualizarHitboxRoboBola(robo);
     if (!relevante) continue;
     atualizarFrame(robo, time < (robo.olhoAzulAte || 0));
-    const yBarra = robo.y + robo.deslocamentoFlutuacao - ALTURA_BARRA_VIDA;
+    const yBarra = robo.y + robo.deslocamentoFlutuacao - (robo.perfilVoador?.alturaBarra ?? ALTURA_BARRA_VIDA);
     robo.fundoVida?.setPosition(robo.x, yBarra);
     robo.barraVida?.setPosition(robo.x - 27, yBarra);
     robo.bordaVida?.setPosition(robo.x, yBarra);

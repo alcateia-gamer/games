@@ -18,7 +18,8 @@ export function carregarSomPropulsaoRoboBola(loader) {
 }
 
 export function configurarSomPropulsaoRoboBola(scene, robo, { silencioInicialMs = 600 } = {}) {
-  if (robo.tipoRobo !== "bola" || robo.morto || controles.has(robo)) return;
+  if (!["bola", "olhao"].includes(robo.tipoRobo) || robo.morto || controles.has(robo)) return;
+  const ganhoVolume = robo.tipoRobo === "olhao" ? 1.4 : 1;
   let som = null, filtro = null, envelope = null, tocando = false, destruido = false, volumeAnterior = null;
   let anterior = null, forca = 0, liberacao = 0.2, intervalo = Infinity, entrada = 0;
   let silencioNascimento = silencioInicialMs;
@@ -166,7 +167,7 @@ export function configurarSomPropulsaoRoboBola(scene, robo, { silencioInicialMs 
     const intensidade = limitar(0.018 + 0.035 * Math.min(velocidade / 175, 1) + 0.947 * forca, 0, 1);
     entrada = Math.min(1, entrada + dt / ENTRADA_SUAVE_SEGUNDOS);
     const ganhoEntrada = envelope ? 1 : entrada * entrada * (3 - 2 * entrada);
-    fonte.volume = VOLUME_MAXIMO * atenuacao * intensidade * limitar(robo.alpha ?? 1, 0, 1) * ganhoEntrada;
+    fonte.volume = VOLUME_MAXIMO * ganhoVolume * atenuacao * intensidade * limitar(robo.alpha ?? 1, 0, 1) * ganhoEntrada;
     som.setPan(pan);
     if (Math.abs(afinacao - afinacaoAplicada) >= 1) {
       som.setDetune?.(afinacao);

@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { EventEmitter } from "node:events";
+import { readFileSync } from "node:fs";
+import vm from "node:vm";
+import { criarRoboOlhao, registrarAnimacoesRoboOlhao, atualizarFrameRoboOlhao,
+  obterOlhoRoboOlhao, criarLaserRoboOlhao, QUADROS_OLHAO, FEIXE_OLHAO } from "./RoboOlhao.js";
+import { laserAtingeRetangulo } from "./EnemyLaser.js";
+import { atualizarSpawnsDev } from "../controls/DeveloperSpawns.js";
 import { criarRoboBola, atualizarRoboBola, registrarAnimacoesRoboBola, ROBO_BOLA_CONFIG } from "./RoboBola.js";
 import { iniciarEmergenciaRoboBola, EMERGENCIA_ROBO_BOLA } from "./RoboBolaEmergencia.js";
 import { ROBO_BOLA_FLUTUACAO } from "./RoboBolaFlutuacao.js";
@@ -82,7 +88,9 @@ function preparar() {
         robo.setVelocity((x - robo.x) / d * speed, (y - robo.y) / d * speed);
       },
       add: { existing(tiro) {
-        tiro.body = { velocity: {}, setAllowGravity() {}, setSize() {}, updateFromGameObject() {} };
+        tiro.body = { velocity: {}, position: { x: 0, y: 0 },
+          prev: { copy() {} }, prevFrame: { copy() {} }, autoFrame: { copy() {} },
+          setAllowGravity() {}, setSize() {}, updateFromGameObject() {} };
       } },
       velocityFromRotation(angle, speed, velocity) {
         velocity.x = Math.cos(angle) * speed;
@@ -471,6 +479,246 @@ test("nasce no centro visual do portal e introduz a flutuação aos poucos sem m
       const esperado = Math.sin(600 / ROBO_BOLA_FLUTUACAO.periodoMs * Math.PI * 2 + fase) * ROBO_BOLA_FLUTUACAO.amplitude;
       assert.equal(robo.deslocamentoFlutuacao, esperado);
       assert.equal(robo.emergenciaPortal, null);
+    }
+  }
+});
+
+// O olhão compartilha navegação e combate, com folha, animações e feixe próprios.
+
+function prepararOlhao() {
+  const { scene, robo, tiros } = preparar();
+  scene.inimigos = [];
+  scene.textures = { exists: () => true, get: () => ({ setFilter() {} }) };
+  scene.physics.add.collider = () => ({ destroy() {} });
+  scene.physics.add.sprite = (x, y, textura) => {
+    Object.assign(robo, { x, y, texture: { key: textura } });
+    robo.body.setAllowGravity = () => {};
+    robo.body.updateFromGameObject = () => {};
+    robo.body.setSize = function (w, h) { this.width = w * robo.scaleX; this.height = h * robo.scaleY; return this; };
+    robo.anims.play = function (key, ignorar) {
+      if (ignorar && this.isPlaying && this.key === key) return;
+      this.key = key; this.isPlaying = true;
+      if (!key.startsWith("robo-olhao-morte-")) {
+        robo.setFrame(QUADROS_OLHAO[key.replace("robo-olhao-", "")][0]);
+      }
+    };
+    robo.anims.stop = function () { this.isPlaying = false; };
+    return robo;
+  };
+  scene.add.image = (x, y) => scene.add.rectangle(x, y, 112, 24);
+  criarRoboOlhao(scene, { x: 100, y: 155 });
+  return { scene, robo, tiros };
+}
+
+test("olhão nasce pequeno, mais lento e com menos órbita que o bola", () => {
+  const { scene, robo } = prepararOlhao();
+  assert.equal(robo.tipoRobo, "olhao");
+  assert.equal(robo.texture.key, "robo-olhao");
+  assert.equal(robo.scaleX, 0.3);
+  assert.ok(robo.velocidade < ROBO_BOLA_CONFIG.velocidade);
+  assert.ok(robo.configBola.velocidadeOrbita < ROBO_BOLA_CONFIG.velocidadeOrbita / 2);
+  assert.equal(robo.body.width, 33.6);
+  assert.equal(scene.inimigos[0], robo);
+  scene.events.emit("shutdown");
+});
+
+test("olhão repete os quatro quadros por direção e reserva quadro 4 para o tiro frontal", () => {
+  const clips = [];
+  registrarAnimacoesRoboOlhao({ anims: { exists: () => false, create: clip => clips.push(clip) } });
+  const voo = clips.filter(c => !c.key.includes("morte"));
+  assert.deepEqual(voo.map(c => c.frames.map(f => f.frame)),
+    [[0, 1, 2, 3], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]]);
+  assert.ok(voo.every(c => c.repeat === -1 && c.frameRate === 8));
+  const mortes = clips.filter(c => c.key.includes("morte"));
+  assert.deepEqual(mortes.map(c => [c.key, c.frames.map(f => f.frame)]), [
+    ["robo-olhao-morte-down", [0, 1, 2, 3]],
+    ["robo-olhao-morte-up", [4, 5, 6, 7]],
+    ["robo-olhao-morte-right", [8, 9, 10, 11]],
+    ["robo-olhao-morte-left", [12, 13, 14, 15]],
+  ]);
+  assert.ok(mortes.every(c => c.repeat === 0 && c.frameRate === 14));
+  const { scene, robo } = prepararOlhao();
+  for (const direcao of Object.keys(QUADROS_OLHAO)) {
+    robo.direcaoAtual = direcao;
+    atualizarFrameRoboOlhao(robo, true);
+    assert.equal(robo.frame.name, direcao === "down" ? 4 : QUADROS_OLHAO[direcao][0]);
+    atualizarFrameRoboOlhao(robo, false);
+    assert.equal(robo.anims.key, `robo-olhao-${direcao}`);
+    // Uma atualização por frame não pode reiniciar o loop.
+    robo.setFrame(QUADROS_OLHAO[direcao][2]);
+    atualizarFrameRoboOlhao(robo, false);
+    assert.equal(robo.frame.name, QUADROS_OLHAO[direcao][2]);
+  }
+  scene.events.emit("shutdown");
+});
+
+test("IA do olhão dispara da posição do olho, usa flash frontal e volta ao loop", () => {
+  const { scene, robo, tiros } = prepararOlhao();
+  const listenersAntes = scene.events.listenerCount("postupdate");
+  atualizarRoboBola(scene, 1600, 16);
+  assert.notEqual(robo.frame.name, 4, "não acende durante a carga");
+  atualizarRoboBola(scene, 1920, 16);
+  assert.equal(tiros.length, 1);
+  assert.equal(robo.frame.name, 4);
+  const olho = obterOlhoRoboOlhao(robo), tiro = tiros[0];
+  assert.ok(Math.abs(olho.x - (robo.x - 0.3)) < 1e-9,
+    "disparo frontal alinhado ao centro x=139 do olho na folha");
+  assert.ok(Math.abs(olho.y - (robo.y + (111 - robo.originY * 280) * 0.3)) < 1e-9,
+    "altura frontal segue o centro y=111 e a origem de flutuação");
+  const metade = FEIXE_OLHAO.comprimento / 2;
+  assert.ok(Math.abs(tiro.x - Math.cos(tiro.rotation) * metade - olho.x) < 1e-9);
+  assert.ok(Math.abs(tiro.y - Math.sin(tiro.rotation) * metade - olho.y) < 1e-9);
+  assert.ok(Math.abs(Math.hypot(tiro.body.velocity.x, tiro.body.velocity.y) - 400) < 1e-9);
+  assert.equal(tiro.especialAtirador, robo);
+  atualizarRoboBola(scene, 2100, 16);
+  assert.notEqual(robo.frame.name, 4);
+  tiro.destroy();
+  assert.equal(scene.events.listenerCount("postupdate"), listenersAntes);
+  scene.events.emit("shutdown");
+});
+
+test("cada quadro projeta o feixe do olho mesmo durante a flutuação", () => {
+  const { scene, robo } = prepararOlhao();
+  for (const [direcao, quadros] of Object.entries(QUADROS_OLHAO)) {
+    for (const frame of quadros) {
+      robo.direcaoAtual = direcao; robo.setFrame(frame); robo.originY = 0.4;
+      const olho = obterOlhoRoboOlhao(robo);
+      const tiro = criarLaserRoboOlhao(scene, robo, { x: olho.x - 100, y: olho.y + 200 });
+      assert.ok(Math.abs(tiro.x - Math.cos(tiro.rotation) * 56 - olho.x) < 1e-9);
+      assert.ok(Math.abs(tiro.y - Math.sin(tiro.rotation) * 56 - olho.y) < 1e-9);
+      const lateral = direcao === "left" || direcao === "right";
+      // Um ponto a 5 px do eixo recebe o feixe frontal, mas fica fora do lateral.
+      const ponto = { x: tiro.x - Math.sin(tiro.rotation) * 5 - 0.05,
+        y: tiro.y + Math.cos(tiro.rotation) * 5 - 0.05, width: 0.1, height: 0.1 };
+      assert.equal(laserAtingeRetangulo(tiro, ponto), !lateral,
+        `espessura da colisão acompanha a pose ${direcao}`);
+      tiro.destroy();
+    }
+  }
+  scene.events.emit("shutdown");
+});
+
+test("física real do Phaser não desloca o laser do olho no primeiro pós-update", () => {
+  // Carrega apenas Body do bundle local, sem inicializar o renderer ou o DOM.
+  const fonte = readFileSync(new URL("../libs/phaser.min.js", import.meta.url), "utf8");
+  const contexto = { module: { exports: {} }, exports: {} };
+  const corpo = fonte.replace("i(85454)})());", "({Body:i(37742)})})());");
+  assert.notEqual(corpo, fonte, "entrypoint do Phaser local identificado");
+  vm.runInNewContext(corpo, contexto);
+  const { Body } = contexto.module.exports;
+  const { scene, robo } = prepararOlhao();
+  const imagem = scene.add.image;
+  scene.add.image = (x, y, chave) => {
+    const laser = imagem(x, y, chave);
+    const altura = chave.endsWith("lateral") ? 10 : 24;
+    Object.assign(laser, { width: 112, height: altura, scaleX: 1, scaleY: 1,
+      displayWidth: 112, displayHeight: altura, displayOriginX: 56,
+      displayOriginY: altura / 2, frame: { realWidth: 112, realHeight: altura },
+      getCenter() { return { x: this.x, y: this.y }; } });
+    Object.defineProperty(laser, "angle", {
+      get() { return this.rotation * 180 / Math.PI; },
+      set(valor) { this.rotation = valor * Math.PI / 180; },
+    });
+    return laser;
+  };
+  scene.physics.add.existing = laser => {
+    laser.body = new Body({ defaults: {}, bounds: {}, updateMotion() {} }, laser);
+  };
+  for (const [direcao, quadros] of Object.entries(QUADROS_OLHAO)) {
+    for (const frame of direcao === "down" ? [...quadros, 4] : quadros) {
+      robo.direcaoAtual = direcao; robo.setFrame(frame); robo.originY = 0.4;
+      const olho = obterOlhoRoboOlhao(robo);
+      for (const angulo of [0, Math.PI / 2, Math.PI, -Math.PI / 2, Math.PI / 3]) {
+        const cos = Math.cos(angulo), sin = Math.sin(angulo);
+        const tiro = criarLaserRoboOlhao(scene, robo,
+          { x: olho.x + cos * 200, y: olho.y + sin * 200 });
+        tiro.body.postUpdate(); // Nasce após a etapa física, durante scene.update.
+        assert.ok(Math.abs(tiro.x - cos * 56 - olho.x) < 1e-8,
+          `frame ${frame}, ângulo ${angulo}: cauda alinhada horizontalmente`);
+        assert.ok(Math.abs(tiro.y - sin * 56 - olho.y) < 1e-8,
+          `frame ${frame}, ângulo ${angulo}: cauda alinhada verticalmente`);
+        tiro.body.preUpdate(true, 1 / 60);
+        tiro.body.postUpdate();
+        const normal = -(tiro.x - olho.x) * sin + (tiro.y - olho.y) * cos;
+        assert.ok(Math.abs(normal) < 1e-8, "segue o eixo do olho após mover");
+        tiro.destroy();
+      }
+    }
+  }
+  scene.events.emit("shutdown");
+});
+
+test("feixe diagonal só colide na faixa visível e preserva espessura e pontas", () => {
+  const laser = { x: 0, y: 0, rotation: Math.PI / 4, comprimentoFeixe: 112, larguraFeixe: 14 };
+  assert.equal(laserAtingeRetangulo(laser, { x: 20, y: 20, width: 4, height: 4 }), true);
+  assert.equal(laserAtingeRetangulo(laser, { x: 30, y: -30, width: 4, height: 4 }), false);
+  laser.rotation = 0;
+  assert.equal(laserAtingeRetangulo(laser, { x: 55, y: 6, width: 4, height: 4 }), true);
+  assert.equal(laserAtingeRetangulo(laser, { x: 57, y: 0, width: 4, height: 4 }), false);
+  assert.equal(laserAtingeRetangulo(laser, { x: 0, y: 8, width: 4, height: 4 }), false);
+});
+
+
+test("tecla 7 cria o olhão localmente e encaminha o mesmo tipo no cooperativo", () => {
+  const { scene } = prepararOlhao();
+  const pressionadas = new Set();
+  Phaser.Input = { Keyboard: { JustDown: tecla => pressionadas.delete(tecla) } };
+  scene.teclaSpawnRoboOlhao = { keyCode: 55 };
+  pressionadas.add(scene.teclaSpawnRoboOlhao);
+  scene.inimigos = [];
+  atualizarSpawnsDev(scene);
+  assert.equal(scene.inimigos.length, 1);
+  assert.equal(scene.inimigos[0].tipoRobo, "olhao");
+  atualizarSpawnsDev(scene);
+  assert.equal(scene.inimigos.length, 1, "segurar tecla não repete o spawn");
+  const pedidos = [];
+  scene.coopRuntime = { manager: { sendCoopAction: (...args) => pedidos.push(args) } };
+  pressionadas.add(scene.teclaSpawnRoboOlhao);
+  atualizarSpawnsDev(scene);
+  assert.deepEqual(pedidos, [["devSpawn", { tipo: "olhao", quantidade: 1 }]]);
+  scene.events.emit("shutdown");
+});
+
+test("olhão reproduz a morte na direção visível e só desaparece ao terminar", () => {
+  for (const [direcao, quadros, inicio] of [
+    ["down", [0, 1, 2, 3, 4], 0], ["up", [5, 6, 7, 8], 4],
+    ["left", [9, 10, 11, 12], 12], ["right", [13, 14, 15, 16], 8],
+  ]) {
+    for (const frame of quadros) {
+      const { scene, robo } = prepararOlhao();
+      scene.tweens = { killTweensOf() {} };
+      robo.destroy = () => { robo.emit("destroy"); robo.active = false; };
+      robo.setVisible = () => robo;
+      robo.setActive = valor => { robo.active = valor; return robo; };
+      robo.setAlpha = valor => { robo.alpha = valor; return robo; };
+      robo.setFrame(frame);
+      robo.direcaoAtual = direcao === "down" ? "up" : "down";
+      robo.setOrigin(0.5, 0.42);
+      robo.baseScaleX = robo.baseScaleY = 0.3;
+      robo.combatSquashBody = {};
+      robo.setScale(0.35);
+      const posicao = { x: robo.x, y: robo.y };
+      destruirInimigoTeste(scene, robo);
+      const chave = `robo-olhao-morte-${direcao}`;
+      assert.equal(robo.morto, true);
+      assert.equal(robo.body.enable, false);
+      assert.equal(robo.hitboxDano, null);
+      assert.equal(robo.direcaoMorte, direcao);
+      assert.equal(robo.texture, "robo-olhao-morte");
+      assert.equal(robo.frame.name, inicio);
+      assert.equal(robo.anims.key, chave);
+      assert.equal(robo.scaleX, 0.3, "cancela deformação do golpe fatal");
+      assert.equal(robo.originY, 0.42, "mantém a origem do voo");
+      assert.deepEqual({ x: robo.x, y: robo.y }, posicao);
+      assert.equal(scene.inimigos.length, 0);
+      assert.equal(robo.barraVida, null);
+      assert.equal(robo.active, true, "sprite permanece até o último quadro");
+      // Chamadas repetidas de morte não devem reiniciar a explosão.
+      destruirInimigoTeste(scene, robo);
+      assert.equal(robo.listenerCount(`animationcomplete-${chave}`), 1);
+      robo.emit(`animationcomplete-${chave}`);
+      assert.equal(robo.active, false);
+      scene.events.emit("shutdown");
     }
   }
 });

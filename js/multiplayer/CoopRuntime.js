@@ -236,7 +236,7 @@ export class CoopRuntime {
         this.manager.sendCoopAction("teleport", { x: context.player.x, y: context.player.y },
           { authority: true, targetId: action.playerId });
       }
-    } else if (action.kind === "devSpawn" && ["padrao", "serra", "bola"].includes(p.tipo) &&
+    } else if (action.kind === "devSpawn" && ["padrao", "serra", "bola", "olhao"].includes(p.tipo) &&
         Number.isInteger(p.quantidade) && p.quantidade >= 1 && p.quantidade <= 3) {
       executarSpawnDev(soloContext(s, { player: context.player }), p.tipo, p.quantidade);
     } else if (action.kind === "escape") registrarApertoLibertacaoNovoBoss(context);

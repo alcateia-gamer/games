@@ -8,6 +8,7 @@ import { tocarSomMorteRobo } from "../sounds/inimigos.js";
 import { playHitEffects } from "../combat/CombatEffects.js";
 import { obterPoseMorteRoboSerra } from "./EnemyAnimations.js";
 import { obterPoseMorteRoboBola } from "./RoboBola.js";
+import { obterPoseMorteRoboOlhao } from "./RoboOlhao.js";
 
 /**
  * Resolve o alvo, aplica dano ou o solicita ao host, alerta o grupo e inicia a morte quando a
@@ -113,6 +114,39 @@ function destruirInimigoTeste(scene, inimigo = scene.inimigoTeste) {
     inimigo.setTexture("robo-serra-morte", pose.frame);
     inimigo.setAlpha(1);
     const chave = `robo-serra-morte-${pose.direcao}`;
+    inimigo.once(`animationcomplete-${chave}`, () => finalizarDestruicaoInimigo(scene, inimigo));
+    inimigo.anims.play(chave);
+    tocarSomMorteRobo(scene, inimigo);
+    return;
+  }
+
+  if (inimigo.tipoRobo === "olhao") {
+    const pose = obterPoseMorteRoboOlhao(inimigo);
+    inimigo.direcaoMorte = pose.direcao;
+    inimigo.morto = true;
+    inimigo.estado = "morto";
+    inimigo.alerta = false;
+    inimigo.combatKnockbackUntil = 0;
+    inimigo.setVelocity(0, 0);
+    inimigo.hitboxDano = null;
+    if (inimigo.body) inimigo.body.enable = false;
+    inimigo.anims.stop();
+    scene.tweens.killTweensOf(inimigo);
+    if (inimigo.combatSquashBody) {
+      inimigo.setScale(inimigo.baseScaleX ?? inimigo.scaleX, inimigo.baseScaleY ?? inimigo.scaleY);
+      inimigo.combatSquashBody = null;
+    }
+    for (const key of ["debugHitboxDano", "fundoVida", "barraVida", "bordaVida"]) {
+      inimigo[key]?.destroy();
+      inimigo[key] = null;
+    }
+    scene.inimigos = (scene.inimigos || []).filter(robo => robo !== inimigo);
+    if (scene.inimigoTeste === inimigo) scene.inimigoTeste = scene.inimigos[0] ?? null;
+    inimigo.clearTint();
+    // Células iguais preservam posição, origem de flutuação e escala do robô.
+    inimigo.setTexture("robo-olhao-morte", pose.frame);
+    inimigo.setAlpha(1);
+    const chave = `robo-olhao-morte-${pose.direcao}`;
     inimigo.once(`animationcomplete-${chave}`, () => finalizarDestruicaoInimigo(scene, inimigo));
     inimigo.anims.play(chave);
     tocarSomMorteRobo(scene, inimigo);

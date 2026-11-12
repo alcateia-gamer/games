@@ -17,6 +17,24 @@ import { obterFilhosGrupoSeguro } from "./EnemyPathfinding.js";
 
 const COR_DANO_PLAYER = 0xff4040;
 
+// Feixes longos usam seu retângulo orientado. A caixa externa de um disparo
+// diagonal ocupa muito espaço vazio e causaria acertos longe da luz visível.
+export function laserAtingeRetangulo(laser, rect) {
+  if (!laser.comprimentoFeixe) {
+    return Phaser.Geom.Intersects.RectangleToRectangle(rect, laser.getBounds());
+  }
+  const c = Math.cos(laser.rotation), s = Math.sin(laser.rotation);
+  const dx = (rect.x + rect.width / 2) - laser.x;
+  const dy = (rect.y + rect.height / 2) - laser.y;
+  const a = laser.comprimentoFeixe / 2, b = laser.larguraFeixe / 2;
+  const w = rect.width / 2, h = rect.height / 2;
+  // Teorema dos eixos separadores: dois eixos do mapa e dois do feixe.
+  return Math.abs(dx) <= w + Math.abs(c) * a + Math.abs(s) * b &&
+    Math.abs(dy) <= h + Math.abs(s) * a + Math.abs(c) * b &&
+    Math.abs(dx * c + dy * s) <= a + w * Math.abs(c) + h * Math.abs(s) &&
+    Math.abs(-dx * s + dy * c) <= b + w * Math.abs(s) + h * Math.abs(c);
+}
+
 // =====================================================
 // VERIFICAR RECARGA DO ROBÔ
 // =====================================================
@@ -119,8 +137,6 @@ function verificarLasersNoMapa(scene) {
       continue;
     }
 
-    const boundsLaser = laser.getBounds();
-
     for (const bloco of blocos) {
       if (!bloco?.body) {
         continue;
@@ -135,7 +151,7 @@ function verificarLasersNoMapa(scene) {
 
       // Refletidos também devem colidir
       // com obstáculos do cenário.
-      if (Phaser.Geom.Intersects.RectangleToRectangle(rectBloco, boundsLaser)) {
+      if (laserAtingeRetangulo(laser, rectBloco)) {
         laser.destroy();
         break;
       }
@@ -185,10 +201,7 @@ function verificarLasersNoPlayer(scene) {
     // COLISÃO ORIGINAL COM O PLAYER
     // ===============================================
 
-    const acertou = Phaser.Geom.Intersects.RectangleToRectangle(
-      scene.hitboxDanoPlayer,
-      laser.getBounds(),
-    );
+    const acertou = laserAtingeRetangulo(laser, scene.hitboxDanoPlayer);
 
     if (acertou) {
       acertarPlayerComLaser(scene, laser);

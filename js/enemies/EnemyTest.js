@@ -356,7 +356,7 @@ function configurarHitboxPeInimigo(inimigo) {
  */
 function atualizarHitboxDanoInimigo(inimigo) {
   // O Robo Bola mantém uma hitbox própria, ajustada à escala do sprite.
-  if (!inimigo || !inimigo.body || inimigo.tipoRobo === "bola") {
+  if (!inimigo || !inimigo.body || ["bola", "olhao"].includes(inimigo.tipoRobo)) {
     return;
   }
 
@@ -423,7 +423,7 @@ function atualizarInimigoTeste(scene, time) {
     }
 
     if (!inimigo.remoteOnly) {
-      if (inimigo.tipoRobo !== "bola" && atualizarDecisaoAtor(scene, inimigo, time)) {
+      if (!["bola", "olhao"].includes(inimigo.tipoRobo) && atualizarDecisaoAtor(scene, inimigo, time)) {
         atualizarIAInimigo(scene, time, inimigo);
       }
     }

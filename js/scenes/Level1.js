@@ -335,6 +335,7 @@ class Level1 extends Phaser.Scene {
     this.teclaSpawnRoboSerra = this.input.keyboard.addKey(
       Phaser.Input.Keyboard.KeyCodes.FIVE,
     );
+    this.teclaSpawnRoboOlhao = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SEVEN);
     this.teclaSpawnRoboBola = this.input.keyboard.addKey(
       Phaser.Input.Keyboard.KeyCodes.SIX,
     );
