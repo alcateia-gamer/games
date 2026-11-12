@@ -124,6 +124,8 @@ test("DEV apaga a fábrica, persiste a falta de energia e permite religar", asyn
   const calls = [];
   const scene = Object.assign(Object.create(Level1Parte2.prototype), {
     developerMode: true, luzFabricaAcesa: true, game: { registry: new Map() },
+    cache: { tilemap: { remove() {} } },
+    scene: { get() { return null; } },
     definirIluminacaoFabrica(...args) { calls.push(args); },
   });
   scene.apagarLuzFabrica();
@@ -137,6 +139,7 @@ test("DEV apaga a fábrica, persiste a falta de energia e permite religar", asyn
   assert.equal(scene.luzFabricaAcesa, true);
   assert.equal(scene.game.registry.get("factoryGeneratorPowered"), true);
   assert.deepEqual(calls.at(-1), [true, null]);
+  assert.equal(scene.cidadeDescarregada, true, "religar a energia também bloqueia o retorno");
   scene.developerMode = false;
   scene.apagarLuzFabrica();
   assert.equal(scene.luzFabricaAcesa, true, "desligamento é exclusivo do DEV");

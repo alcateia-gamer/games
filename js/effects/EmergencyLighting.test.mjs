@@ -243,3 +243,21 @@ test("Neon é fixo, pequeno e aceita orientação vertical em propriedades raw e
     }
   }
 });
+
+test("entrada no boss apaga giroflex de teto e parede e preserva neons fixos", () => {
+  const lights = new EmergencyLighting(mapa([
+    ponto(),
+    { ...ponto({ Lateral: true, Esquerda: true }), id: 2 },
+    { ...ponto({ Neon: true }), id: 3 },
+  ]));
+  const cam = camera();
+  assert.equal(lights.atualizar(0, cam).length, 3);
+  const antes = lights.revisao;
+  lights.desligarGiroflex();
+  const fontes = lights.atualizar(100, cam);
+  assert.equal(fontes.length, 1);
+  assert.equal(fontes[0].luz.neon, true);
+  assert.ok(lights.revisao > antes, "a máscara é redesenhada para remover os feixes");
+  lights.desligarGiroflex();
+  assert.equal(lights.atualizar(3000, cam).length, 1);
+});

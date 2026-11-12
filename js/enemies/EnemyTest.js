@@ -31,6 +31,7 @@ function criarInimigoTeste(scene, config = {}) {
 
   const inimigo = scene.physics.add.sprite(x, y, textura, 0);
 
+  inimigo.origemSpawn = { x, y };
   inimigo.networkId = config.networkId || null;
   inimigo.remoteOnly = Boolean(config.remoteOnly);
 

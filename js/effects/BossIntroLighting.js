@@ -53,6 +53,21 @@ export default class BossIntroLighting {
     return limiar < 0 || this.progresso >= limiar ? 1 : 0;
   }
 
+  /** A réplica mantém revisão local e refaz os limiares se o enquadramento mudar. */
+  aplicarEstadoRede(estado) {
+    if (!estado) return;
+    let alterada = false;
+    const reiniciar = this.topo !== estado.topo || this.base !== estado.base ||
+      (!this.ativa && estado.ativa) || estado.progresso < this.progresso;
+    for (const campo of ["ativa", "progresso", "aura", "ambiente", "topo", "base"]) {
+      if (estado[campo] === undefined || this[campo] === estado[campo]) continue;
+      this[campo] = estado[campo];
+      alterada = true;
+    }
+    if (reiniciar) this.limiares = new WeakMap();
+    if (alterada) this.revisao++;
+  }
+
   restaurar() {
     this.ativa = false;
     this.aura = this.ambiente = 1;

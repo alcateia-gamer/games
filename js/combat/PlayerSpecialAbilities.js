@@ -269,6 +269,14 @@ function refletirLaser(scene, estado, laser) {
   }
 
   const origem = laser.especialAtirador;
+  const boss = scene.novoBoss;
+  if (laser.novoBossDisparoEnergia || (boss &&
+      (origem === boss || boss.projeteisBoss?.includes(laser)))) {
+    // O domo conserva o alcance e a proteção; energia do boss é absorvida sem voltar como dano.
+    pulsoVisual(scene, laser.x, laser.y, 11, 0x38bdf8, 150);
+    laser.destroy();
+    return true;
+  }
 
   const alvo =
     origem?.active && !origem.morto

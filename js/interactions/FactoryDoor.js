@@ -2,6 +2,7 @@
  * @file Portas da fábrica abertas por interação, com persianas animadas e portas instantâneas.
  */
 
+import { calcularDepthAtor } from "../map/ProfundidadeMapa.js";
 import { distanceToInteractionArea, findFactoryInteraction } from "./FactoryGenerator.js";
 import { criarInteracaoLeitorCartao } from "./FactoryCardReader.js";
 import { drawCollectibleMarker } from "../ui/CollectibleMarker.js";
@@ -136,7 +137,8 @@ function criarPorta(scene, layer, area, fala) {
   ).setOrigin(0.5, 1).setDepth(200).setVisible(false);
 
   const stateKey = chaveEstadoPorta(area.name);
-  const alreadyOpen = scene.game.registry.get(stateKey) === true;
+  const alreadyOpen = scene.game.registry.get(stateKey) === true &&
+    (area.name !== "porta05" || scene.novoBoss?.morto === true);
   const criarColisao = () => scene.collisionGroup.create(
     area.x + area.width / 2, area.y + area.height / 2,
   ).setDisplaySize(area.width, area.height).setVisible(false).refreshBody();
@@ -181,6 +183,7 @@ function criarPorta(scene, layer, area, fala) {
   /** As duas portas iniciais usam energia; o leitor da arena também exige o crachá. */
   const motivoBloqueio = () => {
     if (porta.bloqueadaPorBoss) return "COMBATE EM ANDAMENTO";
+    if (area.name === "porta05" && scene.novoBoss?.morto !== true) return "DERROTE O BOSS PARA ABRIR";
     const exigeCartao = PORTAS_COM_ACESSO.has(area.name);
     if (!exigeCartao && !PORTAS_COM_ENERGIA.has(area.name)) return null;
     const requisitos = [];
@@ -269,7 +272,8 @@ function criarPorta(scene, layer, area, fala) {
     return true;
   };
   porta.liberarAposBoss = () => {
-    if (encerrada || !porta.bloqueadaPorBoss) return false;
+    if (encerrada || !porta.bloqueadaPorBoss ||
+        (scene.fabricaDescarregada && PORTAS_COM_ACESSO.has(area.name))) return false;
     tween?.stop();
     porta.bloqueadaPorBoss = false;
     porta.estado = abertaAntesDoBoss ? "aberta" : "fechada";
@@ -284,13 +288,13 @@ function criarPorta(scene, layer, area, fala) {
    * Ajusta a profundidade sem mover a moldura que cobre a folha da porta.
    */
   const atualizar = () => {
-    // O personagem fica por cima enquanto a porta está fechada ou abrindo.
-    // Após a abertura, a moldura fica acima dele durante a passagem.
+    // A folha usa a mesma ordem pelos pés dos atores: cobre quem está atrás,
+    // inclusive enquanto fecha na entrada do boss. A moldura aberta cobre a passagem.
     const playerDepth = scene.profundidadePersonagemParte2 ??
       scene.player?.depth ?? layer.depth;
     const doorDepth = porta.estado === "aberta"
       ? Math.max(layer.depth, playerDepth + 0.01)
-      : Math.min(layer.depth, playerDepth - 0.01);
+      : Math.max(layer.depth, calcularDepthAtor(scene, area.y + area.height));
     visual?.setDepth(doorDepth);
     header?.setDepth(doorDepth);
     prompt?.setText(motivoBloqueio() ?? "E - ABRIR PORTA");
@@ -300,6 +304,7 @@ function criarPorta(scene, layer, area, fala) {
   };
 
   const limpar = () => {
+    if (encerrada) return;
     encerrada = true;
     porta.bloqueadaPorBoss = false;
     tween?.stop();
@@ -397,6 +402,15 @@ function criarInteracaoPortaFabrica(scene) {
       }
     }
   };
+  scene.descarregarPortasFabrica = limiteY => {
+    for (let i = portas.length - 1; i >= 0; i--) {
+      if (portas[i].porta.area.y <= limiteY) continue;
+      portas[i].limpar();
+      portas.splice(i, 1);
+    }
+    scene.portasFabrica = portas.map(controle => controle.porta);
+    scene.portaFabrica = null;
+  };
   scene.atualizarInteracaoPortaFabrica = atualizar;
   scene.events.on(Phaser.Scenes.Events.PRE_RENDER, atualizar);
   scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
@@ -411,6 +425,7 @@ function criarInteracaoPortaFabrica(scene) {
     scene.portaFabrica = null;
     scene.interacaoMundoProxima = null;
     scene.atualizarInteracaoPortaFabrica = null;
+    scene.descarregarPortasFabrica = null;
   });
   atualizar();
 }

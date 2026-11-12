@@ -83,13 +83,14 @@ export default class MiniMapManager {
     this.image = scene.add.image(VIEW_X, VIEW_Y, this.textureKey).setOrigin(0, 0)
       .setDisplaySize(VIEW_WIDTH, VIEW_HEIGHT);
     this.enemyMarkers = scene.add.graphics();
+    this.allyMarkers = scene.add.graphics();
     this.itemMarkers = scene.add.graphics();
     this.marker = scene.add.container(0, 0);
     const glow = scene.add.circle(0, 0, 5.5, 0x071d18, 0.7);
     const heading = scene.add.graphics().lineStyle(1.5, this.colors.player, 1);
     heading.beginPath().moveTo(-3, 2).lineTo(0, -4).lineTo(3, 2).strokePath();
     this.marker.add([glow, heading]);
-    this.root.add([frame, this.image, this.enemyMarkers, this.itemMarkers, title, this.marker]);
+    this.root.add([frame, this.image, this.enemyMarkers, this.itemMarkers, this.allyMarkers, title, this.marker]);
     this.nativeView = criarCanvasHUDNitido(scene, WIDTH, HEIGHT + 14, 100100);
     if (this.nativeView) {
       this.nativeBackground = document.createElement("canvas");
@@ -131,6 +132,7 @@ export default class MiniMapManager {
       this.nativeView?.limpar();
       this.marker.setVisible(false);
       this.enemyMarkers.clear();
+      this.allyMarkers?.clear();
       this.itemMarkers.clear();
       return;
     }
@@ -139,6 +141,7 @@ export default class MiniMapManager {
       this.nativeView?.limpar();
       this.marker.setVisible(false);
       this.enemyMarkers.clear();
+      this.allyMarkers?.clear();
       this.itemMarkers.clear();
       return;
     }
@@ -160,6 +163,7 @@ export default class MiniMapManager {
       return;
     }
     this.updateEnemyMarkers();
+    this.updateAllyMarkers();
     this.updateItemMarkers();
     this.updateGeneratorMarker();
     this.updateShutterDoorMarkers();
@@ -172,6 +176,33 @@ export default class MiniMapManager {
       position.x >= 7 && position.y >= 7 && position.x <= VIEW_WIDTH - 7 && position.y <= VIEW_HEIGHT - 7;
     this.marker.setVisible(inside).setPosition(VIEW_X + position.x, VIEW_Y + position.y);
     this.marker.setRotation({ up: 0, right: Math.PI / 2, down: Math.PI, left: -Math.PI / 2 }[this.scene.direcaoAtual] ?? 0);
+  }
+
+  /** Setas dos aliados usam a mesma forma do jogador e a cor de cada personagem. */
+  updateAllyMarkers() {
+    const graphics = this.allyMarkers;
+    if (!graphics) return;
+    graphics.clear();
+    const { bounds } = this.geometry;
+    for (const [id, ally] of this.scene.remotePlayers ?? []) {
+      const data = this.scene.multiplayerManager?.room?.players?.find(p => p.id === id);
+      if (!ally?.active || ally.morto || data?.dead || ally.vida <= 0 ||
+          !Number.isFinite(ally.x) || !Number.isFinite(ally.y)) continue;
+      if (ally.x < bounds.x || ally.y < bounds.y ||
+          ally.x > bounds.x + bounds.width || ally.y > bounds.y + bounds.height) continue;
+      const position = worldToMiniMap(this.transform, ally.x, ally.y);
+      if (position.x < 7 || position.y < 7 || position.x > VIEW_WIDTH - 7 || position.y > VIEW_HEIGHT - 7) continue;
+      const x = VIEW_X + position.x, y = VIEW_Y + position.y;
+      const color = obterTemaPersonagem(ally.mapCharacter ?? data?.character).accent;
+      const direction = LOOK_DIRECTIONS[ally.direcaoAtual ?? data?.direction] ?? LOOK_DIRECTIONS.down;
+      const sideX = -direction.y * 3, sideY = direction.x * 3;
+      graphics.fillStyle(0x071d18, 0.7).fillCircle(x, y, 5.5);
+      graphics.lineStyle(1.5, color, 1)
+        .lineBetween(x - direction.x * 2 + sideX, y - direction.y * 2 + sideY,
+          x + direction.x * 4, y + direction.y * 4)
+        .lineBetween(x + direction.x * 4, y + direction.y * 4,
+          x - direction.x * 2 - sideX, y - direction.y * 2 - sideY);
+    }
   }
 
   /**
@@ -423,11 +454,13 @@ export default class MiniMapManager {
     const ctx = view.context;
     ctx.drawImage(this.nativeBackground, 0, 0, view.width, view.height);
     // Reutiliza as mesmas regras e símbolos da versão Phaser.
-    const enemyMarkers = this.enemyMarkers, itemMarkers = this.itemMarkers;
+    const enemyMarkers = this.enemyMarkers, itemMarkers = this.itemMarkers, allyMarkers = this.allyMarkers;
     this.enemyMarkers = this.nativeGraphics;
+    this.allyMarkers = this.nativeGraphics;
     this.itemMarkers = this.nativeGraphics;
     try {
       this.updateEnemyMarkers();
+      this.updateAllyMarkers();
       this.updateItemMarkers();
       this.updateGeneratorMarker();
       this.updateShutterDoorMarkers();
@@ -437,6 +470,7 @@ export default class MiniMapManager {
       this.updateSearchMarker();
     } finally {
       this.enemyMarkers = enemyMarkers;
+      this.allyMarkers = allyMarkers;
       this.itemMarkers = itemMarkers;
     }
     const position = worldToMiniMap(this.transform, x, y), { bounds } = this.geometry;
@@ -469,6 +503,7 @@ export default class MiniMapManager {
     this.texture = null; this.atlas = null;
     this.geometry = null; this.root = null; this.marker = null; this.image = null;
     this.enemyMarkers = null;
+    this.allyMarkers = null;
     this.itemMarkers = null;
     if (this.scene.minimap === this) this.scene.minimap = null;
   }

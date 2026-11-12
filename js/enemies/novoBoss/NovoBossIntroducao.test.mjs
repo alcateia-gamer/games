@@ -504,3 +504,34 @@ test("invocação mantém ritmo acelerado, mas raios e formação do escudo usam
   assert.equal(f.sistema.snapshot().concluida, true);
   assert.equal(botao.cameraFilter, 0); assert.equal(status.style.visibility, "");
 });
+
+test("início da cutscene reúne aliados e descarrega a fábrica antes de bloquear o movimento", () => {
+  const { scene, sistema } = fixture();
+  const ordem = [];
+  scene.coopRuntime = {
+    bossTarget: () => ({ movimentoBloqueado: false }),
+    world: { iniciarIntroducaoBoss() { ordem.push("reunir"); return true; } },
+  };
+  scene.descarregarFabricaParaBoss = () => {
+    assert.equal(scene.cenaEntradaBossAtiva, undefined);
+    ordem.push("descarregar");
+  };
+  sistema.atualizar(0);
+  assert.deepEqual(ordem, ["reunir", "descarregar"]);
+  assert.equal(scene.cenaEntradaBossAtiva, true);
+  sistema.atualizar(100);
+  assert.deepEqual(ordem, ["reunir", "descarregar"], "não repete a reunião por quadro");
+  sistema.destruir();
+});
+
+test("sem espaço para reunir o grupo, a cutscene espera antes de limpar o mapa", () => {
+  const { scene, sistema } = fixture();
+  scene.coopRuntime = {
+    bossTarget: () => ({}), world: { iniciarIntroducaoBoss: () => false },
+  };
+  scene.descarregarFabricaParaBoss = () => assert.fail("não deve limpar antes do teleporte");
+  sistema.atualizar(0);
+  assert.equal(sistema.snapshot().etapa, "aguardando");
+  assert.equal(scene.movimentoBloqueado, false);
+  sistema.destruir();
+});

@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import { VisualSender, VisualReceiver, mergePendingFrame, describeVisual, applyVisual } from "./CoopVisuals.js";
+import { playerVisualObjects } from "./CoopPlayers.js";
 import { CoopWorld } from "./CoopWorld.js";
 import FactoryLighting from "../effects/FactoryLighting.js";
 import { BossReplica } from "./CoopBossReplica.js";
@@ -279,5 +280,99 @@ test("equipe não troca de mapa para contornar o resgate de um aliado caído", (
   world.receive({ playerId: "client", kind: "map", payload: { key: "Level1Parte2", from: "Level1", boss: true } });
   assert.equal(scene.started, undefined);
   assert.equal(world.transitioning, false);
+  world.destroy();
+});
+
+test("cliente mantém sala do boss apagada antes do spawn e durante recuperação de rede", () => {
+  const arena = { xMin: 0, xMax: 200, yMin: -400, yMax: 0, entradaY: 0 };
+  const scene = { map: { getObjectLayer: () => null }, novoBossConfig: { arena } };
+  const runtime = { scene, host: false, mapKey: "Level1Parte2" };
+  const replica = new BossReplica(runtime);
+  const espera = scene.iluminacaoEntradaBossReplica;
+  const dentro = { x: 40, y: -160, neon: true }, fora = { x: 400, y: -160, neon: true };
+  assert.equal(espera.fatorLuz(dentro), 0);
+  assert.equal(espera.fatorLuz(fora), 1);
+  assert.equal(espera.ambiente, 0);
+  replica.receive(null);
+  replica.destroy();
+  assert.equal(scene.iluminacaoEntradaBossReplica, espera, "perder o stream não acende a sala");
+  runtime.disposed = true;
+  replica.destroy();
+  assert.equal(scene.iluminacaoEntradaBossReplica, null);
+});
+
+test("estado de espera do cliente não interfere na iluminação do host", () => {
+  const scene = {};
+  new BossReplica({ scene, host: true, mapKey: "Level1Parte2" });
+  assert.equal(scene.iluminacaoEntradaBossReplica, undefined);
+});
+
+
+test("dash do aliado replica flash, duas camadas do rastro e desaparecimento sem duplicar no host", () => {
+  const scene = visualScene();
+  const visual = (type, x, y, alpha = 1) => ({
+    ...scene.add.sprite(x, y), type, alpha, depth: 16.49, scaleX: 1, scaleY: 1, rotation: 0,
+    originX: 0.5, originY: 0.5,
+  });
+  const arrow = visual("Sprite", 100, 200);
+  const rastro = visual("Container", 80, 200, 0.7);
+  const sombra = visual("Image", 0, 0, 0.62), brilho = visual("Image", 0, 0, 0.17);
+  for (const layer of [arrow, sombra, brilho]) {
+    layer.texture = { key: "walk" };
+    layer.frame = { name: 18, cutX: 0, cutY: 0, cutWidth: 128, cutHeight: 128 };
+  }
+  sombra.tintTopLeft = 0x2376c7;
+  brilho.tintTopLeft = 0x31c8ff; brilho.blendMode = 1;
+  sombra.parentContainer = brilho.parentContainer = rastro;
+  rastro.list = [sombra, brilho];
+  const flash = Object.assign(visual("Arc", 90, 200, 0.5), {
+    radius: 15, fillColor: 0x00bfff, fillAlpha: 0.1,
+    strokeColor: 0x00bfff, strokeAlpha: 0.55, lineWidth: 2, isFilled: true, isStroked: true,
+  });
+  scene.projeteisPlayer = { getChildren: () => [arrow] };
+  scene.estadoDash = { rastros: new Set([rastro]), efeitos: new Set([flash]) };
+  const source = playerVisualObjects(scene);
+  assert.deepEqual(source, [arrow, rastro, sombra, brilho, flash]);
+  const sender = new VisualSender(), packet = sender.capture(source, true);
+  const payload = object => packet.changed.find(n => n.id === sender.id(object)).s;
+  assert.equal(payload(sombra).parent, sender.id(rastro));
+  assert.equal(payload(brilho).parent, sender.id(rastro));
+  assert.equal(payload(brilho).blend, 1);
+  assert.equal(payload(sombra).tint, 0x2376c7);
+  assert.equal(payload(brilho).tint, 0x31c8ff);
+  assert.equal(payload(flash).stroke, 0x00bfff);
+  const remote = visualScene();
+  remote.add.container = (x, y) => Object.assign(remote.add.sprite(x, y), {
+    type: "Container", list: [], add(child) { this.list.push(child); child.parentContainer = this; },
+  });
+  remote.add.circle = (x, y) => Object.assign(remote.add.sprite(x, y), { type: "Arc", setRadius() {} });
+  const receiver = new VisualReceiver(remote);
+  receiver.receive(packet);
+  assert.equal(receiver.get(sender.id(rastro)).list.length, 2);
+  assert.equal(receiver.get(sender.id(brilho)).parentContainer, receiver.get(sender.id(rastro)));
+  rastro.alpha = 0.2;
+  receiver.receive(sender.capture(playerVisualObjects(scene), true));
+  assert.equal(receiver.entries.get(sender.id(rastro)).state.a, 0.2, "o fade local chega ao aliado");
+  const enemy = visual("Sprite", 300, 200);
+  scene.children = { list: [arrow, rastro, flash, enemy] };
+  const world = CoopRuntime.prototype.worldObjects.call({ scene, baseline: new Set(),
+    players: { objects: () => [], effects: new Map() } });
+  assert.deepEqual(world, [enemy], "o mesmo dash não é reenviado como objeto do mundo");
+  scene.estadoDash.rastros.clear(); scene.estadoDash.efeitos.clear();
+  receiver.receive(sender.capture(playerVisualObjects(scene), true));
+  assert.equal(receiver.entries.size, 1, "terminar o dash remove todas as réplicas temporárias");
+  assert.ok(receiver.get(sender.id(arrow)));
+});
+
+test("gerador ligado bloqueia o retorno à cidade sem remover a regra de resgate", () => {
+  const { world, manager, scene, sent } = worldFixture();
+  world.r.host = true; world.r.mapKey = "Level1Parte2";
+  manager.room.coopProgress.flags.factoryGeneratorPowered = true;
+  Object.assign(scene.player, { x: 95, y: -916 });
+  world.receive({ kind: "map", playerId: manager.playerId,
+    payload: { from: "Level1Parte2", key: "Level1" } });
+  assert.equal(world.transitioning, false);
+  assert.equal(scene.started, undefined);
+  assert.equal(sent.length, 0);
   world.destroy();
 });

@@ -22,6 +22,8 @@ export function obterDirecaoMiraAutomaticaAria(scene) {
   ])].flatMap(alvo => {
     if (!alvo?.active || alvo.visible === false || alvo.morto || alvo.body?.enable === false ||
         (alvo.vida != null && alvo.vida <= 0)) return [];
+    // O escudo mantém o boss no contrato de dano, mas suspende a atração da mira.
+    if (alvo === scene.novoBoss && alvo.barreiraAtiva) return [];
     const centro = centroAlvo(alvo);
     if (!centro) return [];
     const dx = centro.x - jogador.x, dy = centro.y - jogador.y;

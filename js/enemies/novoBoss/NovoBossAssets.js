@@ -129,7 +129,8 @@ export const assetsNovoBoss = Object.freeze({
     arquivo: "PERSONAGENS/INIMIGOS PRINCIPAIS/BossPrincipal/derivados/portal/portal-quadros.png",
     larguraFrame: 320, alturaFrame: 320, ultimoFrame: 6,
     duracoesMs: Object.freeze([100, 100, 100, 100, 100, 100, 200]),
-    origemX: 0.5, origemY: 0.5, escala: 0.35,
+    // Centro da abertura escura na célula; o contorno tem padding assimétrico.
+    origemX: 190 / 320, origemY: 155 / 320, escala: 0.35,
   }),
 });
 

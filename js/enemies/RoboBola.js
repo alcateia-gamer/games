@@ -11,7 +11,7 @@ import { atualizarIAInimigo, moverInimigoAte } from "./EnemyAI.js";
 import { suavizarTexturasRoboBola, criarBrilhoOlho, criarRastroPlasma } from "./RoboBolaEffects.js";
 import { protegerColisaoRoboBola } from "./RoboBolaColisao.js";
 import { ROBO_BOLA_FLUTUACAO } from "./RoboBolaFlutuacao.js";
-import { atualizarEmergenciaRoboBola } from "./RoboBolaEmergencia.js";
+import { atualizarEmergenciaRoboBola, EMERGENCIA_ROBO_BOLA } from "./RoboBolaEmergencia.js";
 
 // Grade viva 2×3: frente, disparo frontal, costas, esquerda, direita, vazio.
 // A morte usa as mesmas poses, cada uma em uma linha de quatro quadros.
@@ -46,10 +46,13 @@ function atualizarHitboxRoboBola(robo) {
 }
 
 /** Move só a imagem: a colisão de navegação permanece estável sobre o chão. */
-function atualizarFlutuacao(robo, time) {
+function atualizarFlutuacao(robo, time, delta = 0) {
   robo.faseFlutuacaoAtual = time / ROBO_BOLA_FLUTUACAO.periodoMs * Math.PI * 2 +
     (robo.faseFlutuacao || 0);
-  robo.deslocamentoFlutuacao = Math.sin(robo.faseFlutuacaoAtual) * ROBO_BOLA_FLUTUACAO.amplitude;
+  // O centro visual nasce na abertura; a oscilação entra junto com a saída física.
+  const saida = robo.emergenciaPortal;
+  const progresso = saida ? Math.min(1, (saida.tempo + Math.max(0, delta)) / EMERGENCIA_ROBO_BOLA.duracaoMs) : 1;
+  robo.deslocamentoFlutuacao = Math.sin(robo.faseFlutuacaoAtual) * ROBO_BOLA_FLUTUACAO.amplitude * progresso;
   const deslocamentoLocal = robo.deslocamentoFlutuacao / robo.scaleY;
   robo.setOrigin(0.5, 0.5 - deslocamentoLocal / 127);
   const offset = (127 - TAMANHO_HITBOX) / 2;
@@ -192,6 +195,7 @@ function criarRoboBola(scene, posicao = null) {
     "robo-bola",
     0,
   );
+  robo.origemSpawn = { x: spawn.x, y: spawn.y };
   robo.tipoRobo = "bola";
   robo.morto = false;
   // 127 px × 0,56 ≈ 71 px: mesma largura visual do robo-pet em escala 0,2.
@@ -358,7 +362,7 @@ function atualizarRoboBola(scene, time, delta) {
     if (!robo?.active || robo.tipoRobo !== "bola" || robo.morto || robo.remoteOnly) continue;
     const protegendoSpawn = time < Math.max(robo.prologoProtegidoAte ?? -Infinity,
       robo.spawnProtegidoAte ?? -Infinity);
-    atualizarFlutuacao(robo, time);
+    atualizarFlutuacao(robo, time, delta);
     let combateVisivel = false;
     if (!atualizarEmergenciaRoboBola(scene, robo, delta)) {
       if (protegendoSpawn) robo.setVelocity(0, 0);

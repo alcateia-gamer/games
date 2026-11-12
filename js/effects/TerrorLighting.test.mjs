@@ -92,7 +92,7 @@ test("flashlight updates on movement and direction changes only while factory po
   assert.equal(scene.game.renderer.listenerCount("render"), 0);
 });
 
-test("neon fica atrás do boss e das cópias mesmo sem jogador visível, com clareamento separado", t => {
+test("neon fica atrás do boss, cópias, Robô Bola e NOVA, acompanhando suas poses", t => {
   const previousPhaser = globalThis.Phaser, previousDocument = globalThis.document;
   let limpar;
   const chamadas = [];
@@ -132,6 +132,10 @@ test("neon fica atrás do boss e das cópias mesmo sem jogador visível, com cla
     scaleX: 0.55, scaleY: 0.55, displayOriginX: 144, displayOriginY: 144,
     frame: { source: { image: imagem }, cutX: 0, cutY: 0, cutWidth: 288, cutHeight: 288 } });
   const boss = sprite(imagemBoss), copia = sprite(imagemCopia);
+  const imagemRobo = {}, imagemNova = {}, imagemAliado = {};
+  const robo = { ...sprite(imagemRobo), tipoRobo: "bola" };
+  const nova = sprite(imagemNova);
+  const aliado = sprite(imagemAliado);
   const scene = {
     game: { renderer: new EventEmitter() }, events: new EventEmitter(), time: { now: 0 },
     map: { getObjectLayer: name => ({ objects: name === "Luzedeemergencia" ? [{
@@ -143,6 +147,7 @@ test("neon fica atrás do boss e das cópias mesmo sem jogador visível, com cla
     textures: { exists: () => false, createCanvas: () => texture },
     add: { image: () => overlay }, luzFabricaAcesa: true,
     player: { active: false, visible: false },
+    inimigos: [robo], companionPet: nova, remotePlayers: new Map([["aliado", aliado]]),
     novoBoss: { jogadorNaArena: true, sprite: boss,
       alvosIlusorios: [{ active: true, visible: true, sprite: copia }] },
   };
@@ -154,12 +159,13 @@ test("neon fica atrás do boss e das cópias mesmo sem jogador visível, com cla
     ch.args[0]?.width === 800 && ch.args[0]?.height === 450);
   assert.ok(composicao, "a cor é composta separadamente mesmo sem jogador visível");
   const corContext = composicao.args[0].getContext();
-  for (const imagem of [imagemBoss, imagemCopia]) {
+  for (const imagem of [imagemBoss, imagemCopia, imagemRobo, imagemNova, imagemAliado]) {
     const recorte = chamadas.find(ch => ch.context === corContext && ch.args[0] === imagem);
     assert.ok(recorte, "o corpo oculta o neon antes de compor a luz");
     assert.equal(recorte.op, "destination-out");
     assert.equal(recorte.alpha, 1, "remove a faixa inteira, não só parte do brilho");
     assert.ok(chamadas.indexOf(recorte) < chamadas.indexOf(composicao));
+    if ([imagemRobo, imagemNova, imagemAliado].includes(imagem)) continue;
     const clareamento = chamadas.find(ch => ch.context === texture.getContext() && ch.args[0] === imagem);
     assert.equal(clareamento.op, "destination-out");
     assert.equal(clareamento.alpha, 0.55, "a sombra conserva o clareamento pedido para o sprite");
@@ -176,13 +182,46 @@ test("neon fica atrás do boss e das cópias mesmo sem jogador visível, com cla
   copia.frame = { ...copia.frame, cutX: 288 };
   render();
   assert.equal(uploads, antes + 2, "o recorte acompanha a animação das cópias");
-  const imagemBola = {};
-  const bola = { ...sprite(imagemBola), tipoRobo: "bola" };
-  scene.inimigos = [bola]; chamadas.length = 0;
+  robo.x += 10;
   render();
-  assert.ok(chamadas.some(ch => ch.context === corContext && ch.args[0] === imagemBola && ch.op === "destination-out"));
-  const comBola = uploads;
-  render(); assert.equal(uploads, comBola, "bola parada preserva o cache");
-  bola.y += 2; render(); assert.equal(uploads, comBola + 1, "recorte acompanha a flutuação");
-  bola.active = false; render(); assert.equal(uploads, comBola + 2, "remoção limpa a silhueta antiga");
+  assert.equal(uploads, antes + 3, "o recorte acompanha o movimento do Robô Bola");
+  nova.frame = { ...nova.frame, cutX: 288 };
+  render();
+  assert.equal(uploads, antes + 4, "o recorte acompanha a animação da NOVA");
+  nova.displayOriginY += 5;
+  render();
+  assert.equal(uploads, antes + 5, "o recorte acompanha mudanças de origem e flutuação");
+  // Mesmo com apenas os neons fixos, os dois sprites permanecem sobre o brilho.
+  scene.novoBoss = null;
+  chamadas.length = 0;
+  render();
+  for (const imagem of [imagemRobo, imagemNova, imagemAliado]) {
+    assert.ok(chamadas.some(ch => ch.context === corContext && ch.args[0] === imagem &&
+      ch.op === "destination-out"), "recorta o neon sem depender da aura do boss ou do jogador");
+  }
+  const parado = uploads;
+  render();
+  assert.equal(uploads, parado, "neons e atores parados reutilizam a máscara");
+  robo.visible = false;
+  chamadas.length = 0;
+  render();
+  assert.equal(uploads, parado + 1, "esconder o robô remove sua silhueta antiga");
+  assert.ok(!chamadas.some(ch => ch.args[0] === imagemRobo));
+  scene.companionPet = null;
+  chamadas.length = 0;
+  render();
+  assert.equal(uploads, parado + 2, "remover a NOVA também invalida o recorte");
+  assert.ok(!chamadas.some(ch => ch.args[0] === imagemNova));
+  aliado.x += 20;
+  aliado.flipX = true;
+  render();
+  assert.equal(uploads, parado + 3, "recorte acompanha posição e espelhamento recebidos pela rede");
+  aliado.frame = { ...aliado.frame, cutX: 288 };
+  render();
+  assert.equal(uploads, parado + 4, "recorte acompanha a animação do aliado");
+  scene.remotePlayers.clear();
+  chamadas.length = 0;
+  render();
+  assert.equal(uploads, parado + 5, "saída do aliado remove a silhueta antiga");
+  assert.ok(!chamadas.some(ch => ch.args[0] === imagemAliado));
 });

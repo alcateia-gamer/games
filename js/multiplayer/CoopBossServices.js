@@ -31,7 +31,7 @@ export function coopBossServices(runtime, encounter, original) {
       const candidates = players().map(c => ({ c, t: tempoImpactoFlecha(start, end, vector,
         c.hitboxDanoPlayer, radius, radius) })).filter(p => p.t !== null).sort((a, b) => a.t - b.t);
       for (const c of players()) {
-        if (visual && c.tentarInterceptarLaserEspecial?.(visual)) return false;
+        if (visual && c.tentarInterceptarLaserEspecial?.(visual)) return visual.active === false;
         if (visual && c.acertarHologramaEspecial?.(visual)) return true;
       }
       if (!candidates.length) return false;

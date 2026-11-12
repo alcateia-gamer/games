@@ -27,34 +27,41 @@ const CONFIG_DASH = {
   opacidadeRecarga: 0.35,
 
   // RASTROS
-  intervaloRastro: 25,
-  intervaloRastroPosDash: 45,
-  duracaoRastroPosDash: 300,
+  intervaloRastro: 35,
+  intervaloRastroPosDash: 65,
+  duracaoRastroPosDash: 160,
 
   // TEMPO DE VIDA
-  duracaoRastro: 380,
+  duracaoRastro: 270,
 
   // OPACIDADES
   opacidadeSombra: 0.62,
-  opacidadeBrilho: 0.17,
 
   // DISTÂNCIA ENTRE CÓPIAS
   distanciaMinimaRastro: 3,
   distanciaMinimaRastroWalk: 11,
 
   // OTIMIZAÇÃO MOBILE
-  maximoRastros: 24,
+  maximoRastros: 8,
 
   // FLASH
   duracaoFlash: 160,
 };
 
-// Menos cópias simultâneas no toque; mantém as cores, o flash e as duas camadas.
+// Menos sobreposição no toque; preserva as cores e o flash sem blend aditivo por cópia.
 const PERFIL_DASH_MOBILE = {
-  maximoRastros: 12,
-  intervaloRastro: 40,
-  intervaloRastroPosDash: 70,
+  ...CONFIG_DASH,
+  maximoRastros: 4,
+  intervaloRastro: 60,
+  intervaloRastroPosDash: 90,
+  duracaoRastro: 200,
+  duracaoRastroPosDash: 100,
 };
+
+function obterPerfilDash(scene) {
+  return scene.sys?.game?.device?.input?.touch || scene.sys?.game?.device?.os?.desktop === false
+    ? PERFIL_DASH_MOBILE : CONFIG_DASH;
+}
 
 // =====================================================
 // PALETA DE CORES DE CADA PERSONAGEM
@@ -134,12 +141,13 @@ function criarRastroTemporal(scene) {
   }
 
   const agora = scene.time.now;
+  const perfil = estado.perfilVisual ?? obterPerfilDash(scene);
 
   if (!estado.ativo && agora >= estado.fimEfeitoVisual) {
     return;
   }
 
-  if (estado.rastros.size >= (estado.perfilVisual ?? CONFIG_DASH).maximoRastros) {
+  if (estado.rastros.size >= perfil.maximoRastros) {
     return;
   }
 
@@ -179,84 +187,26 @@ function criarRastroTemporal(scene) {
     return;
   }
 
-  // ===================================================
-  // CONTAINER DA SOMBRA TEMPORAL
-  // ===================================================
-
-  const grupo = scene.add.container(player.x, player.y);
-
-  grupo.setDepth(player.depth - 0.01);
-
-  // ===================================================
-  // CAMADA PRINCIPAL DA SOMBRA
-  // ===================================================
-
-  const sombra = scene.add.image(0, 0, textura, frame);
-
+  // Uma única imagem mantém as cópias no mesmo lote de desenho. Alternar NORMAL/ADD
+  // para cada sombra quebrava o lote e acumulava transparências no fim do dash.
+  const sombra = scene.add.image(player.x, player.y, textura, frame);
+  sombra.setDepth(player.depth - 0.01);
   sombra.setOrigin(player.originX, player.originY);
-
   sombra.setDisplaySize(player.displayWidth, player.displayHeight);
-
   sombra.setFlip(player.flipX, player.flipY);
-
   sombra.setAngle(player.angle);
-
-  // COR EXCLUSIVA DO PERSONAGEM
   sombra.setTint(cores.sombra);
-
-  sombra.setAlpha(CONFIG_DASH.opacidadeSombra);
-
-  // ===================================================
-  // CAMADA DE BRILHO
-  // ===================================================
-
-  const brilho = scene.add.image(0, 0, textura, frame);
-
-  brilho.setOrigin(player.originX, player.originY);
-
-  brilho.setDisplaySize(player.displayWidth, player.displayHeight);
-
-  brilho.setFlip(player.flipX, player.flipY);
-
-  brilho.setAngle(player.angle);
-
-  // BRILHO EXCLUSIVO DO PERSONAGEM
-  brilho.setTint(cores.brilho);
-
-  brilho.setAlpha(CONFIG_DASH.opacidadeBrilho);
-
-  brilho.setBlendMode(Phaser.BlendModes.ADD);
-
-  // ===================================================
-  // MONTAR SOMBRA COMPLETA
-  // ===================================================
-
-  grupo.add([sombra, brilho]);
-
-  estado.rastros.add(grupo);
-
+  const intensidade = estado.ativo ? 1 : Math.max(0, Math.min(0.6,
+    (estado.fimEfeitoVisual - agora) / perfil.duracaoRastroPosDash));
+  sombra.setAlpha(CONFIG_DASH.opacidadeSombra * intensidade);
+  estado.rastros.add(sombra);
   estado.ultimoRastroX = player.x;
   estado.ultimoRastroY = player.y;
-
-  // ===================================================
-  // DESAPARECIMENTO SUAVE
-  // ===================================================
-
   scene.tweens.add({
-    targets: grupo,
-
-    alpha: 0,
-
-    duration: CONFIG_DASH.duracaoRastro,
-
-    ease: "Sine.easeIn",
-
+    targets: sombra, alpha: 0, duration: perfil.duracaoRastro, ease: "Sine.easeOut",
     onComplete: () => {
-      estado.rastros.delete(grupo);
-
-      if (grupo.active) {
-        grupo.destroy();
-      }
+      estado.rastros.delete(sombra);
+      if (sombra.active) sombra.destroy();
     },
   });
 }
@@ -376,7 +326,8 @@ function iniciarDash(scene) {
 
   estado.fim = agora + CONFIG_DASH.duracao;
 
-  estado.fimEfeitoVisual = estado.fim + CONFIG_DASH.duracaoRastroPosDash;
+  estado.perfilVisual ??= obterPerfilDash(scene);
+  estado.fimEfeitoVisual = estado.fim + estado.perfilVisual.duracaoRastroPosDash;
 
   estado.proximoDash = agora + CONFIG_DASH.recarga;
 
@@ -459,7 +410,7 @@ function atualizarDash(scene) {
     // Mantém a transição para o walk sem lacunas.
     criarRastroTemporal(scene);
 
-    estado.proximoRastro = agora;
+    estado.proximoRastro = agora + (estado.perfilVisual ?? CONFIG_DASH).intervaloRastroPosDash;
   }
 
   // ===================================================
@@ -511,7 +462,7 @@ function criarControlesDash(scene) {
 
   scene.estadoDash = {
     ativo: false,
-    perfilVisual: scene.sys?.game?.device?.input?.touch ? PERFIL_DASH_MOBILE : CONFIG_DASH,
+    perfilVisual: obterPerfilDash(scene),
 
     direcao: new Phaser.Math.Vector2(0, 1),
 

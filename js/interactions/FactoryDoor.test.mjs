@@ -10,6 +10,7 @@ import { readFileSync } from "node:fs";
 import { FACTORY_DOOR_STATE_KEY, chaveEstadoPorta, criarInteracaoPortaFabrica } from "./FactoryDoor.js";
 import { criarSistemaInventario } from "../inventory/ItemPickup.js";
 import { criarInteracaoGeradorFabrica, findGeneratorInteraction } from "./FactoryGenerator.js";
+import { calcularDepthAtor } from "../map/ProfundidadeMapa.js";
 import DoorLightingZones from "../effects/DoorLightingZones.js";
 import { lerLuzesFabrica } from "../effects/FactoryLighting.js";
 
@@ -300,6 +301,7 @@ test("cada porta individual toca uma vez ao abrir, nunca ao negar acesso ou rest
       assert.equal(audio.portas().length, 0);
     }
     scene.luzFabricaAcesa = true;
+    if (nome === "porta05") scene.novoBoss = { morto: true };
     assert.equal(abrir(), true);
     assert.equal(audio.portas().length, 1);
     assert.equal(abrir(), false);
@@ -439,7 +441,7 @@ function lerCartao(scene) {
   scene.finishActivation();
 }
 
-test("porta05 abre por E ou toque sem animação e revela seus dois retângulos LuzApagada", () => {
+test("porta05 abre após a morte do boss por E ou toque e revela a sala menor", () => {
   for (const entrada of ["teclado", "toque"]) {
     const { scene, layer, bodies } = createScene();
     const porta = scene.portasFabrica.find(porta => porta.nome === "porta05");
@@ -454,6 +456,7 @@ test("porta05 abre por E ou toque sem animação e revela seus dois retângulos 
     const sala = zonas.zonas.filter(zona => zona.porta === porta);
     assert.deepEqual(sala.map(zona => zona.id), [1310, 1311]);
     assert.ok(sala.every(zona => zona.opacidade === 1));
+    scene.novoBoss = { morto: true };
     aproximarPorta(scene, porta);
     assert.equal(scene.interacaoMundoProxima.distance, 30);
     const animacoes = scene.animations.length;
@@ -491,9 +494,8 @@ test("porta05 abre por E ou toque sem animação e revela seus dois retângulos 
     const { scene: retorno, layer: camadaRetorno } = createScene(registry);
     const restauradas = new DoorLightingZones(retorno.map, lerLuzesFabrica(retorno.map));
     restauradas.atualizar(0, retorno.portasFabrica, false);
-    assert.equal(retorno.portasFabrica.find(porta => porta.nome === "porta05").colisao, null);
-    assert.ok(camadaRetorno.getTilesWithinWorldXY(-480, -5904, 48, 144).every(tile => tile.alpha === 0));
-    assert.ok(restauradas.zonas.filter(zona => zona.porta.nome === "porta05").every(zona => zona.opacidade === 0));
+    assert.ok(retorno.portasFabrica.find(porta => porta.nome === "porta05").colisao, "uma nova luta exige derrotar o boss novamente");
+    assert.ok(camadaRetorno.getTilesWithinWorldXY(-480, -5904, 48, 144).every(tile => tile.alpha === 1));
     restauradas.destroy();
     retorno.events.emit("shutdown");
   }
@@ -1536,4 +1538,60 @@ test("fechar e reabrir limpa reservas; cancelar um arraste e outro dedo não enc
     assert.equal(scene.input.listenerCount(name), 0, name);
   }
   assert.equal(scene.game.events.listenerCount("blur"), 0);
+});
+
+
+test("porta da sala menor permanece fechada enquanto o boss estiver vivo", () => {
+  const { scene, layer } = createScene();
+  const porta = scene.portasFabrica.find(p => p.nome === "porta05");
+  scene.novoBoss = { morto: false };
+  aproximarPorta(scene, porta);
+  assert.equal(scene.interacaoMundoProxima.interact(), false);
+  assert.equal(porta.estado, "fechada");
+  assert.ok(porta.colisao);
+  assert.ok(layer.getTilesWithinWorldXY(-480, -5904, 48, 144).every(t => t.alpha === 1));
+  scene.novoBoss.morto = true;
+  assert.equal(scene.interacaoMundoProxima.interact(), true);
+  assert.equal(porta.estado, "aberta");
+  scene.events.emit("shutdown");
+});
+
+test("descarregar a fábrica mantém as duas entradas bloqueadas após a derrota", () => {
+  const { scene } = createScene();
+  const portas = scene.portasFabrica.filter(p => ["porta02", "porta03"].includes(p.nome));
+  scene.fabricaDescarregada = true;
+  for (const porta of portas) {
+    porta.fecharParaBoss();
+    assert.equal(porta.liberarAposBoss(), false);
+    assert.ok(porta.colisao);
+    assert.equal(porta.bloqueadaPorBoss, true);
+  }
+  scene.descarregarPortasFabrica(-5232);
+  assert.deepEqual(scene.portasFabrica.map(p => p.nome), ["porta02", "porta03", "porta05"]);
+  scene.events.emit("shutdown");
+});
+
+
+test("persiana cobre o personagem atrás dela sem cobrir quem já está à frente", () => {
+  const { scene } = createScene();
+  scene.profundidadePersonagemParte2 = 16.5;
+  const porta = scene.portasFabrica.find(p => p.nome === "porta02");
+  const base = porta.area.y + porta.area.height;
+  for (const estado of ["fechada", "fechando", "abrindo"]) {
+    porta.aplicarEstadoRede({ estado, progresso: estado === "fechada" ? 0 : 0.5 });
+    scene.player.body = { bottom: base - 60 };
+    scene.atualizarInteracaoPortaFabrica();
+    assert.ok(porta.visual.depth > calcularDepthAtor(scene, scene.player.body.bottom),
+      `${estado}: a folha cobre o personagem do lado de dentro`);
+    assert.ok(porta.visual.depth < calcularDepthAtor(scene, base + 30),
+      `${estado}: um aliado do lado de fora continua à frente da folha`);
+    scene.player.body.bottom = base + 30;
+    scene.atualizarInteracaoPortaFabrica();
+    assert.ok(porta.visual.depth < calcularDepthAtor(scene, scene.player.body.bottom),
+      `${estado}: atravessar muda a sobreposição sem alterar a colisão`);
+    assert.ok(porta.visual.depth > calcularDepthAtor(scene, base - 60),
+      `${estado}: aliado atrás da porta continua coberto mesmo com o jogador local na frente`);
+  }
+  assert.ok(porta.colisao);
+  scene.events.emit("shutdown");
 });

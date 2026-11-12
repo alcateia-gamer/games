@@ -415,6 +415,28 @@ test("alcance e velocidade independem de FPS e chamadas antigas continuam cardin
 });
 
 
+test("mira da Aria ignora boss com escudo e volta a selecioná-lo quando a barreira cai", () => {
+  for (const multiplayer of [false, true]) {
+    const alvo = (x, y, extra = {}) => ({ active: true, visible: true, vida: 100,
+      body: { enable: true }, hitboxDano: { x: x - 10, y: y - 10, width: 20, height: 20 }, ...extra });
+    const boss = alvo(100, 0, { barreiraAtiva: true });
+    const torre = alvo(0, 200, { torre: true, id: 1 });
+    const scene = { multiplayer, coopRuntime: multiplayer ? {} : null,
+      player: { active: true, x: 0, y: 0 }, novoBoss: boss, inimigos: [] };
+    assert.equal(obterDirecaoMiraAutomaticaAria(scene), null, "boss protegido não atrai a mira");
+    boss.geradores = [torre];
+    assert.deepEqual(obterDirecaoMiraAutomaticaAria(scene), { x: 0, y: 1 }, "torres continuam selecionáveis");
+    const robo = alvo(0, -150);
+    scene.inimigos.push(robo);
+    assert.deepEqual(obterDirecaoMiraAutomaticaAria(scene), { x: 0, y: -1 }, "robôs continuam selecionáveis");
+    boss.barreiraAtiva = false;
+    assert.deepEqual(obterDirecaoMiraAutomaticaAria(scene), { x: 1, y: 0 });
+    boss.barreiraAtiva = true;
+    assert.deepEqual(obterDirecaoMiraAutomaticaAria(scene), { x: 0, y: -1 }, "reativar o escudo solta a mira novamente");
+  }
+});
+
+
 test("mira prende na torre antes da colisão de sua base, mas respeita paredes à frente", () => {
   for (const multiplayer of [false, true]) {
     const base = { x: 100, y: -10, width: 20, height: 20, enable: true };

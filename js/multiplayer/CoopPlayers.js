@@ -8,7 +8,18 @@ import { criarFalaFlutuante } from "../ui/PlayerSpeechBubble.js";
 import { atualizarPoseLanterna } from "../effects/FlashlightPose.js";
 
 export function playerVisualObjects(scene) {
-  return (scene.projeteisPlayer?.getChildren?.() || []).filter(o => o?.active);
+  const objects = [], seen = new Set();
+  const visit = object => {
+    if (!object?.active || seen.has(object)) return;
+    seen.add(object);
+    objects.push(object);
+    // Cada sombra do dash é um container com uma imagem colorida e outra aditiva.
+    if (object.type === "Container") for (const child of object.list ?? []) visit(child);
+  };
+  for (const object of scene.projeteisPlayer?.getChildren?.() ?? []) visit(object);
+  for (const object of scene.estadoDash?.rastros ?? []) visit(object);
+  for (const object of scene.estadoDash?.efeitos ?? []) visit(object);
+  return objects;
 }
 
 export class CoopPlayers {
@@ -37,11 +48,14 @@ export class CoopPlayers {
   }
   receive(players) {
     const s = this.scene, r = this.r, ids = new Set();
-    for (const data of players) {
+    for (let data of players) {
       if (data.id === r.manager.playerId || !data.character || !sameMap(data, r.mapKey) && !data.dead) continue;
       if (data.mapKey && data.mapKey !== r.mapKey) continue;
       ids.add(data.id);
       let entry = this.remotes.get(data.id);
+      // Durante a cutscene, pacotes enviados antes do teleporte não devolvem o aliado à fábrica.
+      const entrada = (s.cenaEntradaBossAtiva || (!r.host && r.world?.introCamera)) && r.world?.bossAssembly?.jogadores[data.id];
+      if (entrada) data = { ...data, x: entrada.x, y: entrada.y };
       const desc = data.coop?.visual;
       if (!entry) {
         if (!desc) continue;

@@ -1665,6 +1665,8 @@ test("the real scene generator method persists power and forwards the startup cl
   const { default: Level1Parte2 } = await import("../scenes/Level1Parte2.js");
   const { FACTORY_GENERATOR_STATE_KEY } = await import("../interactions/FactoryGenerator.js");
   scene.game.registry = new Map();
+  scene.cache = { tilemap: { remove() {} } };
+  scene.scene = { get: () => null };
   let progress = 0;
   Level1Parte2.prototype.acenderLuzFabrica.call(scene, () => progress);
   assert.equal(scene.luzFabricaAcesa, true);

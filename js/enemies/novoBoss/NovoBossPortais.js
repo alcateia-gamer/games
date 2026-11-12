@@ -1,4 +1,5 @@
 /** Portais sem vida ou hitbox. A seleção e o spawn compartilham a mesma validação. */
+import { calcularDepthAtor } from "../../map/ProfundidadeMapa.js";
 import { retanguloLivreDoMapa } from "../EnemyPathfinding.js";
 import { areasSobrepostasNovoBoss } from "./NovoBossTeleporte.js";
 import { entidadesFisicasArena } from "./NovoBossColisoesTorres.js";
@@ -79,12 +80,18 @@ export function escolherParPortais(scene, encontro, anterior = []) {
 export function criarPortaisNovoBoss(scene, pontos) {
   const asset = assetsNovoBoss.portal;
   if (!scene.textures?.exists(asset.chave)) throw new Error("Spritesheet do portal não carregada");
-  const portais = pontos.map((ponto, indice) => ({ ...ponto, indice,
-    sprite: scene.add.sprite(ponto.x, ponto.y, asset.chave, 0)
-      .setOrigin(asset.origemX, asset.origemY).setScale(asset.escala)
-      .setFlipX(ponto.x === Math.min(...pontos.map(p => p.x)))
-      .setDepth(50.6).setVisible(false).setName(`novo-boss-portal-${indice + 1}`),
-  }));
+  const portais = pontos.map((ponto, indice) => {
+    const flip = ponto.x === Math.min(...pontos.map(p => p.x));
+    return { ...ponto, indice,
+      sprite: scene.add.sprite(ponto.x, ponto.y, asset.chave, 0)
+        // O espelhamento também inverte o pivô: ambos os lados nascem na abertura.
+        .setOrigin(flip ? 1 - asset.origemX : asset.origemX, asset.origemY)
+        .setScale(asset.escala).setFlipX(flip)
+        // O robô precisa aparecer desde o centro, sem ficar oculto atrás da imagem do portal.
+        .setDepth(calcularDepthAtor(scene, ponto.y) - 0.01)
+        .setVisible(false).setName(`novo-boss-portal-${indice + 1}`),
+    };
+  });
   let tempo = 0, fechadoEm = null, destruido = false;
   return {
     pontos: portais,

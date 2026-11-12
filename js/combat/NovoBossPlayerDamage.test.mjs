@@ -202,7 +202,7 @@ test("aura Nyx dura dez segundos e respeita vinte segundos de recarga", () => {
   assert.ok(scene.estadoEspecial.auraNyx);
 });
 
-test("parry Kai direciona o laser para novo boss e devolve dano pelo contrato", () => {
+test("Kai continua refletindo lasers comuns e aplicando o dano pelo contrato do alvo", () => {
   const scene = cena("kai-mercer", 80, 0), laser = objeto(20, 0);
   scene.lasersInimigo = { getChildren: () => [laser] };
   criarSistemaEspeciais(scene);
@@ -231,4 +231,53 @@ test('Kai mantém parry por 5,8s e respeita o raio reduzido em mais 20%',()=>{
   assert.equal(scene.estadoEspecial.parryAte,5800);
   scene.time.now=8000;scene.events.emit('player:especial');
   assert.equal(scene.estadoEspecial.parryAte,13800);
+});
+
+test("Kai absorve projéteis do boss sem refletir, causar dano de volta ou mudar seu alcance", () => {
+  for (const marca of ["atirador", "energia", "registro"]) {
+    const scene = cena("kai-mercer", 80, 0), laser = objeto(20, 0);
+    if (marca === "atirador") laser.especialAtirador = scene.novoBoss;
+    if (marca === "energia") laser.novoBossDisparoEnergia = true;
+    scene.novoBoss.projeteisBoss = marca === "registro" ? [laser] : [];
+    criarSistemaEspeciais(scene);
+    assert.equal(scene.tentarInterceptarLaserEspecial(laser), false, "sem habilidade ativa não intercepta");
+    scene.events.emit("player:especial");
+    const longe = objeto(100, 0);
+    longe.especialAtirador = scene.novoBoss;
+    assert.equal(scene.tentarInterceptarLaserEspecial(longe), false);
+    assert.equal(longe.active, true);
+    assert.equal(scene.tentarInterceptarLaserEspecial(laser), true);
+    assert.equal(laser.active, false);
+    assert.ok(!laser.especialRefletido);
+    assert.equal(laser.danoEspecial, undefined);
+    atualizarSistemaEspeciais(scene);
+    assert.equal(scene.vida, 100);
+    assert.equal(scene.novoBoss.vida, 1000);
+    assert.equal(scene.novoBoss.acertos.length, 0);
+    assert.equal(scene.tentarInterceptarLaserEspecial(laser), false, "não intercepta outra vez o projétil removido");
+  }
+});
+
+test("absorção do boss encerra o impacto também no cooperativo, sem atingir outros jogadores", async () => {
+  const { criarServicosAtaques } = await import("../enemies/novoBoss/NovoBossServicosAtaques.js");
+  const { coopBossServices } = await import("../multiplayer/CoopBossServices.js");
+  for (const coop of [false, true]) {
+    const scene = cena("kai-mercer", 80, 0), laser = objeto(20, 0);
+    scene.hitboxDanoPlayer = new Rectangle(-15, -10, 30, 20);
+    scene.novoBoss.jogadorNaArena = true;
+    scene.novoBoss.projeteisBoss = [laser];
+    laser.especialAtirador = scene.novoBoss;
+    laser.especialLaserInimigo = true;
+    criarSistemaEspeciais(scene); scene.events.emit("player:especial");
+    const original = criarServicosAtaques(scene, scene.novoBoss);
+    let danos = 0;
+    const runtime = { playerContexts: () => [scene], inArena: () => true,
+      damage() { danos++; return true; } };
+    const servicos = coop ? coopBossServices(runtime, scene.novoBoss, original) : original;
+    assert.equal(servicos.atingirJogadorComLaser({ x: 30, y: 0 }, { x: 20, y: 0 }, 6, 10, {}, laser), true,
+      "informa ao ataque que o projétil foi consumido e encerra sua varredura");
+    assert.equal(laser.active, false);
+    assert.equal(danos, 0);
+    assert.equal(scene.vida, 100);
+  }
 });

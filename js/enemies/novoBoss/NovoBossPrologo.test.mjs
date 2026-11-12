@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { candidatosPortaisNovoBoss, escolherParPortais, pontoSeguroPortal, lateralPortalNovoBoss } from "./NovoBossPortais.js";
+import { candidatosPortaisNovoBoss, escolherParPortais, pontoSeguroPortal, lateralPortalNovoBoss, criarPortaisNovoBoss } from "./NovoBossPortais.js";
 import { emissoesPadraoPrologo } from "./NovoBossPadroesPrologo.js";
 import { criarControleColisaoTorre } from "./NovoBossColisoesTorres.js";
 import { pontosTorresNovoBoss } from "./NovoBossTorres.js";
@@ -182,4 +182,40 @@ test("impacto simultâneo escolhe uma morte por ID e mantém dano não fatal dos
   assert.equal(torres[0].vida, 1);
   assert.equal(torres[2].vida, 90);
   assert.equal(torres[3].vida, 90);
+});
+
+
+test("os dois portais alinham a abertura ao spawn, inclusive espelhados, e ficam atrás dos robôs", async () => {
+  const { assetsNovoBoss } = await import("./NovoBossAssets.js");
+  const { calcularDepthAtor } = await import("../../map/ProfundidadeMapa.js");
+  const asset = assetsNovoBoss.portal;
+  const scene = {
+    profundidadePersonagemParte2: 16.5,
+    textures: { exists: () => true },
+    add: { sprite(x, y) {
+      return {
+        x, y,
+        setOrigin(x, y) { this.originX = x; this.originY = y; return this; },
+        setScale(scale) { this.scale = scale; return this; },
+        setFlipX(flip) { this.flipX = flip; return this; },
+        setDepth(depth) { this.depth = depth; return this; },
+        setVisible() { return this; }, setName() { return this; },
+        setFrame() { return this; }, setAlpha() { return this; }, destroy() {},
+      };
+    } },
+  };
+  const portais = criarPortaisNovoBoss(scene, [{ x: -1450, y: -5800 }, { x: -750, y: -5800 }]);
+  portais.atualizar(650, 650, 450);
+  for (const portal of portais.pontos) {
+    const sprite = portal.sprite;
+    const aberturaX = sprite.flipX ? asset.larguraFrame - 190 : 190;
+    const x = sprite.x + (aberturaX - sprite.originX * asset.larguraFrame) * sprite.scale;
+    const y = sprite.y + (155 - sprite.originY * asset.alturaFrame) * sprite.scale;
+    assert.equal(x, portal.x);
+    assert.equal(y, portal.y);
+    assert.ok(sprite.depth < calcularDepthAtor(scene, portal.y + 16.8));
+  }
+  assert.equal(portais.pontos[0].sprite.flipX, true);
+  assert.equal(portais.pontos[1].sprite.flipX, false);
+  portais.destruir();
 });

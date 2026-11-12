@@ -284,3 +284,21 @@ test("cancelar no meio da emissão longa desregistra os lasers e impede novos di
   assert.equal(c.ataque.snapshot().emitidos, emitidos);
   assert.ok(c.visuais.every(v => v.destruicoes === 1));
 });
+
+test("absorver um disparo encerra a varredura no mesmo quadro sem atingir outro jogador", () => {
+  let impactos = 0, refletidos = 0;
+  const c = preparar({ avisoMs: 0, quantidade: 1, emissoes: [{ em: 0, angulo: 0 }] }, {
+    atingirJogadorComLaser(_inicio, _fim, _raio, _dano, _origem, visual) {
+      impactos++;
+      visual.destroy();
+      return true;
+    },
+    atingirAlvoComLaserRefletido() { refletidos++; return false; },
+  }, true);
+  c.ataque.atualizar(1000);
+  assert.equal(impactos, 1);
+  assert.equal(refletidos, 0);
+  assert.equal(c.visuais[0].active, false);
+  assert.equal(c.registrados.size, 0);
+  assert.equal(c.ataque.snapshot().projeteis.length, 0);
+});

@@ -11,6 +11,7 @@ import {
   createMapTransform, worldToMiniMap, miniMapLayout,
 } from "./MiniMapData.js";
 import { drawMiniMapAtlas, RADAR_COLORS } from "./MiniMapAtlas.js";
+import { GraficosCanvasHUD } from "./HudCanvas.js";
 import MiniMapManager from "./MiniMapManager.js";
 import { createCollectibleMarker, COLLECTIBLE_MARKER_COLOR } from "./CollectibleMarker.js";
 import { connectSidewalks } from "./MiniMapConnections.js";
@@ -835,4 +836,53 @@ test("o leitor da arena tem um cartão fixo no radar, independente de energia e 
   radar.scene.leitorCartaoFabrica = null;
   radar.update();
   assert.equal(itemCommands.length, 0);
+});
+
+test("aliados aparecem como setas nas próprias cores e atualizam sem redesenhar o mapa", () => {
+  const { radar } = enemyRadarFixture([]);
+  const commands = [];
+  radar.allyMarkers = {
+    clear() { commands.length = 0; return this; },
+    fillStyle() { return this; },
+    fillCircle(...args) { commands.push(["circle", ...args]); return this; },
+    lineStyle(_width, color) { this.color = color; return this; },
+    lineBetween(...args) { commands.push(["line", this.color, ...args]); return this; },
+  };
+  const allies = [
+    { active: true, x: -100, y: 0, mapCharacter: "magnus-force", direcaoAtual: "right" },
+    { active: true, x: 0, y: 50, mapCharacter: "aria-kade", direcaoAtual: "down" },
+    { active: true, x: 100, y: 0, mapCharacter: "nyx", direcaoAtual: "left" },
+  ];
+  radar.scene.remotePlayers = new Map(allies.map((a, i) => [String(i), a]));
+  radar.update();
+  assert.equal(commands.filter(c => c[0] === "circle").length, 3);
+  const lines = commands.filter(c => c[0] === "line");
+  assert.deepEqual([...new Set(lines.map(c => c[1]))], [0xff9b42, 0xff70b5, 0xb486ff]);
+  assert.equal(lines.length, 6, "mesmo formato aberto de duas linhas da seta local");
+  const pos = worldToMiniMap(radar.transform, allies[0].x, allies[0].y);
+  assert.deepEqual(lines[0].slice(-2), [2 + pos.x + 4, 2 + pos.y]);
+  const antes = lines[0];
+  allies[0].x += 20; allies[0].direcaoAtual = "up";
+  radar.update();
+  assert.notDeepEqual(commands.find(c => c[0] === "line"), antes);
+  allies[1].morto = true; allies[2].active = false;
+  radar.update();
+  assert.equal(commands.filter(c => c[0] === "circle").length, 1);
+  radar.scene.remotePlayers.clear();
+  radar.update();
+  assert.equal(commands.length, 0, "sair da partida remove a seta sem deixar rastros");
+});
+
+test("setas de aliados usam os mesmos comandos no canvas nítido do celular", () => {
+  const { radar } = enemyRadarFixture([]);
+  const lines = [], context = {
+    beginPath() {}, moveTo(x, y) { this.inicio = [x, y]; },
+    lineTo(x, y) { lines.push({ color: this.strokeStyle, inicio: this.inicio, fim: [x, y] }); },
+    stroke() {}, arc() {}, fill() {},
+  };
+  radar.allyMarkers = new GraficosCanvasHUD(context);
+  radar.scene.remotePlayers = new Map([["kai", { active: true, x: 0, y: 0, mapCharacter: "kai-mercer", direcaoAtual: "up" }]]);
+  radar.updateAllyMarkers();
+  assert.equal(lines.length, 2);
+  assert.equal(lines[0].color, "rgba(56,189,248,1)");
 });

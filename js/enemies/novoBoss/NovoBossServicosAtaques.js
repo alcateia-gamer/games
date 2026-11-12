@@ -81,7 +81,7 @@ export function criarServicosAtaques(scene, encontro) {
       if (!jogadorValido()) return false;
       visual?.setPosition?.(fim.x, fim.y);
       visual?.body?.updateFromGameObject?.();
-      if (visual?.especialLaserInimigo && scene.tentarInterceptarLaserEspecial?.(visual)) return false;
+      if (visual?.especialLaserInimigo && scene.tentarInterceptarLaserEspecial?.(visual)) return visual.active === false;
       if (visual?.especialLaserInimigo && scene.acertarHologramaEspecial?.(visual)) return true;
       const area = areaPlayer();
       if (!area || tempoImpactoFlecha(inicio, fim, direcao(inicio, fim), area, raio, raio) === null) return false;

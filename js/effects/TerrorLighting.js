@@ -33,6 +33,7 @@ const GANHO_DISPERSAO_FABRICA = 2;
 const CLARIDADE_SPRITE_BOSS = 0.55;
 const CAMPOS_OCLUSAO = ["x", "y", "scaleX", "scaleY", "rotation", "flipX", "flipY",
   "displayOriginX", "displayOriginY", "alpha"];
+const CAMPOS_BRILHO_ATOR = ["frame", ...CAMPOS_OCLUSAO];
 const CAMPOS_OCLUSAO_CAMADA = ["x", "y", "scaleX", "scaleY", "rotation", "alpha", "visible"];
 const COR_ESCURIDAO = `rgba(0,0,0,${ESCURIDAO_AMBIENTE_FABRICA})`;
 // Após destination-out, q é a sombra restante em [0,1]. A composição final produz
@@ -232,8 +233,9 @@ function criarIluminacaoTerror(scene) {
   const energiaBoss = new BossEnergyLighting(scene);
   const luzesIndependentes = [...emergencia.luzes, ...arandelas.luzes];
   const zonas = new DoorLightingZones(scene.map, iluminacao.lampadas, luzesIndependentes);
+  const obterLuzesIntroducao = () => scene.novoBoss?.introducao?.iluminacao ?? scene.iluminacaoEntradaBossReplica;
   const zonasCena = { fatorLuz(luz, agora) {
-    return zonas.fatorLuz(luz, agora) * (scene.novoBoss?.introducao?.iluminacao?.fatorLuz(luz) ?? 1);
+    return zonas.fatorLuz(luz, agora) * (obterLuzesIntroducao()?.fatorLuz(luz) ?? 1);
   } };
   const paredesLanterna = new FlashlightWalls(scene);
   const limitesLampadas = scene.map.getObjectLayer("LimitaLuz")?.objects?.length
@@ -320,13 +322,13 @@ function criarIluminacaoTerror(scene) {
   lanternaOclusaoCanvas.width = 460;
   lanternaOclusaoCanvas.height = 320;
   const oclusaoContext = lanternaOclusaoCanvas.getContext("2d");
-  // Uma composição compartilhada mantém todos os brilhos abaixo do personagem.
+  // Uma composição compartilhada permite recortar o brilho atrás dos atores.
   const brilhoCanvas = document.createElement("canvas");
   brilhoCanvas.width = larguraMascara; brilhoCanvas.height = alturaMascara;
   const brilhoContext = brilhoCanvas.getContext("2d");
   const brilhoAnterior = { frame: null };
+  const brilhoAtoresAnteriores = new Map();
   const oclusaoAnterior = { frame: null };
-  const posesBolas = new Map();
   const camadasAnteriores = new Map();
   let paredeAnterior = null;
   let regiaoAnterior = null;
@@ -408,7 +410,7 @@ function criarIluminacaoTerror(scene) {
     }
     posicionarOverlay();
     zonas.atualizar(scene.time.now, scene.portasFabrica ?? [], iluminacao.energia);
-    const luzesIntroducao = scene.novoBoss?.introducao?.iluminacao;
+    const luzesIntroducao = obterLuzesIntroducao();
     const fontes = iluminacao.atualizar(scene.time.now, camera, zonasCena);
     const giroflex = emergencia.atualizar(scene.time.now, camera, zonasCena);
     const fontesParede = arandelas.atualizar(scene.time.now, camera, zonasCena);
@@ -418,25 +420,33 @@ function criarIluminacaoTerror(scene) {
     if ((giroflex.length || fontesParede.length) && estatuasGiroflex.atualizar()) invalidada = true;
     carimbosGiroflex.sincronizar(giroflex);
     const player = scene.player;
-    const temBrilho = giroflex.length || fontesParede.length || fontesEnergiaBoss.length || fontes.some(fonte => fonte.luz.pulsando);
+    const temBrilho = giroflex.length || fontesParede.length || fontesEnergiaBoss.length ||
+      luzesFixas.fontes.length || fontes.some(fonte => fonte.luz.pulsando);
+    const atoresSobreBrilho = new Set();
+    if (temBrilho) {
+      for (const ator of [scene.companionPet,
+        ...(scene.inimigos ?? []).filter(inimigo => inimigo?.tipoRobo === "bola"),
+        ...(scene.remotePlayers?.values?.() ?? [])]) {
+        if (!ator ||
+            ator.active === false || ator.visible === false || (ator.alpha ?? 1) <= 0 ||
+            !ator.frame?.source?.image || !Number.isFinite(ator.x) || !Number.isFinite(ator.y)) continue;
+        atoresSobreBrilho.add(ator);
+        let anterior = brilhoAtoresAnteriores.get(ator);
+        if (!anterior) { anterior = {}; brilhoAtoresAnteriores.set(ator, anterior); invalidada = true; }
+        for (const campo of CAMPOS_BRILHO_ATOR) {
+          if (anterior[campo] !== ator[campo]) { anterior[campo] = ator[campo]; invalidada = true; }
+        }
+      }
+    }
+    for (const ator of brilhoAtoresAnteriores.keys()) {
+      if (atoresSobreBrilho.has(ator)) continue;
+      brilhoAtoresAnteriores.delete(ator);
+      invalidada = true;
+    }
     const personagemSobreBrilho = !!(temBrilho && player?.active !== false && player?.visible !== false &&
       (player?.alpha ?? 1) > 0 && player?.frame?.source?.image && Number.isFinite(player.x) && Number.isFinite(player.y));
     const bossSobreBrilho = fontesEnergiaBoss.some(fonte => fonte.vermelha && fonte.emissor?.frame?.source?.image);
-    const bolasSobreBrilho = temBrilho ? (scene.inimigos ?? []).filter(robo =>
-      robo?.tipoRobo === "bola" && robo.active && robo.visible !== false && robo.frame?.source?.image) : [];
-    // A flutuação e a animação mudam a silhueta mesmo com a câmera parada.
-    const bolasAtuais = new Set(bolasSobreBrilho);
-    for (const robo of posesBolas.keys()) if (!bolasAtuais.has(robo)) {
-      posesBolas.delete(robo); invalidada = true;
-    }
-    for (const robo of bolasSobreBrilho) {
-      let anterior = posesBolas.get(robo);
-      if (!anterior) { anterior = {}; posesBolas.set(robo, anterior); invalidada = true; }
-      for (const campo of ["frame", ...CAMPOS_OCLUSAO]) {
-        if (anterior[campo] !== robo[campo]) { anterior[campo] = robo[campo]; invalidada = true; }
-      }
-    }
-    const separarBrilho = personagemSobreBrilho || bossSobreBrilho || bolasSobreBrilho.length > 0;
+    const separarBrilho = personagemSobreBrilho || bossSobreBrilho || atoresSobreBrilho.size > 0;
     const frameBrilho = personagemSobreBrilho ? player.frame : null;
     if (brilhoAnterior.frame !== frameBrilho) { brilhoAnterior.frame = frameBrilho; invalidada = true; }
     if (personagemSobreBrilho) {
@@ -626,7 +636,7 @@ function criarIluminacaoTerror(scene) {
       desenharLuminaria(corContext, obterPerfilEnergia(fonte).cor, fonte.luz, paredesLanterna);
     }
     if (personagemSobreBrilho) ocultarBrilhoAtrasPersonagem(corContext, player);
-    for (const robo of bolasSobreBrilho) ocultarBrilhoAtrasPersonagem(corContext, robo);
+    for (const ator of atoresSobreBrilho) ocultarBrilhoAtrasPersonagem(corContext, ator);
     // Recorta também neons, arandelas e luzes de outras cópias, antes de juntar a cor à sombra.
     // O clareamento do sprite continua separado, sem deixar as faixas do piso atravessarem o corpo.
     if (bossSobreBrilho) for (const fonte of fontesEnergiaBoss) {
@@ -681,6 +691,7 @@ function criarIluminacaoTerror(scene) {
     estatuasGiroflex.destroy();
     oclusaoEmissorBoss.destroy();
     paredesLanterna.destroy();
+    brilhoAtoresAnteriores.clear();
     lanternasAliadas.clear();
     if (scene.lanternasAliadas === lanternasAliadas) scene.lanternasAliadas = null;
     limitesLampadas?.destroy();

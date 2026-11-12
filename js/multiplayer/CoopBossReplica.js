@@ -1,7 +1,7 @@
 import { criarHudNovoBoss, atualizarHudNovoBoss, destruirHudNovoBoss } from "../enemies/novoBoss/NovoBossHud.js";
 import { prepararCameraNovoBoss } from "../enemies/novoBoss/NovoBossCamera.js";
 import { criarColisaoBarreiraNovoBoss } from "../enemies/novoBoss/NovoBossBarreiraColisao.js";
-import { jogadorNaArenaNovoBoss } from "../enemies/novoBoss/NovoBossConfig.js";
+import { jogadorNaArenaNovoBoss, configurarZonasNovoBoss, novoBossConfig } from "../enemies/novoBoss/NovoBossConfig.js";
 import { invalidarCacheNavegacao } from "../enemies/EnemyPathfinding.js";
 import BossIntroLighting from "../effects/BossIntroLighting.js";
 
@@ -10,6 +10,7 @@ export function describeCombatTarget(target, id, sender) {
   const object = target.sprite || target.visual || target;
   return { id, visual: sender.id(object), vida: target.vida, vidaMaxima: target.vidaMaxima,
     hitbox: box(target.hitboxDano), body: box(target.body), active: target.active,
+    origemSpawn: target.origemSpawn,
     morto: !!target.morto, torre: !!target.torre, tipoRobo: target.tipoRobo,
     direcaoAtual: target.direcaoAtual, estado: target.estado,
     spawnAreaRoboBolaId: target.spawnAreaRoboBolaId, prologoPortal: target.prologoPortal };
@@ -38,7 +39,16 @@ export function describeBoss(scene, sender) {
 }
 
 export class BossReplica {
-  constructor(runtime) { this.runtime = runtime; this.scene = runtime.scene; this.encounter = null; }
+  constructor(runtime) {
+    this.runtime = runtime; this.scene = runtime.scene; this.encounter = null;
+    // O host só transmite uma entidade após o spawn. A sala do cliente já espera
+    // apagada antes disso, inclusive ao abrir a porta e ao recuperar um keyframe.
+    if (!runtime.host && runtime.mapKey === "Level1Parte2") {
+      const config = configurarZonasNovoBoss(this.scene.map, this.scene.novoBossConfig ?? novoBossConfig);
+      this.waitingLighting = new BossIntroLighting(config.arena);
+      this.scene.iluminacaoEntradaBossReplica = this.waitingLighting;
+    }
+  }
   target(data) {
     const sprite = this.runtime.receiver.get(data.visual);
     const target = { ...data, sprite, x: sprite?.x, y: sprite?.y,
@@ -77,7 +87,7 @@ export class BossReplica {
       sistemaClones: { ativo: data.clonesAtivos, alvos: data.alvos },
       prologo: data.prologo ? { bloqueiaCombatePrincipal: data.prologo.estado !== "COMBATE_PRINCIPAL",
         estado: data.prologo.estado, snapshot: () => data.prologo } : null });
-    if (data.introLighting) Object.assign(this.lighting, data.introLighting);
+    if (data.introLighting) this.lighting.aplicarEstadoRede(data.introLighting);
     else this.lighting.restaurar();
     e.introducao = { iluminacao: this.lighting, snapshot: () => data.intro };
     e.sistemaGeradores = { cargaEscudo: data.shieldCharge,
@@ -119,5 +129,10 @@ export class BossReplica {
     }
     this.shieldCollision = this.shield = this.camera = this.lighting = null;
     this.encounter = null;
+    if (this.waitingLighting && (this.runtime.disposed || this.runtime.host) &&
+        this.scene.iluminacaoEntradaBossReplica === this.waitingLighting) {
+      this.scene.iluminacaoEntradaBossReplica = null;
+      this.waitingLighting = null;
+    }
   }
 }

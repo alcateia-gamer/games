@@ -1,3 +1,4 @@
+import { descarregarCidade, descarregarFabricaParaBoss } from "../map/ProgressaoMapa.js";
 import { atualizarSpawnsDev } from "../controls/DeveloperSpawns.js";
 import { obterBocaMetralhadora, criarMunicaoRobo } from "../enemies/WarRobotProjectile.js";
 /**
@@ -136,6 +137,8 @@ class Level1Parte2 extends Phaser.Scene {
     this.lasersInimigo = null;
     this.grupoRobosAtivado = false;
     this.inimigoTeste = null;
+    this.cidadeDescarregada = false;
+    this.fabricaDescarregada = false;
     this.teleporteRetornoLiberado = false;
     this.transicaoRetornoEmAndamento = false;
     this.regiaoTrocaCamada = null;
@@ -272,7 +275,7 @@ class Level1Parte2 extends Phaser.Scene {
     criarStatusPlayer(this);
     criarControles(this);
     criarSistemaInventario(this);
-    criarInteracaoGeradorFabrica(this);
+    this.removerInteracaoGerador = criarInteracaoGeradorFabrica(this);
     criarInteracaoPortaFabrica(this);
     this.minimap = new MiniMapManager(this, this.map, "fabrica");
 
@@ -311,6 +314,7 @@ class Level1Parte2 extends Phaser.Scene {
     this.spawnAreasRoboBola = criarSpawnAreasRoboBola(this);
     criarRuntimeCoop(this);
     iniciarMusicaFabrica(this);
+    if (this.luzFabricaAcesa) descarregarCidade(this);
   }
 
   /**
@@ -324,6 +328,12 @@ class Level1Parte2 extends Phaser.Scene {
     this.luzFabricaAcesa = true;
     this.game.registry.set(FACTORY_GENERATOR_STATE_KEY, true);
     this.definirIluminacaoFabrica(true, obterProgressoPartida);
+    descarregarCidade(this);
+  }
+
+  /** Invocada pelo início autoritativo da cutscene e por sua réplica de rede. */
+  descarregarFabricaParaBoss() {
+    descarregarFabricaParaBoss(this);
   }
 
   /** Permite repetir o teste da fábrica sem energia pelo mesmo controle DEV. */
@@ -907,9 +917,12 @@ class Level1Parte2 extends Phaser.Scene {
     );
 
     this.teleporteRetornoParte1.body.setSize(largura, altura);
+    this.physics.add.collider(this.player, this.teleporteRetornoParte1, undefined,
+      () => this.luzFabricaAcesa || this.cidadeDescarregada);
 
     this.physics.add.overlap(this.player, this.teleporteRetornoParte1, () => {
       if (
+        this.cidadeDescarregada || this.luzFabricaAcesa ||
         this.transicaoRetornoEmAndamento ||
         (!this.teleporteRetornoLiberado &&
           (this.player.body?.velocity?.y ?? 0) >= 0)

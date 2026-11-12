@@ -118,6 +118,13 @@ export default class EmergencyLighting {
     return this.fontesVisiveis;
   }
 
+  /** Desliga os fachos giratórios, preservando os neons fixos da arena. */
+  desligarGiroflex() {
+    for (const luz of this.luzes) {
+      if (!luz.neon) luz.ligada = false;
+    }
+  }
+
   destroy() {
     this.luzes.length = 0;
     this.estados.length = 0;

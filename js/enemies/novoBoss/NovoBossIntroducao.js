@@ -77,6 +77,9 @@ export function prepararIntroducaoNovoBoss(scene, encontro) {
   }
 
   function iniciar() {
+    // Reúne o grupo antes de capturar a câmera e antes de remover o cenário anterior.
+    if (scene.coopRuntime?.world.iniciarIntroducaoBoss(encontro, scene.player) === false) return false;
+    scene.descarregarFabricaParaBoss?.();
     camera = scene.cameras.main;
     const keyboard = scene.input?.keyboard;
     anterior = { alvo: camera._follow ?? scene.player, roundPixels: camera.roundPixels,
@@ -212,7 +215,8 @@ export function prepararIntroducaoNovoBoss(scene, encontro) {
         if (encontro.pendencia) return true;
         portas = (scene.portasFabrica ?? []).filter(porta => PORTAS_ENTRADA.has(porta.nome));
         // O corpo inteiro precisa terminar a passagem antes de congelar o personagem.
-        if (scene.movimentoBloqueado || scene.generatorMenuOpen || scene.devItemMenuOpen || scene.atacando ||
+        const controle = scene.coopRuntime?.bossTarget() ?? scene;
+        if (controle.movimentoBloqueado || controle.generatorMenuOpen || controle.devItemMenuOpen || controle.atacando ||
             portas.some(porta => porta.estado === "abrindo" || jogadorNaPorta(scene.player, porta))) return true;
         iniciar();
         return true;

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { EventEmitter } from "node:events";
 import { criarRoboBola, atualizarRoboBola, registrarAnimacoesRoboBola, ROBO_BOLA_CONFIG } from "./RoboBola.js";
+import { iniciarEmergenciaRoboBola, EMERGENCIA_ROBO_BOLA } from "./RoboBolaEmergencia.js";
 import { ROBO_BOLA_FLUTUACAO } from "./RoboBolaFlutuacao.js";
 import { caminhoMovimentoBloqueado } from "./EnemyPathfinding.js";
 import { destruirInimigoTeste } from "./EnemyHealth.js";
@@ -445,4 +446,31 @@ test("proteção de spawn impede movimentação e disparo instantâneos sem alte
   assert.equal(depths.length, 1, "continua visível na profundidade correta durante a proteção");
   atualizarRoboBola(scene, 2100, 16);
   assert.ok(Math.hypot(robo.body.velocity.x, robo.body.velocity.y) > 0);
+});
+
+
+test("nasce no centro visual do portal e introduz a flutuação aos poucos sem mover a colisão", () => {
+  for (const direcao of [-1, 1]) {
+    for (const fase of [0, Math.PI / 2, Math.PI, Math.PI * 1.5]) {
+      const { scene, robo } = preparar();
+      robo.setAlpha = alpha => { robo.alpha = alpha; };
+      robo.faseFlutuacao = fase;
+      iniciarEmergenciaRoboBola(robo, direcao);
+      const { x, y } = robo;
+      atualizarRoboBola(scene, 0, 0);
+      assert.equal(Math.abs(robo.deslocamentoFlutuacao), 0);
+      assert.equal(robo.originY, 0.5);
+      assert.equal(robo.x, x);
+      assert.equal(robo.y, y);
+      assert.equal(robo.frame.name, direcao > 0 ? 4 : 3);
+      const centroFisico = robo.body.y + robo.body.height / 2;
+      atualizarRoboBola(scene, 150, 150);
+      assert.ok(Math.abs(robo.deslocamentoFlutuacao) <= ROBO_BOLA_FLUTUACAO.amplitude * 0.25);
+      assert.ok(Math.abs(robo.body.y + robo.body.height / 2 - centroFisico) < 1e-10);
+      atualizarRoboBola(scene, 600, EMERGENCIA_ROBO_BOLA.duracaoMs - 150);
+      const esperado = Math.sin(600 / ROBO_BOLA_FLUTUACAO.periodoMs * Math.PI * 2 + fase) * ROBO_BOLA_FLUTUACAO.amplitude;
+      assert.equal(robo.deslocamentoFlutuacao, esperado);
+      assert.equal(robo.emergenciaPortal, null);
+    }
+  }
 });
