@@ -3,6 +3,8 @@
  * desenha a interface em canvas DOM na resolução da tela.
  */
 
+import { obterBalanceamento } from "../combat/CharacterBalance.js";
+
 import { AllyStatusHud } from "../ui/AllyStatusHud.js";
 import { playPlayerHitEffects } from "../combat/CombatEffects.js";
 import { obterTemaPersonagem } from "../ui/CharacterTheme.js";
@@ -936,19 +938,18 @@ function iniciarHUD(scene) {
  * Inicializa vida, estamina, custos e taxas de regeneração e prepara a HUD.
  */
 function criarStatusPlayer(scene) {
-  // VIDA — VALORES ORIGINAIS.
-  scene.vidaMaxima = 100;
-  scene.vida = 100;
+  const balanceamento = obterBalanceamento(scene.personagemSelecionada, !!(scene.multiplayer || scene.coopRuntime));
+  scene.vidaMaxima = balanceamento.vida;
+  scene.vida = scene.vidaMaxima;
 
   scene.regeneracaoVida = 4;
   scene.tempoSemDanoParaRegen = 4;
   scene.tempoSemDano = 0;
 
-  // Oito ataques no solo; os modos multiplayer mantêm cinco.
-  scene.estaminaMaxima = scene.multiplayer || scene.coopRuntime ? 100 : 160;
+  scene.estaminaMaxima = balanceamento.estamina;
   scene.estamina = scene.estaminaMaxima;
 
-  scene.custoAtaque = 20;
+  scene.custoAtaque = balanceamento.custoAtaque;
   scene.regeneracaoEstamina = 18;
 
   iniciarHUD(scene);

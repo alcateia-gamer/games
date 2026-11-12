@@ -3,6 +3,8 @@
  * recebe dano e a área ofensiva da katana.
  */
 
+import { obterBalanceamento } from "../combat/CharacterBalance.js";
+
 import { gastarEstamina } from "./PlayerStatus.js";
 import { jogadorPresoNovoBoss } from "./PlayerControlEffects.js";
 import { dispararProjetil } from "./PlayerProjectiles.js";
@@ -451,6 +453,7 @@ function criarHitboxKatana(scene) {
   // =====================================================
 
   const hitboxKatana = new Phaser.Geom.Rectangle(0, 0, 40, 40);
+  const dano = obterBalanceamento(scene.personagemSelecionada).dano;
 
   // =====================================================
   // CONTROLE DE DANO
@@ -574,6 +577,7 @@ function criarHitboxKatana(scene) {
   // POSIÇÃO INICIAL
   // =====================================================
 
+  hitboxKatana.ataqueBasico = { id: scene.networkAttackId };
   atualizarHitboxKatana();
 
   // =====================================================
@@ -639,9 +643,9 @@ function criarHitboxKatana(scene) {
         }
 
         if (eAlvoAdicionalCombate(scene, inimigo)) {
-          causarDanoAlvoAdicional(scene, inimigo, 25, hitboxKatana, hitboxKatana);
+          causarDanoAlvoAdicional(scene, inimigo, dano, hitboxKatana, hitboxKatana);
         } else {
-          causarDanoInimigo(scene, inimigo, 25);
+          causarDanoInimigo(scene, inimigo, dano, { ataqueBasico: hitboxKatana });
         }
       }
 

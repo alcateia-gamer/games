@@ -3,6 +3,8 @@
  * inimigos ou boss.
  */
 
+import { DANO_BASICO_PADRAO } from "../combat/CharacterBalance.js";
+
 import { causarDanoInimigo } from "../enemies/EnemyTest.js";
 import { alvosAdicionaisCombate, eAlvoAdicionalCombate,
   causarDanoAlvoAdicional } from "../combat/CombatTargets.js";
@@ -18,7 +20,7 @@ const DIRECOES_PROJETIL = {
 
 const VELOCIDADE_PROJETIL = 420;
 const ALCANCE_MAXIMO_PROJETIL = 1800;
-const DANO_PROJETIL_ARIA = 25;
+const DANO_PROJETIL_ARIA = DANO_BASICO_PADRAO;
 
 /**
  * Converte um vetor em direção unitária; retorna null para um vetor sem
@@ -100,6 +102,7 @@ function dispararProjetil(scene, opcoes = {}) {
   projetil.acertou = false;
   projetil.direcaoDisparo = { x: direcao.x, y: direcao.y };
   projetil.dano = opcoes.damage ?? DANO_PROJETIL_ARIA;
+  projetil.ataqueBasico = { id: scene.networkAttackId, danoAria: projetil.dano };
   projetil.distanciaPercorrida = 0;
   projetil.body.setAllowGravity(false);
   projetil.body.setImmovable(true);
@@ -168,7 +171,7 @@ function atualizarProjeteis(scene, delta = 0) {
       return;
     }
     if (eAlvoAdicionalCombate(scene, impacto.alvo)) causarDanoAlvoAdicional(scene, impacto.alvo, projetil.dano, null, projetil);
-    else if (impacto.alvo) causarDanoInimigo(scene, impacto.alvo, projetil.dano, { playSound: true });
+    else if (impacto.alvo) causarDanoInimigo(scene, impacto.alvo, projetil.dano, { playSound: true, ataqueBasico: projetil });
 
     destruirProjetil(projetil);
   });

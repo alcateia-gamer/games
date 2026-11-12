@@ -34,6 +34,7 @@ export class CoopPlayers {
     // Posição segue no envelope; não invalida novamente a comparação da pose.
     if (visual) { visual.x = 0; visual.y = 0; }
     return { mapKey: r.mapKey, health: round(health), maxHealth: s.vidaMaxima,
+      stamina: round(s.estamina), maxStamina: s.estaminaMaxima,
       dead: !!s.morteEmAndamento || health <= 0,
       coop: { visual, downId: s.coopDownId ?? null, compression: supportsCompression(),
         inventoryDrop: s.coopInventoryDrop ?? null,
@@ -78,6 +79,13 @@ export class CoopPlayers {
             const delta = value - entry.health; entry.health = value;
             if (r.host && delta > 0) r.manager.sendCoopAction("heal", { amount: delta }, { authority: true, targetId: data.id });
           } },
+          estamina: { get: () => entry.data.stamina, set: value => {
+            const next = Math.max(0, Math.min(entry.data.maxStamina, value));
+            const amount = next - entry.data.stamina;
+            entry.data.stamina = next;
+            if (r.host && amount) r.manager.sendCoopAction("stamina", { amount }, { authority: true, targetId: data.id });
+          } },
+          estaminaMaxima: { get: () => entry.data.maxStamina },
           vidaMaxima: { get: () => entry.data.maxHealth || 100 },
         });
         if (r.host) this.prepareContext(entry);
@@ -138,6 +146,8 @@ export class CoopPlayers {
       botaoEspecial: null, atacando: false, estadoDash: null, generatorMenuOpen: false, movimentoBloqueado: false,
       get vida() { return entry.health; }, set vida(value) { actor.vida = value; },
       get vidaMaxima() { return actor.vidaMaxima; },
+      get estamina() { return actor.estamina; }, set estamina(value) { actor.estamina = value; },
+      get estaminaMaxima() { return actor.estaminaMaxima; },
       get hitboxDanoPlayer() { return entry.hitbox; },
       get aliados() { return r.playerContexts().map(c => c.player).filter(p => p !== actor); },
       input: { ...s.input, keyboard: null }, coopRemotePlayerId: entry.data.id };

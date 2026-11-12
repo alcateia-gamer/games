@@ -3,6 +3,8 @@
  * ações, presença e atualizações de movimento.
  */
 
+import { obterBalanceamento } from "../combat/CharacterBalance.js";
+
 import { COOP, RecentActions, validPlayerState, mergeCoopProgress } from "./CoopProtocol.js";
 
 const ROOM_CODE = /^[A-Z0-9]{4,6}$/;
@@ -64,6 +66,7 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
    * presença.
    */
   normalizePlayer(player) {
+    const balanceamento = obterBalanceamento(player.character, true);
     return {
       id: String(player.id),
       isHost: Boolean(player.isHost),
@@ -83,8 +86,10 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
       serverTick: Number(player.serverTick) || 0,
       projectiles: Array.isArray(player.projectiles) ? player.projectiles : [],
       mapKey: COOP.maps.includes(player.mapKey) ? player.mapKey : "Level1",
-      health: Number.isFinite(player.health) ? player.health : 100,
-      maxHealth: Number.isFinite(player.maxHealth) ? player.maxHealth : 100,
+      health: Number.isFinite(player.health) ? Math.max(0, Math.min(balanceamento.vida, player.health)) : balanceamento.vida,
+      maxHealth: balanceamento.vida,
+      stamina: Number.isFinite(player.stamina) ? Math.max(0, Math.min(balanceamento.estamina, player.stamina)) : balanceamento.estamina,
+      maxStamina: balanceamento.estamina,
       dead: Boolean(player.dead),
       coop: player.coop && typeof player.coop === "object" ? player.coop : null,
       nyxAura: player.character === "nyx" && player.nyxAura &&
@@ -258,11 +263,12 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
       const enemy = (this.room.enemies || []).find(
         (item) => item.id === action.enemyId,
       );
-      if (enemy)
+      const attacker = this.room.players.find(p => p.id === action.playerId);
+      if (enemy && attacker)
         this.emit("enemyDamage", {
           enemyId: enemy.id,
           playerId: action.playerId,
-          damage: Math.min(Math.max(Number(action.damage) || 0, 0), 25),
+          damage: Math.min(Math.max(Number(action.damage) || 0, 0), obterBalanceamento(attacker.character, true).dano),
         });
       return;
     }
@@ -296,6 +302,9 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
         return;
       }
       player.character = action.character;
+      const balanceamento = obterBalanceamento(player.character, true);
+      player.health = player.maxHealth = balanceamento.vida;
+      player.stamina = player.maxStamina = balanceamento.estamina;
       player.ready = false;
       this.publishState();
     } else if (
@@ -344,8 +353,11 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
         : [];
       if (this.coopEnabled) {
         player.mapKey = action.mapKey || "Level1";
-        player.health = Math.max(0, Math.min(10000, Number(action.health) || 0));
-        player.maxHealth = Math.max(1, Math.min(10000, Number(action.maxHealth) || 100));
+        const balanceamento = obterBalanceamento(player.character, true);
+        player.maxHealth = balanceamento.vida;
+        player.health = Math.max(0, Math.min(player.maxHealth, Number(action.health) || 0));
+        player.maxStamina = balanceamento.estamina;
+        player.stamina = Math.max(0, Math.min(player.maxStamina, Number(action.stamina) || 0));
         player.dead = Boolean(action.dead);
         player.coop = action.coop;
         player.lastSeen = Date.now();

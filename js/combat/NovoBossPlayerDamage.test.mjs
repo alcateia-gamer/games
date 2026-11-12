@@ -1,8 +1,9 @@
+import { criarStatusPlayer } from "../player/PlayerStatus.js";
 /** Exercita os ataques reais; o encontro substituto só registra seu contrato de dano. */
 import test from "node:test";
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
-import { criarPlayer, atacar } from "../player/Player.js";
+import { criarPlayer, atacar, soltarAtaque } from "../player/Player.js";
 import { dispararProjetil, atualizarProjeteis } from "../player/PlayerProjectiles.js";
 import { criarSistemaEspeciais, atualizarSistemaEspeciais } from "./PlayerSpecialAbilities.js";
 
@@ -96,16 +97,16 @@ function cena(personagem = "kai-mercer", xBoss = 40, yBoss = 0) {
 
 
 test("golpes normais Kai, Magnus e Nyx atingem o contrato do novo boss uma vez", () => {
-  for (const personagem of ["kai-mercer", "magnus-force", "nyx"]) {
+  for (const [personagem, dano] of [["kai-mercer", 25], ["magnus-force", 33.3], ["nyx", 28]]) {
     const scene = cena(personagem);
     criarPlayer(scene);
     scene.direcaoAtual = "right";
     assert.equal(atacar(scene), true);
     for (let i = 0; i < 10; i++) scene.eventosHitbox.forEach(callback => callback());
     assert.equal(scene.novoBoss.acertos.length, 1);
-    assert.equal(scene.novoBoss.acertos[0].quantidade, 25);
+    assert.equal(scene.novoBoss.acertos[0].quantidade, dano);
     assert.ok(scene.novoBoss.acertos[0].area instanceof Rectangle);
-    assert.equal(scene.novoBoss.vida, 975);
+    assert.equal(scene.novoBoss.vida, 1000 - dano);
     assert.deepEqual(scene.inimigos, []);
     assert.equal(scene.bossFinal, undefined);
   }
@@ -331,3 +332,37 @@ test("Magnus online aplica impacto contra robôs comuns tanto no host quanto pel
     assert.ok(robo.especialEmpurraoAte > 390);
   }
 });
+
+for (const [personagem, vida, dano, solo, multi] of [
+  ["kai-mercer", 100, 25, 7, 6], ["magnus-force", 115, 33.3, 6, 5],
+  ["aria-kade", 85, 25, 8, 7], ["nyx", 95, 28, 8, 6],
+]) for (const multiplayer of [false, true]) {
+  test(`${personagem} ${multiplayer ? "multiplayer" : "solo"}: ataques reais até esgotar a barra`, () => {
+    const scene = cena(personagem, personagem === "aria-kade" ? 150 : 40);
+    criarPlayer(scene);
+    scene.multiplayer = multiplayer;
+    // O cooperativo usa o mesmo combate local e replica seus resultados.
+    if (multiplayer) scene.coopRuntime = {};
+    scene.textures.exists = () => false;
+    scene.load = Object.assign(new EventEmitter(), { image() {}, isLoading: () => false, start() {} });
+    criarStatusPlayer(scene);
+    scene.direcaoAtual = "right";
+    assert.equal(scene.vida, vida);
+    const ataques = multiplayer ? multi : solo;
+    for (let i = 0; i < ataques; i++) {
+      scene.time.now += 300;
+      assert.equal(atacar(scene), true);
+      if (personagem === "aria-kade") {
+        soltarAtaque(scene);
+        atualizarProjeteis(scene, 500);
+      } else scene.eventosHitbox.forEach(callback => callback());
+      scene.atacando = false;
+    }
+    assert.equal(atacar(scene), false);
+    assert.equal(scene.estamina, 0);
+    assert.equal(scene.novoBoss.acertos.length, ataques);
+    assert.ok(scene.novoBoss.acertos.every(hit => hit.quantidade === dano));
+    assert.ok(Math.abs(scene.novoBoss.vida - (1000 - ataques * dano)) < 1e-9);
+    scene.events.emit("shutdown");
+  });
+}

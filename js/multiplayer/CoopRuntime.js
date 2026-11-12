@@ -1,3 +1,5 @@
+import { obterBalanceamento } from "../combat/CharacterBalance.js";
+import { ARIA_ATTACK_CONFIG } from "../controls/AriaAttackConfig.js";
 import { CoopRevival, animarQuedaCoop } from "./CoopRevival.js";
 import { tocarSomAuraNyx, pararSomAuraNyx } from "../sounds/SOUNDS_PERSONAGENS.js/sounds_Nyx,.js";
 import { NYX_AURA } from "../combat/NyxHealingAura.js";
@@ -147,7 +149,8 @@ export class CoopRuntime {
       attackId = this.attackIds.get(attack);
     }
     return this.manager.sendCoopAction("damage", { target, amount,
-      area: area && { x: area.x, y: area.y, width: area.width, height: area.height }, attackId });
+      area: area && { x: area.x, y: area.y, width: area.width, height: area.height }, attackId,
+      basic: attack?.ataqueBasico ?? null });
   }
   damage(context, amount, origin = null, options = {}) {
     if (context.vida <= 0 || context.morteEmAndamento || context.player.invulneravel ||
@@ -201,6 +204,9 @@ export class CoopRuntime {
         }
       } else if (action.kind === "hurt") causarDanoPlayer(s, p.amount, p.origin);
       else if (action.kind === "heal" && s.vida > 0 && !s.morteEmAndamento) recuperarVida(s, p.amount);
+      else if (action.kind === "stamina" && Number.isFinite(p.amount)) {
+        s.estamina = Math.max(0, Math.min(s.estaminaMaxima, s.estamina + p.amount));
+      }
       else if (action.kind === "revive") this.revivePlayer(p.downId);
       else if (action.kind === "teleport") this.teleport(p.x, p.y);
       else if (action.kind === "specialPose") {
@@ -237,18 +243,33 @@ export class CoopRuntime {
   applyDamage(context, payload, playerId) {
     const s = this.scene;
     if (!Number.isFinite(payload.amount) || payload.amount <= 0 || payload.amount > 100) return;
+    let amount = payload.amount;
+    if (payload.basic) {
+      if (!Number.isSafeInteger(payload.basic.id) || payload.basic.id <= 0) return;
+      amount = obterBalanceamento(context.personagemSelecionada, true).dano;
+      if (context.personagemSelecionada === "aria-kade") {
+        if (!Number.isFinite(payload.basic.danoAria)) return;
+        amount = Math.max(amount, Math.min(ARIA_ATTACK_CONFIG.maxDamage, payload.basic.danoAria));
+      }
+    }
     const target = (s.inimigos || []).find(e => e.networkId === payload.target) ||
       alvosAdicionaisCombate(this.localContext).find(e => this.combatId(e) === payload.target);
     if (!target?.active || target.morto || Math.hypot(context.player.x - target.x, context.player.y - target.y) > 850) return;
     if (payload.area && ![payload.area.x, payload.area.y, payload.area.width, payload.area.height].every(Number.isFinite)) return;
     // A mesma identidade é reutilizada pelos alvos de um golpe e pelos pacotes repetidos.
     this.damageAttacks ||= new Map();
-    const key = `${playerId}:${payload.attackId ?? "hit"}`;
+    const key = `${playerId}:${payload.basic ? `basic:${payload.basic.id}` : payload.attackId ?? "hit"}`;
     if (!this.damageAttacks.has(key)) this.damageAttacks.set(key, {});
     if (this.damageAttacks.size > 1024) this.damageAttacks.delete(this.damageAttacks.keys().next().value);
-    if (target.tipoRobo) causarDanoInimigo(s, target, payload.amount, {
+    const attack = this.damageAttacks.get(key);
+    if (payload.basic) {
+      attack.targets ||= new Set();
+      if (attack.targets.has(payload.target)) return;
+      attack.targets.add(payload.target);
+    }
+    if (target.tipoRobo) causarDanoInimigo(s, target, amount, {
       attacker: context.player, playerId, localFeedback: playerId === this.manager.playerId });
-    else causarDanoAlvoAdicional(this.localContext, target, payload.amount, payload.area, this.damageAttacks.get(key));
+    else causarDanoAlvoAdicional(this.localContext, target, amount, payload.area, attack);
   }
   broadcastHit(enemy, damage, options = {}) {
     if (!this.host) return;

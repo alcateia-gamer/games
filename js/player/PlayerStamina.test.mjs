@@ -12,13 +12,20 @@ function cena(modo) {
   return scene;
 }
 
+const personagens = [
+  ["kai-mercer", 100, 7, 6], ["magnus-force", 115, 6, 5],
+  ["aria-kade", 85, 8, 7], ["nyx", 95, 8, 6],
+];
+for (const [personagemSelecionada, vida, solo, multi] of personagens)
 for (const [nome, modo, ataques] of [
-  ["single player", { multiplayer: false }, 8],
-  ["multiplayer", { multiplayer: true }, 5],
-  ["cooperativo", { multiplayer: true, coopRuntime: {} }, 5],
+  ["single player", { multiplayer: false }, solo],
+  ["multiplayer", { multiplayer: true }, multi],
+  ["cooperativo", { multiplayer: true, coopRuntime: {} }, multi],
 ]) {
-  test(`${nome}: barra cheia permite exatamente ${ataques} ataques e regenera até o teto`, () => {
-    const scene = cena(modo);
+  test(`${personagemSelecionada} ${nome}: vida inicial e exatamente ${ataques} ataques`, () => {
+    const scene = cena({ ...modo, personagemSelecionada });
+    assert.equal(scene.vida, vida);
+    assert.equal(scene.vidaMaxima, vida);
     assert.equal(scene.estamina, scene.estaminaMaxima);
     assert.equal(scene.custoAtaque, 20);
     for (let i = 0; i < ataques; i++) assert.equal(gastarEstamina(scene, scene.custoAtaque), true);

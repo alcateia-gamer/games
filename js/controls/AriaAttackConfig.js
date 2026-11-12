@@ -1,9 +1,11 @@
 /** Parâmetros exclusivos do arco e do controle da Aria, em pixels lógicos e ms de jogo. */
+
+import { DANO_BASICO_PADRAO } from "../combat/CharacterBalance.js";
 export const ARIA_ATTACK_CONFIG = Object.freeze({
   centerX: 720, centerY: 350,
   joystickRadius: 55, interactionRadius: 46, thumbRadius: 22, deadZone: 8, maxThumbDistance: 45,
   quickTapThreshold: 180, maxChargeTime: 1200, quickShotCooldown: 250,
-  minDamage: 25, maxDamage: 25 * 2.5,
+  minDamage: DANO_BASICO_PADRAO, maxDamage: DANO_BASICO_PADRAO * 2.5,
   minProjectileSpeed: 420, maxProjectileSpeed: 600,
   visualHysteresis: Math.PI / 36,
   aimLineLength: 180,

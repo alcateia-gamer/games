@@ -34,7 +34,7 @@ function causarDanoInimigo(
   }
 
   if (scene.multiplayer && !scene.isMultiplayerHost && alvo.remoteOnly) {
-    if (scene.coopRuntime) return scene.coopRuntime.requestDamage(alvo.networkId, quantidade);
+    if (scene.coopRuntime) return scene.coopRuntime.requestDamage(alvo.networkId, quantidade, null, options.ataqueBasico);
     scene.multiplayerManager?.requestEnemyDamage(alvo.networkId, quantidade);
     return;
   }
