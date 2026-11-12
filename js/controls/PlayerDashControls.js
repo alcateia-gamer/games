@@ -8,6 +8,7 @@ import { ariaCargaBloqueiaMovimento } from "./AriaAttackConfig.js";
 import { obterDirecaoMovimento } from "./PlayerMovementInput.js";
 import { posicionarBotaoAcao } from "./FixedActionButton.js";
 import { jogadorPresoNovoBoss } from "../player/PlayerControlEffects.js";
+import { tocarSomDash } from "../sounds/personagem.js";
 
 // =====================================================
 // DASH SANDEVISTAN - CORES POR PERSONAGEM
@@ -351,6 +352,7 @@ function iniciarDash(scene) {
   // EFEITOS DO SANDEVISTAN
   // ===================================================
 
+  tocarSomDash(scene);
   criarFlashDash(scene);
   criarRastroTemporal(scene);
 

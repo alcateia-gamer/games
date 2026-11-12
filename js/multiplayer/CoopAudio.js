@@ -7,7 +7,7 @@ const EXCLUDED = new Set([
 const WORLD = new Set(["tiro-laser", "robo-explodindo", "robot-walk", "walk-robo-serra",
   "robo-serra-ataque", "boss-escotilha", "boss-impacto-escotilha", "boss-explosao-escotilha",
   "boss-raio-escotilha", "boss-escudo-quebrado"]);
-const PLAYER = new Set(["running", "aria-tensar-arco", "aria-soltar-flecha", "dano-soft",
+const PLAYER = new Set(["running", "dash-personagem", "aria-tensar-arco", "aria-soltar-flecha", "dano-soft",
   "katana-ataque", "ataque-no-ar", "enchendo-galao", "cartao-passando",
   "cartao-acesso-concedido", "colocando-item", "porta-fabrica"]);
 const shared = key => !EXCLUDED.has(key) && (WORLD.has(key) || PLAYER.has(key));

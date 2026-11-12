@@ -16,6 +16,7 @@ function carregarSonsPersonagem(loader) {
   // =====================================================
 
   loader.audio("running", "sounds.mp3/running.mp3");
+  loader.audio("dash-personagem", "sounds.mp3/SONS PARA BOTAR AINDA/DASH.mp3");
 
   // =====================================================
   // SONS DA ARIA KADE
@@ -58,6 +59,12 @@ function encontrarInicioPasso(buffer) {
     }
   }
   return 0;
+}
+
+/** Feedback único quando a esquiva é efetivamente iniciada. */
+function tocarSomDash(scene) {
+  if (!scene.cache?.audio?.exists("dash-personagem")) return;
+  scene.sound?.play("dash-personagem", { volume: 0.05, loop: false });
 }
 
 function passosBloqueados(scene) {
@@ -113,4 +120,4 @@ function atualizarSomCorrida(scene, estaSeMovendo) {
   }
 }
 
-export { carregarSonsPersonagem, configurarSomCorrida, atualizarSomCorrida };
+export { carregarSonsPersonagem, configurarSomCorrida, atualizarSomCorrida, tocarSomDash };
