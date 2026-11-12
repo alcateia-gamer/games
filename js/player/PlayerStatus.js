@@ -944,9 +944,9 @@ function criarStatusPlayer(scene) {
   scene.tempoSemDanoParaRegen = 4;
   scene.tempoSemDano = 0;
 
-  // ESTAMINA — VALORES ORIGINAIS.
-  scene.estaminaMaxima = 100;
-  scene.estamina = 100;
+  // Oito ataques no solo; os modos multiplayer mantêm cinco.
+  scene.estaminaMaxima = scene.multiplayer || scene.coopRuntime ? 100 : 160;
+  scene.estamina = scene.estaminaMaxima;
 
   scene.custoAtaque = 20;
   scene.regeneracaoEstamina = 18;

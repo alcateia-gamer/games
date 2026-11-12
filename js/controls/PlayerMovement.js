@@ -16,7 +16,7 @@ import {
 
 import { atualizarDash } from "./PlayerDashControls.js";
 import { obterDirecaoMovimento } from "./PlayerMovementInput.js";
-import { ARIA_ATTACK_CONFIG } from "./AriaAttackConfig.js";
+import { ariaCargaBloqueiaMovimento } from "./AriaAttackConfig.js";
 import { jogadorPresoNovoBoss } from "../player/PlayerControlEffects.js";
 
 /**
@@ -58,6 +58,21 @@ function atualizarMovimento(scene) {
     return;
   }
 
+  if (ariaCargaBloqueiaMovimento(scene)) {
+    // Encerra um impulso anterior para ele não voltar ao soltar a flecha.
+    if (scene.estadoDash?.ativo) scene.estadoDash.ativo = false;
+    scene.player.setVelocity(0, 0);
+    atualizarSomCorrida(scene, false);
+    const direcao = obterDirecaoMovimento(scene);
+    if (direcao.x !== 0 || direcao.y !== 0) {
+      // Orienta o arco sem caminhar nem reiniciar a carga.
+      atualizarAnimacaoCaminhada(scene, Math.abs(direcao.x) > Math.abs(direcao.y)
+        ? direcao.x > 0 ? "right" : "left"
+        : direcao.y > 0 ? "down" : "up");
+    }
+    return;
+  }
+
   // O dash controla a velocidade durante seu impulso.
   // Evita que o movimento normal cancele o dash.
   if (atualizarDash(scene)) {
@@ -75,12 +90,8 @@ function atualizarMovimento(scene) {
 
   const velocidadeAtualBase = usandoTurbo ? velocidadeTurbo : velocidadeBase;
 
-  const configAria = scene.ariaAttackConfig ?? ARIA_ATTACK_CONFIG;
-  const penalidadeAria = scene.ariaAtaqueCarregando &&
-    scene.time.now - scene.ariaCargaInicio >= configAria.movePenaltyStart
-    ? configAria.movePenaltyMultiplier : 1;
   const velocidadeAtual = scene.personagemSelecionada === "aria-kade"
-    ? velocidadeAtualBase * penalidadeAria
+    ? velocidadeAtualBase
     : !scene.multiplayer && scene.atacando
       ? velocidadeAtualBase * 0.72
       : velocidadeAtualBase;

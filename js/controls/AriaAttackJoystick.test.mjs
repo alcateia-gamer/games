@@ -115,7 +115,7 @@ function geometria(scene) {
 }
 
 test("A/B: toque rápido e carga completa têm dano e velocidade limitados e um só disparo", t => {
-  for (const [duracao, dano, velocidade] of [[0, 25, 420], [180, 25, 420], [600, 35, 510], [1200, 45, 600], [9000, 45, 600]]) {
+  for (const [duracao, dano, velocidade] of [[0, 25, 420], [180, 25, 420], [600, 43.75, 510], [1200, 62.5, 600], [9000, 62.5, 600]]) {
     const scene = cena(t), pointer = pressionar(scene);
     soltar(scene, pointer, duracao);
     scene.input.emit("pointerupoutside", pointer);
@@ -158,15 +158,16 @@ test("mira automática ignora o alvo mais próximo quando uma parede bloqueia a 
   assert.deepEqual(obterDirecaoMiraAutomaticaAria(scene), { x: 0, y: 1 });
 });
 
-test("C/D: mira diagonal exata, caminhada oposta e hitbox estável na carga e soltura", t => {
+test("C/D: mira diagonal exata, carga imóvel e hitbox estável na carga e soltura", t => {
   const scene = cena(t), antes = geometria(scene);
   const pointer = pressionar(scene, dedo(2, 750, 320));
   const inicio = scene.ariaCargaInicio;
   scene.teclasWASD.esquerda.isDown = true;
-  for (const tempo of [0, 599, 600, 900, 2000]) {
+  for (const tempo of [0, 180, 181, 599, 600, 900, 2000]) {
     scene.time.now = inicio + tempo;
     atualizarMovimento(scene);
-    assert.equal(scene.player.body.velocity.x, tempo < 600 ? -200 : -180);
+    assert.equal(scene.player.body.velocity.x, tempo <= 180 ? -200 : 0);
+    assert.equal(scene.player.body.velocity.y, 0);
     assert.deepEqual(geometria(scene), antes);
     assert.ok(Math.abs(scene.ariaMira.x - Math.SQRT1_2) < 1e-12);
   }
@@ -196,7 +197,7 @@ test("quatro dedos preservam a captura e soltar movimento/dash/especial não dis
   assert.equal(flechas(scene).length, 1);
 });
 
-test("E: Sandevistan mantém velocidade, duração, mira e início da carga", t => {
+test("E: dash durante toque rápido preserva a mira, mas segurar bloqueia novos impulsos", t => {
   const scene = cena(t);
   const pointer = pressionar(scene, dedo(2, 750, 320));
   scene.player.texture = null; // O efeito visual é verificado no Phaser real pelo teste de navegador.
@@ -210,8 +211,18 @@ test("E: Sandevistan mantém velocidade, duração, mira e início da carga", t 
   assert.equal(scene.player.body.velocity.x, -CONFIG_DASH.velocidade);
   assert.deepEqual(scene.ariaMira, mira);
   assert.equal(scene.ariaCargaInicio, inicio);
+  scene.time.now += 181;
+  atualizarMovimento(scene);
+  assert.equal(scene.player.body.velocity.x, 0);
+  assert.equal(scene.estadoDash.ativo, false);
+  const estamina = scene.estamina;
+  scene.time.now += CONFIG_DASH.recarga;
+  assert.equal(iniciarDash(scene), false);
+  assert.equal(scene.estamina, estamina);
   soltar(scene, pointer);
   assert.equal(flechas(scene).length, 1);
+  atualizarMovimento(scene);
+  assert.equal(scene.player.body.velocity.x, -200);
 });
 
 test("arrastar fora da base e mudar direção não reinicia carga, nem troca de ponteiro", t => {
@@ -278,6 +289,26 @@ test("touchcancel, perda de evento de soltura e respawn não deixam carga presa"
   assert.equal(scene.ariaAtaqueCarregando, false);
 });
 
+for (const multiplayer of [false, true]) {
+  for (const usarBotao of [false, true]) {
+    test(`Aria imóvel ao segurar, com soltura livre: multiplayer=${multiplayer}, botão=${usarBotao}`, t => {
+      const scene = cena(t, usarBotao);
+      scene.multiplayer = multiplayer;
+      scene.joystick.obterDirecao = vetor => { vetor.x = 1; vetor.y = 0; };
+      const pointer = pressionar(scene);
+      scene.time.now += 500;
+      atualizarMovimento(scene);
+      assert.equal(scene.player.body.velocity.x, 0);
+      assert.equal(scene.player.body.velocity.y, 0);
+      assert.equal(scene.movimentoBloqueado, false, "não altera o bloqueio global da cena");
+      soltar(scene, pointer, 700);
+      assert.equal(flechas(scene)[0].dano, 25 * 2.5);
+      atualizarMovimento(scene);
+      assert.equal(scene.player.body.velocity.x, 200);
+    });
+  }
+}
+
 test("cooldown de 250ms limita toques rápidos, mas permite uma carga legítima", t => {
   const scene = cena(t);
   soltar(scene, pressionar(scene), 0);
@@ -339,15 +370,37 @@ test("Aria usa o botão de ataque padrão: pressionar carrega e soltar dispara u
   assert.equal(scene.pointerAtaque, null);
 });
 
-test("botão da Aria dispara na direção atualizada pela caminhada durante a carga", t => {
-  const scene = cena(t, true);
-  const pointer = pressionar(scene);
-  scene.teclasWASD.esquerda.isDown = true;
-  atualizarMovimento(scene);
-  assert.equal(scene.direcaoAtaque, "left");
-  soltar(scene, pointer, 1200);
-  assert.deepEqual(flechas(scene)[0].direcaoDisparo, { x: -1, y: 0 });
-});
+for (const entrada of ["teclado", "joystick"]) {
+  test(`Aria muda a direção parada durante a carga pelo ${entrada}`, t => {
+    const scene = cena(t, true), antes = geometria(scene);
+    const pointer = pressionar(scene), inicio = scene.ariaCargaInicio, estamina = scene.estamina;
+    scene.time.now += 1200;
+    for (const [tecla, direcao, x, y] of [
+      ["esquerda", "left", -1, 0], ["cima", "up", 0, -1],
+      ["direita", "right", 1, 0], ["baixo", "down", 0, 1],
+    ]) {
+      for (const key of Object.values(scene.teclasWASD)) key.isDown = false;
+      if (entrada === "teclado") scene.teclasWASD[tecla].isDown = true;
+      else scene.joystick.obterDirecao = vetor => { vetor.x = x; vetor.y = y; };
+      atualizarMovimento(scene);
+      assert.equal(scene.direcaoAtaque, direcao);
+      assert.equal(scene.direcaoAtual, direcao);
+      assert.deepEqual(scene.player.body.velocity, { x: 0, y: 0 });
+      assert.deepEqual(geometria(scene), antes);
+      assert.equal(scene.ariaCargaInicio, inicio);
+      assert.equal(scene.estamina, estamina);
+      assert.equal(scene.ariaAtaqueCarregando, true);
+      assert.equal(flechas(scene).length, 0);
+    }
+    for (const key of Object.values(scene.teclasWASD)) key.isDown = false;
+    scene.joystick.obterDirecao = vetor => { vetor.x = 0; vetor.y = 0; };
+    atualizarMovimento(scene);
+    assert.equal(scene.direcaoAtaque, "down", "sem entrada preserva a última direção");
+    soltar(scene, pointer, 0);
+    assert.deepEqual(flechas(scene)[0].direcaoDisparo, { x: 0, y: 1 });
+    assert.equal(flechas(scene)[0].dano, 62.5);
+  });
+}
 
 test("botão da Aria mantém a carga ao soltar o dedo do movimento", t => {
   const scene = cena(t, true);
@@ -364,7 +417,7 @@ test("histerese estabiliza animação sem quantizar direção física e carga é
   const vetor = angulo => ({ x: Math.cos(angulo), y: Math.sin(angulo) });
   assert.equal(direcaoVisualAria(vetor(Math.PI / 4 + 0.02), "right"), "right");
   assert.equal(direcaoVisualAria(vetor(Math.PI / 4 + 0.12), "right"), "down");
-  assert.deepEqual(calcularCargaAria(120000), { ratio: 1, damage: 45, speed: 600 });
+  assert.deepEqual(calcularCargaAria(120000), { ratio: 1, damage: 62.5, speed: 600 });
   assert.equal(ARIA_ATTACK_CONFIG.centerX, 720);
 });
 

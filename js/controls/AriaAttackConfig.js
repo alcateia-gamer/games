@@ -3,12 +3,18 @@ export const ARIA_ATTACK_CONFIG = Object.freeze({
   centerX: 720, centerY: 350,
   joystickRadius: 55, interactionRadius: 46, thumbRadius: 22, deadZone: 8, maxThumbDistance: 45,
   quickTapThreshold: 180, maxChargeTime: 1200, quickShotCooldown: 250,
-  minDamage: 25, maxDamage: 45,
+  minDamage: 25, maxDamage: 25 * 2.5,
   minProjectileSpeed: 420, maxProjectileSpeed: 600,
-  movePenaltyStart: 600, movePenaltyMultiplier: 0.90,
   visualHysteresis: Math.PI / 36,
   aimLineLength: 180,
 });
+
+/** Toques rápidos permitem caminhar; segurar o arco exige ficar parada. */
+export function ariaCargaBloqueiaMovimento(scene) {
+  const config = scene.ariaAttackConfig ?? ARIA_ATTACK_CONFIG;
+  return scene.personagemSelecionada === "aria-kade" && scene.ariaAtaqueCarregando &&
+    scene.time.now - scene.ariaCargaInicio > config.quickTapThreshold;
+}
 
 export const ARIA_AIM_DIRECTIONS = Object.freeze({
   up: { x: 0, y: -1 }, down: { x: 0, y: 1 },

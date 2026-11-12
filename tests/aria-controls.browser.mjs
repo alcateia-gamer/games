@@ -91,7 +91,7 @@ try {
   await frames();
   let s = await state();
   assert.equal(s.shots, 1);
-  assert.ok(s.arrows[0].damage >= 25 && s.arrows[0].damage <= 45);
+  assert.ok(s.arrows[0].damage >= 25 && s.arrows[0].damage <= 62.5);
   near(s.arrows[0].direction.x, Math.SQRT1_2);
   near(s.arrows[0].direction.y, -Math.SQRT1_2);
   console.log("PASS A/C: toque rápido e flecha diagonal");
@@ -113,11 +113,13 @@ try {
   assert.equal(s.holo, true);
   assert.equal(s.shots, 0);
   assert.equal(s.start, chargeStart);
+  await page.waitForTimeout(200);
   await touch("touchStart", 13, 630, 370);
   await frames();
   s = await state();
-  assert.equal(s.dash, true);
-  near(s.velocity.x, -650);
+  assert.equal(s.dash, false);
+  near(s.velocity.x, 0);
+  near(s.velocity.y, 0);
   assert.equal(s.pointer, attackPointer);
   await touch("touchEnd", 13);
   await touch("touchEnd", 14);
@@ -136,10 +138,10 @@ try {
   await frames();
   s = await state();
   assert.equal(s.shots, 1);
-  assert.equal(s.arrows[0].damage, 45);
+  assert.equal(s.arrows[0].damage, 62.5);
   assert.equal(s.arrows[0].speed, 600);
   assert.equal(s.charging, false);
-  console.log("PASS B/D/E/F: quatro dedos, carga máxima, movimento, dash e holograma");
+  console.log("PASS B/D/E/F: quatro dedos, carga máxima imóvel, bloqueio de dash e holograma");
 
   // F: troca com o holograma durante uma nova carga.
   await page.waitForTimeout(300);

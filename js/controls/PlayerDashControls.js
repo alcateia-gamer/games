@@ -4,6 +4,7 @@
  */
 
 import { gastarEstamina } from "../player/PlayerStatus.js";
+import { ariaCargaBloqueiaMovimento } from "./AriaAttackConfig.js";
 import { obterDirecaoMovimento } from "./PlayerMovementInput.js";
 import { posicionarBotaoAcao } from "./FixedActionButton.js";
 import { jogadorPresoNovoBoss } from "../player/PlayerControlEffects.js";
@@ -270,7 +271,7 @@ function iniciarDash(scene) {
   const estado = scene.estadoDash;
   const player = scene.player;
 
-  if (scene.movimentoBloqueado || jogadorPresoNovoBoss(scene) || !estado || !player?.active || !player.body) {
+  if (scene.movimentoBloqueado || jogadorPresoNovoBoss(scene) || ariaCargaBloqueiaMovimento(scene) || !estado || !player?.active || !player.body) {
     return false;
   }
 
