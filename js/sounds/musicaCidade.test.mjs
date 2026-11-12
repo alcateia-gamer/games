@@ -4,6 +4,7 @@ import { EventEmitter } from "node:events";
 import { existsSync, readFileSync } from "node:fs";
 import vm from "node:vm";
 import { carregarMusicaCidade, iniciarMusicaCidade } from "./musicaCidade.js";
+import { atualizarSaidaMusicaAmbiente } from "./musicaAmbiente.js";
 
 function criarCena(duracao = 98.71, adiarPlay = false) {
   const chamadas = [], marcadores = [], entradas = [];
@@ -176,6 +177,15 @@ test("WebAudioSound real começa com ganho zero mesmo se o navegador liberar o �
   assert.equal(musica.volumeNode.gain.value, 0.06);
   contexto.currentTime = 70;
   assert.equal(musica.volumeNode.gain.value, 0.06);
+  atualizarSaidaMusicaAmbiente(scene, 0);
+  atualizarSaidaMusicaAmbiente(scene, 0.5);
+  assert.equal(musica.volumeNode.gain.value, 0.03);
+  assert.equal(musica.coopMusicVolume(), 0.03);
+  musica.pause(); musica.resume();
+  assert.equal(musica.volumeNode.gain.value, 0.03, "retomada preserva o volume da saída");
+  atualizarSaidaMusicaAmbiente(scene, 1);
+  contexto.currentTime = 80;
+  assert.equal(musica.volumeNode.gain.value, 0, "a rampa de entrada não volta a subir");
   scene.events.emit("shutdown");
   assert.equal(musica.pendingRemove, true);
   controle.destruir();

@@ -2,6 +2,26 @@
 const SILENCIO_INICIAL_MS = 500;
 const DURACAO_ENTRADA_MS = 6000;
 const controles = new WeakMap();
+export const DURACAO_SAIDA_MUSICA_MS = 1800;
+
+/** A apresentação do boss dirige a saída pelo progresso da câmera. */
+export function atualizarSaidaMusicaAmbiente(scene, progresso) {
+  for (const controle of controles.get(scene)?.values() ?? []) controle.sair(progresso);
+}
+
+export function retomarMusicaAmbiente(scene) {
+  for (const controle of controles.get(scene)?.values() ?? []) controle.retomar();
+}
+
+/** A troca de mapa mantém a cena viva até terminar esta saída. */
+export function desvanecerMusicaAmbiente(scene) {
+  if (!controles.get(scene)?.size) return;
+  const estado = { progresso: 0 };
+  atualizarSaidaMusicaAmbiente(scene, 0);
+  scene.tweens.add({ targets: estado, progresso: 1, duration: DURACAO_SAIDA_MUSICA_MS,
+    onUpdate: () => atualizarSaidaMusicaAmbiente(scene, estado.progresso),
+    onComplete: () => atualizarSaidaMusicaAmbiente(scene, 1) });
+}
 
 export function iniciarMusicaAmbiente(scene, { chave, volumeMaximo = 0.06, trechoLoop = null }) {
   if (scene.coopRuntime && !scene.coopRuntime.host) return null;
@@ -12,6 +32,8 @@ export function iniciarMusicaAmbiente(scene, { chave, volumeMaximo = 0.06, trech
   let destruida = false;
   let entradaVolume = null;
   let inicioEntradaAudio = null;
+  let volumeInicioSaida = null;
+  let volumeSaida = null;
   function programarVolumeAudio() {
     const contexto = musica.manager.context;
     const ganho = musica.volumeNode.gain;
@@ -30,10 +52,10 @@ export function iniciarMusicaAmbiente(scene, { chave, volumeMaximo = 0.06, trech
     musica.currentConfig.volume = volumeMaximo;
   }
   function retomarEntrada() {
-    if (!destruida && inicioEntradaAudio !== null) programarVolumeAudio();
+    if (!destruida && volumeInicioSaida === null && inicioEntradaAudio !== null) programarVolumeAudio();
   }
   function iniciarEntrada() {
-    if (destruida) return;
+    if (destruida || volumeInicioSaida !== null) return;
     const contexto = musica.manager?.context;
     const ganho = musica.volumeNode?.gain;
     if (contexto && ganho) {
@@ -49,6 +71,27 @@ export function iniciarMusicaAmbiente(scene, { chave, volumeMaximo = 0.06, trech
     }
   }
   const controle = {
+    retomar() {
+      if (destruida || volumeInicioSaida === null) return;
+      volumeInicioSaida = volumeSaida = null;
+      iniciarEntrada();
+    },
+    sair(progresso) {
+      if (destruida) return;
+      if (volumeInicioSaida === null) {
+        volumeInicioSaida = musica.coopMusicVolume();
+        entradaVolume?.remove();
+      }
+      const p = Math.max(0, Math.min(1, progresso));
+      volumeSaida = volumeInicioSaida * (1 - p * p * (3 - 2 * p));
+      const contexto = musica.manager?.context;
+      const ganho = musica.volumeNode?.gain;
+      if (contexto && ganho) {
+        ganho.cancelScheduledValues(contexto.currentTime);
+        ganho.setValueAtTime(volumeSaida, contexto.currentTime);
+        musica.currentConfig.volume = volumeSaida;
+      } else musica.setVolume(volumeSaida);
+    },
     destruir() {
       if (destruida) return;
       destruida = true;
@@ -72,6 +115,7 @@ export function iniciarMusicaAmbiente(scene, { chave, volumeMaximo = 0.06, trech
   sonsCena.set(chave, controle);
   musica.coopMusicControl = controle;
   musica.coopMusicVolume = () => {
+    if (volumeSaida !== null) return volumeSaida;
     const context = musica.manager?.context;
     if (context && inicioEntradaAudio !== null) {
       const p = Math.max(0, Math.min(1, (context.currentTime - inicioEntradaAudio) / (DURACAO_ENTRADA_MS / 1000)));

@@ -7,6 +7,7 @@ import { obterBocaMetralhadora, criarMunicaoRobo } from "../enemies/WarRobotProj
  */
 
 import { iniciarMusicaFabrica } from "../sounds/musicaFabrica.js";
+import { desvanecerMusicaAmbiente, DURACAO_SAIDA_MUSICA_MS } from "../sounds/musicaAmbiente.js";
 import criarLevel1Parte2Map from "../map/MapaFabrica.js";
 import MiniMapManager from "../ui/MiniMapManager.js";
 import { criarSpawnAreasRoboBola } from "../enemies/RoboBolaSpawnAreas.js";
@@ -940,7 +941,8 @@ class Level1Parte2 extends Phaser.Scene {
 
       this.physics.pause();
 
-      this.cameras.main.fadeOut(250, 0, 0, 0);
+      desvanecerMusicaAmbiente(this);
+      this.cameras.main.fadeOut(DURACAO_SAIDA_MUSICA_MS, 0, 0, 0);
 
       this.cameras.main.once("camerafadeoutcomplete", () => {
         limparGrupoRobos(this);

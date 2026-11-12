@@ -1,3 +1,5 @@
+import { atualizarSaidaMusicaAmbiente, retomarMusicaAmbiente } from "./musicaAmbiente.js";
+
 const CHAVE_MUSICA = "musica-novo-boss";
 const NOME_MARCADOR_LOOP = "boss-continuo";
 const ATRASO_ENTRADA = 0.35;
@@ -43,6 +45,7 @@ export function prepararMusicaNovoBoss(scene, encontro) {
   }
 
   function parar() {
+    retomarMusicaAmbiente(scene);
     if (!musica) return;
     musica.stop();
     musica.destroy();
@@ -67,6 +70,8 @@ export function prepararMusicaNovoBoss(scene, encontro) {
   return {
     atualizar(progresso) {
       const p = Math.max(0, Math.min(1, Number.isFinite(progresso) ? progresso : 0));
+      if (!destruida && (!scene.coopRuntime || scene.coopRuntime.host))
+        atualizarSaidaMusicaAmbiente(scene, p / ATRASO_ENTRADA);
       if (p < ATRASO_ENTRADA) return;
       iniciar();
       if (!musica) return;

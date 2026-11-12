@@ -5,6 +5,7 @@
 
 import { limparGrupoRobos } from "../enemies/EnemyTest.js";
 import { createInteractionMarker } from "../ui/CollectibleMarker.js";
+import { desvanecerMusicaAmbiente, DURACAO_SAIDA_MUSICA_MS } from "../sounds/musicaAmbiente.js";
 
 const PORTA_X = 72;
 const PORTA_INFERIOR_Y = -2160;
@@ -106,7 +107,8 @@ function iniciarTransicao(scene) {
 
   scene.transicaoEmAndamento = true;
   scene.physics.pause();
-  scene.cameras.main.fadeOut(250, 0, 0, 0);
+  desvanecerMusicaAmbiente(scene);
+  scene.cameras.main.fadeOut(DURACAO_SAIDA_MUSICA_MS, 0, 0, 0);
 
   scene.cameras.main.once("camerafadeoutcomplete", () => {
     scene.registry.set("fabricaVisitada", true);

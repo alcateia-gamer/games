@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import { existsSync } from "node:fs";
 import { carregarMusicaFabrica, iniciarMusicaFabrica } from "./musicaFabrica.js";
+import { desvanecerMusicaAmbiente, DURACAO_SAIDA_MUSICA_MS } from "./musicaAmbiente.js";
+import { prepararMusicaNovoBoss } from "./novoBoss.js";
 
 function fixture(adiarPlay = false) {
   const sons = [], entradas = [];
@@ -13,8 +15,10 @@ function fixture(adiarPlay = false) {
       get: key => key === "musica-novo-boss" ? boss : null,
       add(key, config) {
         const som = Object.assign(new EventEmitter(), { key, config, volume: config.volume,
-          totalDuration: 167, plays: [], parado: false, destruido: false,
-          play(options) { this.plays.push(options); if (!adiarPlay) this.emit("play"); return true; },
+          totalDuration: 195.72, plays: [], marcadores: [], parado: false, destruido: false,
+          addMarker(marker) { this.marcadores.push(marker); },
+          setVolume(volume) { this.volume = volume; },
+          play(...options) { this.plays.push(options); if (!adiarPlay) this.emit("play"); return true; },
           stop() { this.parado = true; }, destroy() { this.destruido = true; },
         });
         sons.push(som); return som;
@@ -25,7 +29,7 @@ function fixture(adiarPlay = false) {
   return { scene, sons, entradas, boss };
 }
 
-test("carrega a faixa da fábrica e toca o arquivo inteiro em loop, começando sem volume", () => {
+test("preserva a introdução e repete uma frase da fábrica antes do encerramento da faixa", () => {
   carregarMusicaFabrica({ audio(key, path) {
     assert.equal(key, "musica-fabrica");
     assert.equal(path, "sounds.mp3/SONS AMBIENETE/04. You Will Never Know.mp3");
@@ -37,7 +41,9 @@ test("carrega a faixa da fábrica e toca o arquivo inteiro em loop, começando s
   scene.events.emit("update");
   assert.equal(sons.length, 1);
   assert.deepEqual(sons[0].config, { volume: 0, loop: true });
-  assert.deepEqual(sons[0].plays, [{ volume: 0, loop: true }]);
+  assert.deepEqual(sons[0].plays, [["fabrica-continua", { seek: -64 / 3, volume: 0 }]]);
+  assert.deepEqual(sons[0].marcadores, [{ name: "fabrica-continua", start: 64 / 3,
+    duration: 64 - 64 / 3, config: { volume: 0, loop: true } }]);
   assert.equal(entradas[0].delay, 500);
   assert.equal(entradas[0].duration, 6000);
   assert.equal(entradas[0].volume, 0.06);
@@ -81,6 +87,44 @@ test("morte e saída encerram a música e seus listeners; retorno não acumula s
   scene.morteEmAndamento = false;
   iniciarMusicaFabrica(scene); assert.equal(sons.length, 2);
   scene.events.emit("destroy"); assert.ok(sons.every(s => s.destruido));
+});
+
+test("troca de mapa cancela a entrada e reduz o volume até zero antes da limpeza", () => {
+  const { scene, sons, entradas } = fixture();
+  iniciarMusicaFabrica(scene);
+  const som = sons[0]; som.volume = 0.06;
+  desvanecerMusicaAmbiente(scene);
+  const saida = entradas.at(-1);
+  assert.equal(saida.duration, DURACAO_SAIDA_MUSICA_MS);
+  assert.equal(entradas[0].removida, true);
+  saida.targets.progresso = 0.5; saida.onUpdate();
+  assert.equal(som.volume, 0.03);
+  assert.equal(som.coopMusicVolume(), 0.03, "cooperativo publica o volume da saída");
+  som.emit("resume");
+  assert.equal(som.volume, 0.03);
+  saida.targets.progresso = 1; saida.onComplete();
+  assert.equal(som.volume, 0);
+  scene.events.emit("shutdown");
+  assert.equal(som.destruido, true);
+});
+
+test("apresentação silencia a fábrica antes de tocar o boss e cancelamento restaura a entrada", () => {
+  const { scene, sons, entradas } = fixture();
+  iniciarMusicaFabrica(scene);
+  sons[0].volume = 0.06;
+  const boss = prepararMusicaNovoBoss(scene, {});
+  boss.atualizar(0);
+  boss.atualizar(0.175);
+  assert.equal(sons[0].volume, 0.03);
+  assert.equal(sons.length, 1, "boss aguarda a saída da fábrica");
+  boss.atualizar(0.35);
+  assert.equal(sons[0].volume, 0);
+  assert.equal(sons.length, 2);
+  boss.parar();
+  assert.equal(entradas.at(-1).volume, 0.06);
+  assert.equal(entradas.at(-1).removida, undefined);
+  boss.destruir();
+  scene.events.emit("shutdown");
 });
 
 test("morte individual no cooperativo não interrompe a trilha compartilhada", () => {

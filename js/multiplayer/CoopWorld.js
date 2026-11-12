@@ -1,4 +1,5 @@
 import { planejarEntradaBoss } from "./CoopBossEntrance.js";
+import { desvanecerMusicaAmbiente, DURACAO_SAIDA_MUSICA_MS } from "../sounds/musicaAmbiente.js";
 import { tocarSomColocando } from "../sounds/colocando.js";
 import { COOP, mergeCoopProgress } from "./CoopProtocol.js";
 import { localizarTelasSupercomputador } from "../enemies/novoBoss/NovoBossSupercomputador.js";
@@ -228,7 +229,8 @@ export class CoopWorld {
         portaAberta: data.key === "Level1", transicao: true });
     });
     s.cameras.main.fadeEffect?.reset();
-    s.cameras.main.fadeOut(250, 0, 0, 0);
+    desvanecerMusicaAmbiente(s);
+    s.cameras.main.fadeOut(DURACAO_SAIDA_MUSICA_MS, 0, 0, 0);
   }
   iniciarIntroducaoBoss(encontro, origem) {
     if (!this.r.host) return false;

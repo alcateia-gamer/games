@@ -18,7 +18,9 @@ export function iniciarMusicaFabrica(scene) {
     if ((scene.morteEmAndamento && !scene.coopRuntime) || boss?.isPlaying || boss?.isPaused) {
       musica?.destruir(); musica = null;
     } else if (!musica) {
-      musica = iniciarMusicaAmbiente(scene, { chave: CHAVE, volumeMaximo: 0.06 });
+      // Frases correspondentes, 32 compassos a 180 BPM; evita o fade final (~175 s).
+      musica = iniciarMusicaAmbiente(scene, { chave: CHAVE, volumeMaximo: 0.06,
+        trechoLoop: { nome: "fabrica-continua", inicio: 64 / 3, fim: 64 } });
     }
   };
   const controle = {

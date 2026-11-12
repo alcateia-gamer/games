@@ -34,7 +34,7 @@ export function criarSomCargaEscudoBoss(scene) {
       if (!scene.cache?.audio?.exists(CHAVE) || !scene.sound?.add) return;
       som ??= scene.sound.add(CHAVE, { volume: 0, loop: true });
       if (!tocando) tocando = !!som.play({ volume: 0, loop: true, rate: 1, detune: 0, seek: 0 });
-      const volume = 0.25 * forca;
+      const volume = 0.375 * forca;
       if (tocando && volume !== ultimoVolume) {
         ajustarVolumeSuave(som, volume);
         ultimoVolume = volume;
@@ -60,7 +60,7 @@ export function criarSomRaioEscotilhaBoss(scene, ponto) {
   function distribuir() {
     let total = 0;
     for (const item of grupo) total += item.volume;
-    const fator = total > 0.22 ? 0.22 / total : 1;
+    const fator = total > 0.33 ? 0.33 / total : 1;
     for (const item of grupo) item.aplicar(item.volume * fator);
   }
   function parar() {
@@ -97,7 +97,7 @@ export function criarSomRaioEscotilhaBoss(scene, ponto) {
       }
       if (!tocando) return;
       som.setPan(pan);
-      fonte.volume = 0.18 * forca * (1 - distancia / 650) ** 2;
+      fonte.volume = 0.27 * forca * (1 - distancia / 650) ** 2;
       grupo.add(fonte);
       distribuir();
     },

@@ -17,18 +17,18 @@ function criarCena() {
   return { scene, sons };
 }
 
-test("o feixe de carga chega a 25%, acompanha sua força e reutiliza um loop nas recargas", () => {
+test("o feixe de carga chega a 37,5%, acompanha sua força e reutiliza um loop nas recargas", () => {
   const { scene, sons } = criarCena();
   const controle = criarSomCargaEscudoBoss(scene);
   controle.atualizar(0);
   assert.equal(sons.length, 0);
   for (let ciclo = 0; ciclo < 4; ciclo++) {
     controle.atualizar(0.2);
-    assert.equal(sons[0].volume, 0.05);
+    assert.equal(sons[0].volume, 0.375 * 0.2);
     controle.atualizar(0.5);
-    assert.equal(sons[0].volume, 0.125);
+    assert.equal(sons[0].volume, 0.375 * 0.5);
     controle.atualizar(1);
-    assert.equal(sons[0].volume, 0.25);
+    assert.equal(sons[0].volume, 0.375);
     assert.equal(sons[0].reproducoes.length, ciclo + 1);
     controle.atualizar(0);
     assert.equal(sons[0].tocando, false);
@@ -51,9 +51,9 @@ test("pulsa a gravação contínua pela intensidade visual sem reiniciar em cada
   controle.atualizar(0);
   assert.equal(sons.length, 0);
   controle.atualizar(0.361);
-  assert.equal(sons[0].volume, 0.18 * 0.361);
+  assert.equal(sons[0].volume, 0.27 * 0.361);
   controle.atualizar(1);
-  assert.equal(sons[0].volume, 0.18);
+  assert.equal(sons[0].volume, 0.27);
   controle.atualizar(0);
   assert.equal(sons[0].volume, 0, "quadros sem raio silenciam o loop");
   controle.atualizar(0.78);
@@ -72,7 +72,7 @@ test("reduz volume com distância e limita as quatro vozes, mantendo fases difer
   const { scene, sons } = criarCena();
   const controles = [1, 2, 3, 4].map(id => criarSomRaioEscotilhaBoss(scene, { id, x: 0, y: 0 }));
   controles.forEach(controle => controle.atualizar(1));
-  assert.ok(Math.abs(sons.reduce((total, som) => total + som.volume, 0) - 0.22) < 1e-9);
+  assert.ok(Math.abs(sons.reduce((total, som) => total + som.volume, 0) - 0.33) < 1e-9);
   assert.equal(new Set(sons.map(som => som.reproducoes[0].seek)).size, 4);
   scene.player.x = 500;
   controles.forEach(controle => controle.atualizar(1));
@@ -90,7 +90,7 @@ test("a câmera da cutscene permite ouvir de perto a torre apresentada", () => {
   scene.cameras = { main: { midPoint: { x: 0, y: 0 } } };
   const controle = criarSomRaioEscotilhaBoss(scene, { x: 0, y: 0 });
   controle.atualizar(1);
-  assert.equal(sons[0].volume, 0.18);
+  assert.equal(sons[0].volume, 0.27);
   scene.cenaEntradaBossAtiva = false;
   controle.atualizar(1);
   assert.equal(sons[0].tocando, false);
