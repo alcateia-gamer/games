@@ -1,0 +1,102 @@
+{
+  "originais_sha256": {
+    "assets/efeitos/cutscene.mp4": "62d1c02d189d1d8b14a72ab10b764d38da9e6937d785c2f154e23075091612d5",
+    "assets/efeitos/televisao-horror.gif": "6d2dc65c9fbb2aee23d48db5a9fe309980399e14d30164562f94514f8c6eba0d",
+    "assets/efeitos/televisao.gif": "88751ca1bac9b4c39aea2b047784ffa8a3e7f892887c3a017452d5cd9dddea19"
+  },
+  "gif": {
+    "resolucao": [
+      300,
+      264
+    ],
+    "quadros": 54,
+    "duracoes_ms": [
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80
+    ],
+    "loop_ms": 4320
+  },
+  "tela_gif": "Retângulos por quadro em televisao-horror-quadros.json; imagem central e escrita ocultadas na composição.",
+  "video": {
+    "original_bytes": 32279799,
+    "derivado_bytes": 12708869,
+    "resolucao_derivada": [
+      960,
+      720
+    ],
+    "faststart": true,
+    "ajuste": "contain; apenas o ruído verde/vermelho vertical recebe recorte proporcional 4:3",
+    "ruido_verde": {
+      "primeiro_quadro": 424,
+      "ultimo_quadro": 441,
+      "recorte_xywh": [
+        378,
+        285,
+        680,
+        510
+      ]
+    },
+    "ruido_vermelho": {
+      "primeiro_quadro": 499,
+      "ultimo_quadro": 521,
+      "recorte_xywh": [
+        306,
+        228,
+        832,
+        624
+      ]
+    }
+  }
+}

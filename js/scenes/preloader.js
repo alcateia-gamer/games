@@ -1,7 +1,7 @@
 import { carregarQuedasCoop } from "../multiplayer/CoopRevival.js";
+import { CutsceneLoading } from "../ui/CutsceneLoading.js";
 /**
- * @file Cena que carrega mapas, personagens, sons, interface e tilesets. Mostra progresso e
- * entra na fase quando os recursos estão prontos.
+ * @file Carrega mapas, personagens, sons, interface e tilesets durante a introdução.
  */
 
 import { carregarSomPropulsaoRoboBola } from "../sounds/propulsaoRoboBola.js";
@@ -47,51 +47,20 @@ class Preloader extends Phaser.Scene {
   // =====================================================
 
   /**
-   * Cria a interface de progresso, conecta a conclusão e inicia a fila de recursos do jogo.
+   * A fila carrega em paralelo à introdução, sem barra ou porcentagem na tela.
    */
   iniciarCarregamento() {
     this.carregandoAtivos = true;
 
-    this.add
-      .rectangle(400, 305, 440, 115, 0x000000, 1)
-      .setStrokeStyle(2, 0x00ff66, 0.8);
-
-    this.textoStatus = this.add.text(
-      200,
-      280,
-      "CARREGANDO ASSETS...",
-      {
-        fontFamily: "monospace",
-        fontSize: "13px",
-        color: "#00ff66",
-      }
-    );
-
-    this.add
-      .rectangle(400, 315, 404, 26, 0x000000, 1)
-      .setStrokeStyle(2, 0x00ff66, 1);
-
-    this.barra = this.add
-      .rectangle(204, 315, 0, 12, 0x00ff66)
-      .setOrigin(0, 0.5);
-
-    this.porcentagem = this.add
-      .text(600, 342, "0%", {
-        fontFamily: "monospace",
-        fontSize: "14px",
-        color: "#42ff84",
-      })
-      .setOrigin(1, 0.5);
-
-    this.load.on("progress", (progress) => {
-      this.barra.width = 392 * progress;
-
-      this.porcentagem.setText(
-        Math.floor(progress * 100) + "%"
-      );
-    });
-
     this.load.once("complete", () => {
+      if (this.falhasCarregamento.length) {
+        this.cutscene.showLoadError("Não foi possível carregar todos os recursos.", () => {
+          this.cutscene.clearMessage();
+          this.cutscene.release();
+          this.scene.restart({ ...this.scene.settings.data, cutscene: this.cutscene });
+        });
+        return;
+      }
       // Também disponível no cliente cooperativo que só recebe o feixe do host.
       prepararTexturaLaserOlhao(this);
       this.prepararRenderizacaoPersonagens();
@@ -138,15 +107,10 @@ class Preloader extends Phaser.Scene {
   // =====================================================
 
   /**
-   * Mostra a confirmação de carregamento e entra em Level1 com personagem e modo de rede
-   * selecionados.
+   * Entra em Level1 após a introdução e o loader, preservando personagem e modo de rede.
    */
   finalizarCarregamento() {
-    this.barra.width = 392;
-    this.porcentagem.setText("100%");
-    this.textoStatus.setText("INCURSÃO PRONTA");
-
-    this.time.delayedCall(1500, () => {
+    this.cutscene.setAssetsReady(() => {
       this.game.musicaMenu?.stop();
       this.game.musicaMenu?.destroy();
       this.game.musicaMenu = null;
@@ -778,6 +742,7 @@ class Preloader extends Phaser.Scene {
     // =====================================================
 
     this.load.on("loaderror", (file) => {
+      this.falhasCarregamento.push(file.key);
       console.error(
         "ERRO AO CARREGAR:",
         file.key,
@@ -802,6 +767,11 @@ class Preloader extends Phaser.Scene {
 
     this.multiplayer =
       this.scene.settings.data?.multiplayer === true;
+
+    this.falhasCarregamento = [];
+    const anterior = this.scene.settings.data?.cutscene;
+    this.cutscene = anterior && !anterior.destroyed ? anterior : new CutsceneLoading(this.game);
+    this.cutscene.attach(this);
 
     this.iniciarCarregamento();
   }

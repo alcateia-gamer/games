@@ -145,3 +145,109 @@ body {
 .upgrade-regions button::before { content:""; display:inline-block; width:10px; border-top:1px solid #55ffad; margin-right:4px; vertical-align:middle; }
 /* Mesmo componente do meio da última linha usado no contador do mapa. */
 .upgrade-balance::before { content:""; display:inline-block; width:32px; height:28px; margin-right:8px; vertical-align:middle; background:url("assets/COLETAVEIS/sucatas.png") -192px -358.51px / 416.54px 425.22px no-repeat; image-rendering:auto; }
+
+/* A TV mantém a proporção do GIF; o vídeo é limitado à janela interna medida. */
+.cutscene-loading {
+  position: fixed;
+  inset: 0;
+  z-index: 1000000;
+  overflow: hidden;
+  background: #0a0a0a;
+  isolation: isolate;
+  opacity: 1;
+  transition: opacity 350ms ease;
+  color: #f4efd7;
+  font-family: monospace;
+  touch-action: manipulation;
+}
+
+.cutscene-loading.cutscene-leaving { opacity: 0; pointer-events: none; }
+.cutscene-backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: blur(24px) brightness(0.5);
+  /* O desfoque escuro não pode escurecer o preto #0a0a0a do GIF nas laterais. */
+  mix-blend-mode: lighten;
+  transform: scale(1.1);
+  pointer-events: none;
+  transition: opacity var(--cutscene-power-off-duration) ease;
+}
+.cutscene-television { position: absolute; }
+.cutscene-television-art {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.cutscene-television-screen {
+  position: absolute;
+  overflow: hidden;
+  background: #000;
+  /* Raio de ~4 px na arte original, sem expor a estática nas outras bordas. */
+  border-radius: 0 0 1.4% 0 / 0 0 2% 0;
+}
+.cutscene-television-screen video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  border-radius: 1.4% / 2%;
+}
+.cutscene-television-screen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background: #e6f7ff;
+  pointer-events: none;
+}
+.cutscene-powering-off .cutscene-television-screen video {
+  animation: cutscene-crt-off var(--cutscene-power-off-duration) ease-in forwards;
+}
+.cutscene-powering-off .cutscene-television-screen::after {
+  animation: cutscene-crt-flash var(--cutscene-power-off-duration) ease-in forwards;
+}
+.cutscene-powering-off .cutscene-television-art {
+  animation: cutscene-tv-darken var(--cutscene-power-off-duration) ease-out forwards;
+}
+.cutscene-powered-off .cutscene-television-art { filter: brightness(0.22); }
+.cutscene-powering-off .cutscene-backdrop,
+.cutscene-powered-off .cutscene-backdrop { opacity: 0.08; }
+@keyframes cutscene-crt-off {
+  0% { transform: scale(1); filter: brightness(1); }
+  45% { transform: scale(1, 0.015); filter: brightness(3); }
+  75% { transform: scale(0.12, 0.008); opacity: 1; }
+  100% { transform: scale(0); opacity: 0; }
+}
+@keyframes cutscene-crt-flash {
+  0%, 25% { opacity: 0; transform: scale(1, 0.025); }
+  45% { opacity: 0.95; transform: scale(1, 0.015); }
+  75% { opacity: 1; transform: scale(0.12, 0.008); }
+  100% { opacity: 0; transform: scale(0); }
+}
+@keyframes cutscene-tv-darken {
+  from { filter: brightness(1); }
+  to { filter: brightness(0.22); }
+}
+.cutscene-loading [hidden] { display: none; }
+.cutscene-skip, .cutscene-action {
+  position: absolute;
+  padding: 10px 14px;
+  border: 1px solid #aaa58f;
+  border-radius: 3px;
+  background: #090909e8;
+  color: #f4efd7;
+  font: 13px monospace;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.cutscene-skip { right: max(18px, env(safe-area-inset-right)); bottom: max(18px, env(safe-area-inset-bottom)); }
+.cutscene-message { position: absolute; left: 5%; right: 5%; top: 76%; margin: 0; text-align: center; font-size: 14px; }
+.cutscene-action { left: 50%; top: 84%; transform: translateX(-50%); }
+.cutscene-skip:hover, .cutscene-action:hover, .cutscene-skip:focus-visible, .cutscene-action:focus-visible {
+  outline: 2px solid #f4efd7;
+  outline-offset: 3px;
+}

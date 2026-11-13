@@ -1,11 +1,13 @@
 import { ECONOMY_KEY } from '../systems/UpgradeSystem.js';
-/** Carrega o código das fases somente depois de iniciar uma partida. */
+import { CutsceneLoading } from "../ui/CutsceneLoading.js";
+
+/** A introdução começa junto com a importação e permanece durante a fila de assets. */
 export default class BootPartida extends Phaser.Scene {
   constructor() {
     super("BootPartida");
   }
 
-  create(data) {
+  create(data = {}) {
     this.registry.remove(ECONOMY_KEY);
     const manager = this.registry.get("multiplayer");
     if (manager?.room) delete manager.room.upgradeEconomy;
@@ -13,9 +15,8 @@ export default class BootPartida extends Phaser.Scene {
     this.registry.set("tanqueCombustivelUsado", false);
     this.registry.set("fabricaVisitada", false);
     this.cameras.main.setBackgroundColor("#000000");
-    const status = this.add.text(400, 225, "PREPARANDO INCURSÃO...", {
-      fontFamily: "monospace", fontSize: "16px", color: "#75ff9a",
-    }).setOrigin(0.5);
+    const cutscene = new CutsceneLoading(this.game);
+    cutscene.attach(this);
     const carregar = async () => {
       try {
         const [preloader, cidade, fabrica] = await Promise.all([
@@ -25,15 +26,13 @@ export default class BootPartida extends Phaser.Scene {
         for (const [key, Scene] of [["preloader", preloader.default], ["Level1", cidade.default], ["Level1Parte2", fabrica.default]]) {
           if (!this.game.scene.keys[key]) this.game.scene.add(key, Scene);
         }
-        this.scene.start("preloader", data);
+        cutscene.clearMessage();
+        cutscene.release();
+        this.scene.start("preloader", { ...data, cutscene });
       } catch (error) {
         if (!this.scene.isActive()) return;
         console.error("Erro ao preparar a partida:", error);
-        status.setText("FALHA AO CARREGAR. TOQUE PARA TENTAR NOVAMENTE.")
-          .setFontSize(12).setInteractive().once("pointerdown", () => {
-            status.setText("PREPARANDO INCURSÃO...");
-            void carregar();
-          });
+        cutscene.showLoadError("Não foi possível preparar a partida.", () => { void carregar(); });
       }
     };
     void carregar();
