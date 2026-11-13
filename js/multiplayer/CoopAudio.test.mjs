@@ -80,7 +80,7 @@ for (const key of ["magnus-martelo-impacto", "running", "aria-tensar-arco", "ari
     for (const peer of peers) assert.equal(plays(peer, key), 1);
   });
 }
-for (const key of ["kai-especial", "magnus-especial", "tiro-laser", "robo-explodindo", "robot-walk", "walk-robo-serra", "robo-serra-ataque",
+for (const key of ["aria-especial", "aria-clone-passos", "kai-especial", "magnus-especial", "tiro-laser", "robo-explodindo", "robot-walk", "walk-robo-serra", "robo-serra-ataque",
   "boss-escotilha", "boss-impacto-escotilha", "boss-explosao-escotilha", "boss-raio-escotilha", "boss-escudo-quebrado"]) {
   test(`${key}: som do mundo chega uma única vez aos quatro jogadores`, t => {
     const { peers } = setup(t);
@@ -313,4 +313,50 @@ test("especial Kai: áudio a 20% parte do jogador remoto que abriu a barreira", 
   const evento = messages.find(m => m.kind === "audio").payload.sounds[0];
   assert.equal(evento.x, 0, "fonte é o Kai remoto, não o host distante");
   assert.equal(evento.y, 0);
+});
+
+
+test("clone Aria: passos replicados seguem o clone e diminuem ao se afastar de cada jogador", async t => {
+  const { iniciarSomCloneAria } = await import("../sounds/ariaEspecial.js");
+  const { peers, clock } = setup(t);
+  const host = peers[0]; host.scene.time = { now: 0 };
+  host.scene.player.x = 2000;
+  const clone = Object.assign(new EventEmitter(), { active: true, x: 0, y: 0 });
+  const limpar = iniciarSomCloneAria(host.scene, clone);
+  for (const peer of peers) assert.equal(plays(peer, "aria-especial"), 1);
+  assert.equal(peers[1].sounds.find(s => s.key === "aria-especial").volume, 0.5);
+  const avancar = (x, ms) => {
+    clone.x = x; host.scene.time.now = ms; clock.now += 150;
+    host.scene.events.emit("postupdate"); host.audio.update();
+  };
+  avancar(30, 200);
+  for (const peer of peers) assert.equal(plays(peer, "aria-clone-passos"), 1);
+  const passos = peers[1].sounds.find(s => s.key === "aria-clone-passos");
+  const perto = passos.volume;
+  assert.equal(perto, 0.65, "clone começa audível no multiplayer");
+  avancar(200, 250); assert.equal(passos.volume, perto);
+  avancar(300, 350); assert.ok(passos.volume < perto);
+  avancar(900, 500); assert.equal(passos.volume, 0);
+  clone.parado = true; avancar(900, 650);
+  assert.equal(passos.isPlaying, false);
+  limpar();
+  assert.equal(host.scene.events.listenerCount("postupdate"), 0);
+});
+
+test("troca da Aria replica o áudio inteiro acelerado, sem eco, em todos os jogadores", async t => {
+  const { tocarSomTrocaAria } = await import("../sounds/ariaEspecial.js");
+  const { peers, messages } = setup(t);
+  tocarSomTrocaAria(peers[0].scene, { x: 0, y: 0 });
+  for (const peer of peers) {
+    assert.equal(plays(peer, "aria-especial"), 1);
+    const som = peer.sounds.at(-1);
+    assert.equal(som.currentMarker, null, "usa o arquivo inteiro, sem recorte");
+    assert.equal(som.rate, 2);
+    assert.equal(som.volume, 0.5);
+    assert.equal(som.loop, false);
+  }
+  const evento = messages.find(m => m.kind === "audio").payload.sounds[0];
+  assert.equal(evento.duration, peers[0].sounds.at(-1).totalDuration);
+  assert.equal(evento.rate, 2);
+  assert.equal(evento.position, 0);
 });

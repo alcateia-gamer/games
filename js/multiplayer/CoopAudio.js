@@ -7,6 +7,7 @@ const EXCLUDED = new Set([
 const WORLD = new Set(["tiro-laser", "robo-explodindo", "robot-walk", "walk-robo-serra",
   "magnus-especial",
   "kai-especial",
+  "aria-especial", "aria-clone-passos",
   "robo-serra-ataque", "boss-escotilha", "boss-impacto-escotilha", "boss-explosao-escotilha",
   "boss-raio-escotilha", "boss-escudo-quebrado"]);
 const PLAYER = new Set(["running", "dash-personagem", "aria-tensar-arco", "aria-soltar-flecha", "dano-soft",
@@ -187,6 +188,10 @@ export class CoopAudio {
       this.scene.player?.body?.center || this.scene.player;
     const profile = state.profile ?? {}, distance = Math.hypot(state.x - (listener?.x ?? state.x), state.y - (listener?.y ?? state.y));
     const range = Number.isFinite(profile.range) ? clamp(profile.range, 1, 3000) : 800;
+    if (profile.curve === "nearfield") {
+      const near = clamp(profile.near ?? 0, 0, range - 1);
+      return Math.max(0, 1 - Math.max(0, distance - near) / (range - near)) ** 2;
+    }
     if (profile.curve === "rational") return 1 / (1 + (distance / range) ** 2);
     if (profile.curve === "hatch") return Math.max(0, 1 - distance / 1400) / (1 + (distance / 340) ** 2);
     return Math.max(0, 1 - distance / range) ** 2;

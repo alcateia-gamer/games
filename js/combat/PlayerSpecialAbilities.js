@@ -8,6 +8,7 @@ import { causarDanoInimigo } from "../enemies/EnemyHealth.js";
 import { jogadorPresoNovoBoss } from "../player/PlayerControlEffects.js";
 import { tocarSomEspecialMagnus } from "../sounds/magnusEspecial.js";
 import { tocarSomEspecialKai } from "../sounds/kaiEspecial.js";
+import { iniciarSomCloneAria, tocarSomTrocaAria } from "../sounds/ariaEspecial.js";
 import { criarColisaoDomoKai } from './KaiDomeCollision.js';
 import { NYX_AURA, prepararAuraNyx, iniciarAuraNyx, atualizarAuraNyx, limparAuraNyx } from './NyxHealingAura.js';
 import { criarEfeitoEspecial, atualizarEfeitoEspecial, deslocamentoChao, iniciarAnimacaoMarreta, desenharDomoKai } from './SpecialAbilityEffects.js';
@@ -495,6 +496,7 @@ function destruirHolograma(scene, estado, emitirPulso = true) {
   }
 
   estado.holograma = null;
+  holo.pararSomEspecialAria?.();
 
   scene.tweens.killTweensOf(holo);
 
@@ -585,6 +587,7 @@ function invocarHolograma(scene, estado, agora) {
   holo.parado = false;
 
   estado.holograma = holo;
+  holo.pararSomEspecialAria = iniciarSomCloneAria(scene, holo);
 
   // Oscilação visual holográfica.
   scene.tweens.add({
@@ -696,6 +699,7 @@ function trocarComHolograma(scene, estado) {
 
   // A cópia é consumida pela troca.
   destruirHolograma(scene, estado, false);
+  tocarSomTrocaAria(scene, destino);
 
   return true;
 }

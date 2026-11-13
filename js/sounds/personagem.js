@@ -120,4 +120,4 @@ function atualizarSomCorrida(scene, estaSeMovendo) {
   }
 }
 
-export { carregarSonsPersonagem, configurarSomCorrida, atualizarSomCorrida, tocarSomDash };
+export { carregarSonsPersonagem, configurarSomCorrida, atualizarSomCorrida, tocarSomDash, encontrarInicioPasso };

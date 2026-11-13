@@ -12,6 +12,7 @@ import { carregarSonsKatana } from "../sounds/katana.js";
 import { carregarSonsPersonagem } from "../sounds/personagem.js";
 import { carregarSomEspecialMagnus } from "../sounds/magnusEspecial.js";
 import { carregarSomEspecialKai } from "../sounds/kaiEspecial.js";
+import { carregarSomEspecialAria } from "../sounds/ariaEspecial.js";
 import { carregarSomAuraNyx } from "../sounds/SOUNDS_PERSONAGENS.js/sounds_Nyx,.js";
 import { carregarSomGerador } from "../sounds/gerador.js";
 import { carregarSomLuzFabrica } from "../sounds/luzFabrica.js";
@@ -175,6 +176,7 @@ class Preloader extends Phaser.Scene {
     carregarSonsPersonagem(this.load);
     carregarSomEspecialMagnus(this.load);
     carregarSomEspecialKai(this.load);
+    carregarSomEspecialAria(this.load);
     carregarSonsKatana(this.load);
     carregarSonsInimigos(this.load);
     carregarSomPropulsaoRoboBola(this.load);

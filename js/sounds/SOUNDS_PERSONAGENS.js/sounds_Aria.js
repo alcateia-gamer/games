@@ -49,7 +49,7 @@ const VELOCIDADE_TENSAO = 1.25;
 
 // VOLUMES
 const VOLUME_TENSAO = 0.65;
-const VOLUME_DISPARO = 0.8;
+const VOLUME_DISPARO = 0.4;
 
 // =====================================================
 // PARAR SOM DE TENSÃO
