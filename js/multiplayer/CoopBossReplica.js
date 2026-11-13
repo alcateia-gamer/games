@@ -4,6 +4,7 @@ import { criarColisaoBarreiraNovoBoss } from "../enemies/novoBoss/NovoBossBarrei
 import { jogadorNaArenaNovoBoss, configurarZonasNovoBoss, novoBossConfig } from "../enemies/novoBoss/NovoBossConfig.js";
 import { invalidarCacheNavegacao } from "../enemies/EnemyPathfinding.js";
 import BossIntroLighting from "../effects/BossIntroLighting.js";
+import { criarColisaoCorpoDerrotado, destruirColisaoCorpoDerrotado } from "../enemies/novoBoss/NovoBossCorpoDerrotado.js";
 
 const box = rect => rect && { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
 export function describeCombatTarget(target, id, sender) {
@@ -13,7 +14,8 @@ export function describeCombatTarget(target, id, sender) {
     origemSpawn: target.origemSpawn,
     morto: !!target.morto, torre: !!target.torre, tipoRobo: target.tipoRobo,
     direcaoAtual: target.direcaoAtual, estado: target.estado,
-    spawnAreaRoboBolaId: target.spawnAreaRoboBolaId, prologoPortal: target.prologoPortal };
+    spawnAreaRoboBolaId: target.spawnAreaRoboBolaId, prologoPortal: target.prologoPortal,
+    portalBossOrigem: target.portalBossOrigem };
 }
 
 export function describeBoss(scene, sender) {
@@ -93,6 +95,7 @@ export class BossReplica {
     e.sistemaGeradores = { cargaEscudo: data.shieldCharge,
       corpoBarreira: { enable: data.shield?.enabled } };
     e.x = e.sprite?.x; e.y = e.sprite?.y;
+    if (e.morto) criarColisaoCorpoDerrotado(s, e);
     let changed = false;
     const collisions = new Map(s.collisionGroup?.getChildren().map(o => [o.tiledCollisionId, o.body]));
     for (const g of data.geradores) for (const state of g.colisoes || []) {
@@ -123,6 +126,7 @@ export class BossReplica {
   destroy() {
     this.shieldCollision?.destruir(); this.shield?.destroy(); this.camera?.destruir();
     if (this.encounter) {
+      destruirColisaoCorpoDerrotado(this.scene, this.encounter);
       this.encounter.encerrado = true;
       destruirHudNovoBoss(this.encounter);
       if (this.scene.novoBoss === this.encounter) this.scene.novoBoss = null;

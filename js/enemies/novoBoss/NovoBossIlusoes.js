@@ -100,6 +100,7 @@ export function criarAlvoIlusorio(scene, encontro, ponto, id, tipo = "ilusao") {
         grafico?.setVisible(false);
         return;
       }
+      if (!visual.efeitosGeometricosLegados) return;
       if (!grafico && scene.add.graphics) {
         grafico = scene.add.graphics().setName(`novo-boss-imitacao-${id}`).setDepth(51);
       }

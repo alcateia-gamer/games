@@ -40,6 +40,11 @@ function configurar(config) {
 /** Sem dependência de timers, física própria ou eventos globais da cena. */
 export function criarChuvaRaios(scene, encontro, config = {}, servicos = {}) {
   const opcoes = configurar(config);
+  const emAneis = opcoes.padrao === "aneis";
+  if (emAneis) {
+    opcoes.mirarJogador = false;
+    if (Number.isFinite(opcoes.danoAneis)) opcoes.dano = Math.min(opcoes.dano, Math.max(0, opcoes.danoAneis));
+  }
   const arena = encontro.config?.arena ?? {
     xMin: encontro.x - 450, xMax: encontro.x + 450,
     yMin: encontro.y - 300, yMax: encontro.y + 300,
@@ -69,12 +74,12 @@ export function criarChuvaRaios(scene, encontro, config = {}, servicos = {}) {
   });
   const player = scene.player;
   const alvoInicial = limitar(player?.x ?? encontro.x, player?.y ?? encontro.y);
-  if (!opcoes.mirarJogador && livre(alvoInicial)) pontos.push(alvoInicial);
+  if (!emAneis && !opcoes.mirarJogador && livre(alvoInicial)) pontos.push(alvoInicial);
 
   // Não sobrepõe regiões enquanto seus avisos/perigos coexistirem. Uma região
   // já encerrada pode voltar à sequência, sempre com um novo aviso completo.
   // Busca por emissão para que até um RNG constante consiga reutilizar o mapa.
-  while (!opcoes.mirarJogador && pontos.length < opcoes.quantidade) {
+  while (!emAneis && !opcoes.mirarJogador && pontos.length < opcoes.quantidade) {
     let escolhido = null;
     for (let tentativa = 0; tentativa < 24 && !escolhido; tentativa++) {
       const ponto = {
@@ -98,12 +103,35 @@ export function criarChuvaRaios(scene, encontro, config = {}, servicos = {}) {
 
   let tempo = 0;
   let destruida = false;
+  if (emAneis && servicos.obterMarcasChuva) {
+    // Como na perseguição, os falsos anunciam o mesmo campo da verdadeira.
+    // Evita multiplicar a área visual por dez e encobrir toda a arena.
+    pontos.push(...servicos.obterMarcasChuva());
+  } else if (emAneis) {
+    const centro = { x: encontro.x, y: encontro.y };
+    const alcance = Math.max(...[[arena.xMin, arena.yMin], [arena.xMin, arena.yMax],
+      [arena.xMax, arena.yMin], [arena.xMax, arena.yMax]]
+      .map(([x, y]) => Math.hypot(x - centro.x, y - centro.y)));
+    let anel = 0;
+    // Frente contínua: círculos vizinhos se tocam e cada novo anel avança do centro.
+    for (let distancia = raio * 1.25; distancia <= alcance + raio; distancia += raio * 1.5, anel++) {
+      const quantidade = Math.min(24, Math.max(6, Math.ceil(Math.PI * 2 * distancia / (raio * 1.7))));
+      for (let indice = 0; indice < quantidade; indice++) {
+        const angulo = indice / quantidade * Math.PI * 2;
+        const x = centro.x + Math.cos(angulo) * distancia;
+        const y = centro.y + Math.sin(angulo) * distancia;
+        if (x < limites.xMin || x > limites.xMax || y < limites.yMin || y > limites.yMax ||
+            (servicos.pontoLivre && !servicos.pontoLivre(x, y, raio * 0.35))) continue;
+        pontos.push({ x, y, anel, inicio: anel * (opcoes.intervaloAnelMs ?? 320) });
+      }
+    }
+  }
   const alvos = opcoes.mirarJogador
     ? Array.from({ length: opcoes.quantidade }, () => ({ x: null, y: null })) : pontos;
   const marcas = alvos.map((ponto, indice) => ({
     ...ponto,
     indice,
-    inicio: indice * opcoes.intervaloMs,
+    inicio: ponto.inicio ?? indice * opcoes.intervaloMs,
     aviso: null, visual: null, iniciou: false, impactoAvaliado: false, atingiu: false, concluida: false,
   }));
   const duracaoEfeito = Math.max(
@@ -204,7 +232,10 @@ export function criarChuvaRaios(scene, encontro, config = {}, servicos = {}) {
     marca.aviso?.atualizar(Math.min(1, local / ateImpacto));
     if (local >= opcoes.avisoMs) {
       criarVisual(marca);
-      const frame = Math.min(opcoes.ultimoFrame, Math.floor((local - opcoes.avisoMs) / opcoes.frameMs));
+      let frame = Math.min(opcoes.ultimoFrame, Math.floor((local - opcoes.avisoMs) / opcoes.frameMs));
+      // A esfera branca é um flash de tela na referência. Em anéis simultâneos,
+      // mantém o feixe anterior para conservar a leitura do chão e dos avisos.
+      if (emAneis && frame === 3) frame = 2;
       if (marca.visual?.tipo === "sprite") marca.visual.objeto.setFrame(frame);
       if (marca.visual?.tipo === "grafico") {
         const grafico = marca.visual.objeto;
@@ -241,7 +272,11 @@ export function criarChuvaRaios(scene, encontro, config = {}, servicos = {}) {
 
   return {
     tipo: "chuvaRaios",
+    configuracaoVisual: opcoes,
     duracao,
+    obterMarcasChuva() {
+      return marcas.map(({ x, y, inicio, anel }) => ({ x, y, inicio, anel }));
+    },
     // As cópias leem as coordenadas já anunciadas pela verdadeira. O registro
     // continua disponível após o fim, para consumir corretamente frames longos.
     obterAlvoChuva(indice) {
@@ -262,9 +297,9 @@ export function criarChuvaRaios(scene, encontro, config = {}, servicos = {}) {
       for (const marca of marcas) limparMarca(marca);
     },
     snapshot() {
-      return { tipo: "chuvaRaios", tempo, duracao, destruida, raio, escala: opcoes.escala,
+      return { tipo: "chuvaRaios", padrao: emAneis ? "aneis" : "perseguicao", tempo, duracao, destruida, raio, escala: opcoes.escala,
         marcas: marcas.map((marca) => ({
-          x: marca.x, y: marca.y, inicio: marca.inicio,
+          x: marca.x, y: marca.y, inicio: marca.inicio, anel: marca.anel,
           iniciou: marca.iniciou, impactoAvaliado: marca.impactoAvaliado,
           atingiu: marca.atingiu, concluida: marca.concluida,
           impactoEm: marca.inicio + ateImpacto,

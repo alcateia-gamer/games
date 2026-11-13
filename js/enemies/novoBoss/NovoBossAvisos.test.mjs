@@ -20,3 +20,17 @@ test('109 quadros preservam fonte e tempos; aviso acompanha prazo, raio e limpez
   a.atualizar(1);assert.equal(sprite.frame,108);
   a.destruir();a.destruir();assert.ok(sprite.destruido&&grafico.destruido);
 });
+
+test('GIF de área substitui a geometria adicional sem perder aviso ou transparência',()=>{
+  let desenhos=0;
+  const v={};
+  for(const metodo of ['setDepth','setName','clear','destroy','setOrigin','setScale','setTint','setFrame','setAlpha'])v[metodo]=()=>v;
+  for(const metodo of ['fillStyle','fillCircle','lineStyle','strokeCircle'])v[metodo]=()=>{desenhos++;return v;};
+  const a=criarAvisoNovoBoss({textures:{exists:()=>true},add:{graphics:()=>v,sprite:()=>v}},0,0,96);
+  for(const p of [0,.5,1])a.atualizar(p);
+  assert.equal(desenhos,0);
+  a.destruir();
+  const b=criarAvisoNovoBoss({textures:{exists:()=>false},add:{graphics:()=>v}},0,0,96);
+  assert.ok(desenhos>0,'sem o recurso, o aviso de perigo permanece visível');
+  b.destruir();
+});

@@ -1,5 +1,6 @@
 /** Vida e relógio local; apenas a barreira protege contra golpes válidos. */
 import { jogadorNaArenaNovoBoss } from "./NovoBossConfig.js";
+import { criarColisaoCorpoDerrotado } from "./NovoBossCorpoDerrotado.js";
 import {
   areasSobrepostasNovoBoss,
   atualizarTeleporteNovoBoss,
@@ -36,6 +37,7 @@ export function inicializarCombateNovoBoss(scene, encontro) {
   encontro.tempoEstado = 0;
   encontro.tempoSemAproximacao = 0;
   encontro.ultimoTeleporteEm = -Infinity;
+  encontro.ultimoTeleportePontasEm = 0;
   encontro.teleportePendente = null;
   encontro.proximaTentativaTeleporteEm = 0;
   encontro.teleporte = null;
@@ -66,6 +68,7 @@ function derrotar(scene, encontro) {
   encontro.sprite?.anims?.pause?.();
   alterarEstado(scene, encontro, "derrotada");
   scene.events?.emit("novo-boss:derrotada", { encontro });
+  criarColisaoCorpoDerrotado(scene, encontro);
 }
 
 function tentarTeleportePendente(scene, encontro) {
@@ -108,6 +111,14 @@ export function atualizarCombateNovoBoss(scene, encontro, delta = 0) {
   let restante = delta;
   // Processa fronteiras de estado, sem perder o excedente de frames demorados.
   do {
+    const intervaloPontas = encontro.config.teleporte.intervaloPontasMs;
+    if (encontro.estado === "preparando" && !encontro.ataqueAtual && !encontro.teleporte &&
+        !encontro.teleportePendente && !encontro.transicaoFase2Pendente && !encontro.sistemaClones?.ativo &&
+        encontro.geradores?.some(g => g.torre) && Number.isFinite(intervaloPontas) && intervaloPontas > 0 &&
+        encontro.relogioCombate >= encontro.ultimoTeleportePontasEm + intervaloPontas) {
+      encontro.teleportePendente = "pontas-geradores";
+      encontro.proximaTentativaTeleporteEm = encontro.relogioCombate;
+    }
     if (!encontro.teleporte && aproximado(scene, encontro)) {
       encontro.tempoSemAproximacao = 0;
       if (encontro.teleportePendente === "preventivo") encontro.teleportePendente = null;
@@ -151,7 +162,8 @@ export function atualizarCombateNovoBoss(scene, encontro, delta = 0) {
     }
 
     const duracao = encontro.estado === "vulneravel"
-      ? encontro.config.combate.janelaVulneravelMs : encontro.config.combate.preparacaoMs;
+      ? encontro.config.combate.janelaVulneravelMs : Math.max(encontro.config.combate.preparacaoMs,
+        encontro.sistemaClones?.preparacaoMs ?? 0);
     const ateEstado = Math.max(0, duracao - encontro.tempoEstado);
     const perto = aproximado(scene, encontro);
     const abertura = encontro.estado === "vulneravel";
@@ -193,7 +205,10 @@ export function causarDanoNovoBoss(scene, encontro, quantidade, area = null, ata
   if (encontro.prologo?.bloqueiaCombatePrincipal) return encontro.prologo.receberDanoBoss(quantidade, ataque ?? area);
   const anterior = encontro.vida;
   if (encontro.estado === "vulneravel") encontro.acertosNaAbertura = (encontro.acertosNaAbertura ?? 0) + 1;
-  encontro.vida = Math.max(0, encontro.vida - quantidade - (encontro.danoAdiadoPrologo ?? 0));
+  const espiral = encontro.ataqueAtual;
+  const protegidoDisparando = espiral?.tipo === "lasers" && espiral.disparando === true;
+  const fator = protegidoDisparando ? (encontro.config.ataques?.lasersEspiral?.fatorDanoRecebido ?? 0.5) : 1;
+  encontro.vida = Math.max(0, encontro.vida - quantidade * fator - (encontro.danoAdiadoPrologo ?? 0));
   encontro.danoAdiadoPrologo = 0;
   scene.events?.emit("novo-boss:vida", { encontro, anterior, vida: encontro.vida, vidaMaxima: encontro.vidaMaxima });
   if (encontro.vida <= 0) {

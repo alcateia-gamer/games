@@ -74,7 +74,7 @@ function preparar({ ataque = true } = {}) {
   };
   const hitboxDano = { setTo(x, y, width, height) { Object.assign(this, { x, y, width, height }); } };
   const encontro = {
-    config: novoBossConfig, sprite, hitboxDano, estado: "preparando",
+    config: { ...novoBossConfig, visual: { ...novoBossConfig.visual, efeitosGeometricosLegados: true } }, sprite, hitboxDano, estado: "preparando",
     jogadorNaArena: true, vida: 1000, vidaMaxima: 1000,
   };
   const sistema = prepararApresentacaoNovoBoss(scene, encontro);
@@ -540,4 +540,15 @@ test("preparo e limpeza são idempotentes e removem somente recursos e listeners
   assert.equal(graficos[0].destruicoes, 1);
   assert.equal(sistema.snapshot().flashRestante, 0);
   assert.equal(sistema.snapshot().pose, null);
+});
+
+test("produção não desenha geometria antiga ao clonar ou teletransportar", () => {
+  const { scene, encontro, sistema, graficos } = preparar();
+  encontro.config = novoBossConfig;
+  scene.events.emit("novo-boss:fase-alterada", { encontro, fase: 2 });
+  encontro.teleporte = { etapa: "desaparecendo", decorrido: 125,
+    origem: { x: -1080, y: -5810 }, destino: { x: -1400, y: -5810 } };
+  sistema.atualizar(16);
+  assert.equal(sistema.snapshot().graficoVisivel, false);
+  assert.equal(graficos.length, 0);
 });

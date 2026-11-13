@@ -6,6 +6,7 @@ import { criarPortaisNovoBoss, escolherParPortais, pontoSeguroPortal } from "./N
 import { criarPadraoPrologo } from "./NovoBossPadroesPrologo.js";
 import { obterFilhosGrupoSeguro } from "../EnemyPathfinding.js";
 import { criarSomCargaEscudoBoss } from "../../sounds/raioEscotilhaBoss.js";
+import { criarRaiosEscudoNovoBoss } from "./NovoBossRaiosEscudo.js";
 
 export const ESTADOS_PROLOGO = Object.freeze({
   PORTAIS_ABRINDO: "PORTAIS_ABRINDO", ONDA_ROBOS: "ONDA_ROBOS",
@@ -26,10 +27,11 @@ export function prepararPrologoNovoBoss(scene, encontro) {
   const id = `novo-boss-prologo-${++sequenciaEncontro}`;
   let estado = "PORTAIS_ABRINDO", ciclo = 1, revisao = 0, ondaId = null;
   let iniciado = false, suspenso = false, destruido = false, tempo = 0, relogio = 0;
-  let portais = null, parAnterior = [], tentadoEm = -Infinity;
+  let portais = null, tentadoEm = -Infinity;
   let invocados = 0, mortos = 0, proximoSpawn = 0, proximoPortal = 0, anteriorVivos = 0;
   let padrao = null, indicePadrao = 0, proximoPadrao = 0;
   let impactos = 0, ultimoImpacto = -Infinity, geradorDoCiclo = null;
+  let raiosCarga = null, recargaIniciadaEm = null;
   const ataquesContados = new Set(), robos = new Set();
   const grafico = scene.add.graphics().setDepth(52).setName("novo-boss-prologo-energia");
   const somCarga = criarSomCargaEscudoBoss(scene);
@@ -40,9 +42,14 @@ export function prepararPrologoNovoBoss(scene, encontro) {
 
   function mudar(proximo) {
     const anterior = estado;
-    if (anterior === "ESCUDO_RECARREGANDO" && proximo !== anterior) somCarga.parar();
+    if (anterior === "ESCUDO_RECARREGANDO" && proximo !== anterior) {
+      somCarga.parar(); raiosCarga?.destruir(); raiosCarga = null;
+    }
     estado = proximo;
     tempo = 0;
+    if (proximo === "ESCUDO_RECARREGANDO") {
+      recargaIniciadaEm = sobreviventes().every(g => g.estadoGerador === "exposto") ? 0 : null;
+    }
     encontro.estado = "prologo";
     scene.events.emit("novo-boss:prologo-estado", { encontro, anterior, estado, ciclo });
   }
@@ -97,10 +104,9 @@ export function prepararPrologoNovoBoss(scene, encontro) {
     if (portais || relogio < tentadoEm + 500) return;
     if (sobreviventes().some(g => g.estadoGerador !== "subterraneo")) return;
     tentadoEm = relogio;
-    const par = escolherParPortais(scene, encontro, parAnterior);
+    const par = escolherParPortais(scene, encontro);
     if (!par) { encontro.pendencia = "prologo-portais-aguardando-espaco"; return; }
     portais = criarPortaisNovoBoss(scene, par);
-    parAnterior = par;
     encontro.pendencia = null;
     tempo = 0;
   }
@@ -115,6 +121,7 @@ export function prepararPrologoNovoBoss(scene, encontro) {
     robo.prologoEncontroId = id;
     robo.prologoOndaId = ondaId;
     robo.prologoPortal = proximoPortal % 2;
+    robo.portalBossOrigem = { x: portal.x, y: portal.y, depth: portal.sprite.depth + 0.1, raio: 72 };
     robo.prologoProtegidoAte = scene.time.now + config.protecaoSpawnMs;
     robo.ultimoTiro = robo.prologoProtegidoAte;
     iniciarEmergenciaRoboBola(robo, portal.x < encontro.x ? 1 : -1);
@@ -151,18 +158,16 @@ export function prepararPrologoNovoBoss(scene, encontro) {
 
   function energia() {
     grafico.clear();
-    if (estado === "ESCUDO_RECARREGANDO") {
-      somCarga.atualizar(sobreviventes().length ? tempo / config.recargaEscudoMs / 0.8 : 0);
-      grafico.lineStyle(2, 0x90f2ff, Math.min(0.8, tempo / config.recargaEscudoMs));
-      for (const torre of sobreviventes()) grafico.lineBetween(torre.x, torre.y,
-        encontro.x, encontro.y + 16);
-    } else if (estado === "GERADORES_DESCENDO") {
-      const duracao = sobreviventes().length ? config.falhaEscudoMs : config.colapsoMs;
-      const p = Math.min(1, tempo / duracao);
-      if (p < 1) {
-        grafico.lineStyle(3, 0x9af3ff, 1 - p);
-        grafico.strokeCircle(encontro.x, encontro.y + 16, 95 + 70 * p);
+    if (estado === "ESCUDO_RECARREGANDO" && recargaIniciadaEm !== null) {
+      const carga = Math.min(1, (tempo - recargaIniciadaEm) / config.recargaEscudoMs);
+      if (carga >= 1) {
+        // A espera pelo jogador sair da barreira não prolonga os feixes da recarga.
+        raiosCarga?.destruir(); raiosCarga = null; somCarga.parar();
+        return;
       }
+      raiosCarga ??= criarRaiosEscudoNovoBoss(scene, encontro, sobreviventes(), { audio: false });
+      raiosCarga?.atualizar(tempo - recargaIniciadaEm, Math.min(1, carga / 0.3));
+      somCarga.atualizar(sobreviventes().length ? carga / 0.8 : 0);
     }
   }
 
@@ -173,6 +178,7 @@ export function prepararPrologoNovoBoss(scene, encontro) {
     encontro.estado = "preparando";
     encontro.tempoEstado = encontro.tempoSemAproximacao = 0;
     encontro.teleportePendente = null;
+    encontro.ultimoTeleportePontasEm = encontro.relogioCombate;
     encontro.verificarFase?.();
     scene.events.emit("novo-boss:prologo-concluido", { encontro });
   }
@@ -205,10 +211,15 @@ export function prepararPrologoNovoBoss(scene, encontro) {
         break;
       }
       case "ESCUDO_RECARREGANDO": {
-        const p = Math.min(1, tempo / config.recargaEscudoMs);
+        if (recargaIniciadaEm === null && sobreviventes().every(g => g.estadoGerador === "exposto")) {
+          recargaIniciadaEm = tempo;
+        }
+        const p = recargaIniciadaEm === null ? 0 : Math.min(1, (tempo - recargaIniciadaEm) / config.recargaEscudoMs);
         const ocupado = encontro.sistemaGeradores.escudoOcupado();
         encontro.sistemaGeradores.controlarEscudo(p, true, p >= 1 && !ocupado);
-        if (p >= 1 && !ocupado) { ciclo++; prepararOnda(); }
+        if (p >= 1 && !ocupado && sobreviventes().every(g => g.estadoGerador === "exposto")) {
+          ciclo++; prepararOnda();
+        }
         break;
       }
     }
@@ -220,9 +231,13 @@ export function prepararPrologoNovoBoss(scene, encontro) {
     get bloqueiaCombatePrincipal() { return !destruido && estado !== "COMBATE_PRINCIPAL"; },
     get estado() { return estado; },
     podeAtingirGerador(torre) {
-      return !destruido && !suspenso && estado === "GERADORES_EXPOSTOS" &&
-        geradorDoCiclo === null && torre.estadoGerador === "exposto";
+      if (destruido || suspenso || torre.morto) return false;
+      if (estado === "ESCUDO_RECARREGANDO") {
+        return ["emergindo", "exposto"].includes(torre.estadoGerador);
+      }
+      return estado === "GERADORES_EXPOSTOS" && geradorDoCiclo === null && torre.estadoGerador === "exposto";
     },
+    get protegendoGeradores() { return !destruido && estado === "ESCUDO_RECARREGANDO"; },
     geradorDestruido(torre) {
       if (geradorDoCiclo !== null || estado !== "GERADORES_EXPOSTOS") return;
       geradorDoCiclo = torre.id;
@@ -244,6 +259,7 @@ export function prepararPrologoNovoBoss(scene, encontro) {
       encontro.danoAdiadoPrologo = (encontro.danoAdiadoPrologo ?? 0) + quantidade - aplicado;
       scene.events.emit("novo-boss:vida", { encontro, anterior, vida: encontro.vida, vidaMaxima: encontro.vidaMaxima });
       if (impactos === config.impactosPorJanela) {
+        sobreviventes().forEach(g => g.emergir());
         encontro.sistemaGeradores.controlarEscudo(0, true, false);
         mudar("ESCUDO_RECARREGANDO");
       }
@@ -253,6 +269,7 @@ export function prepararPrologoNovoBoss(scene, encontro) {
       if (destruido || suspenso || estado === "COMBATE_PRINCIPAL") return;
       suspenso = true;
       somCarga.parar();
+      raiosCarga?.destruir(); raiosCarga = null;
       limparRobos(); portais?.destruir(); portais = null;
       grafico.clear();
       encontro.geradores.forEach(g => g.suspenderColisao());
@@ -287,6 +304,7 @@ export function prepararPrologoNovoBoss(scene, encontro) {
       if (destruido) return;
       destruido = true;
       somCarga.destruir();
+      raiosCarga?.destruir(); raiosCarga = null;
       limparRobos(); portais?.destruir(); portais = null;
       grafico.destroy(); ataquesContados.clear();
     },

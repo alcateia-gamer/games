@@ -4,6 +4,9 @@ import { criarChuvaRaios } from "./ChuvaRaios.js";
 import { novoBossConfig } from "../NovoBossConfig.js";
 import { assetsNovoBoss } from "../NovoBossAssets.js";
 
+// Tempos fixos isolam as regressões de mira, som e reutilização da cadência de produção.
+const chuvaDeTeste = { ...novoBossConfig.ataques.chuvaRaios, avisoMs: 1000, intervaloMs: 400, frameMs: 100 };
+
 function preparar({ textura = true, pontoLivre = () => true, quantidade = 1, raioPlayer = 8,
   config = {}, rng = () => 0.5, configurarCena = () => {} } = {}) {
   const eventos = [];
@@ -179,10 +182,10 @@ test("chuva de produção tem quinze impactos de raio 96, com animação dimensi
   const s = c.ataque.snapshot();
   assert.equal(s.marcas.length, 15);
   assert.equal(s.raio, 96);
-  assert.equal(s.duracao, 7900);
+  assert.equal(s.duracao, 4920);
   assert.equal(c.avisos[0].raio, 96);
-  assert.equal(c.avisos[0].duracao, 1400);
-  c.ataque.atualizar(1000);
+  assert.equal(c.avisos[0].duracao, 930);
+  c.ataque.atualizar(650);
   assert.equal(c.visuais[0].escala, 1.28);
   assert.equal(c.visuais[0].escala * assetsNovoBoss.heavensFury.diametroImpacto, 192);
   assert.deepEqual(c.visuais[0].origem, { x: 198 / 384, y: 0.75 });
@@ -190,7 +193,7 @@ test("chuva de produção tem quinze impactos de raio 96, com animação dimensi
 });
 
 test("reutilização temporal entrega quinze alvos com RNG constante sem sobrepor avisos e perigos", () => {
-  const c = preparar({ config: { ...novoBossConfig.ataques.chuvaRaios, mirarJogador: false } });
+  const c = preparar({ config: { ...chuvaDeTeste, mirarJogador: false } });
   const marcas = c.ataque.snapshot().marcas;
   let reutilizou = false;
   for (let i = 0; i < marcas.length; i++) {
@@ -217,7 +220,7 @@ test("reutilização temporal entrega quinze alvos com RNG constante sem sobrepo
 });
 
 test("raio maior realmente atinge além de 48 px e continua sem dano antes do quadro quatro", () => {
-  const c = preparar({ config: { ...novoBossConfig.ataques.chuvaRaios, quantidade: 1 }, raioPlayer: 0 });
+  const c = preparar({ config: { ...chuvaDeTeste, quantidade: 1 }, raioPlayer: 0 });
   c.scene.player.x = 90;
   c.ataque.atualizar(1399);
   assert.equal(c.eventos.length, 1);
@@ -225,15 +228,15 @@ test("raio maior realmente atinge além de 48 px e continua sem dano antes do qu
   assert.deepEqual(c.eventos[1], { dano: 40, origem: { x: 0, y: 0 } });
   c.ataque.atualizar(150);
   assert.equal(c.eventos.length, 2);
-  const fora = preparar({ config: { ...novoBossConfig.ataques.chuvaRaios, quantidade: 1 }, raioPlayer: 0 });
+  const fora = preparar({ config: { ...chuvaDeTeste, quantidade: 1 }, raioPlayer: 0 });
   fora.scene.player.x = 97;
   fora.ataque.atualizar(1400);
   assert.equal(fora.eventos.length, 1);
 });
 
 test("sequência ampliada conserva quinze impactos e limpeza com deltas grandes e pequenos", () => {
-  const a = preparar({ config: novoBossConfig.ataques.chuvaRaios });
-  const b = preparar({ config: novoBossConfig.ataques.chuvaRaios });
+  const a = preparar({ config: chuvaDeTeste });
+  const b = preparar({ config: chuvaDeTeste });
   for (const c of [a, b]) c.servicos.jogadorAtingeCirculo = () => true;
   assert.equal(a.ataque.atualizar(7900), true);
   for (let i = 0; i < 395; i++) b.ataque.atualizar(20);
@@ -250,7 +253,7 @@ test("sequência ampliada conserva quinze impactos e limpeza com deltas grandes 
 
 test("cancelar a chuva ampliada não deixa avisos nem cria os raios restantes", () => {
   for (const tempo of [500, 1800, 5700]) {
-    const c = preparar({ config: novoBossConfig.ataques.chuvaRaios });
+    const c = preparar({ config: chuvaDeTeste });
     c.ataque.atualizar(tempo);
     c.ataque.destruir();
     c.ataque.destruir();
@@ -265,7 +268,7 @@ test("cancelar a chuva ampliada não deixa avisos nem cria os raios restantes", 
 
 test("busca fina encontra áreas válidas que uma grade do tamanho dos círculos perderia", () => {
   const centros = [[-300, -200], [0, -200], [300, -200], [0, 150]];
-  const c = preparar({ config: { ...novoBossConfig.ataques.chuvaRaios, mirarJogador: false },
+  const c = preparar({ config: { ...chuvaDeTeste, mirarJogador: false },
     pontoLivre: (x, y) => centros.some(([cx, cy]) => Math.hypot(cx - x, cy - y) <= 20),
   });
   const marcas = c.ataque.snapshot().marcas;
@@ -274,7 +277,7 @@ test("busca fina encontra áreas válidas que uma grade do tamanho dos círculos
 });
 
 test("cada aviso mira a posição atual; futuros alvos ficam pendentes e os anunciados não seguem o jogador", () => {
-  const c = preparar({ config: novoBossConfig.ataques.chuvaRaios });
+  const c = preparar({ config: chuvaDeTeste });
   assert.equal(c.ataque.snapshot().marcas.length, 15);
   assert.deepEqual(c.ataque.obterAlvoChuva(0), { x: 0, y: 0 });
   assert.equal(c.ataque.obterAlvoChuva(1), null);
@@ -292,7 +295,7 @@ test("cada aviso mira a posição atual; futuros alvos ficam pendentes e os anun
 });
 
 test("mira prioriza o centro da hitbox de dano e usa o corpo como alternativa", () => {
-  const c = preparar({ config: novoBossConfig.ataques.chuvaRaios });
+  const c = preparar({ config: chuvaDeTeste });
   c.scene.hitboxDanoPlayer = { x: 100, y: 50, width: 40, height: 30 };
   c.scene.player.body = { x: -100, y: -80, width: 30, height: 40 };
   c.ataque.atualizar(400);
@@ -303,7 +306,7 @@ test("mira prioriza o centro da hitbox de dano e usa o corpo como alternativa", 
 });
 
 test("mira junto a obstáculo escolhe a região livre próxima ao jogador sem consumir RNG", () => {
-  const c = preparar({ config: novoBossConfig.ataques.chuvaRaios,
+  const c = preparar({ config: chuvaDeTeste,
     pontoLivre: (x, y) => x >= 120 && y >= 40,
     rng: () => { throw new Error("Mira não precisa de sorteio."); } });
   const alvo = c.ataque.obterAlvoChuva(0);
@@ -314,7 +317,7 @@ test("mira junto a obstáculo escolhe a região livre próxima ao jogador sem co
 });
 
 test("mira nas bordas mantém todo o círculo dentro da arena e da entrada", () => {
-  const c = preparar({ config: novoBossConfig.ataques.chuvaRaios });
+  const c = preparar({ config: chuvaDeTeste });
   Object.assign(c.scene.player, { x: -1000, y: 1000 });
   c.ataque.atualizar(400);
   const alvo = c.ataque.obterAlvoChuva(1);
@@ -325,7 +328,7 @@ test("mira nas bordas mantém todo o círculo dentro da arena e da entrada", () 
 
 test("alvo bloqueado não cria raio invisível e o aviso seguinte volta a funcionar", () => {
   let bloqueado = true;
-  const c = preparar({ config: novoBossConfig.ataques.chuvaRaios, pontoLivre: () => !bloqueado });
+  const c = preparar({ config: chuvaDeTeste, pontoLivre: () => !bloqueado });
   assert.equal(c.avisos.length, 0);
   assert.equal(c.ataque.obterAlvoChuva(0), null);
   assert.equal(c.ataque.snapshot().marcas[0].concluida, true);
@@ -340,7 +343,7 @@ test("alvo bloqueado não cria raio invisível e o aviso seguinte volta a funcio
 });
 
 test("avisos mirados podem ocupar o mesmo alvo, com impactos espaçados e sem dano antecipado", () => {
-  const c = preparar({ config: novoBossConfig.ataques.chuvaRaios });
+  const c = preparar({ config: chuvaDeTeste });
   c.ataque.atualizar(1200);
   assert.equal(c.avisos.length, 4);
   assert.ok(c.avisos.every(a => a.x === 0 && a.y === 0 && a.raio === 96));
@@ -354,7 +357,7 @@ test("avisos mirados podem ocupar o mesmo alvo, com impactos espaçados e sem da
 });
 
 test("sair dos alvos anunciados evita seus impactos e a nova mira pune ficar parado", () => {
-  const c = preparar({ config: { ...novoBossConfig.ataques.chuvaRaios, quantidade: 3 } });
+  const c = preparar({ config: { ...chuvaDeTeste, quantidade: 3 } });
   c.scene.player.x = 200;
   c.ataque.atualizar(400);
   c.scene.player.x = -200;
@@ -366,7 +369,7 @@ test("sair dos alvos anunciados evita seus impactos e a nova mira pune ficar par
 });
 
 test("cancelar conserva os registros anunciados e impede selecionar ou emitir alvos futuros", () => {
-  const c = preparar({ config: novoBossConfig.ataques.chuvaRaios });
+  const c = preparar({ config: chuvaDeTeste });
   c.ataque.atualizar(400);
   const alvo = c.ataque.obterAlvoChuva(1);
   alvo.x = 999;
@@ -407,7 +410,7 @@ test("chuva não repete impacto recusado pela invulnerabilidade depois do zero",
 
 for (const coop of [false,true]) test(`mira do boss ${coop?'coop':'solo'} troca da Aria para seu clone mesmo após o aviso`,()=>{
   let contexto;
-  const c=preparar({config:novoBossConfig.ataques.chuvaRaios, configurarCena(scene) {
+  const c=preparar({config:chuvaDeTeste, configurarCena(scene) {
     scene.time={now:0};
     contexto=coop ? {player:{x:0,y:0},estadoEspecial:{}} : scene;
     contexto.estadoEspecial={};
@@ -428,7 +431,7 @@ for (const coop of [false,true]) test(`mira do boss ${coop?'coop':'solo'} troca 
 });
 
 test('novos avisos miram clone ativo e deixam de usar a hitbox da Aria',()=>{
-  const c=preparar({config:novoBossConfig.ataques.chuvaRaios});
+  const c=preparar({config:chuvaDeTeste});
   c.scene.hitboxDanoPlayer={x:0,y:0,width:20,height:20};
   c.scene.estadoEspecial={holograma:{active:true,x:180,y:40}};
   c.ataque.atualizar(400);
@@ -439,7 +442,7 @@ test('novos avisos miram clone ativo e deixam de usar a hitbox da Aria',()=>{
 });
 
 test('som acompanha cada impacto da chuva uma vez, inclusive em frames atrasados',()=>{
-  const c=preparar({config:{...novoBossConfig.ataques.chuvaRaios,quantidade:3}});
+  const c=preparar({config:{...chuvaDeTeste,quantidade:3}});
   const sons=[];
   c.servicos.somImpactoChuva=(ponto,atraso)=>sons.push({ponto,atraso});
   const primeiro=c.ataque.snapshot().marcas[0].impactoEm;
@@ -456,4 +459,30 @@ test('som acompanha cada impacto da chuva uma vez, inclusive em frames atrasados
   for(let i=0;i<5;i++)c.ataque.atualizar(0);
   assert.equal(sons.length,3);
   c.ataque.destruir();
+});
+
+test("anéis de raios avançam do boss até as bordas com aviso, dano no zero e limpeza completa", () => {
+  const c = preparar({ config: { ...novoBossConfig.ataques.chuvaRaios, padrao: "aneis" } });
+  const estado = c.ataque.snapshot(), grupos = new Map();
+  assert.equal(estado.padrao, "aneis");
+  assert.ok(estado.marcas.length > 15 && estado.marcas.length < 100);
+  for (const marca of estado.marcas) {
+    const distancia = Math.hypot(marca.x, marca.y);
+    if (!grupos.has(marca.anel)) grupos.set(marca.anel, { distancia, inicio: marca.inicio });
+    assert.ok(Math.abs(distancia - grupos.get(marca.anel).distancia) < 1e-6);
+    assert.equal(marca.inicio, grupos.get(marca.anel).inicio);
+  }
+  const aneis = [...grupos.values()];
+  assert.ok(aneis.length >= 3);
+  assert.ok(aneis.every((a, i) => !i || a.distancia > aneis[i-1].distancia));
+  assert.ok(aneis.at(-1).distancia > 350);
+  c.servicos.jogadorAtingeCirculo = () => true;
+  c.ataque.atualizar(estado.marcas[0].impactoEm - 1);
+  assert.equal(c.eventos.filter(e => e.dano).length, 0);
+  c.ataque.atualizar(1);
+  assert.ok(c.eventos.some(e => e.dano === 20));
+  c.ataque.atualizar(estado.duracao);
+  assert.equal(c.eventos.filter(e => e.dano).length, estado.marcas.length);
+  assert.ok(c.avisos.every(v => v.destruidos === 1));
+  assert.ok(c.visuais.every(v => v.destruidos === 1));
 });

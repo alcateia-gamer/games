@@ -1,18 +1,13 @@
 /** Portais sem vida ou hitbox. A seleção e o spawn compartilham a mesma validação. */
-import { calcularDepthAtor } from "../../map/ProfundidadeMapa.js";
 import { retanguloLivreDoMapa } from "../EnemyPathfinding.js";
 import { areasSobrepostasNovoBoss } from "./NovoBossTeleporte.js";
 import { entidadesFisicasArena } from "./NovoBossColisoesTorres.js";
 import { assetsNovoBoss } from "./NovoBossAssets.js";
 import { EMERGENCIA_ROBO_BOLA } from "../RoboBolaEmergencia.js";
+import { novoBossConfig } from "./NovoBossConfig.js";
 
-export function candidatosPortaisNovoBoss(arena) {
-  const largura = arena.xMax - arena.xMin, altura = arena.yMax - arena.yMin;
-  // Três alturas por lateral; nenhum candidato central ou acima/abaixo do boss.
-  return [[0.15, 0.33], [0.85, 0.33], [0.15, 0.50], [0.85, 0.50],
-    [0.15, 0.67], [0.85, 0.67]].map(([fx, fy]) => ({
-    x: arena.xMin + largura * fx, y: arena.yMin + altura * fy,
-  }));
+export function candidatosPortaisNovoBoss(_arena, pontos = novoBossConfig.prologo.portais) {
+  return pontos.map(ponto => ({ ...ponto }));
 }
 
 export function lateralPortalNovoBoss(arena, ponto) {
@@ -20,7 +15,7 @@ export function lateralPortalNovoBoss(arena, ponto) {
   return fracao <= 0.25 ? "esquerda" : fracao >= 0.75 ? "direita" : null;
 }
 
-export function pontoSeguroPortal(scene, encontro, ponto, margem = 48) {
+export function pontoSeguroPortal(scene, encontro, ponto, margem = 22) {
   const a = encontro.config.arena;
   if (!lateralPortalNovoBoss(a, ponto)) return false;
   const area = { x: ponto.x - margem, y: ponto.y - margem, width: margem * 2, height: margem * 2 };
@@ -47,34 +42,22 @@ export function pontoSeguroPortal(scene, encontro, ponto, margem = 48) {
   return saidas >= 3;
 }
 
-export function escolherParPortais(scene, encontro, anterior = []) {
-  const candidatos = candidatosPortaisNovoBoss(encontro.config.arena);
+export function escolherParPortais(scene, encontro) {
+  const candidatos = candidatosPortaisNovoBoss(encontro.config.arena, encontro.config.prologo.portais);
   const a = encontro.config.arena;
-  // Fallback ordenado, validado com as mesmas regras; nunca relaxa a segurança.
-  const fallback = [];
-  for (let y = a.yMin + 100; y < a.yMax - 100; y += 64) {
-    for (const fracao of [0.15, 0.85, 0.10, 0.90, 0.20, 0.80]) {
-      fallback.push({ x: a.xMin + (a.xMax - a.xMin) * fracao, y });
-    }
-  }
   function selecionar(pontos) {
     const livres = pontos.filter(p => pontoSeguroPortal(scene, encontro, p));
-    let repetido = null;
     for (let i = 0; i < livres.length; i++) for (let j = i + 1; j < livres.length; j++) {
       const par = [livres[i], livres[j]];
       if (lateralPortalNovoBoss(a, par[0]) === lateralPortalNovoBoss(a, par[1])) continue;
       if (Math.hypot(par[0].x - par[1].x, par[0].y - par[1].y) <
           encontro.config.prologo.distanciaPortais) continue;
-      if (anterior.length === 2 && par.every(p => anterior.some(q => p.x === q.x && p.y === q.y))) {
-        repetido = par;
-      } else return { par, repetido };
+      // A posição junto às paredes é estável entre ondas; aguarda espaço livre.
+      return par;
     }
-    return { par: null, repetido };
+    return null;
   }
-  const inicial = selecionar(candidatos);
-  if (inicial.par) return inicial.par;
-  const reserva = selecionar([...candidatos, ...fallback]);
-  return reserva.par ?? inicial.repetido ?? reserva.repetido;
+  return selecionar(candidatos);
 }
 
 export function criarPortaisNovoBoss(scene, pontos) {
@@ -87,8 +70,8 @@ export function criarPortaisNovoBoss(scene, pontos) {
         // O espelhamento também inverte o pivô: ambos os lados nascem na abertura.
         .setOrigin(flip ? 1 - asset.origemX : asset.origemX, asset.origemY)
         .setScale(asset.escala).setFlipX(flip)
-        // O robô precisa aparecer desde o centro, sem ficar oculto atrás da imagem do portal.
-        .setDepth(calcularDepthAtor(scene, ponto.y) - 0.01)
+        // A camada de sombra ambiente termina em 50. A luz do portal fica acima dela.
+        .setDepth(51)
         .setVisible(false).setName(`novo-boss-portal-${indice + 1}`),
     };
   });
@@ -105,7 +88,7 @@ export function criarPortaisNovoBoss(scene, pontos) {
       let quadro = 0;
       while (quadro < asset.ultimoFrame && ms >= asset.duracoesMs[quadro]) ms -= asset.duracoesMs[quadro++];
       for (const { sprite } of portais) {
-        sprite.setVisible(tamanho > 0).setFrame(quadro).setAlpha(tamanho)
+        sprite.setVisible(tamanho > 0).setFrame(quadro).setAlpha(1)
           .setScale(asset.escala * tamanho);
       }
     },

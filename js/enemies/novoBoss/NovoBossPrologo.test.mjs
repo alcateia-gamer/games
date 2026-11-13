@@ -25,12 +25,18 @@ function arenaReal() {
 test("as três recargas após a formação inicial tocam somente enquanto seus feixes estão visíveis", () => {
   const { scene, encontro } = arenaReal();
   const sons = [];
+  const visuais = [];
   const visual = () => {
-    const v = {};
+    const v = { active: true };
     for (const metodo of ["setDepth", "setName", "setOrigin", "setScale", "setFlipX",
-      "setVisible", "setFrame", "setAlpha", "clear", "lineStyle", "lineBetween", "strokeCircle", "destroy"]) {
+      "setVisible", "setFrame", "setAlpha", "clear", "lineStyle", "lineBetween", "strokeCircle", "destroy",
+      "beginPath", "moveTo", "lineTo", "strokePath", "fillStyle", "fillCircle"]) {
       v[metodo] = () => v;
     }
+    v.setVisible = visible => { v.visible = visible; return v; };
+    v.setName = name => { v.name = name; return v; };
+    v.destroy = () => { v.active = v.visible = false; };
+    visuais.push(v);
     return v;
   };
   Object.assign(scene, {
@@ -46,6 +52,8 @@ test("as três recargas após a formação inicial tocam somente enquanto seus f
       sons.push(som); return som;
     } },
   });
+  encontro.sprite = { x: encontro.x, y: encontro.y };
+  encontro.geradores.forEach(g => { g.pontoEmissor = { x: g.x, y: g.y }; });
   encontro.config = { ...novoBossConfig, ataques: { ativo: false }, prologo: {
     ...novoBossConfig.prologo, aberturaPortalMs: 0, fechamentoPortalMs: 0,
     ciclos: Array.from({ length: 4 }, () => ({ total: 0, simultaneos: 0, padroes: [] })),
@@ -77,10 +85,12 @@ test("as três recargas após a formação inicial tocam somente enquanto seus f
     assert.equal(prologo.estado, "ESCUDO_RECARREGANDO");
     prologo.atualizar(600);
     assert.equal(sons[0].volume, 0.234375);
+    assert.equal(visuais.filter(v => v.name === "novo-boss-raios-torres" && v.active && v.visible).length, 1);
     prologo.atualizar(400);
     assert.equal(sons[0].volume, 0.375);
     prologo.atualizar(200);
     assert.equal(sons[0].tocando, false, "terminar a recarga interrompe o áudio");
+    assert.ok(visuais.filter(v => v.name === "novo-boss-raios-torres").every(v => !v.active));
     assert.equal(sons[0].reproducoes.length, ciclo + 1);
   }
   assert.equal(sons.length, 1, "a mesma voz atende às três recargas");
@@ -127,16 +137,17 @@ test("restauração detecta jogador e inimigo sobre a base, sem movê-los", () =
   assert.equal(controle.ocupado(), true, "companheiro real também impede restauração sobreposta");
 });
 
-test("seis candidatos e fallback determinísticos são seguros e alternam o par", () => {
+test("portais seguros ficam junto às paredes nas coordenadas solicitadas entre ondas", () => {
   const { scene, encontro } = arenaReal();
-  assert.equal(candidatosPortaisNovoBoss(encontro.config.arena).length, 6);
+  assert.ok(candidatosPortaisNovoBoss(encontro.config.arena).every(p => p.y === -5806));
   const primeiro = escolherParPortais(scene, encontro);
   const segundo = escolherParPortais(scene, encontro, primeiro);
-  assert.equal(primeiro.length, 2);
+  assert.deepEqual(primeiro, [{ x: -1577, y: -5806 }, { x: -567, y: -5806 }]);
   assert.deepEqual(new Set(primeiro.map(p => lateralPortalNovoBoss(encontro.config.arena, p))),
     new Set(["esquerda", "direita"]));
   assert.ok(candidatosPortaisNovoBoss(encontro.config.arena).every(p => lateralPortalNovoBoss(encontro.config.arena, p)));
-  assert.notDeepEqual(primeiro, segundo);
+  assert.deepEqual(primeiro, segundo);
+  assert.ok(primeiro.every(p => Math.min(p.x + 1621, -537 - p.x) <= 106));
   for (const ponto of [...primeiro, ...segundo]) assert.equal(pontoSeguroPortal(scene, encontro, ponto), true);
   assert.deepEqual(escolherParPortais(scene, encontro, primeiro), segundo);
   assert.equal(pontoSeguroPortal(scene, encontro, { x: -1080, y: -6060 }), false, "centro é proibido mesmo livre");
@@ -185,7 +196,7 @@ test("impacto simultâneo escolhe uma morte por ID e mantém dano não fatal dos
 });
 
 
-test("os dois portais alinham a abertura ao spawn, inclusive espelhados, e ficam atrás dos robôs", async () => {
+test("os dois portais alinham a abertura ao spawn, inclusive espelhados, e ficam acima da sombra ambiente", async () => {
   const { assetsNovoBoss } = await import("./NovoBossAssets.js");
   const { calcularDepthAtor } = await import("../../map/ProfundidadeMapa.js");
   const asset = assetsNovoBoss.portal;
@@ -200,7 +211,7 @@ test("os dois portais alinham a abertura ao spawn, inclusive espelhados, e ficam
         setFlipX(flip) { this.flipX = flip; return this; },
         setDepth(depth) { this.depth = depth; return this; },
         setVisible() { return this; }, setName() { return this; },
-        setFrame() { return this; }, setAlpha() { return this; }, destroy() {},
+        setFrame() { return this; }, setAlpha(alpha) { this.alpha = alpha; return this; }, destroy() {},
       };
     } },
   };
@@ -213,7 +224,8 @@ test("os dois portais alinham a abertura ao spawn, inclusive espelhados, e ficam
     const y = sprite.y + (155 - sprite.originY * asset.alturaFrame) * sprite.scale;
     assert.equal(x, portal.x);
     assert.equal(y, portal.y);
-    assert.ok(sprite.depth < calcularDepthAtor(scene, portal.y + 16.8));
+    assert.ok(sprite.depth > 50);
+    assert.equal(sprite.alpha, 1);
   }
   assert.equal(portais.pontos[0].sprite.flipX, true);
   assert.equal(portais.pontos[1].sprite.flipX, false);

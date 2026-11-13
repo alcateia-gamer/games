@@ -466,3 +466,56 @@ test("deltas grandes equivalem a frames pequenos sem perder transições ou cria
   for (const delta of [-1, NaN, Infinity]) grande.atualizar(delta);
   assert.equal(grande.encontro.relogioCombate, relogio);
 });
+
+test("espiral recebe metade do dano apenas durante os disparos, sem imunidade na preparação ou na cauda", () => {
+  const c = criarEncontro();
+  c.encontro.estado = "atacando";
+  let disparando = false;
+  c.encontro.ataqueAtual = { tipo: "lasers", get disparando() { return disparando; } };
+  assert.ok(causarDanoNovoBoss(c.scene, c.encontro, 40)); assert.equal(c.encontro.vida, 960);
+  disparando = true;
+  assert.ok(causarDanoNovoBoss(c.scene, c.encontro, 40)); assert.equal(c.encontro.vida, 940);
+  disparando = false;
+  assert.ok(causarDanoNovoBoss(c.scene, c.encontro, 40)); assert.equal(c.encontro.vida, 900);
+  c.encontro.barreiraAtiva = true;
+  assert.equal(causarDanoNovoBoss(c.scene, c.encontro, 40), false);
+});
+
+test('visita periódica aos geradores respeita recarga e ocorre entre ataques', () => {
+  const c = criarEncontro();
+  c.encontro.geradores = novoBossConfig.geradores.pontos.map(p => ({ ...p, torre: true }));
+  c.encontro.relogioCombate = 9000;
+  c.encontro.estado = 'atacando';
+  c.encontro.ataqueAtual = { tipo: 'chuvaRaios' };
+  c.encontro.avancarAtaque = () => ({ consumido: 0, terminou: false });
+  const candidatos = c.encontro.geradores.map(g=>[g.x,g.y]);
+  // Não antecipa nem interrompe o golpe corrente.
+  c.atualizar(0); assert.equal(c.encontro.teleporte, null);
+  c.encontro.estado = 'preparando'; c.encontro.ataqueAtual = null;
+  c.atualizar(0);
+  assert.equal(c.encontro.teleporte?.motivo, 'pontas-geradores');
+  assert.ok(candidatos.some(([x,y])=>c.encontro.teleporte.destino.x===x&&c.encontro.teleporte.destino.y===y));
+  c.atualizar(500);
+  assert.equal(c.encontro.teleporte, null);
+  assert.ok(c.encontro.ultimoTeleportePontasEm >= 9000);
+  c.atualizar(0);
+  assert.equal(c.encontro.teleporte, null);
+});
+
+test('teleporte com clones escolhe um aglomerado válido e mantém a segurança contra paredes', () => {
+  const c=criarEncontro();
+  const centro={x:-1300,y:-5800};
+  c.encontro.sistemaClones={ativo:true,destinoCamuflagem:()=>centro};
+  assert.deepEqual(escolherDestinoNovoBoss(c.scene,c.encontro),{...centro,regiao:'clones'});
+  c.encontro.sistemaClones.destinoCamuflagem=()=>({x:-99999,y:-99999});
+  assert.ok(destinoValidoNovoBoss(c.scene,c.encontro,escolherDestinoNovoBoss(c.scene,c.encontro)));
+});
+
+test('após a onda de clones o retorno também visita os geradores quando o intervalo venceu',()=>{
+  const c=criarEncontro();
+  c.encontro.geradores=novoBossConfig.geradores.pontos.map(p=>({...p,torre:true}));
+  c.encontro.relogioCombate=9000;
+  const ponto=escolherDestinoNovoBoss(c.scene,c.encontro,'retorno-clones');
+  assert.equal(ponto.regiao,'gerador');
+  assert.ok(destinoValidoNovoBoss(c.scene,c.encontro,ponto));
+});

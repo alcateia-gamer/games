@@ -15,12 +15,13 @@ function movimentoPermitido(scene, encontro, delta) {
       !scene.player?.active || scene.player.morto || !Number.isFinite(scene.player.x) || !Number.isFinite(scene.player.y) ||
       !["preparando", "atacando"].includes(encontro.estado) ||
       ["pulso", "pulsoRepulsao", "lasers", "lasersEspiral"].includes(encontro.ataqueAtual?.tipo) ||
+      encontro.ataqueAtual?.configuracaoVisual?.padrao === "aneis" ||
       encontro.sistemaIlusoes?.ativo) return false;
   return true;
 }
 
 function teleporteVencido(encontro) {
-  if (encontro.fase !== 2) return false;
+  if (encontro.fase !== 2 || encontro.sistemaClones?.ativo) return false;
   const agora = encontro.relogioCombate;
   return encontro.estado === "preparando" && agora >=
     Math.max(encontro.inicioFase2Em ?? agora, encontro.ultimoTeleporteEm) +

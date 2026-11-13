@@ -1,4 +1,5 @@
 import { configurarBalanceamentoBoss } from "./EnemyBalance.js";
+import { destruirColisaoCorpoDerrotado } from "./novoBoss/NovoBossCorpoDerrotado.js";
 import { prepararLibertacaoNovoBoss } from "./novoBoss/NovoBossLibertacao.js";
 /**
  * @file Ciclo do encontro, vida e integração dos estados e teletransportes.
@@ -39,7 +40,7 @@ function atualizarProfundidade(scene, encontro) {
   const sprite = encontro.sprite;
   if (!sprite?.active) return;
   const profundidade = Number.isFinite(scene.profundidadePersonagemParte2)
-    ? calcularDepthAtor(scene, sprite.body.bottom, sprite)
+    ? calcularDepthAtor(scene, (encontro.colisaoCadaver?.body ?? sprite.body).bottom, sprite)
     : encontro.config.visual.profundidade;
   sprite.setDepth(profundidade);
 }
@@ -253,6 +254,7 @@ export function destruirBoss(scene) {
   encontro.sistemaIlusoes?.destruir();
   encontro.sistemaClones?.destruir();
   encontro.apresentacao?.destruir();
+  destruirColisaoCorpoDerrotado(scene, encontro);
   scene.events.off("shutdown", encontro.limpar);
   scene.events.off("destroy", encontro.limpar);
   destruirHudNovoBoss(encontro);

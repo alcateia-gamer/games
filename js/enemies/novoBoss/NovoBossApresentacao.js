@@ -124,7 +124,8 @@ export function prepararApresentacaoNovoBoss(scene, encontro) {
     }
   };
   const fase = payload => {
-    if (!destruido && doEncontro(payload) && payload.fase === 2 && encontro.sprite) {
+    if (!destruido && encontro.config.visual.efeitosGeometricosLegados &&
+        doEncontro(payload) && payload.fase === 2 && encontro.sprite) {
       burstRestante = BURST_MS;
       origemBurst = { x: encontro.sprite.x, y: encontro.sprite.y };
     }
@@ -232,7 +233,7 @@ export function prepararApresentacaoNovoBoss(scene, encontro) {
 
       const viagem = encontro.teleporte;
       // Vulnerabilidade e proteção são informadas pelo HUD, sem marcar a verdadeira no chão.
-      if (!viagem && burstRestante <= 0) {
+      if (!encontro.config.visual.efeitosGeometricosLegados || (!viagem && burstRestante <= 0)) {
         grafico?.setVisible(false);
         return;
       }

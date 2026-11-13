@@ -138,7 +138,7 @@ test("API da fase 2 move a verdadeira com sua única hitbox e respeita teletrans
   const hitbox = encontro.hitboxDano;
   sistema.iniciar();
   assert.equal(sistema.moverVerdadeira(1000), true);
-  assert.ok(Math.abs(encontro.x + 1135) < 0.001);
+  assert.ok(Math.abs(Math.hypot(encontro.x + 1080, encontro.y + 5810) - 55) < 0.001);
   assert.equal(encontro.hitboxDano, hitbox);
   assert.deepEqual({ x: hitbox.x, y: hitbox.y, width: hitbox.width, height: hitbox.height },
     areaCorpoNovoBoss(encontro.config, encontro.sprite));
@@ -207,16 +207,16 @@ test("desativado, multiplayer ou origem bloqueada não geram clones", () => {
   assert.equal(bloqueado.sistema.iniciar(), false);
 });
 
-test("na fase 2 todos caminham a 60 px/s e param nas mesmas aberturas e ataques centrais", () => {
+test("na fase 2 todos se dispersam a 220 px/s e param nas mesmas aberturas e ataques centrais", () => {
   const { encontro, sistema } = preparar();
   Object.assign(encontro, { fase: 2, estado: "preparando", tempoEstado: 1000,
     relogioCombate: 1000, inicioFase2Em: 0, inicioOndaClonesEm: 0, ultimoTeleporteEm: 0 });
   sistema.iniciar();
   sistema.atualizar(100);
-  assert.equal(sistema.snapshot().velocidade, 60);
+  assert.equal(sistema.snapshot().velocidade, 220);
   assert.ok(sistema.alvos.every(a => a.sprite.alpha === 1));
   for (const alvo of sistema.alvos) {
-    assert.ok(Math.abs(Math.hypot(alvo.x - encontro.x, alvo.y - encontro.y) - 6) < 0.1);
+    assert.ok(Math.abs(Math.hypot(alvo.x - encontro.x, alvo.y - encontro.y) - 22) < 0.1);
   }
   for (const bloquear of [
     () => { encontro.estado = "vulneravel"; },
@@ -233,5 +233,26 @@ test("na fase 2 todos caminham a 60 px/s e param nas mesmas aberturas e ataques 
   const antes = sistema.alvos.map(a => [a.x,a.y]);
   sistema.atualizar(1000);
   for (const [i,a] of sistema.alvos.entries())
-    assert.ok(Math.abs(Math.hypot(a.x-antes[i][0],a.y-antes[i][1])-1.2)<0.1);
+    assert.ok(Math.abs(Math.hypot(a.x-antes[i][0],a.y-antes[i][1])-4.4)<0.1);
+});
+
+test('grupos atravessam a arena e a verdadeira permanece junto de várias cópias', () => {
+  const { scene, encontro, sistema } = preparar(novoBossConfig.clones);
+  Object.assign(encontro, { fase: 2, estado: 'preparando', tempoEstado: 0,
+    relogioCombate: 0, inicioFase2Em: 0, inicioOndaClonesEm: 0, ultimoTeleporteEm: 0 });
+  sistema.iniciar();
+  for (let i = 0; i < 150; i++) {
+    encontro.relogioCombate += 20; encontro.tempoEstado += 20;
+    sistema.atualizar(20); sistema.moverVerdadeira(20);
+  }
+  const corpos = [encontro, ...sistema.alvos];
+  assert.ok(sistema.alvos.filter(a => Math.hypot(a.x-encontro.x, a.y-encontro.y) < 130).length >= 2);
+  assert.ok(Math.max(...corpos.map(a=>a.x))-Math.min(...corpos.map(a=>a.x)) > 600);
+  assert.ok(corpos.every(a=>destinoIlusorioValido(scene,encontro,a)));
+  assert.ok(sistema.destinoCamuflagem());
+  const disfarce = sistema.destinoCamuflagem(50);
+  assert.ok(Math.hypot(disfarce.x-encontro.x,disfarce.y-encontro.y)>=50);
+  assert.ok(sistema.alvos.filter(a=>Math.hypot(a.x-disfarce.x,a.y-disfarce.y)<130).length>=2);
+  sistema.alvos.forEach(a=>a.receberDano(1));
+  assert.equal(sistema.destinoCamuflagem(), null);
 });

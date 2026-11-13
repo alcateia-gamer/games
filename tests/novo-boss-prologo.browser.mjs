@@ -115,7 +115,8 @@ try {
         g.colisoes.length === 1 && g.colisoes.every(v => !v)));
     verificar(`ciclo ${ciclo}: exatamente dois portais`, p.portais.length === 2);
     const par = JSON.stringify(p.portais);
-    if (parAnterior) verificar(`ciclo ${ciclo}: alterna o par de portais`, par !== parAnterior);
+    if (parAnterior) verificar(`ciclo ${ciclo}: conserva as coordenadas dos portais`,
+      p.portais.every(p => p.y === -5806));
     parAnterior = par;
     verificar(`ciclo ${ciclo}: posições seguras`, await page.evaluate(async () => {
       const s = window.__game.scene.getScene("Level1Parte2");
@@ -220,7 +221,7 @@ try {
         return [e.receberDano(100, null, {}), e.receberDano(100, null, {})];
       });
       verificar(`ciclo ${ciclo}: exatamente dois impactos`, hits[0] && !hits[1] && (await snapshot()).vida === vidaAntes - 200);
-      await avancar(2000);
+      await avancar(3200);
       p = await snapshot();
       verificar(`ciclo ${ciclo}: recarga não prende jogador`, p.estado === "ESCUDO_RECARREGANDO" && !p.fisica && p.aguardandoSaidaEscudo);
       await previa("03-recarga");

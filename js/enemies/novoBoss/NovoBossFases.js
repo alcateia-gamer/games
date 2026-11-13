@@ -112,11 +112,12 @@ export function atualizarFasesNovoBoss(scene, encontro, delta = 0) {
   if (encontro.sistemaClones?.ativo) {
     encontro.clonesFase2EmCurso = true;
     // Pulso e espiral são anunciados e executados sem deslocar a origem central.
-    if (delta > 0 && !encontro.config.fase2.movimento?.ativo && encontro.estado !== "vulneravel" &&
+    if (delta > 0 && encontro.estado !== "vulneravel" &&
         !["pulsoRepulsao", "lasers"].includes(encontro.ataqueAtual?.tipo)) {
       const desdeInicio = encontro.relogioCombate - (encontro.inicioOndaClonesEm ?? -Infinity);
       encontro.sistemaClones.moverVerdadeira(Math.min(delta, Math.max(0, desdeInicio)));
     }
+    return;
   } else if (encontro.clonesFase2EmCurso && !encontro.transicaoFase2Pendente) {
     encontro.clonesFase2EmCurso = false;
     encontro.invulneravelClonesAte = 0;

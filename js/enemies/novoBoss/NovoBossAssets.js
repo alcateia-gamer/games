@@ -130,7 +130,7 @@ export const assetsNovoBoss = Object.freeze({
     larguraFrame: 320, alturaFrame: 320, ultimoFrame: 6,
     duracoesMs: Object.freeze([100, 100, 100, 100, 100, 100, 200]),
     // Centro da abertura escura na célula; o contorno tem padding assimétrico.
-    origemX: 190 / 320, origemY: 155 / 320, escala: 0.35,
+    origemX: 190 / 320, origemY: 155 / 320, escala: 0.42,
   }),
 });
 

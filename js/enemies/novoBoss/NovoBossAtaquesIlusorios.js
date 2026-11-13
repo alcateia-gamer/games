@@ -77,6 +77,8 @@ export function criarAtaquesIlusoriosNovoBoss(scene, encontro, alvo) {
         rng: () => sorteios[indiceSorteio++] ?? 0.5,
         obterAlvoChuva: typeof original.obterAlvoChuva === "function"
           ? indice => original.obterAlvoChuva(indice) : undefined,
+        obterMarcasChuva: typeof original.obterMarcasChuva === "function"
+          ? () => original.obterMarcasChuva() : undefined,
         pontoLivre: geometria.pontoLivre,
         segmentoBloqueado: geometria.segmentoBloqueado,
         criarAviso: (x, y, raio) => criarAvisoNovoBoss(cenaVisual, x, y, raio),
@@ -103,7 +105,7 @@ export function criarAtaquesIlusoriosNovoBoss(scene, encontro, alvo) {
       };
       // A dimensão e o padrão são os mesmos. Zerar dano é uma segunda proteção,
       // além da ausência de serviços ofensivos e de corpos físicos.
-      const ajustes = { ...encontro.config.ataques[def[1]], dano: 0, empurrao: 0 };
+      const ajustes = { ...encontro.config.ataques[def[1]], ...original.configuracaoVisual, dano: 0, empurrao: 0 };
       execucao = def[0](cenaVisual, alvo, ajustes, servicos);
       return true;
     },

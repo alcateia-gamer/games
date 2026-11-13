@@ -322,6 +322,7 @@ export class CoopRuntime {
       Object.assign(actor, { remoteOnly: true, networkId: data.id, tipoRobo: data.tipoRobo,
         vida: data.vida, vidaMaxima: data.vidaMaxima, morto: data.morto, origemSpawn: data.origemSpawn,
         direcaoAtual: data.direcaoAtual,
+        portalBossOrigem: data.portalBossOrigem,
         hitboxDano: data.hitbox && new Phaser.Geom.Rectangle(...Object.values(data.hitbox)),
         // A réplica não simula física. GameObject.body é reservado a corpos
         // do Phaser, que precisam implementar destroy() ao trocar de cena.

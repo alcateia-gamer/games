@@ -1,5 +1,7 @@
 # Desenvolvimento do boss principal
 
+Revisão mais recente: [ajustes de recarga, portais, clones, ataques e cadáver](boss-revisao-combate.md).
+
 O encontro descrito aqui é o boss principal da fábrica. Consulte a
 [migração definitiva](boss-principal.md) para os nomes e recursos atuais.
 O restante deste documento registra o histórico de desenvolvimento.

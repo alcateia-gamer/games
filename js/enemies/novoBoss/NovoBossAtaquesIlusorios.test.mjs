@@ -108,10 +108,10 @@ test("Heavens Fury reproduz quinze marcas ampliadas, aviso, impacto e animação
   assert.equal(sistema.snapshot().execucao.marcas.length, 15);
   assert.equal(sistema.snapshot().execucao.raio, 96);
   assert.equal(sistema.snapshot().execucao.escala, 1.28);
-  avancar(1000);
+  avancar(650);
   const raio = objetos.find(o => o.textura === "novo-boss-heavens-fury");
   assert.equal(raio.frame, 0);
-  avancar(400);
+  avancar(280);
   assert.equal(raio.frame, 4);
   avancar(6500);
   sistema.encerrar();
@@ -119,7 +119,7 @@ test("Heavens Fury reproduz quinze marcas ampliadas, aviso, impacto e animação
   semConsequencias();
 });
 
-test("espiral emite cem projéteis por dez segundos sem corpos, parry ou registro ofensivo", () => {
+test("espiral combina os mesmos 156 projéteis por dez segundos sem corpos, parry ou registro ofensivo", () => {
   const { sistema, objetos, avancar, semConsequencias } = preparar();
   sistema.iniciar("lasers", {});
   avancar(700);
@@ -135,7 +135,7 @@ test("espiral emite cem projéteis por dez segundos sem corpos, parry ou registr
   laser.especialRefletido = true;
   laser.danoEspecial = 999;
   avancar(9899);
-  assert.equal(sistema.snapshot().execucao.emitidos, 100);
+  assert.equal(sistema.snapshot().execucao.emitidos, 156);
   assert.equal(sistema.snapshot().execucao.emitindo, true);
   avancar(1);
   assert.equal(sistema.snapshot().execucao.emitindo, false);
@@ -277,5 +277,26 @@ test("cópia que encerra seus projéteis antes da fonte continua no mesmo relóg
   avancar(100);
   assert.equal(sistema.snapshot().tempo, 500);
   assert.equal(sistema.snapshot().ativo, false);
+  semConsequencias();
+});
+
+test('anéis falsos compartilham o campo real sem multiplicar áreas nem usar o flash branco', () => {
+  const { sistema, objetos, avancar, semConsequencias } = preparar();
+  const pontos = [
+    { x: -100, y: 0, anel: 0, inicio: 0 }, { x: 100, y: 0, anel: 0, inicio: 0 },
+    { x: 0, y: -200, anel: 1, inicio: 320 },
+  ];
+  sistema.iniciar('chuva', {
+    configuracaoVisual: { ...novoBossConfig.ataques.chuvaRaios, padrao: 'aneis' },
+    obterMarcasChuva: () => pontos.map(p => ({ ...p })),
+  });
+  const marcas = sistema.snapshot().execucao.marcas;
+  assert.deepEqual(marcas.map(({ x, y, anel, inicio }) => ({ x, y, anel, inicio })), pontos);
+  const config = novoBossConfig.ataques.chuvaRaios;
+  avancar(config.avisoMs + 3 * config.frameMs);
+  const feixes = objetos.filter(o => o.textura === 'novo-boss-heavens-fury');
+  assert.equal(feixes.length, 2);
+  assert.ok(feixes.every(f => f.frame === 2));
+  sistema.cancelar();
   semConsequencias();
 });

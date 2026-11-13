@@ -43,14 +43,30 @@ export function criarLasersEspiral(scene, encontro, config = {}, servicos = {}) 
     : Math.atan2((jogador?.y ?? origemInicial.y + 1) - origemInicial.y,
       (jogador?.x ?? origemInicial.x) - origemInicial.x);
   const limiteVida = Math.min(ajustes.vidaProjetilMs, ajustes.alcance / ajustes.velocidade * 1000);
-  const fimEmissao = ajustes.avisoMs + (config.emissoes?.at(-1)?.em ??
+  let emissoes = config.emissoes;
+  if (!emissoes && config.padroesAdicionais) {
+    const janela = duracaoDisparosMs || ajustes.quantidade * ajustes.intervaloMs;
+    emissoes = Array.from({ length: ajustes.quantidade }, (_, indiceBase) =>
+      ({ em: indiceBase * ajustes.intervaloMs, indiceBase, padrao: "espiral" }));
+    // Rajadas simultâneas à espiral; o limite temporal evita timers e acúmulo sem fim.
+    for (let em = 900, rodada = 0; em < janela; em += 1200, rodada++) {
+      const anel = rodada % 2 === 0;
+      const angulos = anel ? Array.from({ length: 8 }, (_, i) => i * 45 + rodada * 11.25)
+        : [0, 180, 45, 135, 225, 315];
+      for (const angulo of angulos) emissoes.push({ em, angulo,
+        padrao: anel ? "circulo" : angulo % 180 === 0 ? "horizontal" : "diagonal" });
+    }
+    emissoes.sort((a, b) => a.em - b.em);
+    ajustes.quantidade = emissoes.length;
+  }
+  const fimEmissao = ajustes.avisoMs + (emissoes?.at(-1)?.em ??
     (ajustes.quantidade - 1) * ajustes.intervaloMs);
   const fimDisparos = duracaoDisparosMs > 0 ? ajustes.avisoMs + duracaoDisparosMs : fimEmissao;
   const duracao = Math.max(fimDisparos, fimEmissao + limiteVida);
   const arena = encontro.config?.arena;
   const grafico = scene.add?.graphics?.();
   grafico?.setDepth?.(53);
-  let aviso = servicos.criarAviso?.(origemInicial.x, origemInicial.y,
+  let aviso = config.mostrarAvisoArea === false ? null : servicos.criarAviso?.(origemInicial.x, origemInicial.y,
     Math.max(32, ajustes.raio * 4), ajustes.avisoMs);
   let decorrido = 0;
   let emitidos = 0;
@@ -60,7 +76,9 @@ export function criarLasersEspiral(scene, encontro, config = {}, servicos = {}) 
   const projeteis = [];
 
   function anguloDisparo(indice) {
-    if (config.emissoes?.[indice]) return config.emissoes[indice].angulo * Math.PI / 180;
+    const emissao = emissoes?.[indice];
+    if (Number.isFinite(emissao?.angulo)) return emissao.angulo * Math.PI / 180;
+    indice = emissao?.indiceBase ?? indice;
     const passo = ajustes.passoAngulo;
     let deslocamento = 0;
     if (config.intercalar && passo > 0) {
@@ -201,6 +219,7 @@ export function criarLasersEspiral(scene, encontro, config = {}, servicos = {}) 
   return {
     tipo: "lasers",
     duracao,
+    get disparando() { return !terminado && decorrido >= ajustes.avisoMs && decorrido < fimDisparos; },
     atualizar(delta) {
       if (terminado) return true;
       const anterior = decorrido;
@@ -211,14 +230,15 @@ export function criarLasersEspiral(scene, encontro, config = {}, servicos = {}) 
       }
       for (const projetil of projeteis) avancar(projetil, decorrido - anterior);
       while (emitidos < ajustes.quantidade &&
-          ajustes.avisoMs + (config.emissoes?.[emitidos]?.em ?? emitidos * ajustes.intervaloMs) <= decorrido) {
-        const nascimento = ajustes.avisoMs + (config.emissoes?.[emitidos]?.em ?? emitidos * ajustes.intervaloMs);
+          ajustes.avisoMs + (emissoes?.[emitidos]?.em ?? emitidos * ajustes.intervaloMs) <= decorrido) {
+        const nascimento = ajustes.avisoMs + (emissoes?.[emitidos]?.em ?? emitidos * ajustes.intervaloMs);
         const angulo = anguloDisparo(emitidos);
         const projetil = {
           x: encontro.x ?? encontro.sprite?.x ?? origemInicial.x,
           y: encontro.y ?? encontro.sprite?.y ?? origemInicial.y,
           dx: Math.cos(angulo), dy: Math.sin(angulo),
           idade: 0, percorrido: 0, ativo: true,
+          padrao: emissoes?.[emitidos]?.padrao ?? "espiral",
         };
         emitidos++;
         servicos.somDisparoLaser?.({ x: projetil.x, y: projetil.y }, Math.max(0, decorrido - nascimento));
@@ -246,8 +266,8 @@ export function criarLasersEspiral(scene, encontro, config = {}, servicos = {}) 
       quantidade: ajustes.quantidade, duracaoDisparosMs,
       emitindo: !terminado && decorrido >= ajustes.avisoMs && decorrido < fimDisparos,
       avisando: !terminado && decorrido < ajustes.avisoMs,
-      projeteis: projeteis.map(({ x, y, dx, dy, idade, visual }) => ({
-        x, y, dx, dy, idade, raio: ajustes.raio, refletido: Boolean(visual?.especialRefletido),
+      projeteis: projeteis.map(({ x, y, dx, dy, idade, visual, padrao }) => ({
+        x, y, dx, dy, idade, padrao, raio: ajustes.raio, refletido: Boolean(visual?.especialRefletido),
       })),
     }),
   };

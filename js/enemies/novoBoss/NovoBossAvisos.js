@@ -31,7 +31,9 @@ export function criarAvisoNovoBoss(scene, x, y, raio) {
         sprite.setFrame(frame).setAlpha(0.4 + p * 0.2);
       }
       const pulso = p > 0.75 ? 0.15 * Math.sin(p * 65) : 0;
-      grafico.clear().fillStyle(0xe2263c, (sprite ? 0.03 : 0.13) + p * 0.17 + pulso)
+      grafico.clear();
+      if (sprite) return; // A área já está representada pelo GIF, sem círculos sobrepostos.
+      grafico.fillStyle(0xe2263c, 0.13 + p * 0.17 + pulso)
         .fillCircle(x, y, raio).lineStyle(2, 0xff4058, 0.95)
         .strokeCircle(x, y, raio).lineStyle(2, 0xffb2b9, 0.9)
         .strokeCircle(x, y, Math.max(1, raio * p));

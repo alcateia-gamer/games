@@ -1,5 +1,7 @@
 # Prólogo dos quatro geradores
 
+Revisão mais recente: [ajustes de recarga, portais, clones, ataques e cadáver](boss-revisao-combate.md).
+
 **Atualização dos portais e colisões:** os portais agora usam os sete quadros do
 GIF original `Tilesets/mechanics/portal.gif`, preservando transparência e duração
 (100/100/100/100/100/100/200 ms). Foram gerados apenas uma spritesheet e um

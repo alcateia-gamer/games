@@ -12,7 +12,7 @@ import {
   atualizarDepthObjetosDepthPerso,
   atualizarDepthParedePortaBoss,
   atualizarDepthGarras, atualizarDepthAtores, atualizarDepthCercaFabrica2,
-  obterFootYAtor,
+  obterFootYAtor, calcularDepthAtor,
 } from "./ProfundidadeMapa.js";
 import { atualizarDepthCompanionPet } from "../player/CompanionPet.js";
 import { atualizarDepthPlayer } from "../player/Player.js";
@@ -356,4 +356,15 @@ test("robôs bola ficam acima das torres no solo e nas réplicas multiplayer", (
     atualizarDepthAtores(scene);
     assert.equal(bola.depth, serra.depth, "sem torre visível volta à ordem dos pés");
   }
+});
+
+test('robô do boss fica sobre o portal próximo, inclusive na réplica, sem mudar os demais atores',()=>{
+  const scene={profundidadePersonagemParte2:16.5,player:{body:{bottom:-5800}}};
+  const robo={x:-1577,y:-5806,tipoRobo:'bola',remoteOnly:true,
+    portalBossOrigem:{x:-1577,y:-5806,depth:51.1,raio:72}};
+  assert.equal(calcularDepthAtor(scene,-5780,robo),51.1);
+  robo.x=-1400;
+  assert.ok(calcularDepthAtor(scene,-5780,robo)<18);
+  const comum={x:-1577,y:-5806,tipoRobo:'bola'};
+  assert.ok(calcularDepthAtor(scene,-5780,comum)<18);
 });

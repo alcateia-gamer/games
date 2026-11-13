@@ -58,6 +58,8 @@ export function criarTorreNovoBoss(scene, encontro, ponto, aoDestruir) {
   let ultimoFrame = 0;
   let controlada = false, estadoGerador = "emergindo";
   let velocidadeMovimento = 1;
+  const atingivelNaRecarga = () => encontro.prologo?.protegendoGeradores &&
+    ["emergindo", "exposto"].includes(estadoGerador);
   const somEscotilha = criarSomEscotilhaBoss(scene, ponto, DURACOES.summon);
   const somImpacto = criarSomImpactoEscotilhaBoss(scene, ponto);
   const somExplosao = criarSomExplosaoEscotilhaBoss(scene, ponto);
@@ -126,8 +128,8 @@ export function criarTorreNovoBoss(scene, encontro, ponto, aoDestruir) {
       torre.body.enable = false;
     },
     get active() {
-      return !destruida && !torre.morto && iniciada && estado !== "summon" &&
-        (!controlada || estadoGerador === "exposto") &&
+      return !destruida && !torre.morto && iniciada && (estado !== "summon" || atingivelNaRecarga()) &&
+        (!controlada || estadoGerador === "exposto" || atingivelNaRecarga()) &&
         (!encontro.prologo?.bloqueiaCombatePrincipal || encontro.prologo.podeAtingirGerador(torre)) &&
         encontro.active && visual.visible && torre.body.enable;
     },
@@ -137,7 +139,7 @@ export function criarTorreNovoBoss(scene, encontro, ponto, aoDestruir) {
           (area && !areasSobrepostasNovoBoss(area, hitbox))) return false;
       if (encontro.prologo?.bloqueiaCombatePrincipal && !encontro.prologo.podeAtingirGerador(torre)) return false;
       somImpacto.tocar();
-      torre.vida = Math.max(0, torre.vida - quantidade);
+      torre.vida = Math.max(encontro.prologo?.protegendoGeradores ? 1 : 0, torre.vida - quantidade);
       if (torre.vida === 0) {
         torre.morto = true;
         torre.ligado = false;
@@ -147,7 +149,8 @@ export function criarTorreNovoBoss(scene, encontro, ponto, aoDestruir) {
         estadoGerador = "destruido";
         if (controlada) colisaoMapa.definir(false);
         aoDestruir(torre);
-      } else mudarPose("attacked");
+      // Acertos não reiniciam a subida nem prolongam a recarga indefinidamente.
+      } else if (!atingivelNaRecarga()) mudarPose("attacked");
       return true;
     },
     atualizar(delta, visivel, apresentando = false) {
@@ -164,8 +167,8 @@ export function criarTorreNovoBoss(scene, encontro, ponto, aoDestruir) {
         // O quadro zero é a tampa fechada original, sem alvo ou corpo sólido.
         visual.setDepth(calcularDepthAtor(scene, referenciaDepthY, visual) - 0.001);
       }
-      torre.body.enable = visivel && iniciada && !torre.morto && estado !== "summon" &&
-        (!controlada || estadoGerador === "exposto");
+      torre.body.enable = visivel && iniciada && !torre.morto &&
+        ((estado !== "summon" && (!controlada || estadoGerador === "exposto")) || atingivelNaRecarga());
       if (controlada && !visivel) colisaoMapa.definir(false);
       if (controlada && visivel && estadoGerador === "exposto" && !colisaoMapa.ocupado()) colisaoMapa.definir(true);
       if (!visivel || !iniciada || (!combate && !apresentando)) {
@@ -197,8 +200,8 @@ export function criarTorreNovoBoss(scene, encontro, ponto, aoDestruir) {
         mudarPose("idle");
         tempo = restante;
       }
-      torre.body.enable = visivel && iniciada && !torre.morto && estado !== "summon" &&
-        (!controlada || estadoGerador === "exposto");
+      torre.body.enable = visivel && iniciada && !torre.morto &&
+        ((estado !== "summon" && (!controlada || estadoGerador === "exposto")) || atingivelNaRecarga());
       const asset = poses[estado];
       let ms = estado === "idle" ? tempo % DURACOES.idle : Math.min(tempo, DURACOES[estado] - 1);
       let frame = 0;

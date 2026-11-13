@@ -33,6 +33,11 @@ function depthFromWorldY(y) {
  */
 function calcularDepthAtor(scene, footY, ator = null) {
   const depth = calcularDepthPelosPes(scene, footY, ator);
+  const portal = ator?.portalBossOrigem;
+  if (portal && !ator.morto && Number.isFinite(portal.depth) &&
+      (ator.emergenciaPortal || Math.hypot(ator.x - portal.x, ator.y - portal.y) < portal.raio)) {
+    return Math.max(depth, portal.depth);
+  }
   if (ator?.tipoRobo !== "bola") return depth;
   // Os robôs flutuam à frente das torres, inclusive nas réplicas do multiplayer.
   let frente = depth;

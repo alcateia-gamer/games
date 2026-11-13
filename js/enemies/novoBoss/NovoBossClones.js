@@ -1,5 +1,5 @@
 /** Clones móveis inofensivos; a verdadeira continua sendo a entidade original. */
-import { tempoMovimentoNovoBoss, moverCorpoEmPressaoNovoBoss } from "./NovoBossMovimento.js";
+import { tempoMovimentoNovoBoss } from "./NovoBossMovimento.js";
 import { sincronizarCorpoNovoBoss } from "./NovoBossTeleporte.js";
 import {
   criarAlvoIlusorio, destinoIlusorioValido, encontroIlusorioVisivel,
@@ -21,6 +21,46 @@ export function prepararClonesNovoBoss(scene, encontro) {
   let ataqueAnterior = null;
   let imitacaoAtual = null;
   const rng = () => Math.max(0, Math.min(0.999999, Number((encontro.rng ?? Math.random)()) || 0));
+  const rapidezAtual = () => encontro.fase === 2 && tempo < (config.dispersaoMs ?? 3200)
+    ? (config.velocidadeDispersao ?? 220) : velocidade;
+
+  function gruposVivos() {
+    const grupos = new Map();
+    alvos.forEach((alvo, indice) => {
+      if (!alvo.active) return;
+      const id = Math.floor(indice / 3);
+      if (!grupos.has(id)) grupos.set(id, []);
+      grupos.get(id).push(alvo);
+    });
+    return [...grupos.values()];
+  }
+
+  function destinoCamuflagem(distanciaMinima = 0) {
+    if (!ativo || !config.agrupar) return null;
+    let escolhido = null, melhor = -Infinity;
+    for (const grupo of gruposVivos()) {
+      const centro = { x: grupo.reduce((n, a) => n + a.x, 0) / grupo.length,
+        y: grupo.reduce((n, a) => n + a.y, 0) / grupo.length };
+      const juntos = grupo.filter(a => Math.hypot(a.x - centro.x, a.y - centro.y) < 130).length;
+      const pontos = distanciaMinima > 0 ? [centro, ...[[60, 0], [-60, 0], [0, 60], [0, -60]]
+        .map(([dx, dy]) => ({ x: centro.x + dx, y: centro.y + dy }))] : [centro];
+      for (const ponto of pontos) {
+        const distancia = Math.hypot(encontro.x - ponto.x, encontro.y - ponto.y);
+        const score = juntos * 180 - distancia;
+        if (distancia >= distanciaMinima && score > melhor && destinoIlusorioValido(scene, encontro, ponto)) {
+          escolhido = ponto; melhor = score;
+        }
+      }
+    }
+    return escolhido;
+  }
+
+  function seguir(entidade, ponto, delta, verdadeira = false) {
+    const dx = ponto.x - entidade.x, dy = ponto.y - entidade.y;
+    const distancia = Math.hypot(dx, dy);
+    if (distancia < 2) return;
+    mover(entidade, Math.atan2(dy, dx), Math.min(delta, distancia / rapidezAtual() * 1000), verdadeira);
+  }
 
   function cancelar() {
     for (const alvo of alvos) alvo.destruir();
@@ -35,12 +75,12 @@ export function prepararClonesNovoBoss(scene, encontro) {
   function mover(entidade, angulo, delta, verdadeira = false) {
     if (!(delta > 0)) return angulo;
     // A hitbox inteira é testada a cada <=8px, inclusive em frames muito longos.
-    let restante = velocidade * delta / 1000;
+    let restante = rapidezAtual() * delta / 1000;
     while (restante > 0) {
       const passo = Math.min(8, restante);
       let aceito = false;
       for (let tentativa = 0; tentativa < 8; tentativa++) {
-        const direcao = angulo + tentativa * Math.PI / 4;
+        const direcao = angulo + [0, 1, -1, 2, -2, 3, -3, 4][tentativa] * Math.PI / 4;
         const ponto = {
           x: entidade.x + Math.cos(direcao) * passo,
           y: entidade.y + Math.sin(direcao) * passo,
@@ -67,6 +107,8 @@ export function prepararClonesNovoBoss(scene, encontro) {
 
   const sistema = {
     get ativo() { return ativo; }, get alvos() { return alvos; },
+    destinoCamuflagem,
+    get preparacaoMs() { return ativo && encontro.fase === 2 ? (config.dispersaoMs ?? 3200) : 0; },
     iniciar() {
       if (destruido || !config.ativo || ativo || encontro.teleporte ||
           !encontroIlusorioVisivel(scene, encontro) || !scene.add?.sprite ||
@@ -74,13 +116,15 @@ export function prepararClonesNovoBoss(scene, encontro) {
       encontro.sistemaIlusoes?.encerrarQuatro();
       const origem = { x: encontro.sprite.x, y: encontro.sprite.y };
       const variacao = rng() * Math.PI * 2;
+      const lugarReal = Math.floor(rng() * (quantidade + 1));
       for (let indice = 0; indice < quantidade; indice++) {
         const alvo = criarAlvoIlusorio(scene, encontro, origem, `movel-${indice + 1}`, "clone");
         alvo.sprite.setAlpha(1);
         alvos.push(alvo);
-        rumos.set(alvo, variacao + indice / quantidade * Math.PI * 2);
+        const lugar = indice >= lugarReal ? indice + 1 : indice;
+        rumos.set(alvo, variacao + lugar / (quantidade + 1) * Math.PI * 2);
       }
-      rumoReal = variacao + Math.PI;
+      rumoReal = variacao + lugarReal / (quantidade + 1) * Math.PI * 2;
       ativo = true;
       tempo = 0;
       ataqueAnterior = encontro.ataqueAtual ?? null;
@@ -100,12 +144,18 @@ export function prepararClonesNovoBoss(scene, encontro) {
         imitarAtaque(nome);
       }
       ataqueAnterior = ataque;
+      const grupos = config.agrupar && encontro.fase === 2 ? gruposVivos() : [];
       for (const alvo of alvos) {
         if (!alvo.active) continue;
         if (encontro.fase === 2 && encontro.config.fase2?.movimento?.ativo) {
           const tempoMovel = tempoMovimentoNovoBoss(scene, encontro, passo);
-          // Rotas próprias espalham os corpos; a política e a velocidade são compartilhadas.
-          moverCorpoEmPressaoNovoBoss(scene, encontro, alvo, tempoMovel, rumos.get(alvo));
+          const grupo = grupos.find(g => g.includes(alvo));
+          const lider = grupo?.[0];
+          if (lider && lider !== alvo) {
+            const ordem = grupo.indexOf(alvo), rumo = rumos.get(lider) + (ordem === 1 ? 2.3 : -2.3);
+            const ponto = { x: lider.x + Math.cos(rumo) * 56, y: lider.y + Math.sin(rumo) * 40 };
+            seguir(alvo, destinoIlusorioValido(scene, encontro, ponto) ? ponto : lider, tempoMovel);
+          } else rumos.set(alvo, mover(alvo, rumos.get(alvo), tempoMovel));
         } else rumos.set(alvo, mover(alvo, rumos.get(alvo), passo));
         alvo.atualizarVisual(passo);
       }
@@ -117,15 +167,20 @@ export function prepararClonesNovoBoss(scene, encontro) {
           !encontroIlusorioVisivel(scene, encontro) ||
           !Number.isFinite(delta) || delta <= 0) return false;
       const antes = { x: encontro.sprite.x, y: encontro.sprite.y };
-      rumoReal = mover(encontro.sprite, rumoReal, Math.min(delta, duracaoMs), true);
+      const passo = encontro.fase === 2 && encontro.config.fase2?.movimento?.ativo
+        ? tempoMovimentoNovoBoss(scene, encontro, delta) : Math.min(delta, duracaoMs);
+      const grupo = encontro.fase === 2 ? destinoCamuflagem() : null;
+      if (grupo) seguir(encontro.sprite, grupo, passo, true);
+      else rumoReal = mover(encontro.sprite, rumoReal, passo, true);
       return encontro.sprite.x !== antes.x || encontro.sprite.y !== antes.y;
     },
     cancelar,
     destruir() { if (!destruido) { cancelar(); destruido = true; } },
     snapshot() {
       return { ativo, destruido, tempo, duracaoMs, quantidade,
-        velocidade: encontro.fase === 2 && encontro.config.fase2?.movimento?.ativo
-          ? encontro.config.fase2.movimento.velocidade : velocidade,
+        velocidade: encontro.fase === 2 && tempo < (config.dispersaoMs ?? 3200)
+          ? (config.velocidadeDispersao ?? 220) : velocidade,
+        preparacaoMs: sistema.preparacaoMs,
         imitacaoAtual, alvos: alvos.map(alvo => alvo.snapshot()) };
     },
   };

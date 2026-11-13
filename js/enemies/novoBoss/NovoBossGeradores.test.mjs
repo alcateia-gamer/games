@@ -723,3 +723,25 @@ test("limpeza das torres é idempotente; configuração incompleta não cria pro
   assert.equal(ausente.encontro.pendencia, "assets-torres-indisponiveis");
   assert.equal(ausente.criados.length, 0);
 });
+
+test("na recarga a torre aceita dano sem morrer ou reiniciar sua animação de subida", () => {
+  const { scene, encontro } = criarArenaTorres();
+  const sistema = prepararGeradoresNovoBoss(scene, encontro), torre = encontro.geradores[0];
+  sistema.atualizar(1600);
+  torre.controlarPrologo(); torre.recolher(); sistema.atualizar(1600);
+  let protegendo = true;
+  encontro.prologo = { bloqueiaCombatePrincipal: true,
+    get protegendoGeradores() { return protegendo; }, podeAtingirGerador: () => true, geradorDestruido() {} };
+  torre.emergir(); sistema.atualizar(400);
+  assert.equal(torre.estadoGerador, "emergindo");
+  assert.ok(torre.active);
+  const frame = torre.visual.frame;
+  assert.ok(torre.receberDano(10000)); assert.equal(torre.vida, 1);
+  assert.equal(torre.morto, false); assert.equal(torre.visual.frame, frame);
+  assert.equal(torre.estado, "summon");
+  sistema.atualizar(1200);
+  assert.equal(torre.estadoGerador, "exposto");
+  assert.ok(torre.receberDano(10000)); assert.equal(torre.vida, 1);
+  protegendo = false;
+  assert.ok(torre.receberDano(1)); assert.equal(torre.morto, true);
+});

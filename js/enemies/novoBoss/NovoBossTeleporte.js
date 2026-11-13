@@ -35,10 +35,20 @@ export function destinoValidoNovoBoss(scene, encontro, ponto) {
 }
 
 /** Prefere o ponto válido mais distante; empates seguem a ordem da configuração. */
-export function escolherDestinoNovoBoss(scene, encontro) {
+export function escolherDestinoNovoBoss(scene, encontro, motivo = null) {
   const sprite = encontro.sprite;
   if (!sprite) return null;
-  const pontos = encontro.config.teleporte.pontos.filter((ponto) =>
+  if (encontro.sistemaClones?.ativo) {
+    const grupo = encontro.sistemaClones.destinoCamuflagem?.(50);
+    if (grupo && Math.hypot(grupo.x - sprite.x, grupo.y - sprite.y) > 35 &&
+        destinoValidoNovoBoss(scene, encontro, grupo)) return { ...grupo, regiao: "clones" };
+  }
+  const retornoNasPontas = motivo === "retorno-clones" && encontro.geradores?.some(g => g.torre) &&
+    encontro.relogioCombate >= (encontro.ultimoTeleportePontasEm ?? 0) + encontro.config.teleporte.intervaloPontasMs;
+  const candidatos = motivo === "pontas-geradores" || retornoNasPontas
+    ? (encontro.geradores ?? []).map(g => ({ id: `gerador-${g.id}`, x: g.x, y: g.y, regiao: "gerador" }))
+    : encontro.config.teleporte.pontos;
+  const pontos = candidatos.filter((ponto) =>
     Math.hypot(ponto.x - sprite.x, ponto.y - sprite.y) > 1 &&
     destinoValidoNovoBoss(scene, encontro, ponto));
   let escolhido = null;
@@ -82,7 +92,7 @@ export function iniciarTeleporteNovoBoss(scene, encontro, motivo, opcoes = {}) {
   if (encontro.teleporte || encontro.morto || !encontro.sprite) return false;
   const destino = opcoes.destino
     ? (destinoValidoNovoBoss(scene, encontro, opcoes.destino) ? opcoes.destino : null)
-    : escolherDestinoNovoBoss(scene, encontro);
+    : escolherDestinoNovoBoss(scene, encontro, motivo);
   if (!destino) return false;
   if (!opcoes.preservarIlusoes) encontro.sistemaIlusoes?.encerrarQuatro();
   encontro.teleporte = {
@@ -103,6 +113,7 @@ function prepararReaparecimento(encontro, viagem, destino) {
   viagem.decorrido = 0;
   viagem.cancelado = Math.hypot(destino.x - viagem.origem.x, destino.y - viagem.origem.y) <= 1;
   sincronizarCorpoNovoBoss(encontro, destino);
+  if (destino.regiao === "gerador") encontro.ultimoTeleportePontasEm = encontro.relogioCombate;
   if (encontro.sprite.body) encontro.sprite.body.enable = false;
   definirAlpha(encontro.sprite, 0);
   encontro.pendencia = null;
@@ -114,7 +125,7 @@ function prepararReaparecimento(encontro, viagem, destino) {
  * local seguro, mantém uma silhueta visível, sem colisão, e reavalia mais tarde.
  */
 function recuperarDestino(scene, encontro, viagem) {
-  const destino = escolherDestinoNovoBoss(scene, encontro) ||
+  const destino = escolherDestinoNovoBoss(scene, encontro, viagem.motivo) ||
     (destinoValidoNovoBoss(scene, encontro, viagem.origem) ? viagem.origem : null) ||
     (destinoValidoNovoBoss(scene, encontro, encontro.sprite) ? encontro.sprite : null);
   if (destino) {

@@ -34,25 +34,9 @@ export function criarPadraoPrologo(scene, encontro, tipo, ondaId, indice) {
   const laser = criarLasersEspiral(scene, encontro, {
     ...encontro.config.prologo.lasers, quantidade: emissoes.length, emissoes,
   }, servicos);
-  const aviso = scene.add.graphics().setDepth(51).setName("novo-boss-prologo-direcoes");
-  let tempo = 0, destruido = false;
   return {
     ...laser, padrao: tipo,
-    atualizar(delta) {
-      if (destruido) return true;
-      tempo += delta;
-      aviso.clear();
-      if (tempo < encontro.config.prologo.lasers.avisoMs && tipo !== "espiral") {
-        const angulos = tipo === "rajadas" ? [rotacao, rotacao + 180] : [rotacao + 30];
-        aviso.lineStyle(tipo === "rajadas" ? 10 : 3, tipo === "rajadas" ? 0xff907e : 0x63efb7, 0.35);
-        for (const graus of angulos) {
-          const angulo = graus * Math.PI / 180;
-          aviso.lineBetween(encontro.x, encontro.y, encontro.x + Math.cos(angulo) * 380,
-            encontro.y + Math.sin(angulo) * 380);
-        }
-      }
-      return laser.atualizar(delta);
-    },
-    destruir() { if (!destruido) { destruido = true; laser.destruir(); aviso.destroy(); } },
+    // O preparo usa a animação do boss; não deixa retas/áreas geométricas sobre a arena.
+    get disparando() { return laser.disparando; },
   };
 }

@@ -204,7 +204,7 @@ test("delta inválido não emite nem avança o ataque", () => {
   assert.equal(c.ataque.snapshot().emitidos, 0);
 });
 
-test("configuração real emite cem disparos durante dez segundos depois do aviso", () => {
+test("configuração real combina cem disparos da espiral com 56 disparos extras durante dez segundos", () => {
   const c = preparar({ ...novoBossConfig.ataques.lasersEspiral, vidaProjetilMs: 0 });
   c.ataque.atualizar(699);
   assert.equal(c.ataque.snapshot().emitidos, 0);
@@ -212,15 +212,15 @@ test("configuração real emite cem disparos durante dez segundos depois do avis
   assert.equal(c.ataque.snapshot().emitidos, 1);
   assert.equal(c.ataque.snapshot().emitindo, true);
   assert.equal(c.ataque.atualizar(9999), false);
-  assert.equal(c.ataque.snapshot().emitidos, 100);
+  assert.equal(c.ataque.snapshot().emitidos, 156);
   assert.equal(c.ataque.snapshot().emitindo, true);
   assert.equal(c.ataque.atualizar(1), true);
   assert.equal(c.ataque.snapshot().emitindo, false);
-  assert.equal(c.ataque.snapshot().emitidos, 100, "Não emite um 101º disparo na fronteira.");
+  assert.equal(c.ataque.snapshot().emitidos, 156, "Não emite novos disparos na fronteira.");
 });
 
 function colherDirecoes(config) {
-  const c = preparar({ ...config, anguloInicial: 0 }, { atingirJogadorComLaser: () => false });
+  const c = preparar({ ...config, padroesAdicionais: false, anguloInicial: 0 }, { atingirJogadorComLaser: () => false });
   const angulos = [];
   for (let i = 0; i < 100; i++) {
     c.ataque.atualizar(i === 0 ? config.avisoMs : config.intervaloMs);
@@ -249,7 +249,7 @@ test("ficar parado num vão da primeira volta deixa de evitar a espiral seguinte
     const angulo = 11.25 * Math.PI / 180;
     const alvo = { x: Math.cos(angulo) * 200, y: Math.sin(angulo) * 200 };
     let impactos = 0;
-    const c = preparar({ ...novoBossConfig.ataques.lasersEspiral, anguloInicial: 0, intercalar }, {
+    const c = preparar({ ...novoBossConfig.ataques.lasersEspiral, anguloInicial: 0, intercalar, padroesAdicionais: false }, {
       atingirJogadorComLaser(inicio, fim, raio) {
         // Um corpo circular de diâmetro 32; o segmento é subdividido em até 6 px.
         if (Math.hypot(fim.x - alvo.x, fim.y - alvo.y) <= 16 + raio) { impactos++; return true; }
@@ -332,4 +332,24 @@ test("som é emitido junto a cada laser, nunca durante o aviso nem a cada frame 
   assert.deepEqual(sons.map(s=>s.atraso),[0,200,100,0]);
   assert.equal(c.ataque.snapshot().emitidos,4);
   c.ataque.atualizar(100);assert.equal(sons.length,4);
+});
+
+test("círculos, diagonais e horizontais são simultâneos à espiral e não estendem os dez segundos", () => {
+  const c = preparar({ ...novoBossConfig.ataques.lasersEspiral, anguloInicial: 0 },
+    { atingirJogadorComLaser: () => false });
+  assert.equal(c.ataque.disparando, false);
+  c.ataque.atualizar(1600);
+  let s = c.ataque.snapshot();
+  assert.equal(c.ataque.disparando, true);
+  assert.ok(s.projeteis.some(p => p.padrao === "espiral"));
+  assert.equal(s.projeteis.filter(p => p.padrao === "circulo").length, 8);
+  c.ataque.atualizar(1200);
+  s = c.ataque.snapshot();
+  assert.ok(s.projeteis.some(p => p.padrao === "diagonal"));
+  assert.equal(s.projeteis.filter(p => p.padrao === "horizontal").length, 2);
+  c.ataque.atualizar(7900);
+  assert.equal(c.ataque.disparando, false);
+  assert.equal(c.ataque.snapshot().emitidos, 156);
+  c.ataque.destruir();
+  assert.equal(c.ataque.disparando, false);
 });

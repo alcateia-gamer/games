@@ -258,7 +258,7 @@ test("espiral central preserva as três falsas sem sobreposição e compartilha 
     const copia = alvo.ataquesIlusorios.snapshot();
     assert.equal(copia.tempo, 500);
     assert.equal(copia.execucao.duracaoDisparosMs, 10000);
-    assert.equal(copia.execucao.quantidade, 100);
+    assert.equal(copia.execucao.quantidade, 156);
   }
 });
 

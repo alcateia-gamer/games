@@ -25,6 +25,7 @@ function prepararAtaqueCentral(scene, encontro, tipo) {
 export function prepararAtaquesNovoBoss(scene, encontro) {
   encontro.projeteisBoss = [];
   encontro.indiceAtaque = 0;
+  encontro.chuvasExecutadas = 0;
   encontro.ataqueAtual = null;
   encontro.tentaculosAtivos = null;
   encontro.ataquePendente = null;
@@ -100,7 +101,13 @@ export function executarAtaqueNovoBoss(scene, encontro, tipo) {
   const servicos = criarServicosAtaques(scene, encontro);
   const rng = servicos.rng;
   servicos.rng = () => { const valor = rng(); sorteios.push(valor); return valor; };
-  const execucao = def[0](scene, encontro, encontro.config.ataques[def[1]], servicos);
+  let ajustes = encontro.config.ataques[def[1]];
+  if (tipo === "chuva") {
+    const aneis = ajustes.alternarAneis && encontro.chuvasExecutadas % 2 === 1;
+    ajustes = { ...ajustes, padrao: aneis ? "aneis" : "perseguicao" };
+    encontro.chuvasExecutadas++;
+  }
+  const execucao = def[0](scene, encontro, ajustes, servicos);
   const persistente = tipo === "tentaculos";
   if (persistente) encontro.tentaculosAtivos = execucao;
   else encontro.ataqueAtual = execucao;
