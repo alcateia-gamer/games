@@ -6,6 +6,8 @@ Implementação integrada às duas cenas existentes. Não acrescenta aplicação
 
 O comerciante está no **Mapa 1, x = -410, y = 8817**, no interior da loja já acessível pelo teleporte da cidade em `(816, -860)`. O teleporte leva a `(-436, 8940)`; caminhe em direção ao comerciante. O alcance de interação é 90 pixels, medido entre os centros dos sprites. Use E ou o botão de interação existente (ícone de mão), que aparece ao entrar no alcance. Não há aviso de texto sobre o NPC. E, Esc ou FECHAR encerram o terminal.
 
+Na fábrica (**Mapa 2 / Level1Parte2**), o mesmo NPC fica em **x = -1253, y = -1928**. Usa o mesmo sprite, menu, alcance de 90 pixels, preços, saldo e níveis instalados. Compras na cidade aparecem na fábrica e compras na fábrica aparecem ao retornar à cidade, sem reiniciar a economia da partida. No cooperativo, o host valida a distância até o comerciante do mapa atual usando o sistema de compras existente. O NPC da fábrica fica oculto quando a área anterior é descarregada para a batalha final.
+
 O NPC usa exclusivamente `assets/PERSONAGENS/NPC/NPC.png`, recurso que já estava no diretório de trabalho. A imagem tem 1152 × 3968 pixels, em células de 64 × 64: frame 180, linha 10 e coluna 0, pose frontal da caminhada LPC. Permanece parado, sem corpo físico, ataque, hitbox de dano ou participação no grupo de inimigos. Assim não bloqueia a circulação na loja. As coordenadas são de mundo, iguais às coordenadas do mapa infinito do Tiled: não se soma origem de chunk nem se multiplica por tamanho do tile.
 
 O terminal exibe personagem local, saldo, categorias, níveis, regiões corporais, sprite original ampliado e prévia dos atributos. Compras sem saldo, no máximo ou em andamento ficam desabilitadas. O layout usa três colunas com rolagem interna; em telas estreitas passa a uma coluna. Textos são DOM nativo, como os HUDs existentes, mantendo nitidez nas resoluções solicitadas. A renderização do menu ocorre por eventos, sem reconstrução a cada frame.
@@ -134,3 +136,21 @@ Resultado final:
 - **338 arquivos JS/MJS passaram** em `node --check` (bibliotecas vendorizadas excluídas).
 - **226 imports relativos** dos módulos alterados/criados foram verificados, sem destinos ausentes.
 - `git diff --check` passou.
+
+## Recursos na HUD durante o boss
+
+Inventário (incluindo ícones, contagens e porcentagem de combustível) e contador de
+sucatas ficam ocultos enquanto `novoBoss` está em andamento com o jogador na arena,
+ou durante sua introdução. A regra usa o mesmo estado de encontro nas partidas solo
+e nas réplicas cooperativas; não cria eventos de rede nem altera os dados salvos.
+Vida, estamina e controles de combate continuam sob suas regras existentes.
+
+A interface dos recursos retorna quando o boss é derrotado, o encontro é encerrado
+ou o jogador deixa a arena. Mudanças nos slots durante a luta não reexibem os itens;
+o contador continua recebendo atualizações de saldo enquanto está oculto.
+
+Verificações adicionais: 31 casos em `Upgrades.test.mjs`, dois em
+`HudCinematic.test.mjs` e sete arquivos de regressão passaram. O roteiro
+`tests/upgrade-factory.browser.mjs` valida compras reais no menu da cidade e da
+fábrica nos dois sentidos, o NPC nas coordenadas indicadas, a ocultação dos recursos,
+a preservação dos dados e o retorno da HUD. Capturas locais em `/tmp/upgrade-factory`.

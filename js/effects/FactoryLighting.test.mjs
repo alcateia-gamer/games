@@ -58,29 +58,32 @@ test("reads every real Tiled point through Phaser without changing the negative 
   assert.equal(JSON.stringify(layer), before);
 });
 
-test("mapa real preserva Piscando e todas as lâmpadas ligadas participam das falhas", () => {
+test("mapa real mantém luminárias comuns estáveis e isola falhas nas marcadas", () => {
   const raw = JSON.parse(readFileSync(new URL("../../assets/map/parte2-fase1.json", import.meta.url)));
-  const layer = raw.layers.find(layer => layer.name === "LuzesFabrica");
-  const before = JSON.stringify(layer);
+  const layer = raw.layers.find(layer => layer.name === "LuzesFabrica"), before = JSON.stringify(layer);
   let seed = 321;
   const lights = new FactoryLighting(mapa(...layer.objects.map(object => parseObject(object))), {
     aleatorio: () => ((seed = seed * 16807 % 2147483647) - 1) / 2147483646,
   });
-  const marcadas = layer.objects.filter(object => object.properties.some(property =>
-    property.name === "Piscando" && property.value === true)).map(object => object.id);
-  assert.ok(marcadas.length > 0 && marcadas.length < lights.lampadas.length);
-  assert.deepEqual(lights.lampadas.filter(light => light.piscando).map(light => light.id), marcadas);
+  const marked = layer.objects.filter(o => o.properties.some(p => p.name === "Piscando" && p.value === true)).map(o => o.id);
+  assert.deepEqual(lights.lampadas.filter(l => l.piscando).map(l => l.id), marked);
+  const camera = { width: 100000, height: 100000, matrix: { a: 1, b: 0, c: 0, d: 1, e: 50000, f: 50000 } };
   lights.definirEnergia(true);
-  const camera = criarCamera();
-  const failing = new Set();
-  for (let now = 0; now <= 65000; now += 25) {
+  const failing = new Set(); let changes = 0;
+  for (let now = 0; now < 180000; now += 50) {
+    const revision = lights.revisao;
     lights.atualizar(now, camera);
-    for (const state of lights.estados) if (state.falha) failing.add(state.luz.id);
+    if (lights.revisao !== revision) changes++;
+    const active = lights.estados.filter(state => state.falha);
+    assert.ok(active.length <= 1, "no máximo uma falha ambiental");
+    for (const state of active) { failing.add(state.luz.id); assert.ok(marked.includes(state.luz.id)); }
+    for (const state of lights.estados.filter(state => !state.luz.piscando)) assert.equal(state.proximaFalha, null);
   }
-  const expected = lights.lampadas.filter(light => light.ligada && light.intensidade > 0 && light.cor.alpha > 0);
-  assert.deepEqual([...failing].sort(), expected.map(light => light.id).sort());
+  assert.ok(failing.size > 1, "distribui os eventos entre luminárias");
+  assert.ok(changes < 360, "mais de 90% das atualizações podem reutilizar a máscara");
   assert.equal(JSON.stringify(layer), before);
 });
+
 
 /**
  * Substituto do Canvas para verificar alpha e transformações da composição, sem navegador.
@@ -1576,104 +1579,56 @@ test("startup follows audio progress even when paused and falls back to the exis
   assert.equal(intensidadeLuzPartida(1), 1);
 });
 
-test("Piscando=true repete sem pausas e reutiliza o perfil sem novos sorteios", () => {
-  let sorteios = 0;
-  const lights = new FactoryLighting(mapa(ponto({ Piscando: true }), ponto({ Piscando: false })), {
-    aleatorio: () => { sorteios++; return 0; },
-  });
-  const camera = criarCamera();
-  lights.definirEnergia(true);
-  lights.atualizar(0, camera);
-  const perfil = lights.estados[0].falha;
-  assert.ok(perfil);
-  assert.equal(lights.estados[1].falha, null);
-  assert.equal(lights.falhasIniciadas.length, 0, "o estalo aguarda a queda visível");
-  const sorteiosIniciais = sorteios;
-  for (let agora = 10; agora <= 15000; agora += 10) {
-    lights.atualizar(agora, camera);
-    assert.equal(lights.estados[0].falha, perfil, "sem alocar um novo perfil a cada ciclo");
-    assert.equal(lights.estados[0].proximaFalha, null);
-    assert.equal(lights.estados[1].falha, null);
-    if (agora % perfil.duracao === 1100) assert.ok(lights.estados[0].intensidade < 0.5);
+test("luminária marcada descansa entre quedas suaves e não sorteia por quadro", () => {
+  let draws = 0;
+  const lights = new FactoryLighting(mapa(ponto({ Piscando: true }), ponto()), {aleatorio: () => { draws++; return 0; }});
+  const camera = criarCamera();lights.definirEnergia(true);lights.atualizar(0,camera);
+  assert.equal(lights.estados[0].falha,null);
+  const scheduled = lights.estados[0].proximaFalha, initialDraws = draws;
+  for(let now=100;now<scheduled;now+=100) lights.atualizar(now,camera);
+  assert.equal(draws,initialDraws);
+  lights.atualizar(scheduled,camera);
+  const profile = lights.estados[0].falha;assert.ok(profile);
+  const activeDraws=draws;
+  for(let now=scheduled+10;now<scheduled+profile.duracao;now+=10) {
+    lights.atualizar(now,camera);assert.equal(lights.estados[0].falha,profile);
+    assert.equal(draws,activeDraws);
   }
-  assert.equal(sorteios, sorteiosIniciais, "não sorteia novamente durante os ciclos");
-  lights.definirEnergia(false);
-  assert.equal(lights.estados[0].falha, null);
-  assert.equal(lights.atualizar(16000, camera).length, 0);
-  lights.definirEnergia(true);
-  lights.atualizar(16000, camera);
-  assert.equal(lights.estados[0].falha, perfil, "reutiliza o perfil ao religar");
-  assert.equal(perfil.inicio, 16000);
+  lights.atualizar(scheduled+profile.duracao,camera);
+  assert.equal(lights.estados[0].falha,null);
+  assert.ok(lights.estados[0].proximaFalha>=scheduled+profile.duracao+45000);
+  assert.equal(lights.estados[1].falha,null);
+  lights.definirEnergia(false);assert.equal(lights.estadoEmFalha,null);
 });
 
-test("piscadas contínuas aguardam a partida e não acumulam áudio fora da tela ou após suspensão", () => {
-  let progresso = 0.5;
-  const lights = new FactoryLighting(mapa(ponto({ Piscando: true }, 900, 200)), { aleatorio: () => 0 });
-  const camera = criarCamera();
-  lights.definirEnergia(true, () => progresso);
-  lights.atualizar(0, camera);
-  assert.equal(lights.estados[0].falha, null);
-  progresso = 1;
-  lights.atualizar(1000, camera);
-  assert.ok(lights.estados[0].falha);
-  const perfil = lights.estados[0].falha;
-  const primeiroEstalo = perfil.inicio + perfil.estalos[0].tempo;
-  lights.atualizar(primeiroEstalo, camera);
-  assert.equal(lights.falhasIniciadas.length, 0, "início do ciclo fora do campo de visão");
-  camera.setScroll(500, 0);
-  camera.preRender();
-  lights.atualizar(primeiroEstalo + 100, camera);
-  assert.ok(lights.fontesVisiveis[0].intensidade < 0.5);
-  assert.equal(lights.falhasIniciadas.length, 0, "entrar na tela não repete áudio");
-  lights.atualizar(100000, camera);
-  assert.ok(lights.estados[0].falha, "continua piscando após a suspensão");
-  assert.equal(lights.falhasIniciadas.length, 0, "descarta os eventos vencidos");
-  const proximo = perfil.estalos[perfil.proximoEstalo];
-  lights.atualizar(perfil.inicio + proximo.tempo, camera);
-  assert.equal(lights.falhasIniciadas.length, 1, "um evento por queda visível");
+
+test("falhas aguardam a partida, só começam na tela e descartam eventos vencidos", () => {
+  let progress=.5;
+  const lights=new FactoryLighting(mapa(ponto({Piscando:true},900,200)),{aleatorio:()=>0});
+  const camera=criarCamera();lights.definirEnergia(true,()=>progress);
+  lights.atualizar(0,camera);assert.equal(lights.estados[0].falha,null);
+  progress=1;lights.atualizar(1000,camera);
+  assert.equal(lights.estados[0].proximaFalha,null,"fora da tela não agenda falhas");
+  camera.setScroll(500,0);camera.preRender();lights.atualizar(2000,camera);
+  const start=lights.estados[0].proximaFalha;
+  lights.atualizar(start,camera);const profile=lights.estados[0].falha;assert.ok(profile);
+  lights.atualizar(start+profile.estalos[0].tempo,camera);assert.equal(lights.falhasIniciadas.length,1);
+  lights.atualizar(start+profile.estalos[0].tempo+10,camera);assert.equal(lights.falhasIniciadas.length,0);
+  lights.atualizar(100000,camera);assert.equal(lights.estados[0].falha,null);
+  assert.equal(lights.falhasIniciadas.length,0);
 });
 
-test("lâmpadas não marcadas têm falhas independentes com pausas maiores", () => {
-  let seed = 12;
-  const lights = new FactoryLighting(mapa(ponto({ Piscando: false }), ponto({ Piscando: false }), ponto()), {
-    aleatorio: () => ((seed = seed * 16807 % 2147483647) - 1) / 2147483646,
-  });
-  lights.definirEnergia(true);
-  const camera = criarCamera();
-  const starts = lights.estados.map(() => []);
-  const ends = lights.estados.map(() => []);
-  const values = lights.estados.map(() => []);
-  const previous = lights.estados.map(() => false);
-  let simultaneous = false;
-  for (let now = 0; now < 360000; now += 20) {
-    lights.atualizar(now, camera);
-    simultaneous ||= lights.estados.filter(state => state.falha).length > 1;
-    for (const [index, state] of lights.estados.entries()) {
-      values[index].push(state.intensidade);
-      const failing = !!state.falha;
-      if (failing && !previous[index]) starts[index].push(now);
-      if (!failing && previous[index]) ends[index].push(now);
-      previous[index] = failing;
-    }
-  }
-  assert.ok(simultaneous, "permite mais de uma luminária falhando ao mesmo tempo");
-  assert.notDeepEqual(starts[0], starts[1], "as luminárias não ficam sincronizadas");
-  for (const [index, times] of starts.entries()) {
-    assert.ok(Math.min(...values[index]) < 0.55);
-    assert.ok(values[index].every(value => value >= 0 && value <= 1));
-    assert.ok(times.length >= 3, "também falha com Piscando=false ou sem a propriedade");
-    assert.ok(times[0] >= 20000 && times[0] <= 60020);
-    assert.ok(new Set(times.slice(1).map((time, i) => time - times[i])).size > 1);
-    for (let i = 0; i < ends[index].length; i++) {
-      const duration = ends[index][i] - times[i];
-      assert.ok(duration >= 1185 && duration <= 5466);
-      if (times[i + 1] !== undefined) {
-        const rest = times[i + 1] - ends[index][i];
-        assert.ok(rest >= 30000 && rest <= 90020, "pausas estáveis entre sequências");
-      }
-    }
-  }
+
+test("lâmpadas não marcadas ficam estáveis sem sorteios ou invalidação pelo relógio", () => {
+  let draws=0;
+  const lights=new FactoryLighting(mapa(ponto({Piscando:false}),ponto(),ponto({Piscando:false})),{aleatorio:()=>{draws++;return .5;}});
+  const camera=criarCamera();lights.definirEnergia(true);lights.atualizar(0,camera);
+  const revision=lights.revisao;
+  for(let now=20;now<=360000;now+=20) lights.atualizar(now,camera);
+  assert.equal(lights.revisao,revision);assert.equal(draws,0);
+  assert.ok(lights.estados.every(s=>s.intensidade===1 && !s.falha && s.proximaFalha===null));
 });
+
 
 test("culling uses the configured world radius and current camera matrix at negative scroll and zoom", () => {
   const camera = criarCamera();
@@ -1728,7 +1683,7 @@ test("som da partida mantém os três estalos e não se repete na revisita", t =
   render();
   scene.time.now = 9450;
   render();
-  assert.ok(scene.iluminacaoFabrica.estados[0].falha, "uma luz está piscando durante o jogo");
+  assert.equal(scene.iluminacaoFabrica.estados[0].falha, null, "a partida termina com um período estável");
   assert.equal(reproducoes.length, 3, "essa piscada não produz som");
   scene.definirIluminacaoFabrica(true);
   scene.time.now = 9000;
@@ -1745,127 +1700,79 @@ test("som da partida mantém os três estalos e não se repete na revisita", t =
 });
 
 
-test("uma falha ocasional faz um corte profundo com repique e volta a estabilizar", () => {
-  const lights = new FactoryLighting(mapa(
-    ponto({ Piscando: false }),
-  ), { aleatorio: () => 0 });
-  lights.definirEnergia(true);
-  const camera = criarCamera();
-  const valores = [];
-  let eventos = 0;
-  for (let agora = 0; agora <= 24000; agora += 10) {
-    lights.atualizar(agora, camera);
-    eventos += lights.falhasIniciadas.length;
-    if (agora >= 20000) valores.push(lights.fontesVisiveis[0].intensidade);
+test("uma falha ocasional faz uma queda discreta, sem apagão nem repique", () => {
+  const lights=new FactoryLighting(mapa(ponto({Piscando:true})),{aleatorio:()=>0});
+  const camera=criarCamera();lights.definirEnergia(true);lights.atualizar(0,camera);
+  const start=lights.estados[0].proximaFalha, values=[];let events=0;
+  for(let now=start;now<=start+1500;now+=10) {
+    lights.atualizar(now,camera);values.push(lights.fontesVisiveis[0].intensidade);events+=lights.falhasIniciadas.length;
   }
-  let quedas = 0;
-  let recuperacoes = 0;
-  for (let i = 1; i < valores.length; i++) {
-    if (valores[i] < 0.6 && valores[i - 1] >= 0.6) quedas++;
-    if (valores[i] > 0.9 && valores[i - 1] <= 0.9) recuperacoes++;
-  }
-  assert.equal(eventos, 1, "uma sequência dispara só um evento de áudio");
-  assert.equal(quedas, 2, "corta, tenta reacender e corta novamente");
-  assert.equal(recuperacoes, 1, "só firma a luz após o repique");
-  assert.ok(Math.min(...valores) < 0.08, "a falhada quase apaga a lâmpada");
-  assert.equal(valores.at(-1), 1);
-  assert.equal(lights.estados[0].falha, null);
-});
-
-test("a máscara acompanha as falhas e volta a reutilizar a textura quando estabiliza", t => {
-  const { scene, render, texture } = cenaComMascara(t, [ponto({ Piscando: false })], true);
-  scene.iluminacaoFabrica.aleatorio = () => 0;
-  render();
-  const acesa = texture.canvas.alphaEm(400, 225);
-  scene.time.now = 20000;
-  render();
-  const uploads = texture.refreshes;
-  scene.time.now = 21100;
-  render();
-  assert.ok(texture.canvas.alphaEm(400, 225) > acesa + 0.1, "o cenário escurece na queda");
-  assert.ok(texture.refreshes > uploads);
-  scene.time.now = 21610;
-  render();
-  assert.equal(texture.canvas.alphaEm(400, 225), acesa);
-  const stable = texture.refreshes;
-  scene.time.now = 21700;
-  render();
-  assert.equal(texture.refreshes, stable, "nenhum upload extra durante a pausa estável");
-});
-
-test("a partida do gerador termina antes de agendar as falhas independentes", () => {
-  let progress = 0.5;
-  const lights = new FactoryLighting(mapa(ponto()), { aleatorio: () => 0 });
-  const camera = criarCamera();
-  lights.definirEnergia(true, () => progress);
-  lights.atualizar(30000, camera);
-  assert.equal(lights.estados[0].proximaFalha, null);
-  assert.equal(lights.estados[0].falha, null);
-  progress = 1;
-  lights.atualizar(30000, camera);
-  lights.atualizar(49999, camera);
-  assert.equal(lights.estados[0].falha, null);
-  lights.atualizar(50000, camera);
-  assert.ok(lights.estados[0].falha);
+  assert.equal(events,1);assert.ok(Math.min(...values)>=.71 && Math.min(...values)<.9);
+  let dips=0;for(let i=1;i<values.length;i++) {if(values[i]<.9 && values[i-1]>=.9)dips++;assert.ok(Math.abs(values[i]-values[i-1])<.2);}
+  assert.equal(dips,1);assert.equal(values.at(-1),1);assert.equal(lights.estados[0].falha,null);
 });
 
 
-test("falhas simultâneas respeitam os limites de duração e desligar cancela todos os relógios", () => {
-  for (const sorteio of [0, 0.5, 1]) {
-    const lights = new FactoryLighting(mapa(
-      ponto({ Piscando: false }, 100, 200),
-      ponto({ Piscando: false }, 200, 200),
-      ponto({ Piscando: false }, 300, 200),
-    ), { aleatorio: () => sorteio });
-    lights.definirEnergia(true);
-    const camera = criarCamera();
-    const intervalo = 20000 + sorteio * 40000;
-    lights.atualizar(0, camera);
-    lights.atualizar(intervalo - 1, camera);
-    assert.equal(lights.falhasIniciadas.length, 0);
-    lights.atualizar(intervalo, camera);
-    assert.equal(lights.falhasIniciadas.length, 0, "a falha começa acesa antes da primeira queda");
-    const perfil = lights.estados[0].falha;
-    const duracao = perfil.duracao;
-    lights.atualizar(intervalo + perfil.estalos[0].tempo, camera);
-    assert.equal(lights.falhasIniciadas.length, 3);
-    assert.ok(lights.estados.every(state => state.intensidade < 1));
-    lights.atualizar(intervalo + duracao, camera);
-    assert.ok(lights.estados.every(state => state.intensidade === 1 && !state.falha));
-    lights.definirEnergia(false);
-    assert.ok(lights.estados.every(state => !state.falha && state.proximaFalha === null));
-    assert.equal(lights.atualizar(100000, camera).length, 0);
-    assert.equal(lights.falhasIniciadas.length, 0);
-    lights.definirEnergia(true);
-    lights.atualizar(100000, camera);
-    assert.ok(lights.estados.every(state => state.intensidade === 1 && !state.falha));
+test("a máscara só muda na queda ocasional e reutiliza a textura entre eventos", t => {
+  const {scene,render,texture}=cenaComMascara(t,[ponto({Piscando:true})],true);
+  scene.iluminacaoFabrica.aleatorio=()=>0;render();
+  const lit=texture.canvas.alphaEm(400,225),start=scene.iluminacaoFabrica.estados[0].proximaFalha;
+  scene.time.now=start;render();const uploads=texture.refreshes;
+  scene.time.now=start+150;render();
+  assert.ok(texture.canvas.alphaEm(400,225)>lit);assert.ok(texture.refreshes>uploads);
+  const dipping=texture.refreshes;scene.time.now=start+155;render();
+  assert.equal(texture.refreshes,dipping,"mesmo passo visual não refaz a máscara");
+  scene.time.now=start+1000;render();assert.equal(texture.canvas.alphaEm(400,225),lit);
+  const stable=texture.refreshes;
+  for(let time=start+1100;time<start+5000;time+=100) {scene.time.now=time;render();}
+  assert.equal(texture.refreshes,stable);
+});
+
+
+test("a partida do gerador termina antes de agendar a primeira falha ambiental", () => {
+  let progress=.5;
+  const lights=new FactoryLighting(mapa(ponto({Piscando:true})),{aleatorio:()=>0});
+  const camera=criarCamera();lights.definirEnergia(true,()=>progress);
+  lights.atualizar(30000,camera);assert.equal(lights.estados[0].proximaFalha,null);
+  progress=1;lights.atualizar(30000,camera);
+  const start=lights.estados[0].proximaFalha;assert.ok(start>=48000);
+  lights.atualizar(start-1,camera);assert.equal(lights.estados[0].falha,null);
+  lights.atualizar(start,camera);assert.ok(lights.estados[0].falha);
+});
+
+
+test("luminárias marcadas nunca falham juntas e desligar cancela os relógios", () => {
+  for(const random of [0,.5,1]) {
+    const lights=new FactoryLighting(mapa(...[100,200,300].map(x=>ponto({Piscando:true},x,200))),{aleatorio:()=>random});
+    const camera=criarCamera();lights.definirEnergia(true);
+    let lastEnd=-Infinity,previous=null,events=0;
+    for(let now=0;now<=180000;now+=50) {
+      lights.atualizar(now,camera);const active=lights.estados.filter(s=>s.falha);
+      assert.ok(active.length<=1);
+      if(previous && !active.length)lastEnd=now;
+      if(active.length && !previous) {assert.ok(now-lastEnd>=8000);events++;}
+      previous=active[0]||null;
+    }
+    assert.ok(events>=2);lights.definirEnergia(false);
+    assert.equal(lights.estadoEmFalha,null);assert.ok(lights.estados.every(s=>!s.falha && s.proximaFalha===null));
+    assert.equal(lights.atualizar(200000,camera).length,0);
+    lights.definirEnergia(true);lights.atualizar(200000,camera);
+    assert.ok(lights.estados.every(s=>s.intensidade===1 && !s.falha));
   }
 });
 
-test("falhas seguem fora da tela sem áudio e não acumulam ao suspender o jogo", () => {
-  const lights = new FactoryLighting(mapa(
-    ponto({ Piscando: false }, -50, 200),
-    ponto({ Piscando: false }, 900, 200),
-  ), { aleatorio: () => 0 });
-  lights.definirEnergia(true);
-  const camera = criarCamera();
-  for (const tempo of [0, 20000]) {
-    lights.atualizar(tempo, camera);
-    assert.equal(lights.falhasIniciadas.length, 0, "o halo visível não basta");
-  }
-  assert.ok(lights.estados.every(state => state.falha), "lâmpadas fora da tela também participam");
-  camera.setScroll(500, 0);
-  camera.preRender();
-  lights.atualizar(21100, camera);
-  assert.ok(lights.fontesVisiveis.find(state => state.luz.x === 900).intensidade < 1);
-  assert.equal(lights.falhasIniciadas.length, 0);
-  lights.atualizar(21610, camera);
-  lights.atualizar(120000, camera);
-  assert.ok(lights.estados.every(state => !state.falha));
-  assert.equal(lights.falhasIniciadas.length, 0, "não dispara uma fila de falhas vencidas");
-  lights.atualizar(150000, camera);
-  lights.atualizar(150958, camera);
-  assert.deepEqual(lights.falhasIniciadas.map(estalo => estalo.luz.x), [900]);
+
+test("luzes fora da tela não iniciam falhas e voltar de suspensão não gera rajadas", () => {
+  const lights=new FactoryLighting(mapa(ponto({Piscando:true},-50,200),ponto({Piscando:true},900,200)),{aleatorio:()=>0});
+  const camera=criarCamera();lights.definirEnergia(true);
+  for(const time of [0,20000,40000]) {lights.atualizar(time,camera);assert.equal(lights.falhasIniciadas.length,0);}
+  assert.ok(lights.estados.every(s=>!s.falha && s.proximaFalha===null));
+  camera.setScroll(500,0);camera.preRender();lights.atualizar(50000,camera);
+  lights.atualizar(200000,camera);
+  assert.equal(lights.falhasIniciadas.length,0);assert.equal(lights.estados[1].falha,null);
+  const start=lights.estados[1].proximaFalha;assert.ok(start>200000);
+  lights.atualizar(start,camera);lights.atualizar(start+80,camera);
+  assert.deepEqual(lights.falhasIniciadas.map(event=>event.luz.x),[900]);
 });
 
 

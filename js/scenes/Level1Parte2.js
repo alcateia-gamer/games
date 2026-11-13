@@ -1,3 +1,4 @@
+import { createUpgradeNPC } from '../interactions/UpgradeNPC.js';
 import { ScrapSystem } from '../systems/ScrapSystem.js';
 import { prepararAudioCoop } from "../multiplayer/CoopAudio.js";
 import { descarregarCidade, descarregarFabricaParaBoss } from "../map/ProgressaoMapa.js";
@@ -44,8 +45,6 @@ import {
 
 import {
   criarInimigoTeste,
-  criarRobos,
-  criarRoboSerra,
   atualizarInimigoTeste,
   limparGrupoRobos,
   causarDanoInimigo,
@@ -318,6 +317,7 @@ class Level1Parte2 extends Phaser.Scene {
     this.grupoRobosAtivado = false;
     this.inimigoTeste = null;
     this.spawnAreasRoboBola = criarSpawnAreasRoboBola(this);
+    createUpgradeNPC(this);
     this.scrapSystem = new ScrapSystem(this);
     criarRuntimeCoop(this);
     iniciarMusicaFabrica(this);

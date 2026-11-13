@@ -31,6 +31,14 @@ const QUEDAS_LUZ_FABRICA = PARTIDA_GERADOR.flatMap(([inicio, luz], indice) => {
 });
 const limitar = valor => Math.max(0, Math.min(1, valor));
 const PERIODO_PULSO_MS = 1600;
+// Mau contato ambiental é raro e isolado; alarmes e a partida têm seus próprios efeitos.
+const INTERVALO_FALHA_INICIAL = 18000;
+const VARIACAO_FALHA_INICIAL = 24000;
+const DESCANSO_LUMINARIA = 45000;
+const VARIACAO_DESCANSO = 45000;
+const DESCANSO_ENTRE_FALHAS = 8000;
+const VARIACAO_DESCANSO_GLOBAL = 6000;
+const PASSO_FALHA_MS = 50;
 
 /** Ciclo suave e sincronizado de emergência, entre 10% e 100% da luz configurada. */
 function intensidadePulso(agora) {
@@ -162,9 +170,11 @@ class FactoryLighting {
     this.fontesVisiveis = [];
     this.revisao = 0;
     this.falhasIniciadas = [];
+    this.estadoEmFalha = null;
+    this.proximaFalhaPermitida = 0;
     // Estados separados dos dados do mapa: nada é escrito nos objetos do Tiled.
     this.estados = this.lampadas.map((luz, indice) => ({
-      luz, indice, intensidade: 0, falha: null, proximaFalha: null, perfilContinuo: null,
+      luz, indice, intensidade: 0, falha: null, proximaFalha: null,
     }));
   }
 
@@ -174,37 +184,25 @@ class FactoryLighting {
     this.partida = this.energia && typeof obterProgresso === "function"
       ? { obterProgresso, inicio: agora } : null;
     this.falhasIniciadas.length = 0;
+    this.estadoEmFalha = null;
+    this.proximaFalhaPermitida = 0;
     for (const estado of this.estados) {
       estado.falha = null;
       estado.proximaFalha = null;
     }
   }
 
-  /** Sorteia uma sequência de mau contato uma vez; nunca sorteia brilho por quadro. */
-  criarFalha(agora, continua = false) {
-    const piscadas = continua
-      ? 2 + Math.min(1, Math.floor(this.aleatorio() * 2))
-      : 1 + Math.min(1, Math.floor(this.aleatorio() * 2));
-    const pontos = [[0, 1]];
-    const estalos = [];
-    let tempo = 0;
-    const adicionar = (ms, intensidade) => { tempo += ms; pontos.push([tempo, intensidade]); };
-    for (let i = 0; i < piscadas; i++) {
-      // Espaça as falhas; cada estalo acompanha um corte seco com repique de contato.
-      adicionar(850 + this.aleatorio() * 1250, 1);
-      const minimo = this.aleatorio() * 0.06;
-      const queda = 16 + this.aleatorio() * 16;
-      // Um estalo para toda a falhada, incluindo a tentativa frustrada de reacender.
-      estalos.push({ tempo: tempo + queda * 0.6, inicio: 0, luz: null, duracaoQueda: queda / 1000 });
-      adicionar(queda, minimo);
-      adicionar(100 + this.aleatorio() * 80, minimo);
-      adicionar(32 + this.aleatorio() * 20, 0.65 + this.aleatorio() * 0.25);
-      adicionar(45 + this.aleatorio() * 45, pontos.at(-1)[1]);
-      adicionar(12 + this.aleatorio() * 12, minimo * 0.5);
-      adicionar(90 + this.aleatorio() * 80, minimo * 0.5);
-      adicionar(40 + this.aleatorio() * 35, 1);
-    }
-    return { inicio: agora, duracao: tempo, pontos, estalos, proximoEstalo: 0 };
+  /** Uma pequena queda de tensão, com retorno suave, sem apagar ou repicar. */
+  criarFalha(agora) {
+    const minimo = 0.72 + this.aleatorio() * 0.15;
+    const queda = 120 + this.aleatorio() * 100;
+    const pausa = 70 + this.aleatorio() * 80;
+    const retorno = 300 + this.aleatorio() * 180;
+    const duracao = queda + pausa + retorno;
+    return { inicio: agora, duracao,
+      pontos: [[0, 1], [queda, minimo], [queda + pausa, minimo], [duracao, 1]],
+      estalos: [{ tempo: queda * 0.6, inicio: 0, luz: null, duracaoQueda: queda / 1000 }],
+      proximoEstalo: 0 };
   }
 
   registrarEstalos(estado, agora, camera) {
@@ -222,28 +220,10 @@ class FactoryLighting {
     }
   }
 
-  /** Cada fonte tem seu relógio, permitindo falhas simultâneas em qualquer região. */
+  /** Só luminárias marcadas falham, uma por vez, com longos períodos estáveis. */
   atualizarFalha(estado, agora, camera) {
     if (this.coopReplica) {
       if (estado.falha) this.registrarEstalos(estado, agora, camera);
-      return;
-    }
-    if (estado.luz.piscando) {
-      // Um único perfil por luminária, repetido sem pausas nem novas alocações.
-      if (!estado.perfilContinuo) estado.perfilContinuo = this.criarFalha(agora, true);
-      const perfil = estado.perfilContinuo;
-      const iniciou = !estado.falha;
-      if (iniciou) {
-        perfil.inicio = agora;
-        perfil.proximoEstalo = 0;
-      }
-      const decorrido = agora - perfil.inicio;
-      if (decorrido >= perfil.duracao) {
-        perfil.inicio += Math.floor(decorrido / perfil.duracao) * perfil.duracao;
-        perfil.proximoEstalo = 0;
-      }
-      estado.falha = perfil;
-      this.registrarEstalos(estado, agora, camera);
       return;
     }
     if (estado.falha) {
@@ -252,27 +232,31 @@ class FactoryLighting {
         return;
       }
       estado.falha = null;
-      estado.proximaFalha = agora + 30000 + this.aleatorio() * 60000;
+      estado.proximaFalha = agora + DESCANSO_LUMINARIA + this.aleatorio() * VARIACAO_DESCANSO;
+      if (this.estadoEmFalha === estado) this.estadoEmFalha = null;
+      this.proximaFalhaPermitida = agora + DESCANSO_ENTRE_FALHAS + this.aleatorio() * VARIACAO_DESCANSO_GLOBAL;
       return;
     }
+    if (!estado.luz.piscando || estado.luz.pulsando || !luzDentroCampoVisao(estado.luz, camera)) return;
     if (estado.proximaFalha === null) {
-      // Espalha também a primeira falha depois da estabilização do gerador.
-      estado.proximaFalha = agora + 20000 + this.aleatorio() * 40000;
+      estado.proximaFalha = agora + INTERVALO_FALHA_INICIAL + this.aleatorio() * VARIACAO_FALHA_INICIAL;
+      return;
     }
-    if (agora < estado.proximaFalha) return;
+    if (agora < estado.proximaFalha || this.estadoEmFalha || agora < this.proximaFalhaPermitida) return;
     if (agora - estado.proximaFalha > 1000) {
-      // Uma aba suspensa não acumula falhas para disparar todas ao retornar.
-      estado.proximaFalha = agora + 30000 + this.aleatorio() * 60000;
+      // Não cria rajadas ao voltar de outra sala ou de uma aba suspensa.
+      estado.proximaFalha = agora + INTERVALO_FALHA_INICIAL + this.aleatorio() * VARIACAO_FALHA_INICIAL;
       return;
     }
     estado.falha = this.criarFalha(agora);
     estado.proximaFalha = null;
+    this.estadoEmFalha = estado;
   }
 
-  /** Cortes bruscos e repiques curtos, com respiros irregulares entre falhadas. */
+  /** Queda suave em passos de 50 ms: menos invalidações da máscara compartilhada. */
   calcularFalha(estado, agora) {
     if (!estado.falha) return 1;
-    const tempo = agora - estado.falha.inicio;
+    const tempo = Math.floor((agora - estado.falha.inicio) / PASSO_FALHA_MS) * PASSO_FALHA_MS;
     const pontos = estado.falha.pontos;
     for (let i = 1; i < pontos.length; i++) {
       const [fim, intensidade] = pontos[i];
@@ -292,6 +276,7 @@ class FactoryLighting {
   aplicarEstadoRede(dados, agora) {
     if (!dados || !Array.isArray(dados.falhas) || !Number.isFinite(dados.agora)) return;
     this.coopReplica = true;
+    this.estadoEmFalha = null;
     const ativos = new Set();
     for (const f of dados.falhas) {
       const e = this.estados[f.indice];
@@ -317,6 +302,11 @@ class FactoryLighting {
       if (progresso >= 1) this.partida = null;
     }
     const energia = this.energia ? intensidadeLuzPartida(progresso) : 0;
+    // Só a falha ativa avança fora da câmera, para liberar seu horário sem acumular eventos.
+    if (this.estadoEmFalha && !this.partida) {
+      const visivelNaZona = (zonas?.fatorLuz(this.estadoEmFalha.luz, agora) ?? 1) === 1;
+      this.atualizarFalha(this.estadoEmFalha, agora, visivelNaZona ? camera : null);
+    }
     let quantidade = 0;
     let alteradas = false;
     for (const estado of this.estados) {
@@ -325,9 +315,9 @@ class FactoryLighting {
       if (!energia || !luz.ligada || !luz.intensidade || !luz.cor.alpha || !fatorZona) {
         continue;
       }
-      // Atualiza os relógios fora da tela também, sem gerar estalos fora do campo de visão.
-      if (!this.partida && fatorZona === 1) this.atualizarFalha(estado, agora, camera);
       if (!luzAfetaCamera(luz, camera)) continue;
+      if (!this.partida && fatorZona === 1 && estado !== this.estadoEmFalha &&
+          (this.coopReplica ? estado.falha : luz.piscando)) this.atualizarFalha(estado, agora, camera);
       const oscilacao = this.partida
         ? 1 - (1 - progresso) * 0.12 * Math.sin(progresso * 15 + estado.indice) ** 2
         : fatorZona < 1 ? 1 : this.calcularFalha(estado, agora);
@@ -345,6 +335,7 @@ class FactoryLighting {
   }
 
   destroy() {
+    this.estadoEmFalha = null;
     this.partida = null;
     this.progressoPartida = null;
     this.energia = false;

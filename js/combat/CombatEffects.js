@@ -57,7 +57,9 @@ function playHitFlash(enemy, duration = COMBAT_FEEL.hitFlashDuration) {
   }
 
   enemy.setTint?.(0xffffff).setTintMode(Phaser.TintModes.FILL);
-  enemy.scene.time.delayedCall(duration, () => {
+  enemy.combatFlashTimer?.remove?.(false);
+  enemy.combatFlashTimer = enemy.scene.time.delayedCall(duration, () => {
+    enemy.combatFlashTimer = null;
     if (enemy.active) {
       enemy.clearTint();
     }
@@ -152,7 +154,7 @@ function applyKnockback(
   force = COMBAT_FEEL.knockback,
   duration = COMBAT_FEEL.knockbackDuration,
 ) {
-  if (!supportsCombatEffects(scene) || !enemy?.active || !enemy.body || !attacker) {
+  if (!supportsCombatEffects(scene) || !enemy?.active || !enemy.body || enemy.body.enable === false || enemy.morto || !attacker) {
     return;
   }
 
@@ -162,6 +164,10 @@ function applyKnockback(
     enemy.x,
     enemy.y,
   );
+  if (["padrao", "serra"].includes(enemy.tipoRobo)) {
+    force = Number.isFinite(force) ? Math.max(0, Math.min(force, 320)) : COMBAT_FEEL.knockback;
+    duration = Number.isFinite(duration) ? Math.max(0, Math.min(duration, 250)) : COMBAT_FEEL.knockbackDuration;
+  }
   enemy.body.setVelocity(Math.cos(angle) * force, Math.sin(angle) * force);
   enemy.combatKnockbackUntil = scene.time.now + duration;
   debugCombat("KNOCKBACK", force);

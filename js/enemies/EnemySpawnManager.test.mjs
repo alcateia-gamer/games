@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
+import { areaContemCorpo } from "./EnemySpawnArea.js";
 import EnemySpawnManager, { SPAWN_CONFIG } from "./EnemySpawnManager.js";
 
 // Usa o parser das camadas e a geometria da mesma biblioteca carregada pelo jogo.
@@ -87,9 +88,11 @@ test("a hitbox inteira precisa caber na zona mesmo quando o ponto sorteado está
   t.mock.method(Math, "random", () => 0.99);
   const manager = new EnemySpawnManager(scene(), map);
   const region = manager.regions[0];
+  const p = manager.findPosition(region, "serra", []);
+  assert.ok(p);
+  assert.ok(areaContemCorpo(region.area, corpo(p, "serra")));
+  region.area.width = 20;
   assert.equal(manager.findPosition(region, "serra", []), null);
-  assert.ok(region.rejected.length > 0);
-  assert.ok(region.rejected.every(p => p.x < region.area.x + region.area.width));
 });
 
 test("zona 639 rejeita objeto sob a imagem mesmo quando os pés estão livres", () => {
@@ -117,7 +120,9 @@ test("rejeita um robô com pés dentro da zona e sprite atravessando a borda sup
   const pes = corpo(p, "padrao");
   assert.ok(pes.top >= area.y && pes.bottom <= area.y + area.height);
   assert.equal(manager.isValidPosition(p, "padrao", []), true);
-  assert.equal(manager.findPosition(region, "padrao", []), null);
+  const sorteado = manager.findPosition(region, "padrao", []);
+  assert.ok(sorteado.y - 421 * .23 / 2 >= area.y,
+    "o sorteio agora já desconta a imagem e a margem antes de escolher o ponto");
 });
 
 test("a ativação mantém proximidade, limite global, retentativa e spawn único", () => {
@@ -156,7 +161,8 @@ test("aceita o nome SpawnRobos e zonas rotacionadas, inclusive em camada oculta"
     : null });
   const region = manager.regions[0];
   assert.deepEqual(region.center, { x: -1100, y: -800 });
-  assert.deepEqual(manager.findPosition(region, "padrao", []), region.center);
+  const p = manager.findPosition(region, "padrao", []);
+  assert.ok(p && areaContemCorpo(region.area, corpo(p, "padrao")));
 });
 
 test("camada vazia ou ausente nunca ativa o spawn antigo", () => {
@@ -166,4 +172,47 @@ test("camada vazia ou ausente nunca ativa o spawn antigo", () => {
     assert.deepEqual(manager.regions, []);
     assert.equal(manager.findPosition({ center: { x: -316, y: 1304 } }, "padrao", []), null);
   }
+});
+
+test("zonas bloqueadas não têm fallback e autoridade impede criação no cliente", t => {
+  seededRandom(t);
+  const sc = scene(), manager = new EnemySpawnManager(sc, map);
+  const region = manager.regions[0];
+  sc.collisionGroup = { getChildren: () => [{ body: { ...region.area, enable: true } }] };
+  assert.equal(manager.findPosition(region, "padrao", []), null);
+  assert.equal(manager.findPosition(region, "serra", []), null);
+  sc.multiplayer = true; sc.isMultiplayerHost = false;
+  assert.equal(manager.spawnRegion(region), 0);
+  assert.deepEqual(manager.solicitarSpawn("padrao", 3), []);
+  assert.equal(manager.autorizarCriacao({ x: 0, y: 0 }), false);
+});
+
+test("limpeza mantém robô distante válido, remove fora do mapa sem morte nem recompensas", () => {
+  const sc = scene(), manager = new EnemySpawnManager(sc, map);
+  manager.playableArea = { intersecta: b => b.x < 200 };
+  const valido = { active: true, tipoRobo: "padrao", body: { x: 10, y: 10, width: 20, height: 20 }, x: 1e5, y: 1e5 };
+  let destruido = 0;
+  const invalido = { active: true, tipoRobo: "serra", body: { x: 300, y: 10, width: 20, height: 20 },
+    destroy() { destruido++; this.active = false; }, setVelocity() {} };
+  sc.inimigos = [valido, invalido]; sc.inimigoTeste = invalido;
+  sc.scrapSystem = { onRobotDeath() { assert.fail("limpeza não é morte"); } };
+  manager.regions[0].enemies = [valido, invalido];
+  manager.limparForaDoMapa();
+  assert.equal(destruido, 1); assert.deepEqual(sc.inimigos, [valido]);
+  assert.deepEqual(manager.regions[0].enemies, [valido]);
+  assert.equal(sc.inimigoTeste, valido); assert.equal(invalido.body.enable, false);
+  manager.limparForaDoMapa(); assert.equal(destruido, 1);
+});
+
+test("parser real aplica offsets de grupos e camadas exatamente uma vez", () => {
+  const offsetMap = structuredClone(raw);
+  offsetMap.layers = [{ type: "group", name: "grupo", x: 0, y: 0, offsetx: 100, offsety: -200,
+    opacity: 1, visible: true, layers: [{ ...structuredClone(spawnLayer), offsetx: 20, offsety: 30 }] }];
+  const layer = load(22611)(offsetMap)[0];
+  const original = spawnLayer.objects[0];
+  assert.equal(layer.objects[0].x, original.x + 120);
+  assert.equal(layer.objects[0].y, original.y - 170);
+  const manager = new EnemySpawnManager(scene(), { objects: [layer] });
+  assert.equal(manager.regions[0].area.x, original.x + 120);
+  assert.equal(manager.regions[0].area.y, original.y - 170);
 });

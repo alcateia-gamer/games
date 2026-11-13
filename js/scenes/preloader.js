@@ -770,7 +770,7 @@ class Preloader extends Phaser.Scene {
 
     this.falhasCarregamento = [];
     const anterior = this.scene.settings.data?.cutscene;
-    this.cutscene = anterior && !anterior.destroyed ? anterior : new CutsceneLoading(this.game);
+    this.cutscene = anterior && !anterior.destroyed ? anterior : new CutsceneLoading(this.game, this.scene.settings.data);
     this.cutscene.attach(this);
 
     this.iniciarCarregamento();

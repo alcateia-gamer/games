@@ -4,6 +4,7 @@ import { criarRoboOlhao } from "../enemies/RoboOlhao.js";
 import { criarRoboBola } from "../enemies/RoboBola.js";
 
 export function executarSpawnDev(scene, tipo, quantidade = 1) {
+  if (scene.sys?.settings?.key === "Level1" && !["padrao", "serra"].includes(tipo)) return null;
   if (tipo === "padrao") return criarRobos(scene, quantidade);
   if (tipo === "serra") return criarRoboSerra(scene);
   if (tipo === "olhao") return criarRoboOlhao(scene);

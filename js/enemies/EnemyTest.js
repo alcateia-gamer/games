@@ -1,3 +1,4 @@
+import { PERFIS_ROBOS } from "./RobotBody.js";
 import { obterBalanceamentoInimigos } from "./EnemyBalance.js";
 import { atorRelevante, atualizarDecisaoAtor, atualizarBarrasDistantes } from "../core/ActorActivity.js";
 /**
@@ -23,10 +24,13 @@ import {
  * barra de vida.
  */
 function criarInimigoTeste(scene, config = {}) {
+  if (scene.sys?.settings?.key === "Level1" && !config.remoteOnly &&
+      !scene.enemySpawnManager?.autorizarCriacao(config)) return null;
+  if (![config.x, config.y].every(Number.isFinite)) return null;
   criarAnimacoesInimigo(scene);
 
-  const x = Number(config.x ?? scene.respawnX + 180);
-  const y = Number(config.y ?? scene.respawnY);
+  const x = config.x;
+  const y = config.y;
 
   const tipoRobo = config.tipoRobo === "serra" ? "serra" : "padrao";
   const balanceamento = obterBalanceamentoInimigos(scene)[tipoRobo];
@@ -34,11 +38,20 @@ function criarInimigoTeste(scene, config = {}) {
 
   const inimigo = scene.physics.add.sprite(x, y, textura, 0);
 
+  inimigo.once?.("destroy", () => {
+    inimigo.tempoFlashDano?.remove?.(false);
+    inimigo.combatFlashTimer?.remove?.(false);
+    inimigo.tempoFlashDano = inimigo.combatFlashTimer = null;
+    for (const key of ["debugHitboxDano", "fundoVida", "barraVida", "bordaVida"]) {
+      inimigo[key]?.destroy?.();
+      inimigo[key] = null;
+    }
+  });
   inimigo.origemSpawn = { x, y };
   inimigo.networkId = config.networkId || null;
   inimigo.remoteOnly = Boolean(config.remoteOnly);
 
-  inimigo.setScale(tipoRobo === "serra" ? 0.36 : 0.23);
+  inimigo.setScale(PERFIS_ROBOS[tipoRobo].scale);
   inimigo.baseScaleX = inimigo.scaleX;
   inimigo.baseScaleY = inimigo.scaleY;
   inimigo.setAlpha(1);
@@ -146,40 +159,10 @@ function criarInimigoTeste(scene, config = {}) {
 }
 
 /**
- * Cria um robô-serra próximo do jogador ou retorna um exemplar ativo já existente.
+ * Solicita uma unidade ao gerenciador das zonas; não há nascimento ao redor do jogador.
  */
 function criarRoboSerra(scene) {
-  if (!scene?.player?.active) {
-    return null;
-  }
-
-  const roboExistente = scene.inimigos?.find(
-    (inimigo) =>
-      inimigo?.tipoRobo === "serra" && inimigo.active && !inimigo.morto,
-  );
-  if (roboExistente) {
-    return roboExistente;
-  }
-
-  const angulo = Math.random() * Math.PI * 2;
-  const robo = criarInimigoTeste(scene, {
-    tipoRobo: "serra",
-    x: scene.player.x + Math.cos(angulo) * 140,
-    y: scene.player.y + Math.sin(angulo) * 140,
-    velocidade: 62,
-    distanciaDeteccao: 820,
-    distanciaAtaque: 68,
-    distanciaGrupo: 180,
-    tempoEntreAtaques: 1000,
-  });
-  robo.alerta = true;
-  robo.estado = "alerta";
-
-  if (scene.collisionGroup) {
-    scene.physics.add.collider(robo, scene.collisionGroup);
-  }
-
-  return robo;
+  return scene?.enemySpawnManager?.solicitarSpawn("serra", 1)[0] ?? null;
 }
 
 /**
@@ -255,79 +238,10 @@ function limparGrupoRobos(scene) {
 }
 
 /**
- * Cria a quantidade solicitada de robôs em torno de um centro e configura suas referências e
- * colisões.
+ * Encaminha os atalhos antigos ao único gerenciador autorizado de spawn.
  */
-function criarRobos(
-  scene,
-  quantidade = 1,
-  centroX = scene.player?.x ?? scene.respawnX,
-  centroY = scene.player?.y ?? scene.respawnY,
-) {
-  if (!scene) {
-    return [];
-  }
-
-  if (!Array.isArray(scene.inimigos)) {
-    scene.inimigos = [];
-  }
-
-  const quantidadeSolicitada = Phaser.Math.Clamp(
-    Math.floor(Number(quantidade) || 1),
-    1,
-    3,
-  );
-  const robosExistentes = scene.inimigos.length;
-  const robosCriados = [];
-  scene.networkEnemyId = (scene.networkEnemyId || 0) + 1;
-
-  for (let index = 0; index < quantidadeSolicitada; index += 1) {
-    const angulo = (Math.PI * 2 * index) / quantidadeSolicitada;
-    const raio = 120 + index * 25;
-    const x = centroX + Math.cos(angulo) * raio + (Math.random() - 0.5) * 18;
-    const y = centroY + Math.sin(angulo) * raio + (Math.random() - 0.5) * 18;
-
-    const robo = criarInimigoTeste(scene, {
-      x,
-      y,
-      networkId: `${scene.multiplayerManager?.playerId || "local"}-enemy-${scene.networkEnemyId}-${robosExistentes + index}`,
-      formacaoIndex: robosExistentes + index,
-      velocidade: 50,
-      distanciaDeteccao: 760,
-      distanciaAtaque: 330,
-      distanciaGrupo: 220,
-      tempoEntreTiros: 680 - index * 40,
-      tempoPatrulha: 1200 + index * 120,
-      direcaoAtual: ["down", "left", "right", "up"][
-        Math.floor(Math.random() * 4)
-      ],
-    });
-    robosCriados.push(robo);
-  }
-
-  if (scene.physics && robosCriados.length > 0) {
-    const aliadosExistentes = scene.inimigos.slice(0, robosExistentes);
-
-    for (let index = 0; index < robosCriados.length; index += 1) {
-      const robo = robosCriados[index];
-
-      for (const aliado of aliadosExistentes) {
-        scene.physics.add.collider(robo, aliado);
-      }
-
-      for (let aliadoIndex = 0; aliadoIndex < index; aliadoIndex += 1) {
-        scene.physics.add.collider(robo, robosCriados[aliadoIndex]);
-      }
-    }
-
-    if (scene.collisionGroup) {
-      for (const robo of robosCriados) {
-        scene.physics.add.collider(robo, scene.collisionGroup);
-      }
-    }
-  }
-
-  return scene.inimigos;
+function criarRobos(scene, quantidade = 1) {
+  return scene?.enemySpawnManager?.solicitarSpawn("padrao", quantidade) ?? [];
 }
 
 /**
@@ -338,16 +252,9 @@ function configurarHitboxPeInimigo(inimigo) {
     return;
   }
 
-  // Physics body pequeno na base do robô: o corpo visual continua grande, mas a
-  // colisão com cenário acontece somente na região dos pés.
-  if (inimigo.tipoRobo === "serra") {
-    inimigo.body.setSize(190, 100);
-    inimigo.body.setOffset(44, 160);
-    return;
-  }
-
-  inimigo.body.setSize(180, 110);
-  inimigo.body.setOffset(65, 270);
+  const perfil = PERFIS_ROBOS[inimigo.tipoRobo] || PERFIS_ROBOS.padrao;
+  inimigo.body.setSize(perfil.width, perfil.height);
+  inimigo.body.setOffset(perfil.offsetX, perfil.offsetY);
 }
 
 /**
@@ -431,8 +338,6 @@ function atualizarInimigoTeste(scene, time) {
     const relevante = atorRelevante(scene, inimigo);
     atualizarBarrasDistantes(inimigo, relevante);
     if (!relevante) continue;
-    atualizarDepthInimigo(inimigo, scene);
-
     const x = inimigo.x;
     const y = inimigo.y - 65;
 

@@ -1,3 +1,4 @@
+import { recursosHUDOcultosNoBoss } from '../ui/HudCinematic.js';
 /**
  * @file Interface dos slots do inventário. Prepara ícones sem margens transparentes e mantém
  * posição e tamanho durante o zoom.
@@ -135,7 +136,7 @@ class InventoryUI {
       return;
     }
 
-    this.container.setVisible(true);
+    this.container.setVisible(!recursosHUDOcultosNoBoss(this.scene));
 
     slots.forEach((slot, index) => {
       const row = Math.floor(index / columns);
@@ -219,6 +220,7 @@ class InventoryUI {
   updateCameraLayout() {
     const camera = this.scene.cameras.main;
     if (!camera || !this.container.scene) return;
+    this.container.setVisible(this.inventory.getSlotCount() > 0 && !recursosHUDOcultosNoBoss(this.scene));
 
     const columns = this.getColumnCount();
     if (columns !== this.columns) {

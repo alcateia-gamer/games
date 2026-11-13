@@ -13,6 +13,8 @@ function obstaculos(scene, inicio, fim, width, height) {
 
 export function limitarPassoInimigo(scene, robo, inicio, fim) {
   const { width, height } = robo.body;
+  if (inicio.x === fim.x && inicio.y === fim.y) return { x: fim.x, y: fim.y };
+  if (robo.playableArea) fim = robo.playableArea.limitarPasso(inicio, fim, width, height);
   const dx = fim.x - inicio.x, dy = fim.y - inicio.y;
   const distancia = Math.hypot(dx, dy);
   if (!distancia) return { ...fim };
@@ -46,7 +48,7 @@ export function protegerColisaoInimigo(scene, robo) {
   const mundo = scene.physics?.world;
   if (!mundo?.on) return;
   let seguro = null, removido = false;
-  const validar = area => retanguloLivreDoMapa(scene, area) && (!robo.prologoEncontroId || !scene.novoBoss ||
+  const validar = area => (!robo.playableArea || robo.playableArea.contem(area)) && retanguloLivreDoMapa(scene, area) && (!robo.prologoEncontroId || !scene.novoBoss ||
     (area.x >= scene.novoBoss.config.arena.xMin && area.y >= scene.novoBoss.config.arena.yMin &&
       area.x + area.width <= scene.novoBoss.config.arena.xMax &&
       area.y + area.height <= scene.novoBoss.config.arena.yMax));

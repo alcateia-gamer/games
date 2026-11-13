@@ -1,13 +1,11 @@
 import { CUTSCENE_LAYOUT } from "./CutsceneLayout.js";
 
-/** Mantém o GIF em loop fora da tela; congela a arte somente ao desligar a TV. */
+/** Encaixa vídeo e diálogo no contorno do vidro CRT da arte industrial. */
 export class CutsceneTelevision {
   constructor(image, screen, backdrop) {
     this.image = image;
     this.screen = screen;
     this.backdrop = backdrop;
-    this.stillImage = new Image();
-    this.stillImage.src = CUTSCENE_LAYOUT.still;
     this.duration = CUTSCENE_LAYOUT.duration;
     this.looping = false;
     this.destroyed = false;
@@ -19,11 +17,11 @@ export class CutsceneTelevision {
     try {
       await this.loadImage(CUTSCENE_LAYOUT.source);
       if (this.destroyed || this.frozen) return;
-      this.looping = true;
+      this.frozen = true;
     } catch {
       if (this.destroyed) return;
       try { await this.loadImage(CUTSCENE_LAYOUT.still); this.frozen = true; }
-      catch { /* O vídeo e o botão de pular continuam disponíveis. */ }
+      catch { /* O vídeo e o diálogo continuam disponíveis mesmo sem a arte. */ }
     }
   }
 
@@ -37,6 +35,7 @@ export class CutsceneTelevision {
   }
 
   setScreen(rect) {
+    this.screen.style.clipPath = rect.clipPath || "none";
     for (const [property, value] of Object.entries({ left: rect.x / CUTSCENE_LAYOUT.width,
       top: rect.y / CUTSCENE_LAYOUT.height, width: rect.width / CUTSCENE_LAYOUT.width,
       height: rect.height / CUTSCENE_LAYOUT.height })) this.screen.style[property] = `${value * 100}%`;

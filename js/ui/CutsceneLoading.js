@@ -1,17 +1,17 @@
+import { CrtLighting } from "./CrtLighting.js";
+import { HollowTransmission } from "../narrative/HollowTransmission.js";
 import { CUTSCENE_LAYOUT, CutsceneGate, fitCutscene } from "./CutsceneLayout.js";
 import { CutsceneTelevision } from "./CutsceneTelevision.js";
 
-/** DOM nativo mantém o GIF animado e o MP4 decodificado enquanto o Phaser carrega. */
+/** DOM nativo mantém a TV e o MP4 decodificado enquanto o Phaser carrega. */
 export class CutsceneLoading {
-  constructor(game) {
+  constructor(game, data = {}) {
     this.game = game;
     this.gate = new CutsceneGate();
     this.destroyed = false;
     this.finishing = false;
     this.root = document.createElement("section");
     this.root.className = "cutscene-loading";
-    this.powerOffDuration = 480;
-    this.root.style.setProperty("--cutscene-power-off-duration", `${this.powerOffDuration}ms`);
     this.root.setAttribute("aria-label", "Introdução de Nullborns");
     const backdrop = document.createElement("img");
     backdrop.className = "cutscene-backdrop";
@@ -39,9 +39,15 @@ export class CutsceneLoading {
     video.hidden = true;
     video.volume = 0.8;
     video.setAttribute("aria-label", "Vídeo de introdução");
-    screen.append(video);
+    // Vídeo e diálogo preenchem a abertura inteira; o contorno curvo limita a imagem.
+    const display = this.display = document.createElement("div");
+    display.className = "crt-display";
+    display.style.clipPath = layout.screen.clipPath;
+    display.append(video);
+    screen.append(display);
     stage.append(television, screen);
     this.televisionRenderer = new CutsceneTelevision(television, screen, backdrop);
+    this.crtLighting = new CrtLighting(stage, screen, video);
     this.message = document.createElement("p");
     this.message.className = "cutscene-message";
     this.message.setAttribute("role", "status");
@@ -53,11 +59,24 @@ export class CutsceneLoading {
     this.skip = document.createElement("button");
     this.skip.className = "cutscene-skip";
     this.skip.type = "button";
-    this.skip.textContent = "Pular introdução";
-    this.skip.addEventListener("click", () => this.finishVideo({ powerOff: true }));
-    this.root.append(backdrop, stage, this.message, this.action, this.skip);
+    this.skip.textContent = "[SEGURAR ESC] PULAR TRANSMISSÃO";
+    this.skip.addEventListener("click", () => this.transmission.skip());
+    this.advance = document.createElement("button");
+    this.advance.className = "cutscene-advance";
+    this.advance.type = "button";
+    this.advance.hidden = true;
+    this.advance.textContent = data.multiplayer ? "[ESPAÇO / TOQUE] REVELAR MENSAGEM" : "[ESPAÇO / TOQUE] AVANÇAR";
+    this.advance.onclick = () => this.transmission.advance();
+    this.root.append(backdrop, stage, this.message, this.action, this.advance, this.skip);
     (document.getElementById("game-container") || document.body).append(this.root);
-    this.onPlaying = () => { if (!this.gate.videoFinished) this.video.hidden = false; };
+    this.onPlaying = () => {
+      window.clearTimeout(this.stallTimer);
+      if (!this.gate.videoFinished) this.video.hidden = false;
+    };
+    this.onWaiting = () => {
+      window.clearTimeout(this.stallTimer);
+      this.stallTimer = window.setTimeout(() => this.showMediaError(), 15000);
+    };
     this.onEnded = () => this.finishVideo();
     this.onMediaError = () => this.showMediaError();
     this.onVisibility = () => {
@@ -74,6 +93,8 @@ export class CutsceneLoading {
         left: `${rect.x}px`, top: `${rect.y}px` });
     };
     video.addEventListener("playing", this.onPlaying);
+    video.addEventListener("waiting", this.onWaiting);
+    video.addEventListener("stalled", this.onWaiting);
     video.addEventListener("ended", this.onEnded);
     video.addEventListener("error", this.onMediaError);
     document.addEventListener("visibilitychange", this.onVisibility);
@@ -82,7 +103,39 @@ export class CutsceneLoading {
     this.observer?.observe(this.root);
     this.onGameDestroy = () => this.destroy();
     game.events.once("destroy", this.onGameDestroy);
+    this.transmission = new HollowTransmission({ screen: display, game, character: data.personagem,
+      multiplayer: data.multiplayer === true,
+      onComplete: () => this.finishTransmission(),
+      onSkipVideo: () => this.finishVideo(),
+      onStatus: text => { this.skip.textContent = `[SEGURAR ESC] ${text}`; },
+      onCancel: () => {
+        const scene = this.scene;
+        this.destroy();
+        game.registry.get("multiplayer")?.leaveRoom(false);
+        scene?.scene.start("Start", { abrirMenu: true });
+      },
+    });
+    this.onKeyDown = event => {
+      if (!["Escape", " ", "Enter"].includes(event.key) || event.repeat) return;
+      if (event.target instanceof HTMLButtonElement && event.key !== "Escape") return;
+      event.preventDefault(); event.stopImmediatePropagation();
+      if (event.key === "Escape") {
+        if (!this.holdTimer) {
+          this.skip.classList.add("hollow-holding");
+          this.holdTimer = window.setTimeout(() => { this.transmission.skip(); }, 1100);
+        }
+      } else this.transmission.advance();
+    };
+    this.cancelHold = () => {
+      window.clearTimeout(this.holdTimer); this.holdTimer = null;
+      this.skip.classList.remove("hollow-holding");
+    };
+    this.onKeyUp = event => { if (event.key === "Escape") this.cancelHold(); };
+    document.addEventListener("keydown", this.onKeyDown, true);
+    document.addEventListener("keyup", this.onKeyUp, true);
+    window.addEventListener("blur", this.cancelHold);
     this.onResize();
+    this.onWaiting();
     this.game.musicaMenu?.stop();
     void this.televisionRenderer.ready.then(() => this.play());
   }
@@ -119,47 +172,43 @@ export class CutsceneLoading {
     }
   }
 
-  finishVideo({ powerOff = false } = {}) {
+  finishVideo() {
     if (this.destroyed || this.gate.videoFinished) return;
     this.gate.videoFinished = true;
     this.video.pause();
-    this.skip.hidden = true;
-    if (this.mediaFailed && !this.loadFailed) this.clearMessage();
-    if (powerOff) {
-      this.poweringOff = true;
-      this.televisionRenderer.freeze();
-      this.root.classList.add("cutscene-powering-off");
-      this.powerOffTimer = window.setTimeout(() => {
-        if (this.destroyed) return;
-        this.poweringOff = false;
-        this.root.classList.remove("cutscene-powering-off");
-        this.root.classList.add("cutscene-powered-off");
-        this.video.hidden = true;
-        this.tryFinish();
-      }, this.powerOffDuration);
-      return;
-    }
-    // A tela limpa não revela a estática do GIF original durante a espera.
-    if (!this.gate.assetsReady) this.video.hidden = true;
+    this.video.hidden = true;
+    window.clearTimeout(this.mediaErrorTimer);
+    window.clearTimeout(this.stallTimer);
+    if (!this.loadFailed) this.clearMessage();
+    this.root.classList.add("cutscene-hollow-active");
+    this.advance.hidden = false;
+    this.transmission.prepare();
+  }
+
+  finishTransmission() {
+    if (this.destroyed || this.narrativeFinished) return;
+    this.narrativeFinished = true;
+    this.gate.videoFinished = true;
+    this.video.pause();
+    this.skip.hidden = this.advance.hidden = true;
+    if (!this.loadFailed) this.clearMessage();
+    this.video.hidden = true;
     this.tryFinish();
   }
 
   setAssetsReady(callback) {
     this.onComplete = callback;
     this.gate.assetsReady = true;
+    this.transmission.ready();
     this.tryFinish();
   }
 
   tryFinish() {
-    if (this.destroyed || this.finishing || this.poweringOff || this.loadFailed || document.hidden || !this.onComplete || !this.gate.complete()) return;
+    if (this.destroyed || this.finishing || !this.narrativeFinished || this.loadFailed || document.hidden || !this.onComplete || !this.gate.complete()) return;
     this.finishing = true;
-    this.root.classList.add("cutscene-leaving");
-    this.exitTimer = window.setTimeout(() => {
-      if (this.destroyed) return;
-      const complete = this.onComplete;
-      this.destroy();
-      complete();
-    }, 350);
+    const complete = this.onComplete;
+    this.destroy();
+    complete();
   }
 
   setAction(label, callback) {
@@ -176,6 +225,7 @@ export class CutsceneLoading {
     this.message.textContent = "Não foi possível reproduzir a transmissão.";
     this.message.hidden = false;
     this.setAction("Continuar", () => this.finishVideo());
+    this.mediaErrorTimer = window.setTimeout(() => this.finishVideo(), 1200);
   }
 
   showLoadError(message, retry) {
@@ -201,15 +251,23 @@ export class CutsceneLoading {
   destroy() {
     if (this.destroyed) return;
     this.destroyed = true;
-    window.clearTimeout(this.exitTimer);
-    window.clearTimeout(this.powerOffTimer);
+    window.clearTimeout(this.mediaErrorTimer);
+    window.clearTimeout(this.stallTimer);
+    this.cancelHold();
+    this.transmission.destroy();
+    document.removeEventListener("keydown", this.onKeyDown, true);
+    document.removeEventListener("keyup", this.onKeyUp, true);
+    window.removeEventListener("blur", this.cancelHold);
     this.release();
     this.observer?.disconnect();
     this.televisionRenderer.destroy();
+    this.crtLighting.destroy();
     window.removeEventListener("resize", this.onResize);
     document.removeEventListener("visibilitychange", this.onVisibility);
     this.game.events.off("destroy", this.onGameDestroy);
     this.video.removeEventListener("playing", this.onPlaying);
+    this.video.removeEventListener("waiting", this.onWaiting);
+    this.video.removeEventListener("stalled", this.onWaiting);
     this.video.removeEventListener("ended", this.onEnded);
     this.video.removeEventListener("error", this.onMediaError);
     this.video.pause();

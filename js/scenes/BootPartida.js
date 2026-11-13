@@ -15,7 +15,7 @@ export default class BootPartida extends Phaser.Scene {
     this.registry.set("tanqueCombustivelUsado", false);
     this.registry.set("fabricaVisitada", false);
     this.cameras.main.setBackgroundColor("#000000");
-    const cutscene = new CutsceneLoading(this.game);
+    const cutscene = new CutsceneLoading(this.game, data);
     cutscene.attach(this);
     const carregar = async () => {
       try {

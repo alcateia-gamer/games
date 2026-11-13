@@ -1,3 +1,4 @@
+import { createHollowSession, updateHollowSession, validHollowSession } from './HollowSession.js';
 import { maximumHealth, modifiers } from '../systems/UpgradeSystem.js';
 /**
  * @file Protocolo de salas sobre MQTT. O host publica o estado compartilhado; clientes enviam
@@ -187,11 +188,13 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
   receiveState(data) {
     if (
       data.roomCode !== this.roomTopic.split("/")[1] ||
-      !Array.isArray(data.players)
+      !Array.isArray(data.players) ||
+      (data.hollow && !validHollowSession(data.hollow))
     )
       return;
     if (!this.room || data.revision > (this.room.revision || 0)) {
       const seen = new Map((this.room?.players || []).map(p => [p.id, p.lastSeen]));
+      if (Number.isFinite(data.serverTime)) this.hollowClockOffset = data.serverTime - Date.now();
       if (data.status === "PLAYING" && this.room?.status !== "PLAYING")
         this.coopTransitionUntil = Date.now() + COOP.transitionGraceMs;
       const upgradeEconomy = (this.room?.upgradeEconomy?.revision ?? -1) > (data.upgradeEconomy?.revision ?? -1)
@@ -217,7 +220,11 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
    * pelo host.
    */
   receiveAction(action) {
-    if (!action || !action.type) return;
+    if (!action || typeof action.type !== "string") return;
+    if (action.type.startsWith("hollow_")) {
+      if (this.room?.hostId === this.playerId && updateHollowSession(this.room, action)) this.publishState();
+      return;
+    }
     if (action.type === "coop_action") {
       const known = this.room?.players?.some(p => p.id === action.playerId);
       if (!known || (action.clientId && action.clientId !== action.playerId) ||
@@ -324,9 +331,11 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
     ) {
       player.ready = Boolean(action.ready) && Boolean(player.character);
       this.publishState();
-    } else if (action.type === "start_game" && this.canStart()) {
+    } else if (action.type === "start_game" && this.room.status !== "PLAYING" &&
+      action.playerId === this.room.hostId && this.canStart()) {
       this.coopTransitionUntil = Date.now() + COOP.transitionGraceMs;
       this.room.status = "PLAYING";
+      this.room.hollow = createHollowSession(this.room.players, Date.now());
       this.publishState();
       this.emit("gameStarted", this.room);
     } else if (action.type === "nyx_aura" && player?.character === "nyx" &&
@@ -484,7 +493,18 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
         player.isHost = player.id === nextHost.id;
       });
     }
-    if (this.room.hostId === this.playerId) this.publishState();
+    if (this.room.hostId === this.playerId) {
+      // Na migração, preserva a posição temporal na referência do novo host.
+      if (wasHost && this.room.hollow) {
+        const offset = this.hollowClockOffset || 0;
+        for (const key of ["startAt", "releaseAt"]) {
+          if (this.room.hollow[key]) this.room.hollow[key] -= offset;
+        }
+        this.hollowClockOffset = 0;
+      }
+      updateHollowSession(this.room);
+      this.publishState();
+    }
     this.emit("playerLeft", playerId);
   }
 
@@ -516,6 +536,10 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
           (player) => player.id === this.room.hostId,
         );
         if (host && Date.now() > (this.coopTransitionUntil || 0) && Date.now() - host.lastSeen > PLAYER_TIMEOUT_MS) {
+          if (this.room.hollow && !this.room.hollow.releaseAt) {
+            this.removePlayer(host.id);
+            return;
+          }
           const nextHost = [...this.room.players].sort((left, right) =>
             left.id.localeCompare(right.id),
           )[0];
@@ -556,6 +580,7 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
       );
     this.roomTopic = null;
     this.room = null;
+    this.emit("roomClosed");
     this.coopEnabled = false;
     this.coopWorld = null;
   }
@@ -634,6 +659,7 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
       .filter((enemy) => enemy?.active && !enemy.morto && enemy.networkId)
       .map((enemy) => ({
         id: enemy.networkId,
+        tipoRobo: enemy.tipoRobo,
         x: enemy.x,
         y: enemy.y,
         direction: enemy.direcaoAtual,

@@ -67,7 +67,7 @@ try {
   check("vídeo original adaptado toca dentro da TV", await page.evaluate(() => {
     const v = document.querySelector(".cutscene-loading video");
     return v.videoWidth === 960 && v.videoHeight === 720 && v.duration > 31 && v.duration < 32 &&
-      getComputedStyle(v).objectFit === "cover" && !v.hidden && !v.parentElement.hidden;
+      getComputedStyle(v).objectFit === "fill" && !v.hidden && !v.parentElement.hidden;
   }));
   await page.evaluate(() => document.querySelector(".cutscene-loading video").pause());
   await page.waitForFunction(() => window.__game.scene.getScene("preloader")?.cutscene?.gate.assetsReady,
@@ -76,16 +76,16 @@ try {
     const s = window.__game.scene.getScene("preloader");
     return s.scene.isActive() && !s.barra && !s.porcentagem && !s.cutscene.gate.videoFinished && s.personagemSelecionada === "aria-kade";
   }));
-  check("TV original de 800x600 mantém a tela coberta pelo vídeo", await page.evaluate(() => {
+  check("TV industrial mantém vídeo recortado no vidro curvo", await page.evaluate(() => {
     const renderer = window.__game.scene.getScene("preloader").cutscene.televisionRenderer;
-    return renderer.duration === 2880 && renderer.image.naturalWidth === 800 &&
-      renderer.image.naturalHeight === 600 && !renderer.screen.hidden &&
+    return renderer.duration === 0 && renderer.image.naturalWidth === 1671 &&
+      renderer.image.naturalHeight === 941 && renderer.screen.style.clipPath.startsWith("polygon(") && !renderer.screen.hidden &&
       getComputedStyle(renderer.screen).backgroundColor === "rgb(0, 0, 0)";
   }));
   for (const time of [2.5, 12, 17.2, 17.8, 20.4, 28]) {
     await advanceTo(page, time);
     if (time === 12) {
-      check("GIF continua em loop enquanto o vídeo avança dentro da TV", await page.evaluate(async () => {
+      check("arte industrial permanece estática enquanto o vídeo avança", await page.evaluate(async () => {
         const cutscene = window.__game.scene.getScene("preloader").cutscene;
         const renderer = cutscene.televisionRenderer;
         const before = renderer.image.currentSrc;
@@ -93,24 +93,19 @@ try {
         await cutscene.video.play();
         await new Promise(resolve => setTimeout(resolve, 250));
         cutscene.video.pause();
-        return renderer.looping && !renderer.frozen && before.endsWith("televisao.gif") &&
-          before === renderer.image.currentSrc && renderer.backdrop.currentSrc === before &&
-          cutscene.video.currentTime > videoTime &&
+        return !renderer.looping && renderer.frozen &&
+          decodeURIComponent(before).endsWith("Televisor CRT Verde Neon em Ambiente Industrial.png") &&
+          before === renderer.image.currentSrc && cutscene.video.currentTime > videoTime &&
           !cutscene.gate.videoFinished;
       }));
-      await page.waitForTimeout(100);
-      const tv = await page.locator(".cutscene-television").boundingBox();
+      // A luz acompanha o último quadro pausado e termina sua suavização.
+      await page.waitForTimeout(2200);
       const screen = await page.locator(".cutscene-television-screen").boundingBox();
-      const beam = { x: tv.x + tv.width * 360 / 800, y: tv.y + tv.height * 500 / 600,
-        width: tv.width * 80 / 800, height: tv.height * 50 / 600 };
-      const inside = { x: screen.x + 8, y: screen.y + 8, width: screen.width - 16, height: screen.height - 16 };
-      const firstBeam = await page.screenshot({ clip: beam });
+      const inside = { x: screen.x + 12, y: screen.y + 12, width: screen.width - 24, height: screen.height - 24 };
       const firstScreen = await page.screenshot({ clip: inside });
       await page.waitForTimeout(160);
-      const nextBeam = await page.screenshot({ clip: beam });
-      const nextScreen = await page.screenshot({ clip: inside });
-      check("feixe do GIF muda de quadro com o vídeo pausado", !firstBeam.equals(nextBeam));
-      check("nenhuma animação do GIF aparece dentro da tela com o vídeo pausado", firstScreen.equals(nextScreen));
+      check("vídeo pausado fica estável dentro do vidro CRT", firstScreen.equals(await page.screenshot({ clip: inside })));
+
     }
     await page.screenshot({ path: `${artifacts}/tv-${time}s.png` });
   }
@@ -120,7 +115,7 @@ try {
     const layout = await page.evaluate(() => {
       const root = document.querySelector(".cutscene-loading").getBoundingClientRect();
       const tv = document.querySelector(".cutscene-television").getBoundingClientRect();
-      const screen = document.querySelector(".cutscene-television-screen").getBoundingClientRect();
+      const screen = document.querySelector(".crt-display").getBoundingClientRect();
       const video = document.querySelector(".cutscene-loading video").getBoundingClientRect();
       const backdrop = document.querySelector(".cutscene-backdrop").getBoundingClientRect();
       const box = r => ({ x: r.x, y: r.y, w: r.width, h: r.height });
@@ -128,13 +123,11 @@ try {
     });
     report.layouts.push({ width, height, ...layout });
     check(`televisão proporcional e centralizada em ${width}x${height}`,
-      Math.abs(layout.tv.w / layout.tv.h - 4 / 3) < 0.001 &&
+      Math.abs(layout.tv.w / layout.tv.h - 1671 / 941) < 0.001 &&
       Math.abs(layout.tv.x - (layout.root.w - layout.tv.w) / 2) < 1 &&
       Math.abs(layout.tv.y - (layout.root.h - layout.tv.h) / 2) < 1);
-    check(`fundo ocupa a tela toda e GIF completo fica visível em ${width}x${height}`,
+    check(`fundo ocupa a tela toda e TV fica enquadrada em ${width}x${height}`,
       layout.root.w === width && layout.root.h === height &&
-      layout.backdrop.x <= 0 && layout.backdrop.y <= 0 &&
-      layout.backdrop.x + layout.backdrop.w >= width && layout.backdrop.y + layout.backdrop.h >= height &&
       layout.tv.x >= -1 && layout.tv.x + layout.tv.w <= width + 1 &&
       layout.tv.y >= -1 && layout.tv.y + layout.tv.h <= height + 1);
     check(`vídeo permanece dentro da janela em ${width}x${height}`,
@@ -163,12 +156,10 @@ try {
   await slow.page.waitForFunction(() => !!window.__game.scene.getScene("preloader")?.cutscene);
   await slow.page.waitForFunction(() => window.__game.scene.getScene("preloader").load.isLoading());
   await slow.page.locator(".cutscene-skip").click();
-  check("pular inicia o desligamento antes de liberar a fase", await slow.page.evaluate(() => {
+  check("pular conclui a narrativa e aguarda os recursos sem animação extra", await slow.page.evaluate(() => {
     const s = window.__game.scene.getScene("preloader");
-    return s.scene.isActive() && s.cutscene.poweringOff &&
-      s.cutscene.root.classList.contains("cutscene-powering-off");
+    return s.scene.isActive() && s.cutscene.narrativeFinished && !s.cutscene.finishing;
   }));
-  await slow.page.waitForFunction(() => document.querySelector(".cutscene-powered-off"));
   check("pular com loader incompleto mantém a TV e aguarda os recursos", await slow.page.evaluate(() => {
     const s = window.__game.scene.getScene("preloader");
     return s.scene.isActive() && s.cutscene.gate.videoFinished && !s.cutscene.gate.assetsReady &&
@@ -191,16 +182,8 @@ try {
   }, null, { timeout: 120000 });
   await mobile.page.screenshot({ path: `${artifacts}/celular-horizontal-antes-skip.png` });
   await mobile.page.locator(".cutscene-skip").tap();
-  check("com assets prontos, o toque em pular aguarda a animação CRT", await mobile.page.evaluate(() => {
-    const s = window.__game.scene.getScene("preloader");
-    return s.scene.isActive() && s.cutscene.poweringOff && !s.cutscene.finishing &&
-      s.cutscene.video.getAnimations().length > 0 && !s.cutscene.video.hidden &&
-      s.cutscene.televisionRenderer.frozen && !s.cutscene.televisionRenderer.looping;
-  }));
-  await mobile.page.waitForTimeout(210);
-  await mobile.page.screenshot({ path: `${artifacts}/celular-horizontal-desligando.png` });
   await phase(mobile.page);
-  check("pular no celular horizontal conclui o desligamento e abre a fase", true);
+  check("pular no celular horizontal abre a fase sem esperar desligamento ou fade", true);
   await mobile.context.close();
   }
 

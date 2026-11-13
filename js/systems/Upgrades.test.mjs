@@ -4,7 +4,7 @@ import { EventEmitter } from 'node:events';
 import { readFileSync } from 'node:fs';
 import { createEconomy, economyFor, accountFor, playerAccount, purchase, modifiers, modifiersFor,
   applyUpgrades, basicDamage, specialCooldown, localPlayerId } from './UpgradeSystem.js';
-import { rollScrap, SCRAP_BALANCE, UPGRADE_NPC } from './UpgradeBalance.js';
+import { rollScrap, SCRAP_BALANCE, UPGRADE_NPC, UPGRADE_NPCS } from './UpgradeBalance.js';
 import { upgradeDefinitions, CHARACTER_NAMES } from './UpgradeDefinitions.js';
 import { ScrapSystem, claimScrap, canUseShop } from './ScrapSystem.js';
 import { UpgradeShopUI } from '../ui/UpgradeShopUI.js';
@@ -23,6 +23,9 @@ function visual(x = 0, y = 0, key = '', frame = 0) {
     body: { setAllowGravity(){}, setImmovable(){}, setSize(){}, setOffset(){}, setVelocity(){} } });
   for (const k of ['setDisplaySize','setOrigin','setDepth','setScrollFactor','setName','setStrokeStyle','setRotation','setInteractive','setScale','setTint','setAlpha','setVisible'])
     o[k] = (...args) => { o[k.slice(3)] = args; return o; };
+  o.setPosition = (x,y) => { o.x=x; o.y=y; return o; };
+  o.setDepth = value => { o.depth=value; return o; };
+  o.setVisible = value => { o.visible=value; return o; };
   o.setText = text => { o.text = text; return o; };
   o.setVelocity = (x,y) => { o.velocity = {x,y}; return o; };
   o.destroy = () => { o.active = false; o.destroyed = true; };
@@ -319,4 +322,70 @@ test('saldo e instalação do cliente são confirmados pelo host através das a�
   assert.equal(accountFor(client).scrap,0);assert.equal(modifiersFor(guest).healing,.06);
   assert.equal(modifiersFor(client).healing,.06);
   host.scrapSystem.destroy();client.scrapSystem.destroy();
+});
+
+
+test('comerciante da fábrica usa a coordenada informada e a mesma interação', () => {
+  const s=scene();s.sys.settings.key='Level1Parte2';s.profundidadePersonagemParte2=16.5;
+  const position=UPGRADE_NPCS.Level1Parte2;s.player.setPosition(position.x,position.y);
+  const {npc,shop}=createUpgradeNPC(s);
+  assert.equal(npc.x,-1253);assert.equal(npc.y,-1928);assert.equal(npc.frame,UPGRADE_NPC.frame);
+  assert.equal(npc.depth,16.5);assert.equal(npc.coopLocalVisual,true);
+  s.events.emit('update');assert.ok(s.interacaoCiberneticasProxima);
+  let opened=0;shop.open=()=>{opened++;return true;};s.interacaoCiberneticasProxima.interact();assert.equal(opened,1);
+  s.player.x+=91;s.events.emit('update');assert.equal(s.interacaoCiberneticasProxima,null);
+  s.player.setPosition(position.x,position.y);s.fabricaDescarregada=true;s.events.emit('update');
+  assert.equal(canUseShop(s,'Level1Parte2'),false);assert.equal(npc.visible,false);
+  globalThis.window={removeEventListener(){}};s.events.emit('shutdown');delete globalThis.window;
+  assert.equal(npc.destroyed,true);assert.equal(s.upgradeShop,null);
+});
+
+test('cidade e fábrica compartilham saldo, níveis e atributos nos dois sentidos', () => {
+  const city=scene(),citySystem=new ScrapSystem(city);city.scrapSystem=citySystem;
+  const account=grant(city,100);
+  assert.equal(citySystem.requestPurchase('health',0),true);assert.equal(account.scrap,92);
+  const factory=scene('kai-mercer',city.game.registry);factory.sys.settings.key='Level1Parte2';
+  factory.player.setPosition(UPGRADE_NPCS.Level1Parte2.x,UPGRADE_NPCS.Level1Parte2.y);
+  const factorySystem=new ScrapSystem(factory);factory.scrapSystem=factorySystem;applyUpgrades(factory);
+  assert.equal(accountFor(factory),account);assert.equal(new UpgradeShopUI(factory).level('health'),1);
+  assert.equal(factory.vidaMaxima,105);assert.equal(factorySystem.requestPurchase('health',1),true);
+  assert.equal(account.scrap,78);assert.equal(account.characters['kai-mercer'].health,2);
+  applyUpgrades(city);assert.ok(Math.abs(city.vidaMaxima-110)<1e-9);assert.equal(new UpgradeShopUI(city).level('health'),2);
+  assert.equal(accountFor(city).scrap,78);citySystem.destroy();factorySystem.destroy();
+});
+
+test('distância de compra é validada contra o comerciante do mapa atual', () => {
+  const s=scene();assert.equal(canUseShop(s,'Level1'),true);assert.equal(canUseShop(s,'Level1Parte2'),false);
+  s.player.setPosition(UPGRADE_NPCS.Level1Parte2.x,UPGRADE_NPCS.Level1Parte2.y);
+  assert.equal(canUseShop(s,'Level1'),false);assert.equal(canUseShop(s,'Level1Parte2'),true);
+  s.player.x+=90;assert.equal(canUseShop(s,'Level1Parte2'),true);
+  s.player.x+=.01;assert.equal(canUseShop(s,'Level1Parte2'),false);
+  assert.equal(canUseShop(s,'OutroMapa'),false);
+});
+
+test('host valida compras remotas na fábrica preservando melhorias da cidade', () => {
+  const s=scene();s.sys.settings.key='Level1Parte2';s.multiplayer=true;
+  s.multiplayerManager={playerId:'host',room:{}};
+  const r=s.coopRuntime={host:true,manager:{sendCoopAction(){}},players:{remotes:new Map()}};
+  const guest=soloContext(s,{coopRemotePlayerId:'guest',personagemSelecionada:'nyx',player:visual(UPGRADE_NPC.x,UPGRADE_NPC.y),vida:95},true);
+  r.players.remotes.set('guest',{context:guest});
+  const a=playerAccount(economyFor(s),'guest','nyx');a.scrap=100;a.characters.nyx.health=1;
+  const sys=new ScrapSystem(s);s.scrapSystem=sys;
+  const request={kind:'upgradeBuy',playerId:'guest',payload:{id:'weapon',level:0}};
+  sys.receive(request);assert.equal(a.scrap,100,'posição da cidade não autoriza a loja da fábrica');
+  guest.player.setPosition(UPGRADE_NPCS.Level1Parte2.x,UPGRADE_NPCS.Level1Parte2.y);
+  sys.receive(request);sys.receive(request);
+  assert.equal(a.scrap,90);assert.equal(a.characters.nyx.health,1);assert.equal(a.characters.nyx.weapon,1);
+  sys.destroy();
+});
+
+
+test('contador de sucatas some na luta sem perder saldo ou parar sincronização', () => {
+  const s=scene(),sys=new ScrapSystem(s);s.scrapSystem=sys;const a=grant(s,40);
+  s.novoBoss={encerrado:false,morto:false,jogadorNaArena:true};sys.update();
+  assert.equal(sys.counter.visible,false);assert.equal(sys.counterIcon.visible,false);
+  assert.equal(a.scrap,40);a.scrap=45;economyFor(s).revision++;sys.update();
+  assert.equal(sys.counter.visible,false);assert.equal(a.scrap,45);
+  s.novoBoss.morto=true;sys.update();assert.equal(sys.counter.visible,true);assert.equal(sys.counterIcon.visible,true);
+  assert.equal(a.scrap,45);sys.destroy();
 });

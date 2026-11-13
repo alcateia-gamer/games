@@ -146,7 +146,7 @@ body {
 /* Mesmo componente do meio da última linha usado no contador do mapa. */
 .upgrade-balance::before { content:""; display:inline-block; width:32px; height:28px; margin-right:8px; vertical-align:middle; background:url("assets/COLETAVEIS/sucatas.png") -192px -358.51px / 416.54px 425.22px no-repeat; image-rendering:auto; }
 
-/* A TV mantém a proporção do GIF; o vídeo é limitado à janela interna medida. */
+/* A arte industrial mantém sua proporção; vídeo e diálogo seguem o vidro CRT. */
 .cutscene-loading {
   position: fixed;
   inset: 0;
@@ -163,6 +163,8 @@ body {
 
 .cutscene-loading.cutscene-leaving { opacity: 0; pointer-events: none; }
 .cutscene-backdrop {
+  /* A própria arte já inclui o cenário industrial completo. */
+  display: none;
   position: absolute;
   inset: 0;
   width: 100%;
@@ -185,16 +187,23 @@ body {
   position: absolute;
   overflow: hidden;
   background: #000;
-  /* Raio de ~4 px na arte original, sem expor a estática nas outras bordas. */
-  border-radius: 0 0 1.4% 0 / 0 0 2% 0;
+  /* clip-path em CutsceneLayout acompanha as bordas convexas da tela de tubo. */
+  isolation: isolate;
 }
 .cutscene-television-screen video {
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  /* Estica os dois eixos para ocupar todo o vidro, sem preservar a proporção. */
+  object-fit: fill;
   object-position: center;
-  border-radius: 1.4% / 2%;
+}
+.crt-display {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #000;
+  isolation: isolate;
 }
 .cutscene-television-screen::after {
   content: "";
@@ -251,3 +260,134 @@ body {
   outline: 2px solid #f4efd7;
   outline-offset: 3px;
 }
+
+/* Canal clandestino: largura lógica de 572 px e altura ajustada ao vidro da TV. */
+.hollow-messenger {
+  --background: #000; --panel: #050a07; --primary: #00ff66;
+  --secondary: #00a843; --text: #c4ffd5; --muted: #47775a;
+  --border: #123b25; --warning: #ff4545;
+  position: absolute; inset: 0 auto auto 0; width: 572px; height: 398px;
+  box-sizing: border-box; padding: 18px 24px 14px; transform-origin: top left;
+  display: flex; flex-direction: column; overflow: hidden;
+  background: var(--background); color: var(--text); font: 18px/1.4 monospace;
+  text-align: left;
+}
+.hollow-messenger header, .hollow-messenger footer, .hollow-encryption {
+  display: flex; justify-content: space-between; flex-shrink: 0; gap: 12px;
+}
+.hollow-messenger header { color: var(--primary); font-size: 16px; letter-spacing: 1px; }
+.hollow-messenger header span { color: var(--secondary); font-size: 13px; }
+.hollow-encryption { color: var(--muted); font-size: 12px; padding: 3px 0 8px; border-bottom: 1px solid var(--border); }
+.hollow-feed { flex: 1; min-height: 0; overflow: auto; scrollbar-width: thin; scrollbar-color: var(--border) #000; padding: 10px 0; overscroll-behavior: contain; }
+.hollow-message { max-width: 91%; margin: 0 0 13px; overflow-wrap: anywhere; }
+.hollow-message b { display: block; color: var(--primary); font-size: 13px; letter-spacing: .5px; animation: hollow-arrival 450ms ease-out; }
+.hollow-message p { margin: 4px 0 0; white-space: pre-wrap; }
+.hollow-agent { margin-left: auto; background: var(--panel); border: 1px solid var(--border); padding: 7px 10px; text-align: right; }
+.hollow-system { max-width: 100%; text-align: center; color: var(--muted); font-size: 12px; letter-spacing: 1px; }
+.hollow-system b { display: none; }
+.hollow-unknown b, .hollow-unknown p { color: var(--warning); }
+.hollow-unknown { border-left: 2px solid var(--warning); padding-left: 10px; }
+.hollow-typing { flex-shrink: 0; height: 18px; font-size: 11px; color: var(--secondary); overflow: hidden; white-space: nowrap; }
+.hollow-messenger footer { border-top: 1px solid var(--border); padding-top: 6px; color: var(--muted); font-size: 11px; letter-spacing: .8px; }
+.hollow-status { color: var(--primary); }
+.hollow-compromised .hollow-status { color: var(--warning); animation: hollow-signal 250ms steps(2) 6; }
+.hollow-compromised::after, .cutscene-hollow-active .cutscene-television-screen::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none; opacity: 0;
+  background: repeating-linear-gradient(0deg, transparent 0 5px, #00ff661c 6px 7px);
+  animation: hollow-interference 480ms steps(3) 1;
+}
+.hollow-connecting .hollow-feed { display: flex; align-items: center; justify-content: center; }
+.hollow-connecting .hollow-message { font-size: 17px; color: var(--primary); }
+.hollow-operation pre { margin: 0; white-space: pre-wrap; text-align: left; font: 12px/1.2 monospace; letter-spacing: .3px; color: var(--text); }
+.hollow-operation { margin: 0; }
+.hollow-operation-active .hollow-feed { padding: 5px 0; }
+.cutscene-advance { position: absolute; bottom: max(57px, env(safe-area-inset-bottom)); right: 18px; padding: 7px 10px; border: 1px solid #123b25; background: #000c; color: #84b194; font: 11px monospace; cursor: pointer; }
+.cutscene-skip.hollow-holding { animation: hollow-hold 1100ms linear forwards; }
+.cutscene-powering-off .hollow-messenger { animation: cutscene-crt-off var(--cutscene-power-off-duration) ease-in forwards; }
+.cutscene-powered-off .hollow-messenger { visibility: hidden; }
+@keyframes hollow-arrival { from { color: #fff; } to { color: #00ff66; } }
+@keyframes hollow-signal { 50% { opacity: .25; } }
+@keyframes hollow-interference { 15%, 55% { opacity: .9; transform: translateX(2px); } 35%, 80% { opacity: .2; transform: translateX(-2px); } }
+@keyframes hollow-hold { to { color: #c4ffd5; border-color: #00ff66; background: #123b25; } }
+@media (prefers-reduced-motion: reduce) {
+  .hollow-message b, .hollow-compromised .hollow-status, .hollow-compromised::after,
+  .cutscene-hollow-active .cutscene-television-screen::after { animation: none; }
+}
+
+/* Vidro convexo e luz local: a imagem ilumina moldura, controles e superfície da mesa. */
+.cutscene-television {
+  container-type: inline-size;
+  isolation: isolate;
+  --crt-color: 80 220 140;
+  --crt-emission: 0;
+}
+.cutscene-television-art { position: relative; z-index: 0; }
+.cutscene-television-screen { z-index: 3; }
+.crt-room-light, .crt-rim-light, .crt-glass { pointer-events: none; }
+.crt-room-light {
+  position: absolute; inset: 0; z-index: 1; mix-blend-mode: screen;
+  opacity: var(--crt-emission);
+  transition: opacity 150ms linear;
+  background:
+    radial-gradient(ellipse 33% 7% at 47% 81%, rgb(var(--crt-color) / .46), transparent 80%),
+    radial-gradient(ellipse 7% 27% at 69% 48%, rgb(var(--crt-color) / .24), transparent 85%),
+    radial-gradient(ellipse 8% 26% at 26% 48%, rgb(var(--crt-color) / .16), transparent 90%);
+}
+.crt-rim-light {
+  position: absolute; z-index: 2;
+  opacity: var(--crt-emission); mix-blend-mode: screen;
+  filter: blur(.65cqw);
+  transition: opacity 150ms linear;
+}
+.crt-rim-emitter {
+  position: absolute; inset: 0;
+  /* Mesma abertura do vidro, sem um segundo retângulo arredondado sobre a moldura. */
+  background: rgb(var(--crt-color) / .65);
+}
+.crt-glass {
+  position: absolute; inset: 0; z-index: 5;
+  background:
+    radial-gradient(ellipse at 49% 48%, transparent 45%, #0003 78%, #0008 100%),
+    linear-gradient(128deg, #d4e9ff26 0%, #d4e9ff0b 18%, transparent 36%),
+    repeating-linear-gradient(0deg, transparent 0 .18cqw, #0003 .2cqw .26cqw);
+}
+.crt-glass::before {
+  content: ''; position: absolute; left: 4%; right: 4%; top: 1.5%; height: 13%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 46% 0%, #e0f5ff13, transparent 70%);
+}
+.crt-glass::after {
+  content: ''; position: absolute; inset: 0;
+  opacity: var(--crt-emission); mix-blend-mode: screen;
+  background: radial-gradient(ellipse at 50% 52%, rgb(var(--crt-color) / .055), transparent 65%, rgb(var(--crt-color) / .12) 100%);
+}
+@media (prefers-reduced-motion: reduce) {
+  .crt-room-light, .crt-rim-light { transition: none; }
+}
+
+.cutscene-television-screen .hollow-message p,
+.cutscene-television-screen .hollow-message b {
+  text-shadow: 0 0 .25cqw rgb(var(--crt-color) / .32);
+}
+
+/* No celular, mantém o vidro e a luz de estado sem copiar quadros da GPU ou compor blur. */
+.crt-low-power .crt-rim-light { display: none; filter: none; }
+.crt-low-power .crt-room-light {
+  mix-blend-mode: normal;
+  transition: none;
+  background: radial-gradient(ellipse 33% 7% at 47% 81%, rgb(var(--crt-color) / .24), transparent 80%);
+}
+.crt-low-power .crt-display { clip-path: none !important; isolation: auto; }
+.crt-low-power .crt-glass {
+  background:
+    radial-gradient(ellipse at 49% 48%, transparent 55%, #0005 100%),
+    linear-gradient(128deg, #d4e9ff16, transparent 36%);
+}
+.crt-low-power .crt-glass::before,
+.crt-low-power .crt-glass::after { display: none; }
+.crt-low-power .hollow-message b,
+.crt-low-power .hollow-compromised .hollow-status,
+.crt-low-power .hollow-compromised::after,
+.crt-low-power .cutscene-television-screen::after { animation: none; }
+.crt-low-power .hollow-message p,
+.crt-low-power .hollow-message b { text-shadow: none; }

@@ -48,7 +48,7 @@ Cada fonte deve ser um objeto **Point**:
 | `Raio` | int | 170 | Alcance de referência em pixels de mundo; a dispersão usa 1,5 × esse valor. Inteiro positivo. |
 | `Intensidade` | float | 1.0 | Número finito não negativo; zero apaga a fonte, valores acima de 1 são limitados. |
 | `Cor` | color | `#FFD27A` | RGB ou ARGB do Tiled (`#AARRGGBB`); alpha controla a força da fonte. |
-| `Piscando` | bool | false | `true` mantém piscadas contínuas; `false` ou ausente permite apenas falhas ocasionais espaçadas. |
+| `Piscando` | bool | false | `true` permite quedas ocasionais suaves; `false` ou ausente mantém a luminária estável. |
 | `Ligada` | bool | true | Permite acender a fonte apenas quando o gerador fornece energia. |
 | `Orientacao` | string | `horizontal` | `horizontal` ou `vertical`; orienta o segmento luminoso em cápsula. |
 
@@ -62,36 +62,30 @@ coordenadas válidas são ignorados com aviso. Uma camada ausente também gera a
 e mantém a escuridão, sem inventar lâmpadas. As luminárias físicas do mapa não são
 alteradas pela forma da projeção luminosa.
 
-## Piscadas contínuas e falhas ocasionais
+## Mau contato ocasional e iluminação estável
 
-Após estabilizar o gerador, cada lâmpada ligada segue um relógio independente.
-Com `Piscando=true`, a luminária repete continuamente um perfil de 2,37–8,17 segundos,
-com 2–3 falhadas bruscas separadas por respiros de 0,85–2,1 segundos. O perfil é sorteado uma
-vez por luminária e reutilizado, inclusive ao religar a energia, sem novas alocações
-ou sorteios a cada ciclo.
+As luminárias comuns (`Piscando=false` ou ausente) permanecem estáveis depois da
+partida. Somente as marcadas podem apresentar mau contato, e apenas uma falha
+ambiental fica ativa por vez em toda a fábrica. Não são alterados pontos, cores,
+orientações ou propriedades do mapa, nem os neons fixos, alarmes e efeitos do boss.
 
-Nas demais luminárias, a primeira falha ocorre após 20–60 segundos. Cada sequência
-dura 1,19–5,45 segundos com apenas 1–2 falhadas, seguida por uma pausa estável de
-30–90 segundos. Cada falhada corta a luz para 0–6% em 16–32 ms, sustenta o apagão
-por 100–180 ms, tenta reacender brevemente a 65–90% e corta novamente para 0–3%.
-Após mais 90–170 ms de mau contato, volta ao brilho normal em 40–75 ms. Um único
-estalo acompanha o corte e o repique, mantendo o intervalo maior entre falhadas.
-Várias lâmpadas podem falhar ao mesmo tempo.
-`Ligada`, intensidade, cor, orientação e o pulso de emergência continuam sendo
-respeitados.
+A primeira falha é agendada 18–42 segundos após a luminária entrar no campo de visão,
+com o gerador estabilizado. Uma queda dura 490–850 ms, reduz o brilho para 72–87%
+do valor configurado e volta suavemente, sem apagões ou repiques. Depois, a mesma
+luminária descansa por 45–90 segundos; há ainda 8–14 segundos de intervalo mínimo
+entre falhas de fontes diferentes. Assim, várias fontes próximas não oscilam juntas.
 
-Os relógios também avançam fora da tela. Cada queda visível emite um estalo quando
-atinge 60% da descida, acompanhando o mau contato em vez de tocar apenas no início
-do ciclo. Luz e áudio compartilham o instante da queda; o som compensa o atraso do
-quadro com `seek`, mantendo a velocidade original. Eventos com mais de 100 ms de
-atraso são descartados. Quedas simultâneas escolhem o estalo mais próximo e não
-interrompem um estalo em reprodução. Ao suspender o jogo, eventos vencidos são
-descartados, evitando uma fila de piscadas ao retornar. Desligar a energia cancela
-as sequências e os relógios. As falhas ocasionais sorteiam um perfil por sequência;
-as contínuas avançam diretamente ao ciclo atual após uma suspensão. Não há ruído
-aleatório por quadro nem temporizadores adicionais. Só fontes que alcançam a câmera
-têm seu brilho interpolado; a quantização de alpha e o cache da máscara evitam
-uploads quando a iluminação visível não muda.
+Não são iniciadas falhas fora do campo de visão. Uma falha já iniciada pode terminar
+fora dele para liberar seu horário; eventos de áudio vencidos ou invisíveis são
+descartados. Voltar de uma aba suspensa não dispara uma fila de falhas acumuladas.
+O perfil e seus instantes continuam sendo enviados pelo host no protocolo existente,
+permitindo reprodução equivalente com relógios de cena diferentes.
+
+Cada falha tem um único estalo discreto, ligado ao mesmo relógio da queda. A partida
+do gerador mantém seu áudio e sua progressão. Desligar a energia cancela o efeito e os
+agendamentos. Não há novos temporizadores. Só fontes visíveis são avaliadas para
+iniciar falhas; o brilho de uma queda ativa avança em passos de 50 ms (até 20 Hz).
+Durante os longos trechos estáveis, o cache reutiliza a máscara e evita uploads.
 
 ## Causa das manchas e correção
 
@@ -191,8 +185,8 @@ Validação manual:
 3. Compare locais com uma e com várias fontes: o brilho deve se combinar suavemente,
    preservando os detalhes e as cores do cenário.
 4. Teste `Orientacao = vertical` e raios diferentes. As posições não devem mudar.
-   Após estabilizar o gerador, lâmpadas com `Piscando=true` devem piscar continuamente;
-   as demais devem ter falhas de 1–2 quedas com pausas de 30–90 segundos.
+   Após estabilizar o gerador, só lâmpadas com `Piscando=true` podem ter uma queda
+   breve e suave por vez; as demais permanecem estáveis, com longas pausas entre eventos.
 5. Mova a câmera, altere zoom, redimensione e gire o celular. Saia e retorne à fábrica
    para conferir energia persistida e ausência de erros ou vazamentos.
 6. Confira a cidade e a loja e meça FPS/memória em um celular intermediário.

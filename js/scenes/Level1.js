@@ -41,8 +41,6 @@ import {
 
 import {
   criarInimigoTeste,
-  criarRobos,
-  criarRoboSerra,
   atualizarInimigoTeste,
   causarDanoInimigo,
 } from "../enemies/EnemyTest.js";
@@ -594,6 +592,7 @@ class Level1 extends Phaser.Scene {
         enemy = criarInimigoTeste(this, {
           networkId: data.id,
           remoteOnly: true,
+          tipoRobo: data.tipoRobo,
           x: data.x,
           y: data.y,
           vidaMaxima: data.vidaMaxima,

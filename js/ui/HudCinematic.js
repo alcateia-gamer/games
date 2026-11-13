@@ -1,3 +1,10 @@
+/** Inventário e sucatas ficam fora da HUD enquanto o encontro está em andamento. */
+export function recursosHUDOcultosNoBoss(scene) {
+  const boss = scene.novoBoss;
+  return !!(boss && !boss.encerrado && !boss.morto &&
+    (scene.cenaEntradaBossAtiva || boss.jogadorNaArena));
+}
+
 /** Oculta a interface fixa sem interferir nas atualizações dos botões ou na iluminação. */
 export function ocultarHUDDuranteCena(scene, camera) {
   const objetos = new Map(), elementos = new Map();

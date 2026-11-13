@@ -49,7 +49,9 @@ function causarDanoInimigo(
   if (scene.time) {
     alvo.setTint(0xff5555);
     alvo.setTintMode(Phaser.TintModes.FILL);
-    scene.time.delayedCall(100, () => {
+    alvo.tempoFlashDano?.remove?.(false);
+    alvo.tempoFlashDano = scene.time.delayedCall(100, () => {
+      alvo.tempoFlashDano = null;
       if (alvo && alvo.active) {
         alvo.clearTint();
       }

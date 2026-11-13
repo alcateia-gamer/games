@@ -290,6 +290,7 @@ test("city robots and player use the same physical feet and scene depth rule", t
   };
   atualizarDepthPlayer(scene);
   atualizarInimigoTeste(scene, 0);
+  atualizarDepthAtores(scene);
   assert.ok(scene.inimigos[0].depth < scene.player.depth);
   assert.equal(scene.inimigos[1].depth, scene.player.depth);
   assert.ok(scene.inimigos[2].depth > scene.player.depth);
@@ -306,6 +307,7 @@ test("factory robots sort on the player's floor without crossing its overlay lay
   };
   atualizarDepthPlayer(scene);
   atualizarInimigoTeste(scene, 0);
+  atualizarDepthAtores(scene);
   assert.equal(scene.player.depth, 16.5);
   assert.ok(scene.inimigos[0].depth < scene.player.depth);
   assert.equal(scene.inimigos[1].depth, scene.player.depth);
@@ -325,6 +327,7 @@ test("factory ordering follows movement and changes to the player's configured d
   };
   atualizarDepthPlayer(scene);
   atualizarInimigoTeste(scene, 0);
+  atualizarDepthAtores(scene);
   assert.ok(scene.inimigos[0].depth > scene.player.depth);
   scene.player.body.bottom = -5880;
   scene.profundidadePersonagemParte2 = 25.5;
@@ -332,6 +335,7 @@ test("factory ordering follows movement and changes to the player's configured d
   // Os robôs continuam ordenados mesmo durante a animação de morte do jogador.
   scene.player.active = false;
   atualizarInimigoTeste(scene, 16);
+  atualizarDepthAtores(scene);
   assert.equal(scene.player.depth, 25.5);
   assert.ok(scene.inimigos[0].depth < scene.player.depth);
   assert.ok(scene.inimigos[0].depth > 25.499);

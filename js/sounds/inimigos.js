@@ -97,15 +97,15 @@ function configurarSomPassoRobo(scene, inimigo) {
 
   inimigo.somPassoRobo = scene.sound.add(chaveSomPasso, { loop: true });
 
-  scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-    if (!inimigo.somPassoRobo) {
-      return;
-    }
-
-    inimigo.somPassoRobo.stop();
-    inimigo.somPassoRobo.destroy();
+  const limpar = () => {
+    scene.events.off?.(Phaser.Scenes.Events.SHUTDOWN, limpar);
+    inimigo.off?.("destroy", limpar);
+    inimigo.somPassoRobo?.stop();
+    inimigo.somPassoRobo?.destroy();
     inimigo.somPassoRobo = null;
-  });
+  };
+  scene.events.once(Phaser.Scenes.Events.SHUTDOWN, limpar);
+  inimigo.once?.("destroy", limpar);
 }
 
 // =====================================================

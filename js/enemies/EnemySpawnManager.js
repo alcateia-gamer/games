@@ -1,14 +1,19 @@
 /**
  * @file Geração de inimigos por zonas de proximidade. Planeja posições livres, garante os
- * tipos obrigatórios e controla limite e remoção por distância.
+ * tipos obrigatórios e controla limites e limpeza de entidades inválidas.
  */
 
 import { criarInimigoTeste } from "./EnemyTest.js";
 import { areaContemCorpo } from "./EnemySpawnArea.js";
+import { PERFIS_ROBOS as PERFIS } from "./RobotBody.js";
+import { retanguloLivreDoMapa } from "./EnemyPathfinding.js";
+import { criarAreaRobosCidade } from "../map/AreaMapa.js";
 
 /** Usa exclusivamente as áreas do Tiled; sem zonas não há spawn automático. */
 function zonasDoMapa(map) {
-  const layer = map?.getObjectLayer?.("SpawnRobos") || map?.getObjectLayer?.("SpawnRobo");
+  // O parser Phaser já soma offsets de grupos/camadas nos objetos.
+  const layer = map?.getObjectLayer?.("SpawnRobo") || map?.getObjectLayer?.("SpawnRobos") ||
+    map?.objects?.find(l => ["SpawnRobo", "SpawnRobos"].includes(l.name?.split("/").at(-1)));
 
   return (layer?.objects || [])
     .filter((object) =>
@@ -53,9 +58,6 @@ const SPAWN_CONFIG = {
   checkInterval: 400,
   retryDelay: 2500,
 
-  despawnDistance: 1350,
-  despawnGraceMs: 5000,
-
   spawnOnce: true,
 
   debug: false,
@@ -63,28 +65,6 @@ const SPAWN_CONFIG = {
 };
 
 const ROBOT_TYPES = ["padrao", "serra"];
-
-const PERFIS = {
-  serra: {
-    frameWidth: 278,
-    frameHeight: 270,
-    scale: 0.36,
-    width: 190,
-    height: 100,
-    offsetX: 44,
-    offsetY: 160,
-  },
-
-  padrao: {
-    frameWidth: 311,
-    frameHeight: 421,
-    scale: 0.23,
-    width: 180,
-    height: 110,
-    offsetX: 65,
-    offsetY: 270,
-  },
-};
 
 // =====================================================
 // DISTANCIA
@@ -98,50 +78,6 @@ function distancia2(ax, ay, bx, by) {
   const dy = ay - by;
 
   return dx * dx + dy * dy;
-}
-
-// =====================================================
-// LIMITES DO MAPA
-// =====================================================
-
-/**
- * Obtém os limites do mapa pelos chunks ou usa os limites de referência quando eles não estão
- * disponíveis.
- */
-function limitesMapa(map) {
-  const layers = map?.data?.layers || map?.layers || [];
-
-  const chunks = layers.flatMap((l) => l.chunks || []);
-
-  const w = Number(map?.tileWidth || 1);
-  const h = Number(map?.tileHeight || 1);
-
-  if (!chunks.length) {
-    return {
-      left: -2304,
-      top: -3072,
-      right: 2304,
-      bottom: 9216,
-    };
-  }
-
-  return chunks.reduce(
-    (b, c) => ({
-      left: Math.min(b.left, c.x * w),
-
-      top: Math.min(b.top, c.y * h),
-
-      right: Math.max(b.right, (c.x + c.width) * w),
-
-      bottom: Math.max(b.bottom, (c.y + c.height) * h),
-    }),
-    {
-      left: Infinity,
-      top: Infinity,
-      right: -Infinity,
-      bottom: -Infinity,
-    },
-  );
 }
 
 // =====================================================
@@ -240,7 +176,7 @@ class EnemySpawnManager {
       rejected: [],
     }));
 
-    this.mapBounds = limitesMapa(map);
+    this.playableArea = criarAreaRobosCidade(map);
 
     this.debugGraphics = this.config.debug
       ? scene.add.graphics().setDepth(190)
@@ -305,7 +241,7 @@ class EnemySpawnManager {
   // ===================================================
 
   /**
-   * Executa periodicamente remoção por distância e ativação de zonas, somente no solo ou no
+   * Executa periodicamente remoção fora do mapa e ativação de zonas, somente no solo ou no
    * host.
    */
   update(time) {
@@ -322,50 +258,29 @@ class EnemySpawnManager {
       return;
     }
 
-    this.limparDistantes(time);
+    this.limparForaDoMapa();
     this.checkSpawnZones(time);
   }
 
   // ===================================================
-  // REMOVER ROBOS MUITO DISTANTES
+  // REMOVER ROBOS FORA DO MAPA
   // ===================================================
 
   /**
-   * Acompanha o tempo de afastamento e remove inimigos que ficaram longe além do período de
-   * tolerância.
+   * Remove somente corpos completamente fora do contorno, independentemente da câmera e distância.
    */
-  limparDistantes(time) {
-    const player = this.scene.player;
-    const players = this.scene.coopRuntime?.playerContexts().filter(c => c.vida > 0 && !c.morteEmAndamento).map(c => c.player) || [player];
-
-    const limite2 = this.config.despawnDistance ** 2;
-
+  limparForaDoMapa() {
+    for (const enemy of [...(this.scene.inimigos || [])]) {
+      if (!enemy?.active || enemy.morto || enemy.remoteOnly ||
+          !ROBOT_TYPES.includes(enemy.tipoRobo) || !enemy.body) continue;
+      const body = enemy.body;
+      if (![body.x, body.y, body.width, body.height].every(Number.isFinite) ||
+          (this.playableArea && !this.playableArea.intersecta(body))) {
+        this.removerInimigoInvalido(enemy);
+      }
+    }
     for (const region of this.regions) {
-      region.enemies = region.enemies.filter((r) => {
-        if (!r?.active || r.morto) {
-          return false;
-        }
-
-        const distanciaAtual = Math.min(...players.map(p => distancia2(r.x, r.y, p.x, p.y)));
-
-        if (distanciaAtual <= limite2) {
-          r.tempoLongeSpawnManager = null;
-          return true;
-        }
-
-        if (r.tempoLongeSpawnManager == null) {
-          r.tempoLongeSpawnManager = time;
-          return true;
-        }
-
-        if (time - r.tempoLongeSpawnManager < this.config.despawnGraceMs) {
-          return true;
-        }
-
-        this.removerInimigoDistante(r);
-
-        return false;
-      });
+      region.enemies = region.enemies.filter(e => e?.active && !e.morto);
     }
   }
 
@@ -374,14 +289,22 @@ class EnemySpawnManager {
   // ===================================================
 
   /**
-   * Desativa e remove com segurança um inimigo distante e suas referências na cena.
+   * Desativa e remove com segurança um inimigo inválido e suas referências na cena.
    */
-  removerInimigoDistante(enemy) {
+  removerInimigoInvalido(enemy) {
     if (!enemy?.active || enemy.morto) {
       return;
     }
 
+    enemy.estado = "removido";
+    enemy.alerta = false;
+    enemy.rotaAtual = [];
+    enemy.combatKnockbackUntil = 0;
+    this.scene.tweens?.killTweensOf(enemy);
     this.enemyGroup?.remove(enemy, false, false);
+    for (const region of this.regions) {
+      region.enemies = region.enemies.filter(e => e !== enemy);
+    }
 
     enemy.setVelocity?.(0, 0);
 
@@ -494,6 +417,9 @@ class EnemySpawnManager {
    * respeitando o limite de vagas.
    */
   spawnRegion(region, vagas = Infinity) {
+    if (this.destroyed || (this.scene.multiplayer && !this.scene.isMultiplayerHost) ||
+        !this.regions.includes(region)) return 0;
+    vagas = Math.min(vagas, this.config.maxActiveEnemies - this.inimigosAtivos());
     region.enemies = region.enemies.filter((r) => r?.active && !r.morto);
 
     const existentes = region.enemies.length;
@@ -519,6 +445,8 @@ class EnemySpawnManager {
     }
 
     const total = Math.min(Math.max(0, region.targetCount - existentes), vagas);
+
+    if (total < necessarios.length) return 0;
 
     // Primeiro garante uma unidade de cada classe.
     const tipos = [...necessarios];
@@ -548,7 +476,7 @@ class EnemySpawnManager {
         continue;
       }
 
-      escolhidas.push(pos);
+      escolhidas.push({ ...pos, tipoRobo: tipo });
 
       planejados.push({
         tipo,
@@ -570,6 +498,7 @@ class EnemySpawnManager {
         y: pos.y,
 
         tipoRobo: tipo,
+        spawnZoneId: region.id,
 
         networkId: `${
           this.scene.multiplayerManager?.playerId || "local"
@@ -593,6 +522,7 @@ class EnemySpawnManager {
 
       enemy.upgradeZoneId = region.id;
       enemy.spawnArea = region.area;
+      enemy.playableArea = this.playableArea;
       enemy.spawnWallMargin = this.config.wallMargin;
 
       this.prepararColisoes();
@@ -622,13 +552,24 @@ class EnemySpawnManager {
     const rejeitados = [];
     if (!region.area) return null;
 
-    for (
-      let tentativa = 0;
-      tentativa < this.config.maxAttemptsPerEnemy;
-      tentativa++
-    ) {
-      const area = region.area;
-      const ponto = pontoNaArea(area, Math.random() * area.width, Math.random() * area.height);
+    const area = region.area;
+    const ocupacao = areaSpawn(0, 0, tipoRobo, this.config.wallMargin);
+    const cos = Math.cos(area.rotation), sin = Math.sin(area.rotation);
+    const cantos = [[ocupacao.left, ocupacao.top], [ocupacao.right, ocupacao.top],
+      [ocupacao.right, ocupacao.bottom], [ocupacao.left, ocupacao.bottom]];
+    const xs = cantos.map(([x, y]) => x * cos + y * sin);
+    const ys = cantos.map(([x, y]) => -x * sin + y * cos);
+    const minX = -Math.min(...xs), maxX = area.width - Math.max(...xs);
+    const minY = -Math.min(...ys), maxY = area.height - Math.max(...ys);
+    if (minX > maxX || minY > maxY) {
+      region.rejected = [];
+      if (this.config.debug) console.warn(`[SpawnManager] Zona ${region.id}: pequena demais para ${tipoRobo}.`);
+      return null;
+    }
+
+    for (let tentativa = 0; tentativa < this.config.maxAttemptsPerEnemy; tentativa++) {
+      const ponto = pontoNaArea(area, minX + Math.random() * (maxX - minX),
+        minY + Math.random() * (maxY - minY));
 
       const dentroDaZona = areaContemCorpo(area,
         areaSpawn(ponto.x, ponto.y, tipoRobo, this.config.wallMargin));
@@ -644,6 +585,7 @@ class EnemySpawnManager {
     }
 
     region.rejected = rejeitados;
+    if (this.config.debug) console.warn(`[SpawnManager] Zona ${region.id}: sem espaço para ${tipoRobo}.`);
     return null;
   }
 
@@ -663,24 +605,16 @@ class EnemySpawnManager {
       this.config.wallMargin,
     );
 
-    const b = this.mapBounds;
-
-    // Limites do mapa.
-    if (
-      rect.left < b.left ||
-      rect.right > b.right ||
-      rect.top < b.top ||
-      rect.bottom > b.bottom
-    ) {
-      return false;
-    }
+    if (this.playableArea && !this.playableArea.contem(rect)) return false;
 
     const min2 = this.config.minEnemyDistance ** 2;
 
     // Distancia de outras posicoes planejadas.
     if (
       positions.some(
-        (p) => distancia2(candidate.x, candidate.y, p.x, p.y) < min2,
+        (p) => distancia2(candidate.x, candidate.y, p.x, p.y) < min2 ||
+          Phaser.Geom.Intersects.RectangleToRectangle(rect,
+            footprint(p.x, p.y, p.tipoRobo || "serra", 0)),
       )
     ) {
       return false;
@@ -691,57 +625,45 @@ class EnemySpawnManager {
     const players = this.scene.coopRuntime?.playerContexts().filter(c => c.vida > 0 && !c.morteEmAndamento).map(c => c.player) || [player];
 
     if (
-      players.some(p => p?.active && distancia2(candidate.x, candidate.y, p.x, p.y) < this.config.minPlayerDistance ** 2)
+      players.some(p => p?.active && (distancia2(candidate.x, candidate.y, p.x, p.y) < this.config.minPlayerDistance ** 2 ||
+        (p.body && p.body.enable !== false && Phaser.Geom.Intersects.RectangleToRectangle(rect, p.body))))
     ) {
       return false;
     }
 
     // No nascimento, nem a imagem pode aparecer sobre os objetos do cenário.
     const ocupacao = areaSpawn(candidate.x, candidate.y, tipoRobo, this.config.wallMargin);
-    for (const bloco of this.scene.collisionGroup?.getChildren?.() || []) {
-      if (!bloco?.body || bloco.body.enable === false) {
-        continue;
-      }
-
-      const bb = new Phaser.Geom.Rectangle(
-        bloco.body.x,
-        bloco.body.y,
-        bloco.body.width,
-        bloco.body.height,
-      );
-
-      if (Phaser.Geom.Intersects.RectangleToRectangle(ocupacao, bb)) {
-        return false;
-      }
-    }
+    if (!retanguloLivreDoMapa(this.scene, ocupacao)) return false;
 
     // Outros inimigos.
     return !(this.scene.inimigos || []).some(
       (r) =>
         r?.active &&
         !r.morto &&
-        distancia2(candidate.x, candidate.y, r.x, r.y) < min2,
+        (distancia2(candidate.x, candidate.y, r.x, r.y) < min2 ||
+          (r.body && r.body.enable !== false && Phaser.Geom.Intersects.RectangleToRectangle(rect, r.body))),
     );
   }
 
-  // ===================================================
-  // COMPATIBILIDADE COM CHAMADAS ANTERIORES
-  // ===================================================
+  autorizarCriacao(config) {
+    if (this.scene.sys?.settings?.key === "Level1" && !this.playableArea) return false;
+    if (this.destroyed || (this.scene.multiplayer && !this.scene.isMultiplayerHost)) return false;
+    const region = this.regions.find(r => r.id === config.spawnZoneId);
+    if (this.inimigosAtivos() >= this.config.maxActiveEnemies ||
+        (region && region.enemies.filter(e => e.active && !e.morto).length >=
+          (region.targetCount ?? this.config.maxEnemies))) return false;
+    return !!region && [config.x, config.y].every(Number.isFinite) &&
+      areaContemCorpo(region.area, areaSpawn(config.x, config.y, config.tipoRobo, this.config.wallMargin)) &&
+      this.isValidPosition(config, config.tipoRobo, []);
+  }
 
-  /**
-   * Adiciona inimigos recém-criados ao grupo de colisões compartilhado, preservando chamadas
-   * anteriores da API.
-   */
-  addCollidersForNewEnemies(enemies) {
-    if (!enemies?.length) return;
-
-    this.prepararColisoes();
-
-    for (const enemy of enemies) {
-      if (enemy?.active && !this.enemyGroup.contains(enemy)) {
-        this.enemyGroup.add(enemy);
-      }
-    }
+  /** Atalhos passam pelo mesmo planejamento, autoridade e limites das zonas próximas. */
+  solicitarSpawn(tipo, quantidade = 1) {
+    if (this.destroyed || (this.scene.multiplayer && !this.scene.isMultiplayerHost)) return [];
+    const antes = new Set(this.scene.inimigos || []);
+    this.checkSpawnZones(this.scene.time?.now ?? 0);
+    return (this.scene.inimigos || []).filter(e => !antes.has(e) && e.tipoRobo === tipo)
+      .slice(0, quantidade);
   }
 
   // ===================================================

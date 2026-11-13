@@ -1,5 +1,6 @@
+import { recursosHUDOcultosNoBoss } from '../ui/HudCinematic.js';
 import { criarCanvasHUDNitido } from '../ui/HudCanvas.js';
-import { SCRAP_BALANCE, rollScrap, UPGRADE_NPC } from './UpgradeBalance.js';
+import { SCRAP_BALANCE, rollScrap, UPGRADE_NPCS } from './UpgradeBalance.js';
 import { economyFor, localPlayerId, playerAccount, purchase, applyUpgrades, accountFor } from './UpgradeSystem.js';
 
 // Recortes das 12 variações de sucatas.png, sem as margens transparentes.
@@ -21,8 +22,10 @@ export function claimScrap(economy, id, playerId, character, mapKey, position) {
   return drop.quantity;
 }
 export function canUseShop(context, mapKey) {
-  return mapKey === 'Level1' && context?.player?.active && context.vida > 0 && !context.morteEmAndamento &&
-    Math.hypot(context.player.x - UPGRADE_NPC.x, context.player.y - UPGRADE_NPC.y) <= UPGRADE_NPC.range;
+  const npc = UPGRADE_NPCS[mapKey];
+  return !!npc && context?.player?.active && context.vida > 0 && !context.morteEmAndamento &&
+    !(mapKey === 'Level1Parte2' && context.fabricaDescarregada) &&
+    Math.hypot(context.player.x - npc.x, context.player.y - npc.y) <= npc.range;
 }
 
 /** Um componente representa várias unidades. Não cria corpos ou colisores extras. */
@@ -61,6 +64,7 @@ export class ScrapSystem {
     this.seen = new WeakSet(); this.lastRevision = -1; this.lastBalance = accountFor(scene).scrap;
     this.update = this.update.bind(this); this.destroy = this.destroy.bind(this);
     scene.events.on('update', this.update); scene.events.once('shutdown', this.destroy);
+    this.updateHUDVisibility();
   }
   get mapKey() { return this.scene.sys.settings.key; }
   get authority() { return !this.scene.multiplayer || this.scene.coopRuntime?.host; }
@@ -160,7 +164,16 @@ export class ScrapSystem {
     this.lastBalance = balance;
     s.events.emit('upgradesChanged');
   }
+  updateHUDVisibility() {
+    const hidden = recursosHUDOcultosNoBoss(this.scene);
+    if (hidden === this.hudHidden) return;
+    this.hudHidden = hidden;
+    this.counter?.setVisible(!hidden);
+    this.counterIcon?.setVisible(!hidden && !this.counterIconView);
+    this.counterIconView?.object.setVisible(!hidden);
+  }
   update() {
+    this.updateHUDVisibility();
     this.syncVisuals();
     const s = this.scene;
     if (!s.player?.active || s.vida <= 0 || s.morteEmAndamento || s.upgradeMenuOpen) return;

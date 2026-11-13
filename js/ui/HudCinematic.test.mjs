@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
-import { ocultarHUDDuranteCena } from "./HudCinematic.js";
+import { ocultarHUDDuranteCena, recursosHUDOcultosNoBoss } from "./HudCinematic.js";
 
 test("oculta HUD Phaser/HTML e elementos tardios sem apagar luzes ou alterar visibilidade dos controles", () => {
   const camera = { id: 1 };
@@ -37,4 +37,16 @@ test("oculta HUD Phaser/HTML e elementos tardios sem apagar luzes ou alterar vis
   assert.equal(status.style.visibility, "visible"); assert.equal(radarDOM.node.style.visibility, "");
   assert.equal(novoStatus.style.visibility, ""); assert.equal(novo.cameraFilter, 0);
   assert.equal(scene.events.listenerCount("prerender"), 0);
+});
+
+
+test("recursos somem só durante a introdução ou luta, incluindo réplica cooperativa", () => {
+  const scene={};assert.equal(recursosHUDOcultosNoBoss(scene),false);
+  scene.novoBoss={encerrado:false,morto:false,jogadorNaArena:false};
+  assert.equal(recursosHUDOcultosNoBoss(scene),false);
+  scene.novoBoss.jogadorNaArena=true;assert.equal(recursosHUDOcultosNoBoss(scene),true);
+  scene.novoBoss.morto=true;assert.equal(recursosHUDOcultosNoBoss(scene),false);
+  scene.novoBoss.morto=false;scene.novoBoss.encerrado=true;assert.equal(recursosHUDOcultosNoBoss(scene),false);
+  scene.novoBoss.encerrado=false;scene.novoBoss.jogadorNaArena=false;scene.cenaEntradaBossAtiva=true;
+  assert.equal(recursosHUDOcultosNoBoss(scene),true);
 });
