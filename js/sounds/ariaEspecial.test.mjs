@@ -84,6 +84,7 @@ test("troca da Aria toca o áudio inteiro a 2× sem ser cortada ao consumir o cl
   assert.equal(troca.seek, 0, "começa no início do arquivo inteiro");
   assert.equal(troca.volume, 0.5);
   assert.equal(troca.rate, 2);
+  assert.equal(troca.detune, 400);
   assert.equal(troca.loop, false);
   clone.emit("destroy");
   assert.equal(troca.isPlaying, true, "destruir o clone não interrompe o novo som");

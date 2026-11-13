@@ -352,6 +352,7 @@ test("troca da Aria replica o áudio inteiro acelerado, sem eco, em todos os jog
     const som = peer.sounds.at(-1);
     assert.equal(som.currentMarker, null, "usa o arquivo inteiro, sem recorte");
     assert.equal(som.rate, 2);
+    assert.equal(som.detune, 400);
     assert.equal(som.volume, 0.5);
     assert.equal(som.loop, false);
   }

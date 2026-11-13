@@ -28,7 +28,7 @@ export function tocarSomTrocaAria(scene, destino) {
   };
   som.once("complete", limpar);
   scene.events.once("shutdown", limpar);
-  if (!som.play({ volume: 0.5, rate: 2, loop: false, seek: 0 })) limpar();
+  if (!som.play({ volume: 0.5, rate: 2, detune: 400, loop: false, seek: 0 })) limpar();
 }
 
 /** Invocação no nascimento; passos pertencem ao clone, com posição e vida próprias. */
