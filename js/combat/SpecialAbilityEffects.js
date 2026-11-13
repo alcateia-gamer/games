@@ -4,7 +4,7 @@ const DEFINICOES = {
   kai: { arquivo: `${BOSS_AREA}area-ataque-quadros.png`, meta: `${BOSS_AREA}area-ataque.json`, w:221, h:157, origem:[110/221,84/157], diametro:190 },
   nyx: { arquivo:'efeitos/especiais/nyx.png', meta:'efeitos/especiais/nyx.json', w:384, h:192, origem:[189/384,126/192], diametro:240 },
   'nyx-cura': { arquivo:'efeitos/especiais/nyx-cura.png', meta:'efeitos/especiais/nyx-cura.json', w:192, h:192, origem:[88.5/192,189/192], diametro:177 },
-  magnus: { arquivo:'efeitos/especiais/magnus.png', meta:'efeitos/especiais/magnus.json', w:496, h:506, origem:[.5,340/506], diametro:345 },
+  magnus: { arquivo:'efeitos/especiais/magnus (1).png', meta:'efeitos/especiais/magnus.json', w:496, h:506, origem:[.5,340/506], diametro:345 },
 };
 
 export function carregarEfeitosEspeciais(scene) {
@@ -40,7 +40,7 @@ export function deslocamentoChao(scene) {
 
 export function atualizarEfeitoEspecial(efeito, x, y, decorrido, depth, progresso = null) {
   if (!efeito) return;
-  let tempo = efeito.nome === 'nyx' ? Math.min(efeito.total-.001,Math.max(0,decorrido))
+  let tempo = (efeito.nome === 'nyx' || efeito.nome === 'magnus') ? Math.min(efeito.total-.001,Math.max(0,decorrido))
     : progresso === null ? decorrido % efeito.total : Math.min(.99999, progresso)*efeito.total;
   let indice = 0;
   while (indice < efeito.meta.duracoesMs.length-1 && tempo >= efeito.meta.duracoesMs[indice]) {

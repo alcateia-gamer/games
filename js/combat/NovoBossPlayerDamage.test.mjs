@@ -3,6 +3,7 @@ import { criarStatusPlayer } from "../player/PlayerStatus.js";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
+import { readFileSync } from "node:fs";
 import { criarPlayer, atacar, soltarAtaque } from "../player/Player.js";
 import { dispararProjetil, atualizarProjeteis } from "../player/PlayerProjectiles.js";
 import { criarSistemaEspeciais, atualizarSistemaEspeciais } from "./PlayerSpecialAbilities.js";
@@ -294,7 +295,9 @@ test("Magnus online aplica impacto contra robôs comuns tanto no host quanto pel
     scene.textures.exists = key => key === "magnus-especial-marreta";
     scene.anims = { exists: () => false, create() {} };
     scene.player.body.offset = { x: 0, y: 0 };
-    const enviados = [];
+    const enviados = [], sons = [];
+    scene.cache.audio.exists = key => key === "magnus-especial";
+    scene.sound.play = (key, config) => sons.push({ key, ...config });
     scene.multiplayer = true; scene.isMultiplayerHost = true;
     const robo = Object.assign(objeto(50, 0), { vida: 100, vidaMaxima: 100, tipoRobo: "padrao",
       hitboxDano: new Rectangle(40, -10, 20, 20) });
@@ -330,6 +333,9 @@ test("Magnus online aplica impacto contra robôs comuns tanto no host quanto pel
     else atualizarSistemaEspeciais(scene, 16);
     assert.equal(robo.vida, 10);
     assert.ok(robo.especialEmpurraoAte > 390);
+    assert.deepEqual(sons.filter(s => s.key === "magnus-especial"),
+      [{ key: "magnus-especial", volume: 0.15, loop: false }],
+      "host e comando remoto disparam um som por impacto");
   }
 });
 
@@ -394,4 +400,58 @@ test("Magnus: círculo de 90 de dano nos pés, queda à distância e empurrão m
   assert.equal(robos[4].especialEmpurraoAte, undefined, "fora da onda não recebe empurrão");
   atualizarSistemaEspeciais(scene);
   assert.deepEqual(robos.map(r => r.vida), [410, 410, 445, 480, 500], "um acerto por explosão");
+});
+
+test("nova folha Magnus: 33 quadros, mesma âncora e explosão sincronizada ao impacto", () => {
+  const meta = JSON.parse(readFileSync(new URL("../../assets/efeitos/especiais/magnus.json", import.meta.url)));
+  const png = readFileSync(new URL("../../assets/efeitos/especiais/magnus%20(1).png", import.meta.url));
+  assert.equal(meta.quadros, 33);
+  assert.equal(meta.duracoesMs.length, meta.quadros);
+  assert.equal(png.readUInt32BE(16), meta.colunas * meta.larguraFrame);
+  assert.equal(png.readUInt32BE(20), Math.ceil(meta.quadros / meta.colunas) * meta.alturaFrame);
+  const scene = cena("magnus-force", 500, 0);
+  scene.hitboxDanoPlayer = new Rectangle(-10, 0, 20, 30);
+  scene.textures.exists = key => key === "especial-magnus";
+  scene.cache.json = { get: () => meta };
+  const sons = [];
+  scene.cache.audio.exists = key => key === "magnus-especial";
+  scene.sound.play = (key, config) => sons.push({ key, ...config });
+  scene.add.image = (x, y, key, frame) => {
+    const sprite = objeto(x, y).setTexture(key, frame);
+    sprite.setFrame = n => { sprite.frame.name = n; return sprite; };
+    return sprite;
+  };
+  const robo = Object.assign(objeto(0, 30), { vida: 100, vidaMaxima: 100, tipoRobo: "padrao",
+    hitboxDano: new Rectangle(-5, 25, 10, 10) });
+  scene.inimigos = [robo];
+  criarSistemaEspeciais(scene);
+  scene.events.emit("player:especial");
+  const efeito = scene.estadoEspecial.impactoMagnus;
+  assert.equal(efeito.sprite.originX, 0.5);
+  assert.equal(efeito.sprite.originY, 340 / 506);
+  assert.equal(efeito.sprite.scaleX, 220 / 345);
+  scene.time.now = 199;
+  atualizarSistemaEspeciais(scene);
+  assert.equal(efeito.sprite.visible, false, "sem explosão antecipada durante a marreta");
+  assert.equal(robo.vida, 100);
+  assert.equal(sons.length, 0, "som aguarda o impacto, sem antecipar na preparação");
+  scene.time.now = 200;
+  atualizarSistemaEspeciais(scene);
+  assert.equal(efeito.sprite.visible, true);
+  assert.equal(efeito.sprite.frame.name, 0, "primeiro quadro coincide com o impacto");
+  assert.equal(efeito.sprite.x, 0);
+  assert.equal(efeito.sprite.y, 30, "mesmo local nos pés do personagem");
+  assert.equal(robo.vida, 10, "dano começa junto com a explosão");
+  assert.deepEqual(sons, [{ key: "magnus-especial", volume: 0.15, loop: false }]);
+  scene.time.now = 230;
+  atualizarSistemaEspeciais(scene);
+  assert.equal(efeito.sprite.frame.name, 1);
+  assert.equal(sons.length, 1, "som não repete a cada quadro");
+  scene.time.now = 200 + efeito.total - 1;
+  atualizarSistemaEspeciais(scene);
+  assert.equal(efeito.sprite.frame.name, 32, "último quadro útil sem ler células vazias");
+  scene.time.now++;
+  atualizarSistemaEspeciais(scene);
+  assert.equal(efeito.sprite.active, false);
+  assert.equal(scene.estadoEspecial.impactoMagnus, null, "termina sem reiniciar a animação");
 });

@@ -80,7 +80,7 @@ for (const key of ["running", "aria-tensar-arco", "aria-soltar-flecha", "dano-so
     for (const peer of peers) assert.equal(plays(peer, key), 1);
   });
 }
-for (const key of ["tiro-laser", "robo-explodindo", "robot-walk", "walk-robo-serra", "robo-serra-ataque",
+for (const key of ["magnus-especial", "tiro-laser", "robo-explodindo", "robot-walk", "walk-robo-serra", "robo-serra-ataque",
   "boss-escotilha", "boss-impacto-escotilha", "boss-explosao-escotilha", "boss-raio-escotilha", "boss-escudo-quebrado"]) {
   test(`${key}: som do mundo chega uma única vez aos quatro jogadores`, t => {
     const { peers } = setup(t);
@@ -278,4 +278,19 @@ test("motor real do gerador mantém a mesma fase ao entrar no alcance depois", a
   clock.now += 1000; controls[2].update(0);
   assert.equal(peers[2].sounds.at(-1).currentMarker.name, "motor");
   assert.equal(peers[2].sounds.at(-1).position, 3, "aproximar não repete a partida do gerador");
+});
+
+
+test("especial Magnus replica som a 15% no local da explosão, inclusive longe do host", async t => {
+  const { tocarSomEspecialMagnus } = await import("../sounds/magnusEspecial.js");
+  const { peers, messages } = setup(t);
+  peers[0].scene.player.x = 2000;
+  tocarSomEspecialMagnus(peers[0].scene, { x: 0, y: 0 });
+  for (const peer of peers) assert.equal(plays(peer, "magnus-especial"), 1);
+  assert.equal(peers[0].sounds.at(-1).volume, 0);
+  assert.equal(peers[1].sounds.at(-1).volume, 0.15);
+  const evento = messages.find(m => m.kind === "audio").payload.sounds[0];
+  assert.equal(evento.x, 0);
+  assert.equal(evento.y, 0);
+  assert.equal(evento.volume, 0.15);
 });

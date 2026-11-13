@@ -6,6 +6,7 @@
 
 import { causarDanoInimigo } from "../enemies/EnemyHealth.js";
 import { jogadorPresoNovoBoss } from "../player/PlayerControlEffects.js";
+import { tocarSomEspecialMagnus } from "../sounds/magnusEspecial.js";
 import { criarColisaoDomoKai } from './KaiDomeCollision.js';
 import { NYX_AURA, prepararAuraNyx, iniciarAuraNyx, atualizarAuraNyx, limparAuraNyx } from './NyxHealingAura.js';
 import { criarEfeitoEspecial, atualizarEfeitoEspecial, deslocamentoChao, iniciarAnimacaoMarreta, desenharDomoKai } from './SpecialAbilityEffects.js';
@@ -364,13 +365,15 @@ function iniciarOnda(scene, estado, agora) {
   iniciarAnimacaoMarreta(scene);
   estado.impactoMagnus?.sprite.destroy();
   estado.impactoMagnus = criarEfeitoEspecial(scene,'magnus',ONDA_MAGNUS.raioDanoMaximo);
-  estado.impactoInicio = agora+70;
+  // A nova folha já começa no impacto: não mostrar a explosão na preparação.
+  estado.impactoMagnus?.sprite.setVisible(false);
+  estado.impactoInicio = agora + 200;
   estado.impactoPosicao = { x:scene.player.x, y:scene.player.y+deslocamentoChao(scene) };
   estado.onda = {
     x: scene.player.x,
     y: estado.impactoPosicao.y,
 
-    inicio: agora + 200,
+    inicio: estado.impactoInicio,
     duracao: 260,
     raio: ONDA_MAGNUS.raioTotal,
     raioAtual: 0,
@@ -390,6 +393,7 @@ function atualizarOnda(scene, estado, agora) {
   if (agora < onda.inicio) return;
   if (!onda.impactou) {
     onda.impactou = true;
+    tocarSomEspecialMagnus(scene, onda);
     scene.cameras?.main?.shake?.(180,.005);
   }
 
@@ -1132,11 +1136,14 @@ function atualizarSistemaEspeciais(scene, delta = 16.67) {
     atualizarOnda(scene, estado, agora);
     if (estado.impactoMagnus) {
       const elapsed = agora-estado.impactoInicio;
-      if (elapsed >= 1500) {
+      if (elapsed >= estado.impactoMagnus.total) {
         estado.impactoMagnus.sprite.destroy();
         estado.impactoMagnus = null;
-      } else atualizarEfeitoEspecial(estado.impactoMagnus,estado.impactoPosicao.x,
-        estado.impactoPosicao.y,Math.max(0,elapsed),(scene.player.depth ?? 50)-.03);
+      } else if (elapsed >= 0) {
+        estado.impactoMagnus.sprite.setVisible(true);
+        atualizarEfeitoEspecial(estado.impactoMagnus,estado.impactoPosicao.x,
+          estado.impactoPosicao.y,elapsed,(scene.player.depth ?? 50)-.03);
+      }
     }
 
     atualizarHolograma(scene, estado, delta, agora);

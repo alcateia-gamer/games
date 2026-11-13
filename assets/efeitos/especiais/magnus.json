@@ -1,5 +1,5 @@
 {
-  "quadros": 45,
+  "quadros": 33,
   "larguraFrame": 496,
   "alturaFrame": 506,
   "duracoesMs": [
@@ -35,22 +35,10 @@
     30,
     30,
     40,
-    30,
-    30,
-    40,
-    30,
-    30,
-    40,
-    30,
-    30,
-    40,
-    30,
-    30,
-    40,
     30
   ],
   "loop": 0,
-  "colunas": 8,
-  "sha256Original": "810fe2866ca7b35612ec95bd7b57b4cefee5c45dbf35c8183af892fb5f0bf849",
-  "origem": "Tilesets/mechanics/attack-area-magnus.gif"
+  "colunas": 6,
+  "sha256Original": "cb8b4f36ff6a9d58f34fb4ed9118cf29b196d41fe76e09dc64af313f6d66d314",
+  "origem": "assets/efeitos/especiais/magnus (1).png"
 }

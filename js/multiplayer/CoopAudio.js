@@ -5,6 +5,7 @@ const EXCLUDED = new Set([
   "nyx-aura-invocacao", "nyx-aura-cura",
 ]);
 const WORLD = new Set(["tiro-laser", "robo-explodindo", "robot-walk", "walk-robo-serra",
+  "magnus-especial",
   "robo-serra-ataque", "boss-escotilha", "boss-impacto-escotilha", "boss-explosao-escotilha",
   "boss-raio-escotilha", "boss-escudo-quebrado"]);
 const PLAYER = new Set(["running", "dash-personagem", "aria-tensar-arco", "aria-soltar-flecha", "dano-soft",
