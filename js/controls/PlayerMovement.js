@@ -1,3 +1,4 @@
+import { modifiersFor } from '../systems/UpgradeSystem.js';
 /**
  * @file Converte WASD ou joystick em movimento normalizado, respeitando bloqueios, dash e
  * animações.
@@ -88,7 +89,7 @@ function atualizarMovimento(scene) {
   const usandoTurbo =
     !!scene.developerMode && !!scene.teclaShift && scene.teclaShift.isDown;
 
-  const velocidadeAtualBase = usandoTurbo ? velocidadeTurbo : velocidadeBase;
+  const velocidadeAtualBase = (usandoTurbo ? velocidadeTurbo : velocidadeBase) * (1 + (modifiersFor(scene).speed || 0));
 
   const velocidadeAtual = scene.personagemSelecionada === "aria-kade"
     ? velocidadeAtualBase

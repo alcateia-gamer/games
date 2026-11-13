@@ -1,3 +1,4 @@
+import { basicDamage } from '../systems/UpgradeSystem.js';
 /**
  * @file Flechas da Aria: criação, movimento por delta, alcance, colisão com o mapa e dano a
  * inimigos ou boss.
@@ -101,8 +102,9 @@ function dispararProjetil(scene, opcoes = {}) {
   );
   projetil.acertou = false;
   projetil.direcaoDisparo = { x: direcao.x, y: direcao.y };
-  projetil.dano = opcoes.damage ?? DANO_PROJETIL_ARIA;
-  projetil.ataqueBasico = { id: scene.networkAttackId, danoAria: projetil.dano };
+  const danoBase = opcoes.damage ?? DANO_PROJETIL_ARIA;
+  projetil.dano = basicDamage(scene, danoBase, true);
+  projetil.ataqueBasico = { id: scene.networkAttackId, danoAria: danoBase };
   projetil.distanciaPercorrida = 0;
   projetil.body.setAllowGravity(false);
   projetil.body.setImmovable(true);

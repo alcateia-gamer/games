@@ -232,7 +232,7 @@ function criarControlesEspecial(scene) {
     !!scene.player?.active &&
     !scene.movimentoBloqueado &&
     !scene.morteEmAndamento &&
-    !scene.generatorMenuOpen;
+    !(scene.generatorMenuOpen || scene.upgradeMenuOpen);
 
   // ===================================================
   // EVENTO DO ATAQUE ESPECIAL

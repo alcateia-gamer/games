@@ -591,6 +591,7 @@ class EnemySpawnManager {
 
       if (!enemy) continue;
 
+      enemy.upgradeZoneId = region.id;
       enemy.spawnArea = region.area;
       enemy.spawnWallMargin = this.config.wallMargin;
 

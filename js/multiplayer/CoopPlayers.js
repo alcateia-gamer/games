@@ -1,3 +1,4 @@
+import { modifiersFor, maximumHealth } from '../systems/UpgradeSystem.js';
 import { soloContext } from "./CoopContext.js";
 import { describeVisual, applyVisual, createVisual, VisualSender, VisualReceiver } from "./CoopVisuals.js";
 import { COOP, sameMap, round } from "./CoopProtocol.js";
@@ -86,7 +87,7 @@ export class CoopPlayers {
             if (r.host && amount) r.manager.sendCoopAction("stamina", { amount }, { authority: true, targetId: data.id });
           } },
           estaminaMaxima: { get: () => entry.data.maxStamina },
-          vidaMaxima: { get: () => entry.data.maxHealth || 100 },
+          vidaMaxima: { get: () => r.host && entry.context ? maximumHealth(entry.data.character, modifiersFor(entry.context).health || 0) : entry.data.maxHealth || 100 },
         });
         if (r.host) this.prepareContext(entry);
       }
@@ -146,6 +147,7 @@ export class CoopPlayers {
       botaoEspecial: null, atacando: false, estadoDash: null, generatorMenuOpen: false, movimentoBloqueado: false,
       get vida() { return entry.health; }, set vida(value) { actor.vida = value; },
       get vidaMaxima() { return actor.vidaMaxima; },
+      upgradeMenuOpen: false,
       get estamina() { return actor.estamina; }, set estamina(value) { actor.estamina = value; },
       get estaminaMaxima() { return actor.estaminaMaxima; },
       get hitboxDanoPlayer() { return entry.hitbox; },

@@ -167,6 +167,8 @@ class Preloader extends Phaser.Scene {
    */
   carregarAssets() {
     this.load.setPath("./assets/");
+    if (!this.textures.exists("upgrade-npc")) this.load.spritesheet("upgrade-npc", "PERSONAGENS/NPC/NPC.png", { frameWidth: 64, frameHeight: 64 });
+    if (!this.textures.exists("scrap-components")) this.load.image("scrap-components", "COLETAVEIS/sucatas.png");
     carregarMusicaNovoBoss(this.load);
     carregarMusicaCidade(this.load);
     carregarMusicaFabrica(this.load);

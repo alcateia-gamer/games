@@ -1,3 +1,5 @@
+import { createUpgradeNPC } from '../interactions/UpgradeNPC.js';
+import { ScrapSystem } from '../systems/ScrapSystem.js';
 import { prepararAudioCoop } from "../multiplayer/CoopAudio.js";
 import { atualizarSpawnsDev } from "../controls/DeveloperSpawns.js";
 import { obterBocaMetralhadora, criarMunicaoRobo } from "../enemies/WarRobotProjectile.js";
@@ -391,6 +393,8 @@ class Level1 extends Phaser.Scene {
     // =====================================================
 
     this.teclaR = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R);
+    createUpgradeNPC(this);
+    this.scrapSystem = new ScrapSystem(this);
     criarRuntimeCoop(this);
     iniciarMusicaCidade(this);
   }

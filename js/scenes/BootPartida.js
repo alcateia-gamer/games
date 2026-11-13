@@ -1,3 +1,4 @@
+import { ECONOMY_KEY } from '../systems/UpgradeSystem.js';
 /** Carrega o código das fases somente depois de iniciar uma partida. */
 export default class BootPartida extends Phaser.Scene {
   constructor() {
@@ -5,6 +6,9 @@ export default class BootPartida extends Phaser.Scene {
   }
 
   create(data) {
+    this.registry.remove(ECONOMY_KEY);
+    const manager = this.registry.get("multiplayer");
+    if (manager?.room) delete manager.room.upgradeEconomy;
     this.registry.set("lojaArmasVisitada", false);
     this.registry.set("tanqueCombustivelUsado", false);
     this.registry.set("fabricaVisitada", false);

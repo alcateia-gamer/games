@@ -19,7 +19,7 @@ export function criarMenuColetaveisDev(scene) {
 
   const autorizado = () => !!scene.developerMode && !!scene.player?.active &&
     !scene.morteEmAndamento && !scene.transicaoEmAndamento &&
-    !scene.transicaoRetornoEmAndamento && !scene.generatorMenuOpen && !!scene.inventory;
+    !scene.transicaoRetornoEmAndamento && !(scene.generatorMenuOpen || scene.upgradeMenuOpen) && !!scene.inventory;
 
   const atualizarContadores = () => {
     for (const { item, texto } of contadores) {
@@ -30,7 +30,7 @@ export function criarMenuColetaveisDev(scene) {
   const fechar = () => {
     if (!scene.devItemMenuOpen) return;
     scene.devItemMenuOpen = false;
-    if (!scene.morteEmAndamento && !scene.generatorMenuOpen) {
+    if (!scene.morteEmAndamento && !(scene.generatorMenuOpen || scene.upgradeMenuOpen)) {
       scene.movimentoBloqueado = movimentoAnterior;
     }
     cancelarAssinatura?.();

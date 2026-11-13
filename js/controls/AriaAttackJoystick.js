@@ -91,7 +91,7 @@ export class AriaAttackJoystick {
     const scene = this.scene;
     return scene.personagemSelecionada !== "aria-kade" || !scene.player?.active ||
       scene.vida <= 0 || scene.morteEmAndamento || scene.movimentoBloqueado ||
-      scene.generatorMenuOpen || scene.input.enabled === false ||
+      (scene.generatorMenuOpen || scene.upgradeMenuOpen) || scene.input.enabled === false ||
       scene.physics?.world?.isPaused || scene.sys?.isPaused?.() || scene.sys?.isSleeping?.();
   }
 

@@ -1,3 +1,4 @@
+import { applyUpgrades, modifiersFor } from '../systems/UpgradeSystem.js';
 /**
  * @file Vida, estamina e HUD do personagem. Prepara os recortes da imagem original em cache e
  * desenha a interface em canvas DOM na resolução da tela.
@@ -952,6 +953,7 @@ function criarStatusPlayer(scene) {
   scene.custoAtaque = balanceamento.custoAtaque;
   scene.regeneracaoEstamina = 18;
 
+  applyUpgrades(scene);
   iniciarHUD(scene);
 }
 
@@ -1036,7 +1038,7 @@ function tomarDano(scene, quantidade, atacante = null) {
   // DEV OFF: perde HP normalmente.
   if (!scene.developerMode) {
     scene.vida = Phaser.Math.Clamp(
-      scene.vida - quantidade,
+      scene.vida - quantidade * (1 - (modifiersFor(scene).armor || 0)),
       0,
       scene.vidaMaxima,
     );

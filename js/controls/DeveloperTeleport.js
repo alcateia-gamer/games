@@ -8,7 +8,7 @@ export function criarTeleporteDevBoss(scene) {
   const teleportar = () => {
     if (!scene.developerMode || scene.morteEmAndamento ||
         scene.transicaoEmAndamento || scene.transicaoRetornoEmAndamento ||
-        !scene.player?.active || scene.generatorMenuOpen || scene.devItemMenuOpen ||
+        !scene.player?.active || (scene.generatorMenuOpen || scene.upgradeMenuOpen) || scene.devItemMenuOpen ||
         scene.cenaEntradaBossAtiva) return;
 
     if (scene.sys.settings.key === "Level1Parte2") {

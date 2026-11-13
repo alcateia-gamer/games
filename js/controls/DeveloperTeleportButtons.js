@@ -25,7 +25,7 @@ export function criarBotoesTeleporteDev(scene) {
   });
   const permitido = () => scene.developerMode && scene.player?.active &&
     !scene.morteEmAndamento && !scene.transicaoEmAndamento && !scene.transicaoRetornoEmAndamento &&
-    !scene.generatorMenuOpen && !scene.devItemMenuOpen && !scene.cenaEntradaBossAtiva;
+    !(scene.generatorMenuOpen || scene.upgradeMenuOpen) && !scene.devItemMenuOpen && !scene.cenaEntradaBossAtiva;
   const atualizar = () => {
     const camera = scene.cameras.main;
     const zx = camera.zoomX || camera.zoom || 1, zy = camera.zoomY || camera.zoom || 1;

@@ -13,7 +13,9 @@ export function mergePendingFrame(previous, next) {
   for (const node of next.visuals.changed) {
     changed.set(node.id, { ...changed.get(node.id), ...node.s }); removed.delete(node.id);
   }
-  return { ...next, visuals: { full: previous.visuals.full,
+  return { ...next,
+    ...((next.upgradeEconomy || previous.upgradeEconomy) ? { upgradeEconomy: next.upgradeEconomy ?? previous.upgradeEconomy } : {}),
+    visuals: { full: previous.visuals.full,
     changed: [...changed].map(([id, s]) => ({ id, s })), removed: [...removed] } };
 }
 export function describeVisual(o) {

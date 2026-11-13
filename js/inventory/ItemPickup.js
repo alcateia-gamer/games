@@ -225,7 +225,7 @@ function criarSistemaInventario(scene) {
    * ou porta selecionados.
    */
   const coletarItemProximo = () => {
-    if (scene.morteEmAndamento || scene.vida <= 0 || scene.generatorMenuOpen || scene.devItemMenuOpen) return false;
+    if (scene.morteEmAndamento || scene.vida <= 0 || (scene.generatorMenuOpen || scene.upgradeMenuOpen) || scene.devItemMenuOpen) return false;
     if (interagirComMundo) {
       const interagiu = interagirComMundo();
       if (interagiu) {
@@ -269,7 +269,7 @@ function criarSistemaInventario(scene) {
    */
   scene.atualizarColetaItens = () => {
     interagirComMundo = null;
-    if (scene.morteEmAndamento || scene.vida <= 0 || scene.generatorMenuOpen || scene.devItemMenuOpen) {
+    if (scene.morteEmAndamento || scene.vida <= 0 || (scene.generatorMenuOpen || scene.upgradeMenuOpen) || scene.devItemMenuOpen) {
       // Descarta E durante os menus para não interagir com o mundo ao fechá-los.
       Phaser.Input.Keyboard.JustDown(scene.teclaColetarItem);
       scene.itemColetavelProximo = null;
@@ -292,7 +292,7 @@ function criarSistemaInventario(scene) {
         : closest;
     }, null);
 
-    const interaction = [scene.interacaoMundoProxima, scene.interacaoCombustivelProxima]
+    const interaction = [scene.interacaoMundoProxima, scene.interacaoCombustivelProxima, scene.interacaoCiberneticasProxima]
       .filter(Boolean).sort((a, b) => a.distance - b.distance)[0];
     const useWorldInteraction = interaction &&
       (!nearest || interaction.distance < nearest.distance);

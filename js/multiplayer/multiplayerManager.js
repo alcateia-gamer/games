@@ -1,3 +1,4 @@
+import { maximumHealth, modifiers } from '../systems/UpgradeSystem.js';
 /**
  * @file Protocolo de salas sobre MQTT. O host publica o estado compartilhado; clientes enviam
  * ações, presença e atualizações de movimento.
@@ -65,8 +66,14 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
    * Normaliza dados recebidos de um jogador e preenche valores ausentes de posição, ataque e
    * presença.
    */
-  normalizePlayer(player) {
+  maxPlayerHealth(player, economy = this.room?.upgradeEconomy) {
+    const levels = economy?.accounts?.[player.id]?.characters?.[player.character] ?? {};
+    return maximumHealth(player.character, modifiers(player.character, levels).health || 0);
+  }
+
+  normalizePlayer(player, economy = this.room?.upgradeEconomy) {
     const balanceamento = obterBalanceamento(player.character, true);
+    const maxHealth = this.maxPlayerHealth(player, economy);
     return {
       id: String(player.id),
       isHost: Boolean(player.isHost),
@@ -86,8 +93,8 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
       serverTick: Number(player.serverTick) || 0,
       projectiles: Array.isArray(player.projectiles) ? player.projectiles : [],
       mapKey: COOP.maps.includes(player.mapKey) ? player.mapKey : "Level1",
-      health: Number.isFinite(player.health) ? Math.max(0, Math.min(balanceamento.vida, player.health)) : balanceamento.vida,
-      maxHealth: balanceamento.vida,
+      health: Number.isFinite(player.health) ? Math.max(0, Math.min(maxHealth, player.health)) : maxHealth,
+      maxHealth,
       stamina: Number.isFinite(player.stamina) ? Math.max(0, Math.min(balanceamento.estamina, player.stamina)) : balanceamento.estamina,
       maxStamina: balanceamento.estamina,
       dead: Boolean(player.dead),
@@ -187,11 +194,14 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
       const seen = new Map((this.room?.players || []).map(p => [p.id, p.lastSeen]));
       if (data.status === "PLAYING" && this.room?.status !== "PLAYING")
         this.coopTransitionUntil = Date.now() + COOP.transitionGraceMs;
+      const upgradeEconomy = (this.room?.upgradeEconomy?.revision ?? -1) > (data.upgradeEconomy?.revision ?? -1)
+        ? this.room.upgradeEconomy : data.upgradeEconomy;
       this.room = {
         ...data,
+        upgradeEconomy,
         coopProgress: mergeCoopProgress(this.room?.coopProgress, data.coopProgress),
         players: data.players.map(p => {
-          const player = this.normalizePlayer(p);
+          const player = this.normalizePlayer(p, upgradeEconomy);
           player.lastSeen = p.id === data.hostId ? Date.now() :
             Math.max(player.lastSeen || 0, seen.get(p.id) || 0);
           return player;
@@ -354,7 +364,7 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
       if (this.coopEnabled) {
         player.mapKey = action.mapKey || "Level1";
         const balanceamento = obterBalanceamento(player.character, true);
-        player.maxHealth = balanceamento.vida;
+        player.maxHealth = this.maxPlayerHealth(player);
         player.health = Math.max(0, Math.min(player.maxHealth, Number(action.health) || 0));
         player.maxStamina = balanceamento.estamina;
         player.stamina = Math.max(0, Math.min(player.maxStamina, Number(action.stamina) || 0));
@@ -670,6 +680,8 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
         (packet.clientId && packet.clientId !== this.room.hostId) ||
         !Number.isSafeInteger(packet.sequence) || packet.sequence <= this.coopReceivedSequence ||
         !Array.isArray(packet.players) || packet.players.length > MAX_PLAYERS) return;
+    if ((packet.upgradeEconomy?.revision ?? -1) > (this.room.upgradeEconomy?.revision ?? -1))
+      this.room.upgradeEconomy = packet.upgradeEconomy;
     this.coopReceivedSequence = packet.sequence;
     this.coopWorld = packet;
     const seen = new Map(this.room.players.map(p => [p.id, p.lastSeen]));

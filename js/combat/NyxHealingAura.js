@@ -1,3 +1,4 @@
+import { modifiersFor } from '../systems/UpgradeSystem.js';
 import { recuperarVida } from '../player/PlayerStatus.js';
 import { tocarSomAuraNyx } from '../sounds/SOUNDS_PERSONAGENS.js/sounds_Nyx,.js';
 import { criarEfeitoEspecial, atualizarEfeitoEspecial, deslocamentoChao } from './SpecialAbilityEffects.js';
@@ -171,7 +172,7 @@ function concederCura(scene,estado,aura) {
   if (alvos.size || visuais.size) {
     const inicio = aura.inicio + NYX_AURA.animacao;
     const pararSom = iniciarSomSincronizado(scene, `${aura.id}:cura`, 'cura', inicio);
-    estado.curasNyx.set(aura.id,{alvos,visuais,inicio,ultimoPulso:0,pararSom});
+    estado.curasNyx.set(aura.id,{alvos,visuais,inicio,ultimoPulso:0,pararSom, healingMultiplier: 1 + (modifiersFor(scene).healing || 0)});
   }
 }
 
@@ -205,8 +206,8 @@ function atualizarCuras(scene,estado) {
       }
       if (pulso <= cura.ultimoPulso) continue;
       // Após receber o efeito, afastar-se da Nyx não interrompe os pulsos.
-      if (local) recuperarVida(scene,scene.vidaMaxima*NYX_AURA.fracao);
-      else alvo.vida = Math.min(alvo.vidaMaxima,alvo.vida+alvo.vidaMaxima*NYX_AURA.fracao);
+      if (local) recuperarVida(scene,scene.vidaMaxima*NYX_AURA.fracao*(cura.healingMultiplier || 1));
+      else alvo.vida = Math.min(alvo.vidaMaxima,alvo.vida+alvo.vidaMaxima*NYX_AURA.fracao*(cura.healingMultiplier || 1));
     }
     cura.ultimoPulso = pulso;
     if (elapsed >= NYX_AURA.duracao || (!cura.alvos.size && !cura.visuais.size)) {

@@ -1,3 +1,4 @@
+import { basicDamage } from '../systems/UpgradeSystem.js';
 /**
  * @file Sprite e combate do jogador. Mantém separadas as colisões com o chão, a área que
  * recebe dano e a área ofensiva da katana.
@@ -453,7 +454,7 @@ function criarHitboxKatana(scene) {
   // =====================================================
 
   const hitboxKatana = new Phaser.Geom.Rectangle(0, 0, 40, 40);
-  const dano = obterBalanceamento(scene.personagemSelecionada).dano;
+  const dano = basicDamage(scene, obterBalanceamento(scene.personagemSelecionada).dano);
 
   // =====================================================
   // CONTROLE DE DANO
@@ -683,6 +684,7 @@ function criarHitboxKatana(scene) {
  * houver ataque em andamento. Retorna se um novo ataque foi iniciado.
  */
 function atacar(scene) {
+  if (scene.upgradeMenuOpen) return false;
   if (scene.morteEmAndamento || scene.vida <= 0 || scene.player?.morto) return false;
   if (jogadorPresoNovoBoss(scene)) return false;
   // A arma é independente do idle: atacar não troca a folha nem bloqueia a caminhada.

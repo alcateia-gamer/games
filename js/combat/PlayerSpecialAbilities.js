@@ -1,3 +1,4 @@
+import { modifiersFor, specialCooldown } from '../systems/UpgradeSystem.js';
 /**
  * Habilidades especiais de Kai, Magnus, Aria e Nyx.
  * Habilidades solo e aura de cura da Nyx compartilhada no cooperativo.
@@ -309,7 +310,7 @@ function refletirLaser(scene, estado, laser) {
 
   // O laser muda de equipe.
   laser.especialRefletido = true;
-  laser.danoEspecial = 30;
+  laser.danoEspecial = 30 * (1 + (modifiersFor(scene).recovery || 0) * 2);
   tocarSomRicocheteKai(scene, contato);
 
   if (laser.setTint) {
@@ -371,8 +372,8 @@ function intensidadeOnda(distanciaAlvo) {
 
 function danoOnda(onda, alvo) {
   const ponto = pontoMaisProximo(alvo.hitboxDano, onda.x, onda.y);
-  return Math.round(ONDA_MAGNUS.danoBorda +
-    (ONDA_MAGNUS.danoMaximo - ONDA_MAGNUS.danoBorda) * intensidadeOnda(distancia(ponto, onda)));
+  return Math.round((ONDA_MAGNUS.danoBorda +
+    (ONDA_MAGNUS.danoMaximo - ONDA_MAGNUS.danoBorda) * intensidadeOnda(distancia(ponto, onda))) * (onda.damageMultiplier || 1));
 }
 
 function iniciarOnda(scene, estado, agora) {
@@ -384,6 +385,7 @@ function iniciarOnda(scene, estado, agora) {
   estado.impactoInicio = agora + 200;
   estado.impactoPosicao = { x:scene.player.x, y:scene.player.y+deslocamentoChao(scene) };
   estado.onda = {
+    damageMultiplier: 1 + (modifiersFor(scene).impact || 0),
     x: scene.player.x,
     y: estado.impactoPosicao.y,
 
@@ -591,7 +593,7 @@ function invocarHolograma(scene, estado, agora) {
 
   holo.especialHolograma = true;
   holo.invulneravel = true;
-  holo.expiraEm = agora + CONFIG.ariaDuracao;
+  holo.expiraEm = agora + CONFIG.ariaDuracao * (1 + (modifiersFor(scene).clone || 0));
 
   // Direção permanente da cópia.
   holo.direcaoEspecial = vetor;
@@ -1037,7 +1039,7 @@ function criarSistemaEspeciais(scene) {
       return false;
     }
 
-    estado.proximoUso = agora + perfil.cooldown;
+    estado.proximoUso = agora + specialCooldown(scene, perfil.cooldown);
 
     if (personagem === "kai-mercer") {
       iniciarParry(scene, estado, agora);

@@ -1,3 +1,4 @@
+import { basicDamage, economyFor } from '../systems/UpgradeSystem.js';
 import { prepararAudioCoop } from "./CoopAudio.js";
 import { obterBalanceamento } from "../combat/CharacterBalance.js";
 import { ARIA_ATTACK_CONFIG } from "../controls/AriaAttackConfig.js";
@@ -191,6 +192,7 @@ export class CoopRuntime {
   }
   receiveAction(action) {
     if (this.disposed) return;
+    if (this.scene.scrapSystem?.receive(action)) return;
     if (action.authority && action.kind === "teamDefeated") { this.finishTeamGame(); return; }
     if (this.teamDefeated) return;
     if (action.kind === "audio") { this.audio?.receive(action); return; }
@@ -255,6 +257,7 @@ export class CoopRuntime {
         amount = Math.max(amount, Math.min(ARIA_ATTACK_CONFIG.maxDamage, payload.basic.danoAria));
       }
     }
+    if (payload.basic) amount = basicDamage(context, amount, context.personagemSelecionada === "aria-kade");
     const target = (s.inimigos || []).find(e => e.networkId === payload.target) ||
       alvosAdicionaisCombate(this.localContext).find(e => this.combatId(e) === payload.target);
     if (!target?.active || target.morto || Math.hypot(context.player.x - target.x, context.player.y - target.y) > 850) return;
@@ -291,6 +294,7 @@ export class CoopRuntime {
     if (this.host || this.teamDefeated) return;
     if (Object.prototype.hasOwnProperty.call(packet, "music")) this.music.receive(packet.music, packet.streamId);
     if (packet.mapKey !== this.mapKey) return;
+    if (packet.upgradeEconomy) this.scene.scrapSystem?.restore(packet.upgradeEconomy);
     this.revival.receive(packet.revivals);
     if (this.receivedStream !== packet.streamId) {
       this.receivedStream = packet.streamId;
@@ -381,6 +385,7 @@ export class CoopRuntime {
         if (data?.coop) data.coop.special = this.specialSnapshot(e.context);
       }
       const packet = { mapKey: this.mapKey, streamId: this.streamId,
+        ...(full && s.scrapSystem ? { upgradeEconomy: economyFor(s) } : {}),
         music: this.music.snapshot(), revivals: this.revival.snapshot(),
         visuals: this.sender.capture(this.worldObjects(), full),
         targets: (s.inimigos || []).filter(e => e.active && !e.morto).map(e => describeCombatTarget(e, e.networkId, this.sender)),

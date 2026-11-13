@@ -87,7 +87,7 @@ class PlayerJoystick {
   }
 
   bloqueado() {
-    return this.scene.movimentoBloqueado || this.scene.generatorMenuOpen ||
+    return this.scene.movimentoBloqueado || (this.scene.generatorMenuOpen || this.scene.upgradeMenuOpen) ||
       this.scene.morteEmAndamento || this.scene.input.enabled === false;
   }
 

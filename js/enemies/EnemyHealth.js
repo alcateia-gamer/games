@@ -76,6 +76,8 @@ function destruirInimigoTeste(scene, inimigo = scene.inimigoTeste) {
     return;
   }
 
+  scene.scrapSystem?.onRobotDeath(inimigo);
+
   if (inimigo.tipoRobo === "serra") {
     const pose = obterPoseMorteRoboSerra(inimigo);
     inimigo.morto = true;

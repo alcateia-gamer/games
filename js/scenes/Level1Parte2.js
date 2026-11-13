@@ -1,3 +1,4 @@
+import { ScrapSystem } from '../systems/ScrapSystem.js';
 import { prepararAudioCoop } from "../multiplayer/CoopAudio.js";
 import { descarregarCidade, descarregarFabricaParaBoss } from "../map/ProgressaoMapa.js";
 import { atualizarSpawnsDev } from "../controls/DeveloperSpawns.js";
@@ -317,6 +318,7 @@ class Level1Parte2 extends Phaser.Scene {
     this.grupoRobosAtivado = false;
     this.inimigoTeste = null;
     this.spawnAreasRoboBola = criarSpawnAreasRoboBola(this);
+    this.scrapSystem = new ScrapSystem(this);
     criarRuntimeCoop(this);
     iniciarMusicaFabrica(this);
     if (this.luzFabricaAcesa) descarregarCidade(this);

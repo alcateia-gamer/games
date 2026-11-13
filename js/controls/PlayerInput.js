@@ -205,7 +205,7 @@ function criarControlesInput(scene) {
   });
 
   scene.botaoLuzFabrica.on("pointerdown", () => {
-    if (!scene.developerMode || scene.generatorMenuOpen || scene.devItemMenuOpen ||
+    if (!scene.developerMode || (scene.generatorMenuOpen || scene.upgradeMenuOpen) || scene.devItemMenuOpen ||
         scene.morteEmAndamento) return;
     if (scene.coopRuntime) {
       scene.coopRuntime.manager.sendCoopAction("devLighting", { on: !scene.luzFabricaAcesa });

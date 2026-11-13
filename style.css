@@ -92,3 +92,56 @@ body {
   border-color: #9dffb9;
   box-shadow: 0 0 0 2px rgba(66, 255, 132, 0.25);
 }
+
+/* Terminal de aprimoramento: DOM nativo mantém texto legível em telas FIT. */
+.upgrade-terminal { position:fixed; inset:0; z-index:10000; display:flex; align-items:center; justify-content:center; padding:clamp(8px,2vw,30px); box-sizing:border-box; background:#020b08eF; color:#d2ffe7; font:14px/1.5 monospace; }
+.upgrade-terminal[hidden] { display:none; }
+.upgrade-terminal * { box-sizing:border-box; }
+.upgrade-terminal button { font:inherit; color:#d2ffe7; background:#061a13; border:1px solid #216e51; cursor:pointer; padding:10px; transition:background .15s,border-color .15s; }
+.upgrade-terminal button:hover, .upgrade-terminal button:focus-visible { background:#103a29; border-color:#55ffad; outline:1px solid #55ffad; }
+.upgrade-terminal button:disabled { opacity:.5; cursor:default; }
+.upgrade-shell { width:min(1380px,100%); max-height:100%; display:flex; flex-direction:column; border:1px solid #55ffad; background:repeating-linear-gradient(0deg,#55ffad03 0 1px,transparent 1px 5px),#020b08; box-shadow:0 0 40px #55ffad12; }
+.upgrade-shell header { display:flex; align-items:center; gap:18px; padding:14px 22px; border-bottom:1px solid #216e51; }
+.upgrade-shell header strong { letter-spacing:4px; font-size:20px; }
+.upgrade-shell small { display:block; color:#86bba2; font-size:12px; }
+.upgrade-shell header button { margin-left:auto; }
+.upgrade-brand { font-size:36px; color:#55ffad; }
+.upgrade-shell nav { display:flex; gap:8px; padding:12px 22px; border-bottom:1px solid #216e51; }
+.upgrade-shell [aria-pressed=true], .upgrade-row.selected { border-color:#55ffad; background:#123b2a; color:#55ffad; }
+.upgrade-grid { display:grid; grid-template-columns:1fr .95fr 1.1fr; min-height:0; overflow:auto; }
+.upgrade-grid>aside, .upgrade-grid>section { padding:22px; min-width:0; overflow:auto; }
+.upgrade-grid>section { border-left:1px solid #216e51; }
+.upgrade-grid h2 { font-size:20px; line-height:1.3; letter-spacing:1px; margin:0 0 16px; }
+.upgrade-balance { color:#55ffad; padding:12px 0; border-block:1px solid #216e51; }
+.upgrade-muted { color:#86bba2; font-size:12px; }
+.upgrade-row { display:block; width:100%; text-align:left; margin-bottom:10px; }
+.upgrade-row strong { font-size:12px; }
+.upgrade-row small { margin-top:8px; }
+.upgrade-row small span { float:right; color:#55ffad; }
+.upgrade-body { text-align:center; background:radial-gradient(ellipse,#1e805e22,transparent 75%); }
+.upgrade-scan { display:flex; align-items:center; justify-content:center; min-height:270px; position:relative; }
+.upgrade-scan:before { content:''; position:absolute; inset:15px 5px; border-block:1px solid #216e51; pointer-events:none; }
+.upgrade-scan img { width:52%; height:280px; object-fit:contain; image-rendering:pixelated; filter:drop-shadow(0 0 10px #55ffad44); }
+.upgrade-regions { display:flex; flex-direction:column; gap:14px; width:48%; position:relative; }
+.upgrade-regions button { font-size:11px; text-align:left; padding:7px; }
+.upgrade-regions span { color:#55ffad; }
+.upgrade-details p { min-height:62px; color:#86bba2; }
+.upgrade-details dl { display:grid; grid-template-columns:1fr 1fr; gap:12px; border-block:1px solid #216e51; padding:16px 0; font-size:12px; }
+.upgrade-details dt { color:#86bba2; }
+.upgrade-details dd { margin:0; text-align:right; color:#55ffad; }
+.upgrade-progress { height:5px; background:#216e51; margin:22px 0; }
+.upgrade-progress span { display:block; height:100%; background:#55ffad; transition:width .25s; }
+.upgrade-install { width:100%; color:#55ffad!important; }
+.upgrade-message { font-size:12px; min-height:40px!important; }
+.upgrade-message.success { color:#55ffad; animation:upgrade-confirm .45s ease-out; }
+.upgrade-shell footer { padding:12px 22px; font-size:10px; color:#86bba2; border-top:1px solid #216e51; }
+.upgrade-shell footer span { float:right; }
+@keyframes upgrade-confirm { from { background:#55ffad55; } to { background:transparent; } }
+@media(max-width:1000px) { .upgrade-terminal { font-size:12px; } .upgrade-grid>aside,.upgrade-grid>section { padding:14px; } .upgrade-grid h2 { font-size:16px; } .upgrade-details dl { font-size:10px; } }
+@media(max-width:650px) { .upgrade-grid { grid-template-columns:1fr; } .upgrade-grid>aside,.upgrade-grid>section { overflow:visible; border-left:0; border-top:1px solid #216e51; } .upgrade-scan { min-height:180px; } .upgrade-scan img { height:180px; } .upgrade-shell header { padding:8px; gap:8px; } .upgrade-shell header strong { font-size:14px; } .upgrade-shell header small { font-size:9px; } .upgrade-shell nav { padding:8px; gap:4px; } .upgrade-shell nav button { font-size:10px; } .upgrade-shell footer span { float:none; display:block; } }
+@media(prefers-reduced-motion:reduce) { .upgrade-terminal * { animation:none!important; transition:none!important; } }
+
+.upgrade-terminal { touch-action:pan-y; }
+.upgrade-regions button::before { content:""; display:inline-block; width:10px; border-top:1px solid #55ffad; margin-right:4px; vertical-align:middle; }
+/* Mesmo componente do meio da última linha usado no contador do mapa. */
+.upgrade-balance::before { content:""; display:inline-block; width:32px; height:28px; margin-right:8px; vertical-align:middle; background:url("assets/COLETAVEIS/sucatas.png") -192px -358.51px / 416.54px 425.22px no-repeat; image-rendering:auto; }
