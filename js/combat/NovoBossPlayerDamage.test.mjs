@@ -101,9 +101,15 @@ test("golpes normais Kai, Magnus e Nyx atingem o contrato do novo boss uma vez",
   for (const [personagem, dano] of [["kai-mercer", 25], ["magnus-force", 33.3], ["nyx", 28]]) {
     const scene = cena(personagem);
     criarPlayer(scene);
+    const sons = [];
+    scene.sound.play = (key, config) => sons.push({key,...config});
     scene.direcaoAtual = "right";
     assert.equal(atacar(scene), true);
+    assert.equal(sons.length, 0, "som aguarda o contato da arma");
     for (let i = 0; i < 10; i++) scene.eventosHitbox.forEach(callback => callback());
+    assert.deepEqual(sons, [{key: personagem === "magnus-force"
+      ? "magnus-martelo-impacto" : "katana-ataque", volume: 0.15}],
+      "impacto toca uma vez e só Magnus usa o novo som");
     assert.equal(scene.novoBoss.acertos.length, 1);
     assert.equal(scene.novoBoss.acertos[0].quantidade, dano);
     assert.ok(scene.novoBoss.acertos[0].area instanceof Rectangle);

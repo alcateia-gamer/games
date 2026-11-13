@@ -10,7 +10,7 @@ const WORLD = new Set(["tiro-laser", "robo-explodindo", "robot-walk", "walk-robo
   "robo-serra-ataque", "boss-escotilha", "boss-impacto-escotilha", "boss-explosao-escotilha",
   "boss-raio-escotilha", "boss-escudo-quebrado"]);
 const PLAYER = new Set(["running", "dash-personagem", "aria-tensar-arco", "aria-soltar-flecha", "dano-soft",
-  "katana-ataque", "ataque-no-ar", "enchendo-galao", "cartao-passando",
+  "katana-ataque", "magnus-martelo-impacto", "ataque-no-ar", "enchendo-galao", "cartao-passando",
   "cartao-acesso-concedido", "colocando-item", "porta-fabrica"]);
 const shared = key => !EXCLUDED.has(key) && (WORLD.has(key) || PLAYER.has(key));
 const clamp = (n, min, max) => Math.max(min, Math.min(max, n));

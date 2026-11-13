@@ -72,7 +72,7 @@ test("solo mantém o áudio original e seu contexto", () => {
   assert.equal(cenaSomCompartilhado(scene, {}), scene);
 });
 
-for (const key of ["running", "aria-tensar-arco", "aria-soltar-flecha", "dano-soft", "katana-ataque",
+for (const key of ["magnus-martelo-impacto", "running", "aria-tensar-arco", "aria-soltar-flecha", "dano-soft", "katana-ataque",
   "ataque-no-ar", "enchendo-galao", "cartao-passando", "cartao-acesso-concedido", "colocando-item", "porta-fabrica"]) {
   test(`${key}: som do cliente chega uma única vez aos quatro jogadores, sem eco`, t => {
     const { peers } = setup(t);
