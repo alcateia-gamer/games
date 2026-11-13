@@ -221,7 +221,12 @@ test("Kai continua refletindo lasers comuns e aplicando o dano pelo contrato do 
 
 test('Kai mantém parry por 5,8s e respeita o raio reduzido em mais 20%',()=>{
   const scene=cena('kai-mercer',100,0),laser=objeto(49.6,0);
+  const sons=[];
+  scene.cache.audio.exists=key=>key==='kai-especial';
+  scene.sound.play=(key,config)=>sons.push({key,...config,instante:scene.time.now});
   criarSistemaEspeciais(scene);scene.events.emit('player:especial');
+  assert.deepEqual(sons,[{key:'kai-especial',volume:0.2,loop:false,instante:0}],
+    'som começa junto à abertura da barreira');
   assert.equal(scene.estadoEspecial.parryAte,5800);
   assert.equal(scene.estadoEspecial.proximoUso,8000);
   assert.equal(scene.tentarInterceptarLaserEspecial(objeto(55,0)),false);
@@ -231,8 +236,11 @@ test('Kai mantém parry por 5,8s e respeita o raio reduzido em mais 20%',()=>{
   atualizarSistemaEspeciais(scene);assert.equal(scene.estadoEspecial.parryGrafico,null);
   scene.time.now=7999;scene.events.emit('player:especial');
   assert.equal(scene.estadoEspecial.parryAte,5800);
+  assert.equal(sons.length,1,'pedido durante a recarga não repete som');
   scene.time.now=8000;scene.events.emit('player:especial');
   assert.equal(scene.estadoEspecial.parryAte,13800);
+  assert.equal(sons.length,2);
+  assert.equal(sons[1].instante,8000);
 });
 
 test("Kai absorve projéteis do boss sem refletir, causar dano de volta ou mudar seu alcance", () => {

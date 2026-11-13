@@ -7,6 +7,7 @@
 import { causarDanoInimigo } from "../enemies/EnemyHealth.js";
 import { jogadorPresoNovoBoss } from "../player/PlayerControlEffects.js";
 import { tocarSomEspecialMagnus } from "../sounds/magnusEspecial.js";
+import { tocarSomEspecialKai } from "../sounds/kaiEspecial.js";
 import { criarColisaoDomoKai } from './KaiDomeCollision.js';
 import { NYX_AURA, prepararAuraNyx, iniciarAuraNyx, atualizarAuraNyx, limparAuraNyx } from './NyxHealingAura.js';
 import { criarEfeitoEspecial, atualizarEfeitoEspecial, deslocamentoChao, iniciarAnimacaoMarreta, desenharDomoKai } from './SpecialAbilityEffects.js';
@@ -185,7 +186,7 @@ function iniciarParry(scene, estado, agora) {
     .graphics()
     .setDepth((scene.player.depth ?? 50) + 0.15);
   estado.parryGrafico.coopAnchor = scene.player;
-
+  tocarSomEspecialKai(scene);
 }
 
 // =====================================================

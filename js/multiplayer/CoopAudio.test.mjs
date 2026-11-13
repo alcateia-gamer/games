@@ -80,7 +80,7 @@ for (const key of ["running", "aria-tensar-arco", "aria-soltar-flecha", "dano-so
     for (const peer of peers) assert.equal(plays(peer, key), 1);
   });
 }
-for (const key of ["magnus-especial", "tiro-laser", "robo-explodindo", "robot-walk", "walk-robo-serra", "robo-serra-ataque",
+for (const key of ["kai-especial", "magnus-especial", "tiro-laser", "robo-explodindo", "robot-walk", "walk-robo-serra", "robo-serra-ataque",
   "boss-escotilha", "boss-impacto-escotilha", "boss-explosao-escotilha", "boss-raio-escotilha", "boss-escudo-quebrado"]) {
   test(`${key}: som do mundo chega uma única vez aos quatro jogadores`, t => {
     const { peers } = setup(t);
@@ -293,4 +293,24 @@ test("especial Magnus replica som a 15% no local da explosão, inclusive longe d
   assert.equal(evento.x, 0);
   assert.equal(evento.y, 0);
   assert.equal(evento.volume, 0.15);
+});
+
+
+test("especial Kai: áudio a 20% parte do jogador remoto que abriu a barreira", async t => {
+  const { tocarSomEspecialKai } = await import("../sounds/kaiEspecial.js");
+  const { peers, messages } = setup(t);
+  const host = peers[0];
+  host.scene.player.x = 2000;
+  const kai = { x: 0, y: 0 };
+  const contexto = new Proxy(host.scene, { get(target,key) {
+    return key === "player" ? kai : target[key];
+  } });
+  tocarSomEspecialKai(contexto);
+  for (const peer of peers) assert.equal(plays(peer, "kai-especial"), 1);
+  assert.equal(host.sounds.at(-1).volume, 0);
+  assert.equal(peers[1].sounds.at(-1).volume, 0.2);
+  assert.equal(messages.find(m => m.kind === "audio").payload.sounds[0].volume, 0.2);
+  const evento = messages.find(m => m.kind === "audio").payload.sounds[0];
+  assert.equal(evento.x, 0, "fonte é o Kai remoto, não o host distante");
+  assert.equal(evento.y, 0);
 });
