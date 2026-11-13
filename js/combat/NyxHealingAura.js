@@ -3,8 +3,8 @@ import { tocarSomAuraNyx } from '../sounds/SOUNDS_PERSONAGENS.js/sounds_Nyx,.js'
 import { criarEfeitoEspecial, atualizarEfeitoEspecial, deslocamentoChao } from './SpecialAbilityEffects.js';
 import { criarParticulasCuraNyx, atualizarParticulasCuraNyx, destruirParticulasCuraNyx } from './NyxHealingParticles.js';
 
-// O anel completo do GIF tem 240×72px: a área segue essa elipse, sem círculo extra.
-export const NYX_AURA = Object.freeze({ raio:120, raioY:36, animacao:1200,
+// Área 50% maior, mantendo a proporção da elipse visível do GIF.
+export const NYX_AURA = Object.freeze({ raio:180, raioY:54, animacao:1200,
   duracao:10000, cooldown:20000, intervalo:1000, fracao:.05 });
 let sequencia = 0;
 const mapa = scene => scene.sys?.settings?.key || scene.scene?.key;
@@ -25,7 +25,8 @@ function criarAura(scene, id, inicio, dono = null) {
   const pararSom = iniciarSomSincronizado(scene, id, 'invocacao', inicio);
   const efeito = criarEfeitoEspecial(scene,'nyx',NYX_AURA.raio);
   if (efeito) efeito.sprite.coopAnchor = scene.player;
-  return { id, inicio, dono, efeito, pararSom, encerrada:false };
+  return { id, inicio, dono, efeito, pararSom, encerrada:false,
+    beneficiarios:new Set(), posicoesAnteriores:new Map() };
 }
 
 export function prepararAuraNyx(scene, estado) {
@@ -53,6 +54,7 @@ export function prepararAuraNyx(scene, estado) {
       }
       const nova = criarAura(scene,aura.id,scene.time.now-idade,player.id);
       nova.posicao = {x:player.x,y:player.y};
+      registrarBeneficiarios(scene,nova,player);
       estado.aurasRemotas.set(player.id,nova);
     }
     for (const [id,aura] of estado.aurasRemotas) {
@@ -76,8 +78,11 @@ export function prepararAuraNyx(scene, estado) {
   scene.events.on('preupdate',estado.verificarVidaAura);
   estado.atualizarVisuaisCuraNyx = () => {
     atualizarVisuaisCura(scene,estado);
-    if (estado.auraNyx && scene.player?.active)
+    if (estado.auraNyx && scene.player?.active) {
+      if (scene.time.now < estado.auraNyx.inicio + NYX_AURA.animacao)
+        registrarBeneficiarios(scene,estado.auraNyx,scene.player);
       posicionarAura(scene,estado.auraNyx,scene.player,Math.max(0,scene.time.now-estado.auraNyx.inicio));
+    }
   };
   scene.events.on('postupdate',estado.atualizarVisuaisCuraNyx);
   if (scene.multiplayer) {
@@ -89,6 +94,7 @@ export function prepararAuraNyx(scene, estado) {
 export function iniciarAuraNyx(scene, estado) {
   const id = `${scene.multiplayerManager?.playerId || 'solo'}:${Date.now()}:${++sequencia}`;
   estado.auraNyx = criarAura(scene,id,scene.time.now);
+  registrarBeneficiarios(scene,estado.auraNyx,scene.player);
   if (scene.multiplayer && !scene.coopRuntime) scene.multiplayerManager?.publishAction({type:'nyx_aura',
     playerId:scene.multiplayerManager.playerId, id, mapKey:mapa(scene)});
 }
@@ -109,9 +115,32 @@ function encerrarLocal(scene,estado,avisar = true) {
   estado.auraNyx = null;
 }
 
-function dentroDaAura(alvo,centro) {
-  return ((alvo.x-centro.x)/NYX_AURA.raio)**2 +
-    ((alvo.y-centro.y)/NYX_AURA.raioY)**2 <= 1;
+/** Memoriza encontros durante a invocação, mesmo entre dois frames da corrida. */
+function registrarBeneficiarios(scene,aura,centro) {
+  const candidatos = new Set();
+  if (jogadorVivo(scene)) candidatos.add(scene.player);
+  if ((!scene.multiplayer || scene.coopRuntime) && !aura.dono) {
+    const aliados = scene.aliados?.getChildren?.() || scene.aliados || [];
+    for (const aliado of aliados instanceof Map ? aliados.values() : aliados) {
+      if (aliado?.active && !aliado.morto && aliado.vida > 0 && Number.isFinite(aliado.vidaMaxima))
+        candidatos.add(aliado);
+    }
+  }
+  if (scene.multiplayer) for (const remoto of scene.remotePlayers?.values() || []) {
+    if (remoto.active && !remoto.morto) candidatos.add(remoto);
+  }
+  for (const alvo of candidatos) {
+    const atual = { x:(alvo.x-centro.x)/NYX_AURA.raio, y:(alvo.y-centro.y)/NYX_AURA.raioY };
+    const anterior = aura.posicoesAnteriores.get(alvo) ?? atual;
+    const dx = atual.x-anterior.x, dy = atual.y-anterior.y;
+    const comprimento2 = dx*dx+dy*dy;
+    const t = comprimento2 ? Math.max(0,Math.min(1,-(anterior.x*dx+anterior.y*dy)/comprimento2)) : 0;
+    if ((anterior.x+t*dx)**2+(anterior.y+t*dy)**2 <= 1) aura.beneficiarios.add(alvo);
+    aura.posicoesAnteriores.set(alvo,atual);
+  }
+  // Quem morreu ou saiu da equipe durante a invocação não mantém a seleção.
+  for (const alvo of aura.beneficiarios) if (!candidatos.has(alvo)) aura.beneficiarios.delete(alvo);
+  for (const alvo of aura.posicoesAnteriores.keys()) if (!candidatos.has(alvo)) aura.posicoesAnteriores.delete(alvo);
 }
 
 function jogadorVivo(scene) {
@@ -119,21 +148,21 @@ function jogadorVivo(scene) {
     Number.isFinite(scene.vidaMaxima);
 }
 
-function concederCura(scene,estado,aura,centro) {
+function concederCura(scene,estado,aura) {
   const alvos = new Set();
-  if (jogadorVivo(scene) && dentroDaAura(scene.player,centro)) alvos.add(scene.player);
+  if (jogadorVivo(scene) && aura.beneficiarios.has(scene.player)) alvos.add(scene.player);
   if ((!scene.multiplayer || scene.coopRuntime) && !aura.dono) {
     const aliados = scene.aliados?.getChildren?.() || scene.aliados || [];
     for (const aliado of aliados instanceof Map ? aliados.values() : aliados) {
       if (aliado?.active && !aliado.morto && aliado.vida > 0 && Number.isFinite(aliado.vidaMaxima) &&
-        dentroDaAura(aliado,centro)) alvos.add(aliado);
+        aura.beneficiarios.has(aliado)) alvos.add(aliado);
     }
   }
   const visuais = new Map();
   const beneficiariosVisuais = new Set(alvos);
   // A vida remota continua pertencendo ao outro cliente. Aqui só há feedback visual.
   if (scene.multiplayer) for (const remoto of scene.remotePlayers?.values() || []) {
-    if (remoto.active && dentroDaAura(remoto,centro)) beneficiariosVisuais.add(remoto);
+    if (remoto.active && aura.beneficiarios.has(remoto)) beneficiariosVisuais.add(remoto);
   }
   for (const alvo of beneficiariosVisuais) {
     const efeito = criarParticulasCuraNyx(scene,alvo);
@@ -194,8 +223,9 @@ function posicionarAura(scene, aura, centro, elapsed) {
 
 function atualizarAura(scene, estado, aura, centro) {
   const elapsed = Math.max(0,scene.time.now-aura.inicio);
+  registrarBeneficiarios(scene,aura,centro);
   if (elapsed >= NYX_AURA.animacao) {
-    concederCura(scene,estado,aura,centro);
+    concederCura(scene,estado,aura);
     destruirAura(aura);
     return false;
   }
@@ -206,7 +236,7 @@ function atualizarAura(scene, estado, aura, centro) {
 export function atualizarAuraNyx(scene,estado) {
   if (estado.auraNyx) {
     if (!scene.player?.active || scene.morteEmAndamento || scene.vida <= 0) encerrarLocal(scene,estado);
-    // O fim do GIF concede um efeito independente, com dez segundos de cura.
+    // O fim do GIF concede dez segundos de cura a quem passou pela área na invocação.
     else if (!atualizarAura(scene,estado,estado.auraNyx,scene.player)) encerrarLocal(scene,estado,false);
   }
   for (const [id,aura] of estado.aurasRemotas) {

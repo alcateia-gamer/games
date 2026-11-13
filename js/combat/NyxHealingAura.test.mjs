@@ -207,12 +207,12 @@ test('a aura acompanha a posição final da física no mesmo quadro sem adiantar
   s.limparSistemaEspeciais();
 });
 
-test('Nyx seleciona ao fim do GIF e concede dez pulsos, mesmo após os aliados saírem',()=>{
+test('Nyx concede ao fim do GIF dez pulsos aos aliados encontrados na invocação, mesmo após os aliados saírem',()=>{
   const s=scene('nyx');
   const aliado={active:true,x:100,y:0,vida:40,vidaMaxima:200};
   const fora={...aliado,x:221};
   const morto={...aliado,vida:0};
-  const foraVertical={...aliado,x:0,y:37};
+  const foraVertical={...aliado,x:0,y:55};
   s.aliados=[aliado,fora,morto,foraVertical];
   criarSistemaEspeciais(s);s.events.emit('player:especial');
   s.time.now=1000;atualizarSistemaEspeciais(s);
@@ -232,14 +232,15 @@ test('Nyx seleciona ao fim do GIF e concede dez pulsos, mesmo após os aliados s
   s.limparSistemaEspeciais();assert.equal(s.events.listenerCount('preupdate'),0);
 });
 
-test('quem saiu antes do fim não recebe; cura limita HP e não ressuscita',()=>{
+test('quem passou pela aura mantém o benefício; cura limita HP e não ressuscita',()=>{
   const s=scene('nyx'),aliado={active:true,x:0,y:0,vida:40,vidaMaxima:100};
   s.aliados=[aliado];criarSistemaEspeciais(s);s.events.emit('player:especial');
   aliado.x=200;s.time.now=1200;atualizarSistemaEspeciais(s);
   s.vida=99;s.time.now=2200;atualizarSistemaEspeciais(s);
-  assert.equal(s.vida,100);assert.equal(aliado.vida,40);
+  assert.equal(s.vida,100);assert.equal(aliado.vida,45);
   s.vida=0;s.time.now=3200;atualizarSistemaEspeciais(s);
-  assert.equal(s.vida,0);assert.equal(s.estadoEspecial.curasNyx.size,0);
+  assert.equal(s.vida,0);assert.equal(aliado.vida,50);
+  assert.equal(s.estadoEspecial.curasNyx.size,1,"aliado mantém cura após a morte da Nyx");
   s.limparSistemaEspeciais();
 });
 
@@ -322,4 +323,48 @@ test('partículas existem só nos beneficiários e são limpas na morte e ao sai
   assert.equal(pessoal.active,false);assert.equal(outro.active,true);
   s.limparSistemaEspeciais();assert.equal(outro.active,false);
   assert.equal(s.events.listenerCount('postupdate'),0);
+});
+
+for (const remoto of [false,true]) test(`aura em corrida: contexto ${remoto?'do cliente no host':'local do host'} registra travessia entre frames`,()=>{
+  const s=scene('nyx');
+  s.coopRuntime={host:true,manager:{sendCoopAction(){}}};
+  if(remoto)s.coopRemotePlayerId='nyx-cliente';
+  s.player.x=-260;
+  const aliado={active:true,x:0,y:45,vida:40,vidaMaxima:100};
+  const ampliado={active:true,x:-100,y:0,vida:40,vidaMaxima:100};
+  const fora={active:true,x:0,y:60,vida:40,vidaMaxima:100};
+  s.aliados=[aliado,ampliado,fora];
+  criarSistemaEspeciais(s);s.events.emit('player:especial');
+  assert.equal(s.estadoEspecial.auraNyx.beneficiarios.has(ampliado),true,'área maior já inclui aliado a 160px');
+  // Nenhum dos dois extremos está na área: a Nyx passou pelo aliado na corrida.
+  s.player.x=260;s.time.now=100;atualizarSistemaEspeciais(s);
+  assert.equal(s.estadoEspecial.auraNyx.beneficiarios.has(aliado),true);
+  s.player.x=800;s.time.now=1200;atualizarSistemaEspeciais(s);
+  assert.equal(aliado.vida,40,'o benefício aguarda o fim da invocação');
+  fora.x=800;fora.y=0;
+  for(const tempo of [2200,3200]){s.time.now=tempo;atualizarSistemaEspeciais(s);atualizarSistemaEspeciais(s);}
+  assert.equal(aliado.vida,50,'cura persiste após a Nyx se afastar');
+  assert.equal(ampliado.vida,50);
+  assert.equal(fora.vida,40,'fora da elipse e chegada após a invocação não concedem benefício');
+  s.limparSistemaEspeciais();
+});
+
+test('multiplayer por mensagens: Nyx passando em corrida concede cura sem exigir proximidade no último quadro',t=>{
+  let agora=100000;t.mock.method(Date,'now',()=>agora);
+  const {nyx,kai}=rede();
+  nyx.sendPlayerState(-260,0,'right');
+  const n=scene('nyx',nyx),k=scene('kai-mercer',kai);
+  n.player.x=-260;k.player.y=45;
+  criarSistemaEspeciais(n);criarSistemaEspeciais(k);
+  n.events.emit('player:especial');
+  nyx.sendPlayerState(260,0,'right');
+  agora+=100;k.time.now=100;atualizarSistemaEspeciais(k);
+  nyx.sendPlayerState(800,0,'right');
+  agora+=1100;k.time.now=1200;atualizarSistemaEspeciais(k);
+  assert.equal(k.vida,20);
+  agora+=1000;k.time.now=2200;atualizarSistemaEspeciais(k);
+  assert.equal(k.vida,25,'cruzamento durante a invocação concedeu a cura no cliente');
+  nyx.publishState();atualizarSistemaEspeciais(k);
+  assert.equal(k.vida,25,'pacote repetido não duplica pulso');
+  n.limparSistemaEspeciais();k.limparSistemaEspeciais();
 });
