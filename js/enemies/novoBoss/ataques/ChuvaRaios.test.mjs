@@ -5,7 +5,7 @@ import { novoBossConfig } from "../NovoBossConfig.js";
 import { assetsNovoBoss } from "../NovoBossAssets.js";
 
 function preparar({ textura = true, pontoLivre = () => true, quantidade = 1, raioPlayer = 8,
-  config = {}, rng = () => 0.5 } = {}) {
+  config = {}, rng = () => 0.5, configurarCena = () => {} } = {}) {
   const eventos = [];
   const avisos = [];
   const visuais = [];
@@ -54,6 +54,7 @@ function preparar({ textura = true, pontoLivre = () => true, quantidade = 1, rai
     jogadorAtingeCirculo: (x, y, raio) => Math.hypot(scene.player.x - x, scene.player.y - y) <= raio + raioPlayer,
     danoJogador(dano, origem) { eventos.push({ dano, origem }); return true; },
   };
+  configurarCena(scene);
   const ataque = criarChuvaRaios(scene, encontro, { quantidade, ...config }, servicos);
   return { ataque, scene, encontro, servicos, eventos, avisos, visuais };
 }
@@ -402,4 +403,37 @@ test("chuva não repete impacto recusado pela invulnerabilidade depois do zero",
   c.ataque.atualizar(50);
   assert.equal(tentativas,1);
   assert.equal(c.ataque.snapshot().marcas[0].atingiu,false);
+});
+
+for (const coop of [false,true]) test(`mira do boss ${coop?'coop':'solo'} troca da Aria para seu clone mesmo após o aviso`,()=>{
+  let contexto;
+  const c=preparar({config:novoBossConfig.ataques.chuvaRaios, configurarCena(scene) {
+    scene.time={now:0};
+    contexto=coop ? {player:{x:0,y:0},estadoEspecial:{}} : scene;
+    contexto.estadoEspecial={};
+    if(coop)scene.coopRuntime={bossTarget:()=>contexto};
+  }});
+  assert.deepEqual(c.ataque.obterAlvoChuva(0),{x:0,y:0});
+  const clone={active:true,x:200,y:50,expiraEm:4500};
+  contexto.estadoEspecial.holograma=clone;
+  c.ataque.atualizar(100);
+  assert.deepEqual(c.ataque.obterAlvoChuva(0),{x:200,y:50},'aviso já lançado é redirecionado');
+  clone.x=250;clone.y=80;
+  if(coop)c.scene.coopRuntime.bossTarget=()=>({player:{x:-200,y:-100}});
+  c.ataque.atualizar(100);
+  assert.deepEqual(c.ataque.obterAlvoChuva(0),{x:250,y:80},'mantém a Aria originalmente perseguida');
+  clone.active=false;
+  c.ataque.atualizar(100);
+  assert.deepEqual(c.ataque.obterAlvoChuva(0),{x:250,y:80},'não volta a perseguir Aria com ataque já desviado');
+});
+
+test('novos avisos miram clone ativo e deixam de usar a hitbox da Aria',()=>{
+  const c=preparar({config:novoBossConfig.ataques.chuvaRaios});
+  c.scene.hitboxDanoPlayer={x:0,y:0,width:20,height:20};
+  c.scene.estadoEspecial={holograma:{active:true,x:180,y:40}};
+  c.ataque.atualizar(400);
+  assert.deepEqual(c.ataque.obterAlvoChuva(1),{x:180,y:40});
+  c.scene.estadoEspecial.holograma.active=false;
+  c.ataque.atualizar(400);
+  assert.deepEqual(c.ataque.obterAlvoChuva(2),{x:10,y:10});
 });

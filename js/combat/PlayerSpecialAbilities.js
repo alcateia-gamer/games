@@ -37,7 +37,7 @@ const ESPECIAIS = Object.freeze({
   },
 
   "aria-kade": {
-    cooldown: 12000,
+    cooldown: 9600,
     cor: 0xf472b6,
   },
 
@@ -578,7 +578,7 @@ function invocarHolograma(scene, estado, agora) {
   holo.play(animacao);
 
   holo.especialHolograma = true;
-  holo.integridade = 2;
+  holo.invulneravel = true;
   holo.expiraEm = agora + CONFIG.ariaDuracao;
 
   // Direção permanente da cópia.
@@ -728,16 +728,11 @@ function acertarHolograma(scene, estado, atacante) {
     return false;
   }
 
-  holo.integridade -= 1;
-
-  if (eLaser) {
-    atacante.destroy();
-  }
-
-  if (holo.integridade <= 0) {
-    destruirHolograma(scene, estado, true);
-  } else {
+  if (eLaser) atacante.destroy();
+  // O clone absorve impactos sem perder vida; só expira ou é consumido pela troca.
+  if (scene.time.now >= (holo.proximoFeedbackImpacto ?? 0)) {
     pulsoVisual(scene, holo.x, holo.y, 16, 0xf472b6, 150);
+    holo.proximoFeedbackImpacto = scene.time.now + 120;
   }
 
   return true;

@@ -469,3 +469,29 @@ test("nova folha Magnus: 33 quadros, mesma âncora e explosão sincronizada ao i
   assert.equal(efeito.sprite.active, false);
   assert.equal(scene.estadoEspecial.impactoMagnus, null, "termina sem reiniciar a animação");
 });
+
+test("clone Aria é imune a ataques, expira normalmente e especial recarrega em 9,6s", () => {
+  const scene = cena("aria-kade", 500, 0);
+  scene.anims = { exists: () => true };
+  scene.add.sprite = (x,y) => { const s=objeto(x,y); s.play=()=>s; return s; };
+  criarSistemaEspeciais(scene);
+  scene.events.emit("player:especial");
+  const clone = scene.estadoEspecial.holograma;
+  assert.equal(scene.estadoEspecial.proximoUso, 9600);
+  assert.equal(clone.invulneravel, true);
+  for (let i=0;i<20;i++) {
+    const tiro = Object.assign(objeto(clone.x,clone.y),{especialLaserInimigo:true});
+    assert.equal(scene.acertarHologramaEspecial(tiro),true);
+    assert.equal(tiro.active,false);
+    assert.equal(scene.acertarHologramaEspecial(objeto(clone.x,clone.y)),true);
+    assert.equal(clone.active,true);
+    assert.equal(scene.estadoEspecial.holograma,clone);
+  }
+  scene.time.now=4500;atualizarSistemaEspeciais(scene);
+  assert.equal(clone.active,false);
+  assert.equal(scene.estadoEspecial.holograma,null);
+  scene.time.now=9599;scene.events.emit("player:especial");
+  assert.equal(scene.estadoEspecial.holograma,null);
+  scene.time.now=9600;scene.events.emit("player:especial");
+  assert.ok(scene.estadoEspecial.holograma?.active);
+});

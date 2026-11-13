@@ -112,13 +112,24 @@ export function criarChuvaRaios(scene, encontro, config = {}, servicos = {}) {
   );
   const duracao = Math.max(0, ...marcas.map((marca) => marca.inicio + opcoes.avisoMs + duracaoEfeito));
 
-  function mirarJogador() {
-    const area = scene.hitboxDanoPlayer ?? scene.player?.body;
+  function contextoMira() {
+    return scene.coopRuntime?.bossTarget?.() ?? scene;
+  }
+
+  function cloneAtivo(contexto) {
+    const clone = contexto?.estadoEspecial?.holograma ?? contexto?.especialHolograma;
+    return clone?.active && (clone.expiraEm == null ||
+      clone.expiraEm > (scene.time?.now ?? 0)) ? clone : null;
+  }
+
+  function mirarJogador(contexto = contextoMira()) {
+    const clone = cloneAtivo(contexto);
+    const area = clone ? null : contexto.hitboxDanoPlayer ?? contexto.player?.body;
     const temArea = area && [area.x, area.y, area.width, area.height].every(Number.isFinite) &&
       area.width > 0 && area.height > 0;
-    const posicao = {
-      x: temArea ? area.x + area.width / 2 : scene.player?.x ?? encontro.x,
-      y: temArea ? area.y + area.height / 2 : scene.player?.y ?? encontro.y,
+    const posicao = clone ? { x: clone.x, y: clone.y } : {
+      x: temArea ? area.x + area.width / 2 : contexto.player?.x ?? encontro.x,
+      y: temArea ? area.y + area.height / 2 : contexto.player?.y ?? encontro.y,
     };
     const alvo = limitar(posicao.x, posicao.y);
     const cabe = ponto => limites.xMin <= limites.xMax && limites.yMin <= limites.yMax &&
@@ -142,7 +153,8 @@ export function criarChuvaRaios(scene, encontro, config = {}, servicos = {}) {
     if (marca.iniciou) return;
     marca.iniciou = true;
     if (opcoes.mirarJogador) {
-      const alvo = servicos.obterAlvoChuva ? servicos.obterAlvoChuva(marca.indice) : mirarJogador();
+      marca.contextoMira = contextoMira();
+      const alvo = servicos.obterAlvoChuva ? servicos.obterAlvoChuva(marca.indice) : mirarJogador(marca.contextoMira);
       if (!alvo) { marca.concluida = true; return; }
       marca.x = alvo.x;
       marca.y = alvo.y;
@@ -178,6 +190,17 @@ export function criarChuvaRaios(scene, encontro, config = {}, servicos = {}) {
     if (local < 0 || marca.concluida) return;
     iniciarMarca(marca);
     if (marca.concluida) return;
+    // A Aria pode invocar enquanto já está sob mira. Redireciona só os ataques
+    // ainda sem impacto e conserva o dono da mira original no cooperativo.
+    if (opcoes.mirarJogador && !marca.impactoAvaliado && !servicos.obterAlvoChuva &&
+        cloneAtivo(marca.contextoMira)) {
+      const alvo = mirarJogador(marca.contextoMira);
+      if (alvo) {
+        marca.x = alvo.x; marca.y = alvo.y;
+        marca.aviso?.posicionar?.(marca.x, marca.y);
+        marca.visual?.objeto.setPosition?.(marca.x, marca.y);
+      }
+    }
     marca.aviso?.atualizar(Math.min(1, local / ateImpacto));
     if (local >= opcoes.avisoMs) {
       criarVisual(marca);

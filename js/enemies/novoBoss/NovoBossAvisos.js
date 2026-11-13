@@ -15,6 +15,11 @@ export function criarAvisoNovoBoss(scene, x, y, raio) {
   let encerrado = false;
   const aviso = {
     grafico, sprite, x, y, raio,
+    posicionar(novoX, novoY) {
+      x = novoX; y = novoY;
+      this.x = x; this.y = y;
+      sprite?.setPosition(x, y);
+    },
     atualizar(progresso = 0) {
       if (encerrado) return;
       const p = Math.max(0, Math.min(1, progresso));
