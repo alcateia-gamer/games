@@ -143,14 +143,14 @@ test("teletransporte invisível ou com corpo desabilitado não intercepta flecha
   }
 });
 
-test("Magnus causa os 8 de dano de boss, sem empurrão ou atordoamento", () => {
+test("Magnus causa 90 de dano próximo ao boss, sem empurrão ou atordoamento", () => {
   const scene = cena("magnus-force", 50, 0);
   criarSistemaEspeciais(scene);
   scene.events.emit("player:especial");
   scene.time.now = 390;
   atualizarSistemaEspeciais(scene);
   atualizarSistemaEspeciais(scene);
-  assert.equal(scene.novoBoss.vida, 992);
+  assert.equal(scene.novoBoss.vida, 910);
   assert.equal(scene.novoBoss.acertos.length, 1);
   assert.ok(scene.novoBoss.acertos[0].area instanceof Rectangle);
   assert.equal(scene.novoBoss.especialEmpurraoAte, undefined);
@@ -328,7 +328,7 @@ test("Magnus online aplica impacto contra robôs comuns tanto no host quanto pel
     scene.time.now = 390;
     if (remoto) runtime.players.update(390, 16);
     else atualizarSistemaEspeciais(scene, 16);
-    assert.equal(robo.vida, 82);
+    assert.equal(robo.vida, 10);
     assert.ok(robo.especialEmpurraoAte > 390);
   }
 });
@@ -366,3 +366,32 @@ for (const [personagem, vida, dano, solo, multi] of [
     scene.events.emit("shutdown");
   });
 }
+
+test("Magnus: círculo de 90 de dano nos pés, queda à distância e empurrão moderado", () => {
+  const scene = cena("magnus-force", 500, 0);
+  scene.hitboxDanoPlayer = new Rectangle(-10, 0, 20, 30);
+  const distancias = [50, 110, 145, 180, 181];
+  const robos = distancias.map(d => Object.assign(objeto(d + 10, 30), {
+    vida: 500, vidaMaxima: 500, tipoRobo: "padrao",
+    hitboxDano: new Rectangle(d, 20, 20, 20),
+  }));
+  scene.inimigos = robos;
+  criarSistemaEspeciais(scene);
+  scene.events.emit("player:especial");
+  assert.equal(scene.estadoEspecial.onda.y, 30, "centro coincide com o círculo visual nos pés");
+  scene.time.now = 100;
+  atualizarSistemaEspeciais(scene);
+  assert.deepEqual(robos.map(r => r.vida), [500, 500, 500, 500, 500]);
+  scene.time.now = 330;
+  atualizarSistemaEspeciais(scene);
+  assert.deepEqual(robos.map(r => r.vida), [410, 500, 500, 500, 500], "onda ainda está expandindo");
+  scene.time.now = 460;
+  atualizarSistemaEspeciais(scene);
+  assert.deepEqual(robos.map(r => r.vida), [410, 410, 445, 480, 500]);
+  assert.deepEqual(robos.slice(0, 4).map(r => r.body.velocity.x), [200, 200, 150, 100]);
+  assert.ok(robos.slice(0, 4).every(r => r.body.velocity.y === 0));
+  assert.equal(robos[1].especialEmpurraoAte - 460, 180);
+  assert.equal(robos[4].especialEmpurraoAte, undefined, "fora da onda não recebe empurrão");
+  atualizarSistemaEspeciais(scene);
+  assert.deepEqual(robos.map(r => r.vida), [410, 410, 445, 480, 500], "um acerto por explosão");
+});

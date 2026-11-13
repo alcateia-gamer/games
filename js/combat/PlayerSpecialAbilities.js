@@ -343,22 +343,36 @@ function atualizarLasersRefletidos(scene) {
 }
 
 // =====================================================
-// MAGNUS — ONDA DE CHOQUE ORIGINAL
+// MAGNUS — EXPLOSÃO COM DANO POR DISTÂNCIA
 // =====================================================
+
+const ONDA_MAGNUS = Object.freeze({ raioTotal: 180, raioDanoMaximo: 110,
+  danoMaximo: 90, danoBorda: 20, impulsoMaximo: 200, impulsoMinimo: 100, duracaoEmpurrao: 180 });
+
+function intensidadeOnda(distanciaAlvo) {
+  return Phaser.Math.Clamp((ONDA_MAGNUS.raioTotal - distanciaAlvo) /
+    (ONDA_MAGNUS.raioTotal - ONDA_MAGNUS.raioDanoMaximo), 0, 1);
+}
+
+function danoOnda(onda, alvo) {
+  const ponto = pontoMaisProximo(alvo.hitboxDano, onda.x, onda.y);
+  return Math.round(ONDA_MAGNUS.danoBorda +
+    (ONDA_MAGNUS.danoMaximo - ONDA_MAGNUS.danoBorda) * intensidadeOnda(distancia(ponto, onda)));
+}
 
 function iniciarOnda(scene, estado, agora) {
   iniciarAnimacaoMarreta(scene);
   estado.impactoMagnus?.sprite.destroy();
-  estado.impactoMagnus = criarEfeitoEspecial(scene,'magnus',110);
+  estado.impactoMagnus = criarEfeitoEspecial(scene,'magnus',ONDA_MAGNUS.raioDanoMaximo);
   estado.impactoInicio = agora+70;
   estado.impactoPosicao = { x:scene.player.x, y:scene.player.y+deslocamentoChao(scene) };
   estado.onda = {
     x: scene.player.x,
-    y: scene.player.y,
+    y: estado.impactoPosicao.y,
 
     inicio: agora + 200,
     duracao: 260,
-    raio: 110,
+    raio: ONDA_MAGNUS.raioTotal,
     raioAtual: 0,
 
     atingidos: new Set(),
@@ -402,7 +416,7 @@ function atualizarOnda(scene, estado, agora) {
   });
   const areaOnda = new Phaser.Geom.Rectangle(onda.x - onda.raioAtual, onda.y - onda.raioAtual,
     onda.raioAtual * 2, onda.raioAtual * 2);
-  causarDanoAreaAlvosAdicionais(scene, adicionais, 8, areaOnda, onda);
+  causarDanoAreaAlvosAdicionais(scene, adicionais, alvo => danoOnda(onda, alvo), areaOnda, onda);
   adicionais.forEach(alvo => onda.atingidos.add(alvo));
 
   for (const alvo of alvosEspeciais(scene)) {
@@ -421,25 +435,11 @@ function atualizarOnda(scene, estado, agora) {
 
     onda.atingidos.add(alvo);
 
-    // Boss não sofre empurrão.
-    if (eAlvoAdicionalCombate(scene, alvo)) {
-      danoEspecial(
-        scene,
-        alvo,
-        8,
-        new Phaser.Geom.Rectangle(
-          onda.x - onda.raioAtual,
-          onda.y - onda.raioAtual,
-          onda.raioAtual * 2,
-          onda.raioAtual * 2,
-        ),
-        onda,
-      );
+    // Boss, ilusões e torres já receberam o dano da área; estruturas não se movem.
+    if (eAlvoAdicionalCombate(scene, alvo)) continue;
 
-      continue;
-    }
-
-    danoEspecial(scene, alvo, 18);
+    const intensidade = intensidadeOnda(distancia(ponto, onda));
+    danoEspecial(scene, alvo, danoOnda(onda, alvo));
 
     if (!alvo.active || alvo.morto) {
       continue;
@@ -450,9 +450,13 @@ function atualizarOnda(scene, estado, agora) {
 
     const mag = Math.max(1, Math.hypot(dx, dy));
 
-    alvo.setVelocity((dx / mag) * 400, (dy / mag) * 400);
+    const impulso = ONDA_MAGNUS.impulsoMinimo +
+      (ONDA_MAGNUS.impulsoMaximo - ONDA_MAGNUS.impulsoMinimo) * intensidade;
+    // Sobreposto ao centro, usa a direção do golpe para ainda afastar o inimigo.
+    const direcao = mag <= 1 ? direcaoJogador(scene) : { x: dx / mag, y: dy / mag };
+    alvo.setVelocity(direcao.x * impulso, direcao.y * impulso);
 
-    alvo.especialEmpurraoAte = agora + 280;
+    alvo.especialEmpurraoAte = agora + ONDA_MAGNUS.duracaoEmpurrao;
     alvo.especialAtordoadoAte = agora + 1200;
   }
 

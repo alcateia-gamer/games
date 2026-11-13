@@ -28,15 +28,18 @@ export function causarDanoAlvoAdicional(scene, alvo, quantidade, regiaoAtaque = 
 /** Resolve o mesmo impacto de área antes de fechar a exposição: uma única morte, por ID. */
 export function causarDanoAreaAlvosAdicionais(scene, alvos, quantidade, regiao = null, ataque = null) {
   const validos = alvosAdicionaisCombate(scene).filter(alvo => alvos.includes(alvo));
+  // Uma explosão pode fornecer dano diferente para cada distância do alvo.
+  const danos = new Map(validos.map(alvo => [alvo,
+    typeof quantidade === "function" ? quantidade(alvo) : quantidade]));
   const torres = validos.filter(a => a.torre).sort((a, b) => a.id - b.id);
   const fatal = scene.novoBoss?.prologo?.estado === "GERADORES_EXPOSTOS"
-    ? torres.find(t => t.vida <= quantidade) : null;
+    ? torres.find(t => t.vida <= danos.get(t)) : null;
   const atingidos = new Set();
   // Dano não fatal dos sobreviventes é preservado, inclusive em um impacto simultâneo.
   for (const alvo of validos.filter(a => a !== fatal)) {
-    const dano = fatal && alvo.torre ? Math.min(quantidade, Math.max(0, alvo.vida - 1)) : quantidade;
+    const dano = fatal && alvo.torre ? Math.min(danos.get(alvo), Math.max(0, alvo.vida - 1)) : danos.get(alvo);
     if (dano > 0 && causarDanoAlvoAdicional(scene, alvo, dano, regiao, ataque)) atingidos.add(alvo);
   }
-  if (fatal && causarDanoAlvoAdicional(scene, fatal, quantidade, regiao, ataque)) atingidos.add(fatal);
+  if (fatal && causarDanoAlvoAdicional(scene, fatal, danos.get(fatal), regiao, ataque)) atingidos.add(fatal);
   return atingidos;
 }

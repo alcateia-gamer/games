@@ -54,9 +54,9 @@ try {
       }
       if(alvo) {
         const {atualizarIAInimigo}=await import('/js/enemies/EnemyAI.js');
-        atualizarIAInimigo(s,inicio+670,alvo);
+        atualizarIAInimigo(s,inicio+570,alvo);
         impacto.preservouImpulso=Math.hypot(alvo.body.velocity.x,alvo.body.velocity.y)>0;
-        atualizarIAInimigo(s,inicio+681,alvo);
+        atualizarIAInimigo(s,inicio+581,alvo);
         impacto.parouDuranteStun=Math.hypot(alvo.body.velocity.x,alvo.body.velocity.y)===0;
       }
       const parry=nome==='kai'?s.time.now<estado.parryAte:null;
@@ -82,7 +82,7 @@ try {
     if(nome==='kai') {assert.equal(resultado.parry,true);assert.equal(resultado.cooldown,8000);
       assert.ok(resultado.fases[0].escala<resultado.fases[2].escala);}
     if(nome==='magnus') {
-      assert.deepEqual(resultado.impacto,{dano:18,velocidade:400,stun:1200,empurrao:280,
+      assert.deepEqual(resultado.impacto,{dano:90,velocidade:200,stun:1200,empurrao:180,
         preservouImpulso:true,parouDuranteStun:true});
       assert.equal(resultado.texturaPlayer,'magnus-especial-marreta');
       assert.ok(resultado.animacao.startsWith('attack-marreta-'));
