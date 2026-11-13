@@ -225,6 +225,7 @@ export function criarChuvaRaios(scene, encontro, config = {}, servicos = {}) {
       // Sair durante a animação não desfaz dano; entrar depois não recebe dano atrasado.
       if (!marca.impactoAvaliado) {
         marca.impactoAvaliado = true;
+        servicos.somImpactoChuva?.({ x: marca.x, y: marca.y }, local - ateImpacto);
         if (servicos.jogadorAtingeCirculo?.(marca.x, marca.y, raio)) {
           marca.atingiu = Boolean(servicos.danoJogador?.(opcoes.dano, { x: marca.x, y: marca.y }));
         }

@@ -1,6 +1,7 @@
 /** Teletransporte da mesma entidade, sem timers ou dependência de Phaser global. */
 import { retanguloLivreDoMapa } from "../EnemyPathfinding.js";
 import { areaCorpoNovoBoss } from "./NovoBossConfig.js";
+import { tocarSomTeleporteBoss } from "../../sounds/teleporteBoss.js";
 
 export function areasSobrepostasNovoBoss(a, b) {
   return Boolean(a && b && a.width > 0 && a.height > 0 && b.width > 0 && b.height > 0 &&
@@ -91,6 +92,7 @@ export function iniciarTeleporteNovoBoss(scene, encontro, motivo, opcoes = {}) {
   };
   if (encontro.sprite.body) encontro.sprite.body.enable = false;
   definirAlpha(encontro.sprite, 1);
+  tocarSomTeleporteBoss(scene, encontro.teleporte.origem);
   scene.events?.emit("novo-boss:teleporte-iniciado", { encontro, destino, motivo });
   return true;
 }

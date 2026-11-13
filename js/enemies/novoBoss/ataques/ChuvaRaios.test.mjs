@@ -437,3 +437,23 @@ test('novos avisos miram clone ativo e deixam de usar a hitbox da Aria',()=>{
   c.ataque.atualizar(400);
   assert.deepEqual(c.ataque.obterAlvoChuva(2),{x:10,y:10});
 });
+
+test('som acompanha cada impacto da chuva uma vez, inclusive em frames atrasados',()=>{
+  const c=preparar({config:{...novoBossConfig.ataques.chuvaRaios,quantidade:3}});
+  const sons=[];
+  c.servicos.somImpactoChuva=(ponto,atraso)=>sons.push({ponto,atraso});
+  const primeiro=c.ataque.snapshot().marcas[0].impactoEm;
+  c.ataque.atualizar(primeiro-1);
+  assert.equal(sons.length,0,'aviso e queda ainda não tocam explosão');
+  c.ataque.atualizar(1);
+  assert.equal(sons.length,1);
+  assert.equal(sons[0].atraso,0);
+  for(let i=0;i<5;i++)c.ataque.atualizar(0);
+  assert.equal(sons.length,1,'não repete nos frames da cauda da explosão');
+  c.ataque.atualizar(850);
+  assert.equal(sons.length,3);
+  assert.deepEqual(sons.map(s=>s.atraso),[0,450,50]);
+  for(let i=0;i<5;i++)c.ataque.atualizar(0);
+  assert.equal(sons.length,3);
+  c.ataque.destruir();
+});

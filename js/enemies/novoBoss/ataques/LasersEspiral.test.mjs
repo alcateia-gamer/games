@@ -316,3 +316,20 @@ test("absorver um disparo encerra a varredura no mesmo quadro sem atingir outro 
   assert.equal(c.registrados.size, 0);
   assert.equal(c.ataque.snapshot().projeteis.length, 0);
 });
+
+test("som é emitido junto a cada laser, nunca durante o aviso nem a cada frame de voo",()=>{
+  const sons=[];
+  const c=preparar({quantidade:4,avisoMs:700,intervaloMs:100}, {
+    atingirJogadorComLaser:()=>false,
+    somDisparoLaser:(origem,atraso)=>sons.push({origem,atraso}),
+  });
+  c.ataque.atualizar(699);assert.equal(sons.length,0);
+  c.ataque.atualizar(1);
+  assert.equal(sons.length,1);
+  assert.deepEqual(sons[0],{origem:{x:0,y:0},atraso:0});
+  c.ataque.atualizar(0);assert.equal(sons.length,1);
+  c.ataque.atualizar(300);
+  assert.deepEqual(sons.map(s=>s.atraso),[0,200,100,0]);
+  assert.equal(c.ataque.snapshot().emitidos,4);
+  c.ataque.atualizar(100);assert.equal(sons.length,4);
+});

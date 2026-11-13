@@ -213,16 +213,42 @@ test("aura Nyx dura dez segundos e respeita vinte segundos de recarga", () => {
 test("Kai continua refletindo lasers comuns e aplicando o dano pelo contrato do alvo", () => {
   const scene = cena("kai-mercer", 80, 0), laser = objeto(20, 0);
   scene.lasersInimigo = { getChildren: () => [laser] };
+  const sons=[];
+  scene.cache.audio.exists=key=>key==='kai-ricochete';
+  scene.sound.play=(key,config)=>sons.push({key,...config});
   criarSistemaEspeciais(scene);
   scene.events.emit("player:especial");
   assert.equal(scene.tentarInterceptarLaserEspecial(laser), true);
   assert.equal(laser.especialRefletido, true);
+  assert.deepEqual(sons,[{key:'kai-ricochete',volume:0.4,loop:false}]);
+  assert.equal(scene.tentarInterceptarLaserEspecial(laser),false);
+  assert.equal(sons.length,1,'projétil já refletido não repete ricochete');
   assert.ok(laser.body.velocity.x > 0);
   laser.setPosition(75, 0);
   atualizarSistemaEspeciais(scene);
   assert.equal(laser.active, false);
   assert.equal(scene.novoBoss.vida, 970);
   assert.equal(scene.novoBoss.acertos.length, 1);
+});
+
+test('ricochete soa no contato da ponta com a borda visível, uma única vez',()=>{
+  const scene=cena('kai-mercer',200,0), sons=[];
+  scene.cache.audio.exists=key=>key==='kai-ricochete';
+  scene.sound.play=(key,config)=>sons.push({key,...config});
+  criarSistemaEspeciais(scene);scene.events.emit('player:especial');
+  scene.estadoEspecial.parryEfeito={escala:1,meta:{limitesEfeito:[0,0,100,65]}};
+  const laser=Object.assign(objeto(107,0),{comprimentoFeixe:112,larguraFeixe:6});
+  scene.time.now=175;
+  assert.equal(scene.tentarInterceptarLaserEspecial(laser),false,'domo ainda abrindo');
+  scene.time.now=350;
+  assert.equal(scene.tentarInterceptarLaserEspecial(laser),false,'ponta ainda fora');
+  assert.equal(sons.length,0);
+  laser.x=106;
+  assert.equal(scene.tentarInterceptarLaserEspecial(laser),true);
+  assert.equal(sons.length,1);
+  assert.equal(sons[0].volume,.4);
+  assert.equal(scene.tentarInterceptarLaserEspecial(laser),false);
+  assert.equal(sons.length,1);
 });
 
 test('Kai mantém parry por 5,8s e respeita o raio reduzido em mais 20%',()=>{
@@ -235,7 +261,7 @@ test('Kai mantém parry por 5,8s e respeita o raio reduzido em mais 20%',()=>{
     'som começa junto à abertura da barreira');
   assert.equal(scene.estadoEspecial.parryAte,5800);
   assert.equal(scene.estadoEspecial.proximoUso,8000);
-  assert.equal(scene.tentarInterceptarLaserEspecial(objeto(55,0)),false);
+  assert.equal(scene.tentarInterceptarLaserEspecial(Object.assign(objeto(55,0),{width:0,height:0})),false);
   assert.equal(scene.tentarInterceptarLaserEspecial(laser),true);
   scene.time.now=5799;assert.equal(scene.tentarBloquearDanoEspecial(null),true);
   scene.time.now=5800;assert.equal(scene.tentarBloquearDanoEspecial(null),false);
@@ -258,7 +284,7 @@ test("Kai absorve projéteis do boss sem refletir, causar dano de volta ou mudar
     criarSistemaEspeciais(scene);
     assert.equal(scene.tentarInterceptarLaserEspecial(laser), false, "sem habilidade ativa não intercepta");
     scene.events.emit("player:especial");
-    const longe = objeto(100, 0);
+    const longe = Object.assign(objeto(100, 0),{width:0,height:0});
     longe.especialAtirador = scene.novoBoss;
     assert.equal(scene.tentarInterceptarLaserEspecial(longe), false);
     assert.equal(longe.active, true);

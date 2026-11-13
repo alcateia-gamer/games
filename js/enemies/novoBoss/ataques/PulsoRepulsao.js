@@ -38,6 +38,7 @@ export function criarPulsoRepulsao(scene, encontro, config = {}, servicos = {}) 
         aviso = null;
         if (!explosaoCriada) {
           explosaoCriada = true;
+          servicos.somExplosaoPulso?.(origem, tempo - opcoes.avisoMs);
           servicos.criarExplosaoPulso?.(origem, opcoes.raio, tempo - opcoes.avisoMs,
             Number.isFinite(delta) ? Math.max(0, delta) : 0);
         }

@@ -80,7 +80,7 @@ for (const key of ["magnus-martelo-impacto", "running", "aria-tensar-arco", "ari
     for (const peer of peers) assert.equal(plays(peer, key), 1);
   });
 }
-for (const key of ["aria-especial", "aria-clone-passos", "kai-especial", "magnus-especial", "tiro-laser", "robo-explodindo", "robot-walk", "walk-robo-serra", "robo-serra-ataque",
+for (const key of ["kai-ricochete", "boss-disparo-laser", "boss-explosao-pulso", "boss-teleporte", "boss-impacto-chuva", "aria-especial", "aria-clone-passos", "kai-especial", "magnus-especial", "tiro-laser", "robo-explodindo", "robot-walk", "walk-robo-serra", "robo-serra-ataque",
   "boss-escotilha", "boss-impacto-escotilha", "boss-explosao-escotilha", "boss-raio-escotilha", "boss-escudo-quebrado"]) {
   test(`${key}: som do mundo chega uma única vez aos quatro jogadores`, t => {
     const { peers } = setup(t);
@@ -360,4 +360,92 @@ test("troca da Aria replica o áudio inteiro acelerado, sem eco, em todos os jog
   assert.equal(evento.duration, peers[0].sounds.at(-1).totalDuration);
   assert.equal(evento.rate, 2);
   assert.equal(evento.position, 0);
+});
+
+
+test("impacto da chuva transmite 40%, tom original e fase correta aos quatro jogadores", async t => {
+  const { tocarSomImpactoChuvaBoss } = await import("../sounds/impactoChuvaBoss.js");
+  const { peers, messages } = setup(t);
+  tocarSomImpactoChuvaBoss(peers[0].scene,{x:0,y:0},100);
+  for(const peer of peers) {
+    assert.equal(plays(peer,"boss-impacto-chuva"),1);
+    const som=peer.sounds.at(-1);
+    assert.equal(som.volume,0.4);
+    assert.equal(som.seek,0.1);
+    assert.equal(som.detune,0);
+    assert.equal(som.rate,1);
+  }
+  const evento=messages.find(m=>m.kind==="audio").payload.sounds[0];
+  assert.equal(evento.x,0);assert.equal(evento.y,0);
+  peers[0].scene.events.emit("shutdown");
+  assert.ok(peers.every(p=>!p.sounds.at(-1).isPlaying));
+});
+
+
+test("teleporte replica marcador de 1,7s a 15% sem duplicação nos quatro jogadores", async t => {
+  const { tocarSomTeleporteBoss } = await import("../sounds/teleporteBoss.js");
+  const { peers, messages } = setup(t);
+  tocarSomTeleporteBoss(peers[0].scene,{x:0,y:0});
+  for(const peer of peers) {
+    assert.equal(plays(peer,"boss-teleporte"),1);
+    const som=peer.sounds.at(-1);
+    assert.equal(som.currentMarker.start,0);
+    assert.equal(som.currentMarker.duration,1.7);
+    assert.equal(som.volume,0.15);
+    assert.equal(som.loop,false);
+  }
+  const evento=messages.find(m=>m.kind==="audio").payload.sounds[0];
+  assert.equal(evento.duration,1.7);
+  assert.equal(evento.rate,1);
+  peers[0].scene.events.emit("shutdown");
+  assert.ok(peers.every(p=>!p.sounds.at(-1).isPlaying));
+});
+
+
+test("pulso do boss replica explosão a 55% e atraso correto aos quatro jogadores", async t => {
+  const { tocarSomExplosaoPulsoBoss } = await import("../sounds/explosaoPulsoBoss.js");
+  const { peers, messages } = setup(t);
+  tocarSomExplosaoPulsoBoss(peers[0].scene,{x:0,y:0},150);
+  for(const peer of peers) {
+    assert.equal(plays(peer,"boss-explosao-pulso"),1);
+    const som=peer.sounds.at(-1);
+    assert.equal(som.volume,0.55);
+    assert.equal(som.seek,0.15*2**(-200/1200));
+    assert.equal(som.detune,-200);
+    assert.equal(som.loop,false);
+  }
+  const evento=messages.find(m=>m.kind==="audio").payload.sounds[0];
+  assert.equal(evento.x,0);assert.equal(evento.y,0);
+  peers[0].scene.events.emit("shutdown");
+  assert.ok(peers.every(p=>!p.sounds.at(-1).isPlaying));
+});
+
+
+test("laser comum do boss replica aumento de 40%, sincronizado e sem eco", async t => {
+  const { tocarSomDisparoBoss } = await import("../sounds/disparoBoss.js");
+  const { peers } = setup(t);
+  tocarSomDisparoBoss(peers[0].scene,{x:0,y:0},20);
+  for(const peer of peers) {
+    assert.equal(plays(peer,"boss-disparo-laser"),1);
+    const som=peer.sounds.at(-1);
+    assert.equal(som.volume,0.021);
+    assert.equal(som.currentMarker.duration,0.12);
+    assert.equal(som.rate,1);assert.equal(som.detune,0);
+    assert.equal(som.seek,0.02);
+  }
+  peers[0].scene.events.emit("shutdown");
+  assert.ok(peers.every(p=>!p.sounds.at(-1).isPlaying));
+});
+
+
+test("ricochete Kai chega a 40% uma vez aos quatro jogadores na posição do projétil", async t => {
+  const { tocarSomRicocheteKai } = await import("../sounds/kaiEspecial.js");
+  const { peers, messages } = setup(t);
+  peers[0].scene.player.x=2000;
+  tocarSomRicocheteKai(peers[0].scene,{x:0,y:0});
+  for(const peer of peers)assert.equal(plays(peer,"kai-ricochete"),1);
+  assert.equal(peers[1].sounds.at(-1).volume,0.4);
+  const evento=messages.find(m=>m.kind==="audio").payload.sounds[0];
+  assert.equal(evento.x,0);assert.equal(evento.y,0);
+  assert.equal(evento.volume,0.4);assert.equal(evento.loop,false);
 });

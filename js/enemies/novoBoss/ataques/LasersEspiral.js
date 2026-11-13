@@ -221,6 +221,7 @@ export function criarLasersEspiral(scene, encontro, config = {}, servicos = {}) 
           idade: 0, percorrido: 0, ativo: true,
         };
         emitidos++;
+        servicos.somDisparoLaser?.({ x: projetil.x, y: projetil.y }, Math.max(0, decorrido - nascimento));
         criarVisual(projetil);
         avancar(projetil, Math.max(0, decorrido - nascimento));
         if (projetil.ativo) projeteis.push(projetil);

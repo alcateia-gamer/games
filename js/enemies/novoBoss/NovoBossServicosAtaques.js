@@ -9,6 +9,9 @@ import { capturarJogadorNovoBoss, liberarJogadorNovoBoss } from "../../player/Pl
 import { criarAvisoNovoBoss } from "./NovoBossAvisos.js";
 import { configurarCorpoDisparoEnergia } from "./NovoBossDisparoEnergia.js";
 import { coopBossServices } from "../../multiplayer/CoopBossServices.js";
+import { tocarSomImpactoChuvaBoss } from "../../sounds/impactoChuvaBoss.js";
+import { tocarSomExplosaoPulsoBoss } from "../../sounds/explosaoPulsoBoss.js";
+import { tocarSomDisparoBoss } from "../../sounds/disparoBoss.js";
 
 function direcao(inicio, fim) {
   const mag = Math.hypot(fim.x - inicio.x, fim.y - inicio.y) || 1;
@@ -57,6 +60,9 @@ export function criarServicosAtaques(scene, encontro) {
         tempoImpactoFlecha(inicio, fim, vetor, area, raio, raio) !== null);
     },
     danoJogador,
+    somImpactoChuva: (ponto, atrasoMs) => tocarSomImpactoChuvaBoss(scene, ponto, atrasoMs),
+    somExplosaoPulso: (ponto, atrasoMs) => tocarSomExplosaoPulsoBoss(scene, ponto, atrasoMs),
+    somDisparoLaser: (ponto, atrasoMs) => tocarSomDisparoBoss(scene, ponto, atrasoMs),
     criarExplosaoPulso(origem, raio, idade, delta) {
       const inicio = encontro.relogioCombate + delta - idade;
       return encontro.apresentacao?.criarExplosaoPulso(origem, raio, inicio);

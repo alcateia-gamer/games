@@ -8,6 +8,11 @@ const WORLD = new Set(["tiro-laser", "robo-explodindo", "robot-walk", "walk-robo
   "magnus-especial",
   "kai-especial",
   "aria-especial", "aria-clone-passos",
+  "boss-impacto-chuva",
+  "boss-teleporte",
+  "boss-explosao-pulso",
+  "boss-disparo-laser",
+  "kai-ricochete",
   "robo-serra-ataque", "boss-escotilha", "boss-impacto-escotilha", "boss-explosao-escotilha",
   "boss-raio-escotilha", "boss-escudo-quebrado"]);
 const PLAYER = new Set(["running", "dash-personagem", "aria-tensar-arco", "aria-soltar-flecha", "dano-soft",

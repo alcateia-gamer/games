@@ -7,9 +7,10 @@
 import { causarDanoInimigo } from "../enemies/EnemyHealth.js";
 import { jogadorPresoNovoBoss } from "../player/PlayerControlEffects.js";
 import { tocarSomEspecialMagnus } from "../sounds/magnusEspecial.js";
-import { tocarSomEspecialKai } from "../sounds/kaiEspecial.js";
+import { tocarSomEspecialKai, tocarSomRicocheteKai } from "../sounds/kaiEspecial.js";
 import { iniciarSomCloneAria, tocarSomTrocaAria } from "../sounds/ariaEspecial.js";
 import { criarColisaoDomoKai } from './KaiDomeCollision.js';
+import { contatoProjetilDomo } from './KaiProjectileContact.js';
 import { NYX_AURA, prepararAuraNyx, iniciarAuraNyx, atualizarAuraNyx, limparAuraNyx } from './NyxHealingAura.js';
 import { criarEfeitoEspecial, atualizarEfeitoEspecial, deslocamentoChao, iniciarAnimacaoMarreta, desenharDomoKai } from './SpecialAbilityEffects.js';
 import { alvosAdicionaisCombate, eAlvoAdicionalCombate,
@@ -265,18 +266,28 @@ function refletirLaser(scene, estado, laser) {
   if (
     !parryAtivo(scene, estado) ||
     !laser?.active ||
-    laser.especialRefletido ||
-    distancia(scene.player, laser) > CONFIG.kaiRaio + 5
+    laser.especialRefletido
   ) {
     return false;
   }
+
+  const efeito = estado.parryEfeito;
+  const limites = efeito?.meta.limitesEfeito;
+  const abertura = Math.max(0, Math.min(1,
+    (scene.time.now - (estado.parryAte - CONFIG.kaiDuracao)) / 350));
+  const rx = limites ? (limites[2]-limites[0])*efeito.escala*abertura/2 : CONFIG.kaiRaio+5;
+  const contato = contatoProjetilDomo(laser, scene.player.x,
+    scene.player.y + (limites ? deslocamentoChao(scene) : 0), rx,
+    limites ? rx*1.15 : rx,
+    limites ? (limites[3]-limites[1])*efeito.escala*abertura/2 : rx);
+  if (!contato) return false;
 
   const origem = laser.especialAtirador;
   const boss = scene.novoBoss;
   if (laser.novoBossDisparoEnergia || (boss &&
       (origem === boss || boss.projeteisBoss?.includes(laser)))) {
     // O domo conserva o alcance e a proteção; energia do boss é absorvida sem voltar como dano.
-    pulsoVisual(scene, laser.x, laser.y, 11, 0x38bdf8, 150);
+    pulsoVisual(scene, contato.x, contato.y, 11, 0x38bdf8, 150);
     laser.destroy();
     return true;
   }
@@ -299,6 +310,7 @@ function refletirLaser(scene, estado, laser) {
   // O laser muda de equipe.
   laser.especialRefletido = true;
   laser.danoEspecial = 30;
+  tocarSomRicocheteKai(scene, contato);
 
   if (laser.setTint) {
     laser.setTint(0x38bdf8);
@@ -311,7 +323,7 @@ function refletirLaser(scene, estado, laser) {
   // Direcionar o projétil de volta ao inimigo.
   laser.body?.setVelocity((vx / tamanho) * 530, (vy / tamanho) * 530);
 
-  pulsoVisual(scene, laser.x, laser.y, 11, 0x38bdf8, 150);
+  pulsoVisual(scene, contato.x, contato.y, 11, 0x38bdf8, 150);
 
   return true;
 }
