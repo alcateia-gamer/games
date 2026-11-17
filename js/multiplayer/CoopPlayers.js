@@ -103,10 +103,10 @@ export class CoopPlayers {
       actor.coopFlashlightAngle = Number.isFinite(data.coop?.flashlight?.angle) ? data.coop.flashlight.angle : null;
       actor.direcaoAtual = data.direction;
       // Nunca substitui o movimento autoritativo do puxão pela posição anterior do cliente.
-      if (!entry.context?.restricaoControleNovoBoss && !entry.context?.atacando && desc) {
+      if (!entry.context?.restricaoControleNovoBoss && !entry.context?.hackingAtivo && !entry.context?.atacando && desc) {
         applyVisual(s, actor, { ...desc, x: data.x, y: data.y }, !r.host);
       }
-      if (r.host && !entry.context?.restricaoControleNovoBoss) actor.setPosition(data.x, data.y);
+      if (r.host && !entry.context?.restricaoControleNovoBoss && !entry.context?.hackingAtivo) actor.setPosition(data.x, data.y);
       const b = data.coop?.hitbox || { dx: -15, dy: -20, w: 30, h: 46 };
       entry.hitbox = new Phaser.Geom.Rectangle(actor.x + b.dx, actor.y + b.dy, b.w, b.h);
       const speech = new Map((data.coop?.speech || []).filter(p => typeof p.nome === "string" &&

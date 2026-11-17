@@ -1,7 +1,6 @@
 /** Ondas únicas por visita à fábrica, disparadas pela aproximação das áreas do Tiled. */
 import { criarRoboBola } from "./RoboBola.js";
-import { retanguloLivreDoMapa } from "./EnemyPathfinding.js";
-import { criarAreaMapa } from "../map/AreaMapa.js";
+import { obterPisoSpawnRobos, retanguloSpawnLivre } from "./EnemySpawnValidation.js";
 
 export const CONFIG_SPAWN_ROBO_BOLA = Object.freeze({
   proximidade: 180, areaPorRobo: 40000, maximo: 7, intervaloMs: 450,
@@ -23,11 +22,12 @@ export function quantidadeRobosArea(area) {
 }
 
 export function lerAreasRoboBola(map) {
-  const camada = map?.getObjectLayer?.("SpawnRoboBola");
-  return (camada?.objects ?? []).filter(o => !o.point && !o.ellipse && !o.polygon &&
+  const camada = map?.getObjectLayer?.("SpawnRoboBola") ??
+    map?.objects?.find(l => l.name?.split("/").at(-1) === "SpawnRoboBola");
+  return (camada?.objects ?? []).filter(o => o.visible !== false && !o.point && !o.ellipse && !o.polygon &&
     !o.polyline && !o.gid && !o.rotation && [o.x, o.y, o.width, o.height].every(Number.isFinite) &&
-    o.width > 0 && o.height > 0).map(o => ({ id: o.id, x: o.x + (camada.offsetx ?? 0),
-      y: o.y + (camada.offsety ?? 0), width: o.width, height: o.height }));
+    o.width > 0 && o.height > 0).map(o => ({ id: o.id, x: o.x,
+      y: o.y, width: o.width, height: o.height }));
 }
 
 function coordenadas(min, tamanho) {
@@ -45,10 +45,10 @@ export function candidatosAreaRoboBola(area) {
 }
 
 export function pontoLivreAreaRoboBola(scene, ponto, piso = null) {
-  const tamanho = CONFIG_SPAWN_ROBO_BOLA.tamanhoCorpo;
+  const tamanho = CONFIG_SPAWN_ROBO_BOLA.tamanhoCorpo + CONFIG_SPAWN_ROBO_BOLA.margem * 2;
   const corpo = { x: ponto.x - tamanho / 2, y: ponto.y - tamanho / 2,
     width: tamanho, height: tamanho };
-  if (!retanguloLivreDoMapa(scene, corpo) || (piso && !piso.contem(corpo))) return false;
+  if (!retanguloSpawnLivre(scene, corpo) || (piso && !piso.contem(corpo))) return false;
   const jogadores = [scene.player, ...((scene.remotePlayers?.values &&
     [...scene.remotePlayers.values()]) || [])];
   if (jogadores.some(p => p?.active && Math.hypot(ponto.x - p.x, ponto.y - p.y) < 70)) return false;
@@ -80,7 +80,7 @@ export function criarSpawnAreasRoboBola(scene, criar = criarRoboBola) {
     total: quantidadeRobosArea(area), invocados: 0, ativada: false,
     proximoSpawn: 0, candidatos: candidatosAreaRoboBola(area) }));
   aplicarLimitesRegionais(areas);
-  const piso = scene.companionPet?.areaMapa ?? criarAreaMapa(scene.map);
+  const piso = obterPisoSpawnRobos(scene);
   let tempo = 0, destruido = false;
   const sistema = {
     atualizar(delta) {

@@ -228,6 +228,12 @@ export function prepararPrologoNovoBoss(scene, encontro) {
 
   const sistema = {
     id,
+    concluirAntecipado() {
+      if (destruido || estado === "COMBATE_PRINCIPAL") return false;
+      concluir();
+      grafico.clear();
+      return true;
+    },
     get bloqueiaCombatePrincipal() { return !destruido && estado !== "COMBATE_PRINCIPAL"; },
     get estado() { return estado; },
     podeAtingirGerador(torre) {

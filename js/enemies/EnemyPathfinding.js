@@ -135,7 +135,13 @@ function retanguloLivreDoMapa(scene, rect) {
   if (!scene || !rect) return false;
   const area = limites(rect.x, rect.y, rect.width, rect.height);
   if (!Object.values(area).every(Number.isFinite)) return false;
-  return !algumObstaculo(criarIndice(scene), area, (obstaculo) => sobrepoe(area, obstaculo));
+  // Spawn e proteção física precisam do estado atual, inclusive quando uma porta
+  // substitui outra mantendo a mesma quantidade de corpos no grupo.
+  const grupo = scene.collisionGroup, arvore = scene.physics?.world?.staticTree;
+  if (arvore?.search && grupo?.contains) return !arvore.search({
+    minX: area.left, minY: area.top, maxX: area.right, maxY: area.bottom,
+  }).some(body => corpoValido(body) && grupo.contains(body.gameObject) && sobrepoe(area, limitesCorpo(body)));
+  return !obterFilhosGrupoSeguro(grupo).some(o => corpoValido(o.body) && sobrepoe(area, limitesCorpo(o.body)));
 }
 
 /** Interseção exata de um segmento com AABB, incluindo obstáculos finos entre as células. */
@@ -202,6 +208,8 @@ function areaInimigo(geometria, ponto) {
 }
 
 function dentroDosLimites(scene, inimigo, area) {
+  if (inimigo.playableArea && !inimigo.playableArea.contem({ x: area.left, y: area.top,
+    width: area.right - area.left, height: area.bottom - area.top })) return false;
   const mundo = scene.physics?.world?.bounds;
   if (!inimigo.body?.collideWorldBounds || !mundo) return true;
   return area.left >= mundo.x && area.top >= mundo.y &&

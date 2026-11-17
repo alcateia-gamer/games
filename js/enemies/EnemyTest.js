@@ -14,6 +14,7 @@ import {
 } from "./EnemyAnimations.js";
 import { atualizarIAInimigo } from "./EnemyAI.js";
 import { protegerColisaoInimigo } from "./EnemyCollision.js";
+import { obterPisoSpawnRobos, retanguloSpawnLivre } from "./EnemySpawnValidation.js";
 import {
   verificarLasersNoMapa,
   verificarLasersNoPlayer,
@@ -27,6 +28,13 @@ function criarInimigoTeste(scene, config = {}) {
   if (scene.sys?.settings?.key === "Level1" && !config.remoteOnly &&
       !scene.enemySpawnManager?.autorizarCriacao(config)) return null;
   if (![config.x, config.y].every(Number.isFinite)) return null;
+  if (!config.remoteOnly) {
+    if (scene.multiplayer && !scene.isMultiplayerHost) return null;
+    const perfil = PERFIS_ROBOS[config.tipoRobo === "serra" ? "serra" : "padrao"];
+    const width = perfil.frameWidth * perfil.scale, height = perfil.frameHeight * perfil.scale;
+    if (!retanguloSpawnLivre(scene, { x: config.x - width / 2, y: config.y - height / 2,
+      width, height })) return null;
+  }
   criarAnimacoesInimigo(scene);
 
   const x = config.x;
@@ -48,6 +56,7 @@ function criarInimigoTeste(scene, config = {}) {
     }
   });
   inimigo.origemSpawn = { x, y };
+  inimigo.playableArea = config.remoteOnly ? null : obterPisoSpawnRobos(scene);
   inimigo.networkId = config.networkId || null;
   inimigo.remoteOnly = Boolean(config.remoteOnly);
 

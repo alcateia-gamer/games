@@ -8,12 +8,13 @@ import { atorRelevante, atualizarDecisaoAtor, atualizarBarrasDistantes } from ".
 import { calcularDepthAtor } from "../map/ProfundidadeMapa.js";
 import { configurarSomPropulsaoRoboBola } from "../sounds/propulsaoRoboBola.js";
 import { tocarSomTiroLaser } from "../sounds/inimigos.js";
-import { caminhoDiretoBloqueado, caminhoMovimentoBloqueado, retanguloLivreDoMapa } from "./EnemyPathfinding.js";
+import { caminhoDiretoBloqueado, caminhoMovimentoBloqueado } from "./EnemyPathfinding.js";
 import { atualizarIAInimigo, moverInimigoAte } from "./EnemyAI.js";
 import { suavizarTexturasRoboBola, criarBrilhoOlho, criarRastroPlasma } from "./RoboBolaEffects.js";
 import { protegerColisaoRoboBola } from "./RoboBolaColisao.js";
 import { ROBO_BOLA_FLUTUACAO } from "./RoboBolaFlutuacao.js";
 import { atualizarEmergenciaRoboBola, EMERGENCIA_ROBO_BOLA } from "./RoboBolaEmergencia.js";
+import { obterPisoSpawnRobos, retanguloSpawnLivre } from "./EnemySpawnValidation.js";
 
 // Grade viva 2×3: frente, disparo frontal, costas, esquerda, direita, vazio.
 // A morte usa as mesmas poses, cada uma em uma linha de quatro quadros.
@@ -62,6 +63,11 @@ function atualizarFlutuacao(robo, time, delta = 0) {
   robo.body.setOffset(offset, offset - deslocamentoLocal);
 }
 
+function jogadorOcupaSpawn(scene, ponto) {
+  return [scene.player, ...(scene.remotePlayers?.values?.() ?? [])].some(p =>
+    p?.active && !p.morto && Math.hypot(ponto.x - p.x, ponto.y - p.y) < 70);
+}
+
 function escolherSpawn(scene, perfil) {
   const anguloInicial = Math.random() * Math.PI * 2;
   const tamanho = (perfil?.hitbox ?? TAMANHO_HITBOX) * (perfil?.escala ?? 0.56);
@@ -70,7 +76,9 @@ function escolherSpawn(scene, perfil) {
       const angulo = anguloInicial + i * Math.PI / 12;
       const x = scene.player.x + Math.cos(angulo) * raio;
       const y = scene.player.y + Math.sin(angulo) * raio;
-      if (!retanguloLivreDoMapa(scene, { x: x - tamanho / 2, y: y - tamanho / 2, width: tamanho, height: tamanho })) continue;
+      if (!retanguloSpawnLivre(scene, { x: x - tamanho / 2 - 2, y: y - tamanho / 2 - 2,
+        width: tamanho + 4, height: tamanho + 4 })) continue;
+      if (jogadorOcupaSpawn(scene, { x, y })) continue;
       if ((scene.inimigos || []).some(outro => outro?.active && !outro.morto && Math.hypot(outro.x - x, outro.y - y) < 50)) continue;
       return { x, y };
     }
@@ -180,15 +188,15 @@ function criarProjetil(scene, robo, alvo) {
 }
 
 function criarRoboBola(scene, posicao = null, perfil = null) {
-  if (!scene?.player?.active) return null;
+  if (!scene?.player?.active || (scene.multiplayer && !scene.isMultiplayerHost)) return null;
   const spawn = posicao ?? escolherSpawn(scene, perfil);
   if (!spawn) return null;
   if (posicao) {
     const tamanho = (perfil?.hitbox ?? TAMANHO_HITBOX) * (perfil?.escala ?? 0.56);
     if (![spawn.x, spawn.y].every(Number.isFinite) ||
-        !retanguloLivreDoMapa(scene, { x: spawn.x - tamanho / 2, y: spawn.y - tamanho / 2,
-          width: tamanho, height: tamanho }) ||
-        Math.hypot(scene.player.x - spawn.x, scene.player.y - spawn.y) < 70 ||
+        !retanguloSpawnLivre(scene, { x: spawn.x - tamanho / 2 - 2, y: spawn.y - tamanho / 2 - 2,
+          width: tamanho + 4, height: tamanho + 4 }) ||
+        jogadorOcupaSpawn(scene, spawn) ||
         (scene.inimigos ?? []).some(outro => outro?.active && !outro.morto &&
           Math.hypot(outro.x - spawn.x, outro.y - spawn.y) < 50)) return null;
   }
@@ -204,6 +212,7 @@ function criarRoboBola(scene, posicao = null, perfil = null) {
     0,
   );
   robo.origemSpawn = { x: spawn.x, y: spawn.y };
+  robo.playableArea = obterPisoSpawnRobos(scene);
   robo.perfilVoador = perfil;
   robo.tipoRobo = perfil?.tipo ?? "bola";
   robo.morto = false;

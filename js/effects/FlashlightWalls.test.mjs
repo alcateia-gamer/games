@@ -132,8 +132,9 @@ test("Luzatravessa=true libera só a luz e a parede atrás continua bloqueando",
     ]);
     const corpos = [];
     scene.physics = { add: { staticGroup: () => ({ create(x, y) {
-      const corpo = { x, y, setSize(width, height) { Object.assign(this, { width, height }); },
-        setVisible() {} };
+      const corpo = { x, y,
+        setDisplaySize(width, height) { Object.assign(this, { width, height }); return this; },
+        refreshBody() { return this; }, setVisible() { return this; } };
       corpos.push(corpo);
       return corpo;
     } }) } };

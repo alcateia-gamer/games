@@ -1,5 +1,6 @@
 /** Portais sem vida ou hitbox. A seleção e o spawn compartilham a mesma validação. */
 import { retanguloLivreDoMapa } from "../EnemyPathfinding.js";
+import { retanguloSpawnLivre } from "../EnemySpawnValidation.js";
 import { areasSobrepostasNovoBoss } from "./NovoBossTeleporte.js";
 import { entidadesFisicasArena } from "./NovoBossColisoesTorres.js";
 import { assetsNovoBoss } from "./NovoBossAssets.js";
@@ -20,12 +21,12 @@ export function pontoSeguroPortal(scene, encontro, ponto, margem = 22) {
   if (!lateralPortalNovoBoss(a, ponto)) return false;
   const area = { x: ponto.x - margem, y: ponto.y - margem, width: margem * 2, height: margem * 2 };
   if (area.x < a.xMin || area.y < a.yMin || area.x + area.width > a.xMax ||
-      area.y + area.height > a.yMax || !retanguloLivreDoMapa(scene, area)) return false;
+      area.y + area.height > a.yMax || !retanguloSpawnLivre(scene, area)) return false;
   const sentido = lateralPortalNovoBoss(a, ponto) === "esquerda" ? 1 : -1;
   const distancia = EMERGENCIA_ROBO_BOLA.distancia;
   const saida = { x: ponto.x + Math.min(0, sentido * distancia) - 18,
     y: ponto.y - 18, width: distancia + 36, height: 36 };
-  if (!retanguloLivreDoMapa(scene, saida)) return false;
+  if (!retanguloSpawnLivre(scene, saida)) return false;
   if (Math.hypot(ponto.x - scene.player.x, ponto.y - scene.player.y) <
       encontro.config.prologo.distanciaJogador) return false;
   if (Math.hypot(ponto.x - encontro.x, ponto.y - encontro.y) <

@@ -13,6 +13,12 @@ import { criarInteracaoGeradorFabrica, findGeneratorInteraction } from "./Factor
 import { calcularDepthAtor } from "../map/ProfundidadeMapa.js";
 import DoorLightingZones from "../effects/DoorLightingZones.js";
 import { lerLuzesFabrica } from "../effects/FactoryLighting.js";
+import { CoopWorld } from "../multiplayer/CoopWorld.js";
+import { prepararBossDevFase2 } from '../controls/DeveloperBoss.js';
+import { prepararFasesNovoBoss } from '../enemies/novoBoss/NovoBossFases.js';
+import { causarDanoNovoBoss } from '../enemies/novoBoss/NovoBossEstados.js';
+import { novoBossConfig } from '../enemies/novoBoss/NovoBossConfig.js';
+import { HACKING_KEYS } from '../puzzles/HackingConfig.js';
 
 globalThis.Phaser = {
   Scenes: { Events: { PRE_RENDER: "prerender", SHUTDOWN: "shutdown" } },
@@ -1640,4 +1646,167 @@ test("persiana cobre o personagem atrás dela sem cobrir quem já está à frent
   }
   assert.ok(porta.colisao);
   scene.events.emit("shutdown");
+});
+
+/** Duas portas reais do módulo, com o mesmo caminho de ações e snapshots do cooperativo. */
+function criarParCoopPortas() {
+  const host = createScene().scene, client = createScene().scene, enviados = [];
+  const peers = [host, client];
+  for (const [index, scene] of peers.entries()) {
+    const registry = scene.game.registry;
+    registry.events = new EventEmitter();
+    const set = registry.set.bind(registry);
+    registry.set = (key, value) => {
+      set(key, value); registry.events.emit("changedata", registry, key, value); return registry;
+    };
+    const manager = { playerId: index ? "client" : "host", room: { roomCode: 'PORTA1', hostId: 'host',
+      players: [{ id: 'host' }, { id: 'client', coop: {} }], coopProgress: { flags: {}, collected: {} } },
+      publishState() {}, sendCoopAction(kind, payload, options = {}) {
+        enviados.push({ kind, payload, ...options });
+        const action = { kind, payload: structuredClone(payload), playerId: this.playerId, ...options };
+        if (options.authority) client.coopRuntime.world.receive(action);
+        else host.coopRuntime.world.receive(action);
+        return true;
+      } };
+    const runtime = scene.coopRuntime = { scene, host: index === 0, manager, mapKey: "Level1Parte2",
+      localContext: scene, streamId: index ? 'client-factory' : 'host-factory',
+      players: { remotes: new Map() } };
+    runtime.world = new CoopWorld(runtime);
+    scene.luzFabricaAcesa = true;
+  }
+  host.coopRuntime.players.remotes.set("client", { actor: client.player, context: client, data: {} });
+  const sincronizar = () => client.coopRuntime.world.receiveFrame(structuredClone(host.coopRuntime.world.snapshot()));
+  const limpar = () => { for (const scene of peers) { scene.coopRuntime.world.destroy(); scene.events.emit("shutdown"); } };
+  return { host, client, enviados, sincronizar, limpar };
+}
+
+test("cliente pede abertura ao host; snapshots mantêm a animação e a colisão até o fim", () => {
+  const f = criarParCoopPortas(), { host, client } = f;
+  try {
+    assert.equal(client.interacaoMundoProxima.interact(), true);
+    assert.equal(host.portaFabrica.estado, "abrindo");
+    assert.equal(client.portaFabrica.estado, "fechada", "aguarda o primeiro estado do host");
+    assert.equal(client.animations.filter(a => a.targets === client.portaFabrica).length, 0,
+      "cliente não disputa o progresso com um tween local");
+    for (const progresso of [0, 0.2, 0.5, 0.8]) {
+      host.portaFabrica.progresso = progresso; host.animation.onUpdate(); f.sincronizar();
+      assert.equal(client.portaFabrica.estado, "abrindo");
+      assert.equal(client.portaFabrica.visual.y, host.portaFabrica.visual.y);
+      assert.deepEqual(client.portaFabrica.visual.crop, host.portaFabrica.visual.crop);
+      assert.ok(client.portaFabrica.colisao && host.portaFabrica.colisao);
+    }
+    client.coopRuntime.world.requestDoorOpen("porta01");
+    assert.equal(host.animations.filter(a => a.targets === host.portaFabrica).length, 1);
+    host.animation.onComplete(); f.sincronizar();
+    assert.equal(client.portaFabrica.estado, "aberta");
+    assert.equal(client.portaFabrica.colisao, null); assert.equal(host.portaFabrica.colisao, null);
+    assert.equal(client.game.registry.get(FACTORY_DOOR_STATE_KEY), true);
+  } finally { f.limpar(); }
+});
+
+test("host continua abrindo localmente e os clientes acompanham o mesmo progresso", () => {
+  const f = criarParCoopPortas();
+  try {
+    assert.equal(f.host.interacaoMundoProxima.interact(), true);
+    f.host.portaFabrica.progresso = 0.6; f.host.animation.onUpdate(); f.sincronizar();
+    assert.equal(f.client.portaFabrica.estado, "abrindo");
+    assert.equal(f.client.portaFabrica.progresso, 0.6);
+    assert.equal(f.enviados.filter(a => a.kind === "doorOpen").length, 0);
+  } finally { f.limpar(); }
+});
+
+test("pedidos de porta pela rede respeitam alcance, energia, arena e derrota do boss", () => {
+  const f = criarParCoopPortas(), { host, client } = f;
+  try {
+    const pedir = nome => client.coopRuntime.world.requestDoorOpen(nome);
+    host.luzFabricaAcesa = false; pedir("porta01"); assert.equal(host.portaFabrica.estado, "fechada");
+    host.luzFabricaAcesa = true;
+    client.player.x = 1000; pedir("porta01"); assert.equal(host.portaFabrica.estado, "fechada");
+    client.player.x = -1076;
+    host.cenaEntradaBossAtiva = true; pedir("porta01"); assert.equal(host.portaFabrica.estado, "fechada");
+    host.cenaEntradaBossAtiva = false;
+    host.portaFabrica.fecharParaBoss(); pedir("porta01"); assert.equal(host.portaFabrica.estado, "fechada");
+    const saida = host.portasFabrica.find(p => p.nome === "porta05");
+    Object.assign(client.player, { x: saida.area.x, y: saida.area.y });
+    pedir("porta05"); assert.equal(saida.estado, "fechada");
+    host.novoBoss = { morto: true }; pedir("porta05"); assert.equal(saida.estado, "aberta");
+  } finally { f.limpar(); }
+});
+
+test("pedidos das duas persianas do leitor usam o alcance do terminal e animam juntas", () => {
+  const f = criarParCoopPortas(), { host, client } = f;
+  try {
+    Object.assign(client.player, host.leitorCartaoFabrica.area);
+    client.inventory.addItem('card', 1);
+    host.coopRuntime.manager.room.players.find(p => p.id === 'client').coop.accessCard = true;
+    for (const nome of ["porta02", "porta03"]) client.coopRuntime.world.requestDoorOpen(nome);
+    const portas = host.portasFabrica.filter(p => ["porta02", "porta03"].includes(p.nome));
+    assert.ok(portas.every(p => p.estado === "abrindo"));
+    for (const p of portas) p.progresso = 0.5;
+    f.sincronizar();
+    assert.ok(client.portasFabrica.filter(p => ["porta02", "porta03"].includes(p.nome))
+      .every(p => p.estado === "abrindo" && p.progresso === 0.5 && p.colisao));
+  } finally { f.limpar(); }
+});
+
+test('terminal de hacking bloqueia interação, leitor e abertura remota até concluir a invasão', () => {
+  const { scene } = createScene(); let liberado = false;
+  scene.hackingTerminals = { permitePortas: () => liberado }; scene.luzFabricaAcesa = true;
+  scene.atualizarInteracaoPortaFabrica(); assert.equal(scene.interacaoMundoProxima, null);
+  assert.equal(scene.portaFabrica.abrirPelaRede(), false);
+  assert.equal(scene.portaFabrica.estado, 'fechada'); assert.ok(scene.portaFabrica.colisao);
+  liberado = true; scene.atualizarInteracaoPortaFabrica();
+  assert.equal(scene.interacaoMundoProxima.interact(), true);
+  assert.equal(scene.portaFabrica.estado, 'abrindo'); scene.events.emit('shutdown');
+});
+
+test('hacking e cartão do aliado são validados juntos antes da abertura autorizada da arena', () => {
+  const { scene } = createScene(); let liberado = false, sessao = false;
+  scene.hackingTerminals = { permitePortas: () => liberado, temSessao: () => sessao };
+  scene.luzFabricaAcesa = true;
+  const leitor = scene.leitorCartaoFabrica.area;
+  const aliado = { player: { active: true, x: leitor.x, y: leitor.y }, inventory: { getQuantity: () => 1 } };
+  assert.equal(scene.abrirPortasArenaAposCartao(aliado), false);
+  liberado = true; sessao = true;
+  assert.equal(scene.abrirPortasArenaAposCartao(aliado), false);
+  sessao = false;
+  assert.equal(scene.abrirPortasArenaAposCartao({ ...aliado, inventory: { getQuantity: () => 0 } }), false);
+  assert.equal(scene.abrirPortasArenaAposCartao(aliado), true);
+  assert.ok(scene.portasFabrica.filter(p => ['porta02', 'porta03'].includes(p.nome)).every(p => p.estado === 'abrindo'));
+  scene.events.emit('shutdown');
+});
+
+test('atalho M sem hacking anterior libera a saída somente após o golpe fatal', () => {
+  const { scene } = createScene();
+  scene.sys = { settings: { key: 'Level1Parte2' } };
+  scene.developerMode = true; scene.vida = 100;
+  scene.hackingTerminals = { permitePortas: () => scene.game.registry.get(HACKING_KEYS.fabrica) === true };
+  Object.assign(scene.player, { x: -1080, y: -5500 });
+  const criar = scene.collisionGroup.create.bind(scene.collisionGroup);
+  scene.collisionGroup.create = (...args) => {
+    const corpo = criar(...args); corpo.body = { updateFromGameObject() {} }; return corpo;
+  };
+  const boss = { config: novoBossConfig, combateInicializado: true, vida: 1000, vidaMaxima: 1000,
+    active: true, morto: false, estado: 'preparando', relogioCombate: 0,
+    sprite: { ...novoBossConfig.posicaoInicial, active: true, body: { enable: true },
+      setAlpha() {}, anims: { pause() {} } },
+    hitboxDano: { x: -1100, y: -5830, width: 40, height: 40 },
+    geradores: [], cancelarAtaque() { this.estado = 'preparando'; } };
+  scene.novoBoss = boss; prepararFasesNovoBoss(scene, boss);
+  assert.equal(prepararBossDevFase2(scene), true);
+  assert.equal(boss.fase, 2); assert.equal(boss.vida, 1); assert.equal(boss.morto, false);
+  const saida = scene.portasFabrica.find(p => p.nome === 'porta05');
+  aproximarPorta(scene, saida);
+  assert.ok(scene.interacaoMundoProxima);
+  assert.equal(scene.interacaoMundoProxima.interact(), false); assert.equal(saida.estado, 'fechada');
+  Object.assign(scene.player, { x: -1080, y: -5500 });
+  assert.equal(causarDanoNovoBoss(scene, boss, 1), true); assert.equal(boss.morto, true);
+  aproximarPorta(scene, saida);
+  assert.ok(scene.interacaoMundoProxima, 'o golpe fatal deve liberar a interação da saída');
+  assert.equal(scene.interacaoMundoProxima.interact(), true);
+  assert.equal(saida.estado, 'aberta'); assert.equal(saida.colisao, null);
+  assert.equal(scene.game.registry.get(HACKING_KEYS.final), undefined);
+  assert.equal(scene.game.registry.get(HACKING_KEYS.robos), undefined);
+  assert.equal(scene.game.registry.get(HACKING_KEYS.registro), undefined);
+  scene.events.emit('shutdown');
 });

@@ -292,7 +292,7 @@ function criarSistemaInventario(scene) {
         : closest;
     }, null);
 
-    const interaction = [scene.interacaoMundoProxima, scene.interacaoCombustivelProxima, scene.interacaoCiberneticasProxima]
+    const interaction = [scene.interacaoMundoProxima, scene.interacaoCombustivelProxima, scene.interacaoCiberneticasProxima, scene.interacaoHackingProxima]
       .filter(Boolean).sort((a, b) => a.distance - b.distance)[0];
     const useWorldInteraction = interaction &&
       (!nearest || interaction.distance < nearest.distance);

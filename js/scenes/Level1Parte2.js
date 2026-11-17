@@ -1,6 +1,8 @@
 import { enfileirarAssetsFabrica, verificarEntradaFabrica, assetsFabricaProntos } from "../core/FactoryAssetPack.js";
 import { bossNecessarioNaEntrada, criarPreparacaoBoss } from "../core/BossAssetLoading.js";
 import { createUpgradeNPC } from '../interactions/UpgradeNPC.js';
+import { prepararReanimacaoSolo, atualizarReanimacaoSolo } from "../player/SoloPetRevival.js";
+import { criarHackingFabrica } from '../interactions/FactoryHacking.js';
 import { ScrapSystem } from '../systems/ScrapSystem.js';
 import { prepararAudioCoop } from "../multiplayer/CoopAudio.js";
 import { descarregarCidade, descarregarFabricaParaBoss } from "../map/ProgressaoMapa.js";
@@ -270,6 +272,7 @@ class Level1Parte2 extends Phaser.Scene {
 
     if (!this.multiplayer) {
       criarCompanionPet(this);
+      prepararReanimacaoSolo(this);
     }
 
     this.criarTeleporteRetornoParte1();
@@ -302,6 +305,7 @@ class Level1Parte2 extends Phaser.Scene {
     criarSistemaInventario(this);
     criarPreparacaoBoss(this);
     this.removerInteracaoGerador = criarInteracaoGeradorFabrica(this);
+    criarHackingFabrica(this);
     criarInteracaoPortaFabrica(this);
     this.minimap = new MiniMapManager(this, this.map, "fabrica");
 
@@ -394,6 +398,8 @@ class Level1Parte2 extends Phaser.Scene {
   update(time, delta) {
     if (this.aguardandoAssetsFabrica) return;
     this.preparacaoBoss?.atualizar();
+    if (this.hackingTerminals?.atualizar(time, delta)) return;
+    if (atualizarReanimacaoSolo(this, delta)) return;
     atualizarBoss(this, time, delta);
     this.minimap?.update(time);
     if (this.morteEmAndamento) {

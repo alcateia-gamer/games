@@ -6,7 +6,7 @@
 import { criarInimigoTeste } from "./EnemyTest.js";
 import { areaContemCorpo } from "./EnemySpawnArea.js";
 import { PERFIS_ROBOS as PERFIS } from "./RobotBody.js";
-import { retanguloLivreDoMapa } from "./EnemyPathfinding.js";
+import { retanguloSpawnLivre } from "./EnemySpawnValidation.js";
 import { criarAreaRobosCidade } from "../map/AreaMapa.js";
 
 /** Usa exclusivamente as áreas do Tiled; sem zonas não há spawn automático. */
@@ -463,13 +463,13 @@ class EnemySpawnManager {
     const escolhidas = [];
     const planejados = [];
 
-    for (const tipo of tipos) {
+    for (const [indice, tipo] of tipos.entries()) {
       const pos = this.findPosition(region, tipo, escolhidas);
 
       if (!pos) {
         // Se falhar um dos tipos obrigatorios,
         // nao cria um grupo desequilibrado.
-        if (necessarios.includes(tipo)) {
+        if (indice < necessarios.length) {
           return 0;
         }
 
@@ -605,7 +605,8 @@ class EnemySpawnManager {
       this.config.wallMargin,
     );
 
-    if (this.playableArea && !this.playableArea.contem(rect)) return false;
+    const ocupacao = areaSpawn(candidate.x, candidate.y, tipoRobo, this.config.wallMargin);
+    if (this.playableArea && !this.playableArea.contem(ocupacao)) return false;
 
     const min2 = this.config.minEnemyDistance ** 2;
 
@@ -632,8 +633,7 @@ class EnemySpawnManager {
     }
 
     // No nascimento, nem a imagem pode aparecer sobre os objetos do cenário.
-    const ocupacao = areaSpawn(candidate.x, candidate.y, tipoRobo, this.config.wallMargin);
-    if (!retanguloLivreDoMapa(this.scene, ocupacao)) return false;
+    if (!retanguloSpawnLivre(this.scene, ocupacao)) return false;
 
     // Outros inimigos.
     return !(this.scene.inimigos || []).some(

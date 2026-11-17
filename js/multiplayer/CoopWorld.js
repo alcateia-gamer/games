@@ -10,8 +10,12 @@ import { getInventoryItem } from "../inventory/InventoryItems.js";
 import { GENERATOR_LOOP_START_SECONDS } from "../sounds/gerador.js";
 import { ocultarHUDDuranteCena } from "../ui/HudCinematic.js";
 import { retanguloLivreDoMapa } from "../enemies/EnemyPathfinding.js";
+import { distanceToInteractionArea } from "../interactions/FactoryGenerator.js";
+import { HACKING_KEYS } from '../puzzles/HackingConfig.js';
+import { prepararBossDevFase2 } from '../controls/DeveloperBoss.js';
 
-const sharedKey = key => key === "factoryGeneratorPowered" || /^factoryDoorOpen(?::porta\d+)?$/.test(key);
+const hackingKey = key => Object.values(HACKING_KEYS).includes(key);
+const sharedKey = key => key === "factoryGeneratorPowered" || /^factoryDoorOpen(?::porta\d+)?$/.test(key) || hackingKey(key);
 export class CoopWorld {
   constructor(runtime) {
     this.r = runtime; this.scene = runtime.scene; this.pending = new Set();
@@ -69,9 +73,13 @@ export class CoopWorld {
     this.pending.add(pickup.uniqueId);
     return this.manager.sendCoopAction("pickup", { uid: pickup.uniqueId });
   }
+  requestDoorOpen(nome) {
+    return this.manager.sendCoopAction("doorOpen", { nome });
+  }
   receive(action) {
     if (this.bossLoading.receive(action)) return;
     const p = action.payload || {}, r = this.r, s = this.scene;
+    if (s.hackingTerminals?.receberAcao(action)) return;
     if (action.authority) {
       if (action.kind === "collected") this.applyCollected(p);
       else if (action.kind === "pickupRejected") this.pending.delete(p.uid);
@@ -100,7 +108,10 @@ export class CoopWorld {
     const progress = this.manager.room.coopProgress;
     const developer = action.playerId === this.manager.playerId ? s.developerMode :
       r.players.remotes.get(action.playerId)?.data.coop?.developer;
-    if (action.kind === "pickup") {
+    if (action.kind === 'devBossPhase2' && developer && r.mapKey === 'Level1Parte2') {
+      const context = action.playerId === this.manager.playerId ? s : r.players.remotes.get(action.playerId)?.context;
+      if (context) prepararBossDevFase2(s, context);
+    } else if (action.kind === "pickup") {
       const pickup = s.itensColetaveis.find(i => i.uniqueId === p.uid);
       if (!pickup || progress.collected[p.uid] || Math.hypot(player.x - pickup.x, player.y - pickup.y) > pickup.range + 32) {
         this.manager.sendCoopAction("pickupRejected", { uid: p.uid }, { authority: true, targetId: action.playerId }); return;
@@ -116,7 +127,20 @@ export class CoopWorld {
       this.applyDevLighting(p.on);
       this.manager.sendCoopAction("devLightingState", { on: p.on }, { authority: true });
       this.manager.publishState();
+    } else if (action.kind === "doorOpen" && r.mapKey === "Level1Parte2") {
+      if (s.hackingTerminals && !s.hackingTerminals.permitePortas()) return;
+      const door = s.portasFabrica?.find(d => d.nome === p.nome);
+      const leitor = door && ["porta02", "porta03"].includes(door.nome);
+      const area = leitor ? s.leitorCartaoFabrica?.area : door?.area;
+      if (!area || player.morto || s.cenaEntradaBossAtiva || door.bloqueadaPorBoss ||
+          distanceToInteractionArea(player.x, player.y, area) > 96) return;
+      if (door.nome === "porta05" ? s.novoBoss?.morto !== true : s.luzFabricaAcesa !== true) return;
+      // As persianas da arena também passam pela validação do cartão e pela
+      // preparação coletiva dos recursos, inclusive em pedidos da API anterior.
+      if (leitor) { this.bossLoading.confirmCard(action.playerId); return; }
+      door.abrirPelaRede?.();
     } else if (action.kind === "progress" && sharedKey(p.key) && p.value === true) {
+      if (hackingKey(p.key) && action.playerId !== this.manager.playerId) return;
       // O evento só é publicado após a interação solo consumir/validar os requisitos.
       if (r.mapKey !== "Level1Parte2") return;
       if (["factoryDoorOpen:porta02", "factoryDoorOpen:porta03"].includes(p.key) && !this.bossLoading.current()) return;
@@ -133,6 +157,7 @@ export class CoopWorld {
     } else if (action.kind === "map" && !this.transitioning && p.from === r.mapKey &&
         COOP.maps.includes(p.key) && p.key !== r.mapKey) {
       if (p.key === "Level1" && progress.flags.factoryGeneratorPowered) return;
+      if (s.hackingTerminals?.temSessao()) return;
       // A equipe precisa resgatar os caídos antes de mudar de mapa.
       if (r.revival?.participants().some(p => p.dead)) return;
       const boss = !!(p.boss && developer && p.key === "Level1Parte2");
@@ -171,6 +196,7 @@ export class CoopWorld {
       if (flags.factoryGeneratorPowered && !s.luzFabricaAcesa && this.manager.room.coopDevLighting !== false) s.acenderLuzFabrica?.();
       if (typeof this.manager.room.coopDevLighting === "boolean") this.applyDevLighting(this.manager.room.coopDevLighting);
       for (const door of s.portasFabrica || []) {
+        if (s.hackingTerminals && !s.hackingTerminals.permitePortas()) continue;
         const key = door.nome === "porta01" ? "factoryDoorOpen" : `factoryDoorOpen:${door.nome}`;
         if (flags[key] && !door.bloqueadaPorBoss && door.estado === "fechada" &&
             (door.nome !== "porta05" || s.novoBoss?.morto === true)) door.aplicarEstadoRede?.({ estado: "aberta", progresso: 1 });
@@ -233,7 +259,7 @@ export class CoopWorld {
   }
   confirmarCartao() { return this.bossLoading.confirmCard(); }
   iniciarIntroducaoBoss() {
-    return this.r.host && this.bossLoading.canStart() &&
+    return this.r.host && !this.scene.hackingTerminals?.temSessao?.() && this.bossLoading.canStart() &&
       !this.r.revival?.participants().some(p => p.dead);
   }
   aplicarEntradaBoss(entrada) {
@@ -283,6 +309,7 @@ export class CoopWorld {
   snapshot() {
     const s = this.scene;
     return { progress: this.manager.room.coopProgress, map: this.manager.room.coopMap,
+      hacking: s.hackingTerminals?.snapshot(),
       bossAssembly: this.bossAssembly, bossPreparation: this.bossLoading.state,
       devLighting: this.manager.room.coopDevLighting ?? null,
       lighting: s.iluminacaoFabrica?.snapshotRede(s.time.now),
@@ -300,6 +327,7 @@ export class CoopWorld {
     if (packet.progress) this.manager.room.coopProgress = mergeCoopProgress(this.manager.room.coopProgress, packet.progress);
     this.receiveMap(packet.map);
     this.restore();
+    this.scene.hackingTerminals?.receberSnapshot(packet.hacking);
     this.aplicarEntradaBoss(packet.bossAssembly);
     this.scene.iluminacaoFabrica?.aplicarEstadoRede(packet.lighting, this.scene.time.now);
     for (const d of packet.doors || []) this.scene.portasFabrica?.find(p => p.nome === d.nome)?.aplicarEstadoRede?.(d);

@@ -9,6 +9,7 @@ import { criarBotaoHUDNitido } from "../ui/HudCanvas.js";
 import { criarTeleporteDevBoss } from "./DeveloperTeleport.js";
 import { criarBotoesTeleporteDev } from "./DeveloperTeleportButtons.js";
 import { criarMenuColetaveisDev } from "./DeveloperItemMenu.js";
+import { criarAtalhoDevFase2Boss } from "./DeveloperBoss.js";
 
 // =====================================================
 // FIXAR DEV E ANALÓGICO NA TELA
@@ -133,6 +134,7 @@ function criarControlesInput(scene) {
 
   scene.developerMode = !!scene.developerMode;
   criarTeleporteDevBoss(scene);
+  criarAtalhoDevFase2Boss(scene);
   criarMenuColetaveisDev(scene);
 
   // BOTÃO DEV

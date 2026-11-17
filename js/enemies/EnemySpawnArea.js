@@ -1,12 +1,14 @@
 /** Testa os quatro cantos nas coordenadas locais do retângulo desenhado no Tiled. */
 export function areaContemCorpo(area, rect) {
   const cos = Math.cos(area.rotation), sin = Math.sin(area.rotation);
+  const epsilon = 1e-7; // Coordenadas fracionárias e rotação podem variar em poucos ULPs.
   return [[rect.left, rect.top], [rect.right, rect.top],
     [rect.right, rect.bottom], [rect.left, rect.bottom]].every(([x, y]) => {
     const dx = x - area.x, dy = y - area.y;
     const localX = dx * cos + dy * sin;
     const localY = -dx * sin + dy * cos;
-    return localX >= 0 && localX <= area.width && localY >= 0 && localY <= area.height;
+    return localX >= -epsilon && localX <= area.width + epsilon &&
+      localY >= -epsilon && localY <= area.height + epsilon;
   });
 }
 

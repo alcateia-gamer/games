@@ -1,5 +1,7 @@
 import { ECONOMY_KEY } from '../systems/UpgradeSystem.js';
 import { CutsceneLoading } from "../ui/CutsceneLoading.js";
+import { reiniciarResgatesSolo } from "../player/SoloRunState.js";
+import { HACKING_KEYS } from '../puzzles/HackingConfig.js';
 
 /** A introdução começa junto com a importação e permanece durante a fila de assets. */
 export default class BootPartida extends Phaser.Scene {
@@ -8,6 +10,8 @@ export default class BootPartida extends Phaser.Scene {
   }
 
   create(data = {}) {
+    for (const key of Object.values(HACKING_KEYS)) this.registry.remove(key);
+    if (data.multiplayer !== true) reiniciarResgatesSolo(this.registry);
     this.registry.remove(ECONOMY_KEY);
     const manager = this.registry.get("multiplayer");
     if (manager?.room) delete manager.room.upgradeEconomy;

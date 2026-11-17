@@ -98,7 +98,16 @@ export function criarAreaRobosCidade(map) {
     if (tileset.name === "A5_SciFi_Inside_Rasak") pretos.add(tileset.firstgid + 8);
   }
   return criarAreaMapa(map, {
-    incluirCamada: layer => !layer.name?.startsWith("Sombra"),
+    incluirCamada: layer => layer.name?.toLowerCase() === "chão",
     bloquearTile: (layer, tile) => layer.name === "Sombra" && pretos.has(tile.index),
+  });
+}
+
+/** Spawn/navegação dos inimigos: decoração, teto e sombra não ampliam o piso. */
+export function criarAreaSpawnRobos(map) {
+  if (!map) return null;
+  if (map.layers?.some(l => l.name === "Chão")) return criarAreaRobosCidade(map);
+  return criarAreaMapa(map, {
+    incluirCamada: layer => ["chão", "ChãoProdução"].includes(layer.name),
   });
 }

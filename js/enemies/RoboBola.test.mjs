@@ -441,6 +441,10 @@ test("posição explícita rejeita parede, jogador e aliados antes de criar recu
   assert.equal(criarRoboBola(scene, scene.player), null);
   assert.equal(criarRoboBola(scene, { x: scene.inimigos[0].x, y: scene.inimigos[0].y }), null);
   assert.equal(criarRoboBola(scene, { x: NaN, y: 0 }), null);
+  scene.remotePlayers = new Map([["aliado", { active: true, x: 600, y: 600 }]]);
+  assert.equal(criarRoboBola(scene, { x: 600, y: 600 }), null);
+  scene.multiplayer = true; scene.isMultiplayerHost = false;
+  assert.equal(criarRoboBola(scene, { x: 800, y: 800 }), null);
 });
 
 test("proteção de spawn impede movimentação e disparo instantâneos sem alterar a IA normal", () => {

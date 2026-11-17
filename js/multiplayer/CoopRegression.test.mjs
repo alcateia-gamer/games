@@ -143,6 +143,52 @@ test("primeira gravação de energia também publica progresso e aplicação rem
   assert.equal(scene.game.registry.events.listenerCount("setdata"), 0);
 });
 
+test('cliente não publica conclusão de hacking nem contorna portas bloqueadas', () => {
+  const { world, manager, scene, sent } = worldFixture();
+  world.r.host = true; world.r.mapKey = 'Level1Parte2';
+  world.r.players = { remotes: new Map([['ally', { actor: { active: true, x: 0, y: 0 }, data: {} }]]) };
+  scene.hackingTerminals = { receberAcao: () => false, permitePortas: () => false };
+  for (const key of ['factoryHackingComplete', 'matrixZeroComplete']) {
+    world.receive({ kind: 'progress', playerId: 'ally', payload: { key, value: true } });
+    assert.equal(manager.room.coopProgress.flags[key], undefined);
+  }
+  world.receive({ kind: 'doorOpen', playerId: 'ally', payload: { nome: 'porta01' } });
+  assert.equal(sent.length, 0); world.destroy();
+});
+
+test('preparação de recursos e hacking coexistem no snapshot sem iniciar a introdução durante o puzzle', () => {
+  const { world, scene } = worldFixture(); let hackAtivo = true;
+  const hacking = { session: { id: 'hacking-1' } }, preparation = { phase: 'loading', revision: 1 };
+  scene.hackingTerminals = { snapshot: () => hacking, temSessao: () => hackAtivo };
+  world.bossLoading.state = preparation;
+  const packet = world.snapshot();
+  assert.equal(packet.hacking, hacking); assert.equal(packet.bossPreparation, preparation);
+  world.r.host = true; world.bossLoading.canStart = () => true;
+  assert.equal(world.iniciarIntroducaoBoss(), false);
+  hackAtivo = false; assert.equal(world.iniciarIntroducaoBoss(), true);
+  world.destroy();
+});
+
+test('liberação obrigatória da fábrica pelo host chega ao cliente sem eco de progresso', () => {
+  const host = worldFixture(), client = worldFixture(), flags = {};
+  host.manager.playerId = 'host'; host.manager.publishState = () => {};
+  host.world.r.host = true; host.world.r.mapKey = 'Level1Parte2';
+  host.scene.game.registry.set = (k, v) => host.scene.game.registry.events.emit('changedata', null, k, v);
+  client.scene.game.registry.set = (k, v) => {
+    flags[k] = v; client.scene.game.registry.events.emit('setdata', null, k, v);
+  };
+  host.scene.game.registry.events.emit('setdata', null, 'factoryHackingComplete', true);
+  const [kind, payload] = host.sent[0];
+  assert.equal(kind, 'progress'); assert.equal(payload.key, 'factoryHackingComplete');
+  host.world.receive({ kind, payload, playerId: 'host' });
+  assert.equal(host.manager.room.coopProgress.flags.factoryHackingComplete, true);
+  const shared = host.sent.find(([k]) => k === 'progressState'); assert.ok(shared);
+  client.world.receive({ kind: shared[0], payload: shared[1], authority: true });
+  assert.equal(flags.factoryHackingComplete, true); assert.equal(client.sent.length, 0);
+  assert.equal(host.sent.length, 2);
+  host.world.destroy(); client.world.destroy();
+});
+
 test("DEV do cliente permite destino do boss mesmo com DEV desligado no host", () => {
   const { scene, manager, world } = worldFixture();
   manager.playerId = "host"; manager.publishState = () => {};

@@ -4,6 +4,7 @@
  */
 
 import { droparInventarioAoMorrer } from "../inventory/InventoryDrops.js";
+import { prepararReanimacaoSolo } from "../player/SoloPetRevival.js";
 
 /**
  * Substitui os erros animados pela tela de derrota e aguarda o clique para recarregar o jogo.
@@ -21,7 +22,7 @@ function mostrarOpcaoJogarNovamente(scene, camada) {
   const fundo = scene.add.rectangle(centroX, centroY, width, height, 0x000000, 1)
     .setScrollFactor(0)
     .setInteractive();
-  const titulo = scene.add.text(centroX, centroY - 70, "VOCÊ MORREU", {
+  const titulo = scene.add.text(centroX, centroY - 70, scene.multiplayer ? "VOCÊ MORREU" : "GAME OVER", {
     fontFamily: "monospace",
     fontSize: "38px",
     fontStyle: "bold",
@@ -59,10 +60,16 @@ function mostrarOpcaoJogarNovamente(scene, camada) {
 /**
  * Inicia a morte uma única vez, para sons e física e monta o overlay com a sequência de falha.
  */
-function mostrarTelaMorte(scene, { equipeDerrotada = false } = {}) {
+function mostrarTelaMorte(scene, { equipeDerrotada = false, aposQuedaSolo = false } = {}) {
+  scene.hackingTerminals?.cancelarPorMorte();
   if (scene.coopRuntime && !equipeDerrotada) return scene.coopRuntime.downPlayer();
-  if (scene.telaMorteMostrada || (scene.morteEmAndamento && !equipeDerrotada)) {
+  if (scene.telaMorteMostrada || (scene.morteEmAndamento && !equipeDerrotada && !aposQuedaSolo)) {
     return;
+  }
+
+  if (!scene.multiplayer && !equipeDerrotada && !aposQuedaSolo) {
+    const resgate = prepararReanimacaoSolo(scene);
+    if (resgate?.iniciar(() => mostrarTelaMorte(scene, { aposQuedaSolo: true }))) return;
   }
 
   scene.telaMorteMostrada = true;

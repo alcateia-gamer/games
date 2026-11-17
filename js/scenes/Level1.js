@@ -1,4 +1,5 @@
 import { createUpgradeNPC } from '../interactions/UpgradeNPC.js';
+import { prepararReanimacaoSolo, atualizarReanimacaoSolo } from "../player/SoloPetRevival.js";
 import { ScrapSystem } from '../systems/ScrapSystem.js';
 import { prepararAudioCoop } from "../multiplayer/CoopAudio.js";
 import { atualizarSpawnsDev } from "../controls/DeveloperSpawns.js";
@@ -188,6 +189,7 @@ class Level1 extends Phaser.Scene {
     });
     if (!this.multiplayer) {
       criarCompanionPet(this);
+      prepararReanimacaoSolo(this);
     }
 
     if (this.multiplayer) this.iniciarMultiplayer();
@@ -406,6 +408,7 @@ class Level1 extends Phaser.Scene {
    * impacto no solo.
    */
   update(time, delta) {
+    if (atualizarReanimacaoSolo(this, delta)) return;
     this.minimap?.update(time);
     this.weather?.update(time, delta);
 

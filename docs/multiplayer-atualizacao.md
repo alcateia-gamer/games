@@ -1,5 +1,32 @@
 # Atualização cooperativa a partir da versão solo
 
+## Correção da abertura das portas por clientes
+
+As interações nas portas da fábrica agora enviam `doorOpen` ao host após a
+validação local dos requisitos. O host inicia o tween original e transmite seu
+progresso pelos snapshots existentes a 12 Hz. O cliente não inicia um tween
+concorrente, que antes era sobrescrito pelo estado ainda fechado do host.
+
+O host verifica alcance (com 32 px de tolerância de rede), energia, bloqueio da
+arena e derrota do boss para a saída. As duas persianas do leitor usam a área
+do terminal como referência de alcance; cartão e leitura continuam validados
+pelo terminal do solicitante. A colisão permanece até concluir a abertura.
+
+Arquivos: `js/interactions/FactoryDoor.js`, `js/multiplayer/CoopWorld.js` e
+`js/interactions/FactoryDoor.test.mjs`. Quatro novos casos cobrem abertura pelo
+cliente, abertura pelo host, bloqueios e persianas do leitor. A suíte de portas
+aprova 51 de 52 casos; a falha de coordenadas da parede do Tiled já ocorre no
+HEAD anterior. Os 137 testes de multiplayer e reanimação solo passaram.
+
+`tests/portas-coop.browser.mjs` usa duas cenas Phaser reais, o atlas e a área da
+porta do mapa 2, com transporte local atrasado em 50 ms e snapshots a 12 Hz.
+O cenário passou: abertura acionada pelo cliente, persianas animadas nas duas
+cenas, colisões removidas apenas ao concluir e nenhum erro JavaScript.
+As capturas e o relatório ficam em `/tmp/portas-coop`. Execute com um servidor
+HTTP do repositório e as variáveis `PLAYWRIGHT_MODULE` e `CHROMIUM_PATH` apontando
+para Playwright Core e Chromium. Essa fixture valida animação e sincronização
+localmente; ela não mede latência de um broker público.
+
 O multiplayer existente usava sprites e combate anteriores aos sistemas atuais.
 O host publicava a sala inteira a cada entrada de movimento e a cada atualização
 de inimigos; o dano remoto de tiros era enviado depois de 220 ms, sem colisão.

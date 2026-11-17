@@ -14,6 +14,7 @@ const INTERACTION_RANGE = 64;
 const CLOSE_DURATION = 850;
 const PORTAS_COM_ACESSO = new Set(["porta02", "porta03"]);
 const PORTAS_COM_ENERGIA = new Set(["porta01", "porta04"]);
+const hackingLiberado = scene => !scene.hackingTerminals || scene.hackingTerminals.permitePortas();
 const FALAS_SEM_ENERGIA = Object.freeze([
   "Preciso ligar a energia antes.",
   "Sem energia... melhor ligar o gerador.",
@@ -137,7 +138,7 @@ function criarPorta(scene, layer, area, fala) {
   ).setOrigin(0.5, 1).setDepth(200).setVisible(false);
 
   const stateKey = chaveEstadoPorta(area.name);
-  const alreadyOpen = scene.game.registry.get(stateKey) === true &&
+  const alreadyOpen = hackingLiberado(scene) && scene.game.registry.get(stateKey) === true &&
     (area.name !== "porta05" || scene.novoBoss?.morto === true);
   const criarColisao = () => scene.collisionGroup.create(
     area.x + area.width / 2, area.y + area.height / 2,
@@ -174,7 +175,7 @@ function criarPorta(scene, layer, area, fala) {
    * interação.
    */
   const podeInteragir = (alvo = area, contexto = scene) =>
-    !encerrada && !porta.bloqueadaPorBoss && !scene.cenaEntradaBossAtiva &&
+    !encerrada && hackingLiberado(scene) && !porta.bloqueadaPorBoss && !scene.cenaEntradaBossAtiva &&
     porta.estado === "fechada" && contexto.player?.active &&
     !contexto.morteEmAndamento && !contexto.generatorMenuOpen && !contexto.devItemMenuOpen &&
     distanceToInteractionArea(contexto.player.x, contexto.player.y, alvo) <=
@@ -182,6 +183,7 @@ function criarPorta(scene, layer, area, fala) {
 
   /** As duas portas iniciais usam energia; o leitor da arena também exige o crachá. */
   const motivoBloqueio = (contexto = scene) => {
+    if (!hackingLiberado(scene)) return 'REDE BLOQUEADA · INVADA O TERMINAL DE SEGURANÇA';
     if (porta.bloqueadaPorBoss) return "COMBATE EM ANDAMENTO";
     if (area.name === "porta05" && scene.novoBoss?.morto !== true) return "DERROTE O BOSS PARA ABRIR";
     const exigeCartao = PORTAS_COM_ACESSO.has(area.name);
@@ -214,19 +216,9 @@ function criarPorta(scene, layer, area, fala) {
     atualizarVisual();
   };
 
-  /** Abre diretamente ou conclui a persiana antes de remover a colisão. */
-  const abrir = (alvo = area, contexto = scene) => {
-    if (!podeInteragir(alvo, contexto)) return false;
-    const bloqueio = motivoBloqueio(contexto);
-    if (bloqueio) {
-      if (PORTAS_COM_ENERGIA.has(area.name) && scene.luzFabricaAcesa !== true) {
-        fala.mostrar(FALAS_SEM_ENERGIA);
-        return false;
-      }
-      prompt?.setText(bloqueio);
-      return false;
-    }
-    fala.ocultar();
+  /** O host executa a mesma abertura para interações locais e pedidos dos clientes. */
+  const iniciarAbertura = () => {
+    if (encerrada || !hackingLiberado(scene) || porta.bloqueadaPorBoss || scene.cenaEntradaBossAtiva || porta.estado !== "fechada") return false;
     porta.estado = "abrindo";
     scene.interacaoMundoProxima = null;
     prompt?.setVisible(false);
@@ -246,6 +238,26 @@ function criarPorta(scene, layer, area, fala) {
       onComplete: concluirAbertura,
     });
     return true;
+  };
+  porta.abrirPelaRede = iniciarAbertura;
+
+  /** Valida os requisitos localmente; no cooperativo, só o host anima a porta. */
+  const abrir = (alvo = area, contexto = scene) => {
+    if (!podeInteragir(alvo, contexto)) return false;
+    const bloqueio = motivoBloqueio(contexto);
+    if (bloqueio) {
+      if (PORTAS_COM_ENERGIA.has(area.name) && scene.luzFabricaAcesa !== true) {
+        fala.mostrar(FALAS_SEM_ENERGIA);
+        return false;
+      }
+      prompt?.setText(bloqueio);
+      return false;
+    }
+    fala.ocultar();
+    if (scene.coopRuntime && !scene.coopRuntime.host) {
+      return scene.coopRuntime.world.requestDoorOpen(area.name);
+    }
+    return iniciarAbertura();
   };
 
   // O fechamento do encontro é temporário: preserva a abertura salva pelo leitor.
@@ -298,7 +310,7 @@ function criarPorta(scene, layer, area, fala) {
     visual?.setDepth(doorDepth);
     header?.setDepth(doorDepth);
     prompt?.setText(motivoBloqueio() ?? "E - ABRIR PORTA");
-    marcador?.setVisible(porta.estado === "fechada" && !porta.bloqueadaPorBoss &&
+    marcador?.setVisible(hackingLiberado(scene) && porta.estado === "fechada" && !porta.bloqueadaPorBoss &&
       !scene.cenaEntradaBossAtiva && !scene.morteEmAndamento &&
       !scene.generatorMenuOpen && !scene.devItemMenuOpen);
   };
@@ -348,7 +360,7 @@ function criarInteracaoPortaFabrica(scene) {
   const areaLeitor = localizarLeitorCartao(scene.map);
   const marcadorLeitor = areaLeitor && portasLeitor.length
     ? criarMarcadorPorta(scene, areaLeitor, "card-reader-marker") : null;
-  const leitorProximo = (comPainel = false) => !!marcadorLeitor && scene.player?.active &&
+  const leitorProximo = (comPainel = false) => hackingLiberado(scene) && !!marcadorLeitor && scene.player?.active &&
     !scene.cenaEntradaBossAtiva &&
     !scene.morteEmAndamento && (!scene.generatorMenuOpen || (comPainel && scene.cardReaderMenuOpen)) &&
     !scene.devItemMenuOpen &&
@@ -365,8 +377,10 @@ function criarInteracaoPortaFabrica(scene) {
   }) : null;
   scene.leitorCartaoFabrica = marcadorLeitor ? { area: areaLeitor, marcador: marcadorLeitor, terminal, fala } : null;
   scene.abrirPortasArenaAposCartao = contexto => {
+    if (scene.hackingTerminals?.temSessao?.()) return false;
     if (!portasLeitor.length || portasLeitor.some(c => !c.podeInteragir(areaLeitor, contexto) || c.motivoBloqueio(contexto))) return false;
-    for (const controle of portasLeitor) controle.abrir(areaLeitor, contexto);
+    fala.ocultar();
+    for (const controle of portasLeitor) controle.porta.abrirPelaRede();
     return true;
   };
   const passarCartao = () => {
@@ -400,7 +414,7 @@ function criarInteracaoPortaFabrica(scene) {
     if (marcadorLeitor) {
       const perto = leitorProximo();
       const fechadas = portasLeitor.filter(controle => controle.porta.estado === "fechada" && !controle.porta.bloqueadaPorBoss);
-      marcadorLeitor.setVisible(fechadas.length > 0 && !scene.morteEmAndamento &&
+      marcadorLeitor.setVisible(hackingLiberado(scene) && fechadas.length > 0 && !scene.morteEmAndamento &&
         !scene.generatorMenuOpen && !scene.devItemMenuOpen && !scene.cenaEntradaBossAtiva);
       const distanciaLeitor = perto ? distanceToInteractionArea(scene.player.x, scene.player.y, areaLeitor) : Infinity;
       if (fechadas.length && distanciaLeitor < distancia) {

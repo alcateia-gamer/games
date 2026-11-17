@@ -254,9 +254,12 @@ function criarCompanionPet(scene) {
   // A física pode levar o corpo além da borda entre dois updates da IA.
   // Corrige antes do desenho, inclusive em teleporte ou recuperação.
   scene.events.on(Phaser.Scenes.Events.POST_UPDATE, limitar);
-  scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+  const limparLimite = () => {
     scene.events.off(Phaser.Scenes.Events.POST_UPDATE, limitar);
-  });
+    scene.events.off(Phaser.Scenes.Events.SHUTDOWN, limparLimite);
+  };
+  scene.events.once(Phaser.Scenes.Events.SHUTDOWN, limparLimite);
+  pet.once('destroy', limparLimite);
   limitar();
   atualizarDepthCompanionPet(scene);
   return pet;
@@ -272,6 +275,7 @@ function atualizarCompanionPet(scene, _time, delta) {
   if (!pet?.active || !player?.active) {
     return;
   }
+  if (pet.emHack) { pet.setVelocity(0, 0); return; }
 
   const distancia = Phaser.Math.Distance.Between(
     pet.x,
