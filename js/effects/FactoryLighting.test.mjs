@@ -117,6 +117,8 @@ function alphaCor(color) {
 }
 function dentroRecortes(op, x, y) {
   return (op.recortes ?? []).every(pontos => {
+    if (pontos.subcaminhos) return pontos.subcaminhos.reduce((dentro, caminho) =>
+      dentro !== dentroRecortes({ recortes: [caminho] }, x, y), false);
     let dentro = false;
     for (let i = 0, j = pontos.length - 1; i < pontos.length; j = i++) {
       const a = pontos[i], b = pontos[j];
@@ -168,18 +170,23 @@ class ContextoAmostrado {
       this.registrar("image", [x, y, width, height, image]);
     }
   }
-  beginPath() { this.caminho = []; }
+  beginPath() { this.caminho = []; this.subcaminhos = []; }
   moveTo(x, y) {
     const m = this.estado.matriz;
     this.caminho.push({ x: m[0]*x + m[2]*y + m[4], y: m[1]*x + m[3]*y + m[5] });
   }
   lineTo(x, y) { this.moveTo(x, y); }
   rect(x, y, width, height) {
+    const inicio = this.caminho.length;
     this.moveTo(x, y); this.lineTo(x + width, y);
     this.lineTo(x + width, y + height); this.lineTo(x, y + height);
+    this.subcaminhos.push(this.caminho.slice(inicio));
   }
   closePath() {}
-  clip() { this.estado.recortes = [...(this.estado.recortes ?? []), this.caminho]; }
+  clip(regra) {
+    const caminho = regra === "evenodd" ? { subcaminhos: this.subcaminhos.slice() } : this.caminho;
+    this.estado.recortes = [...(this.estado.recortes ?? []), caminho];
+  }
   arc(x, y, raio) { this.circulo = [x, y, raio]; }
   fill() { this.registrar("circle", this.circulo); }
   alphaEm(screenX, screenY) {
@@ -296,6 +303,8 @@ function cenaComMascara(t, objects = [ponto()], powered = false, audio = {}) {
     add: { image(x, y, key) {
       const image = { x, y, key, alpha: 1, visible: true,
         setOrigin() { return this; }, setScrollFactor() { return this; },
+        setAlpha(alpha) { this.alpha = alpha; return this; },
+        setVisible(visible) { this.visible = visible; return this; },
         setDepth(depth) { this.depth = depth; return this; },
         setPosition(x, y) { this.x = x; this.y = y; return this; },
         setRotation(rotation) { this.rotation = rotation; return this; },
@@ -307,7 +316,8 @@ function cenaComMascara(t, objects = [ponto()], powered = false, audio = {}) {
       return image;
     } },
   };
-  const cleanup = criarIluminacaoTerror(scene);
+  scene.add.rectangle = (x, y, width, height, cor) => Object.assign(scene.add.image(x, y), { width, height, cor });
+  const cleanup = criarIluminacaoTerror(scene, { ambienteBasico: audio.ambienteBasico === true });
   t.after(() => {
     cleanup();
     if (oldDocument === undefined) delete globalThis.document; else globalThis.document = oldDocument;
@@ -1787,4 +1797,57 @@ test("pontos antigos de luz rotativa não criam fontes, brilho ou atualizações
   assertSombraAmbiente(texture.canvas.rgbaEm(400, 225)[3], "o ponto antigo não ilumina o cenário");
   for (let time = 0; time < 2000; time += 16) { scene.time.now = time; render(); }
   assert.equal(texture.refreshes, uploads, "o relógio não gera composições de feixes");
+});
+
+
+test("ambiente básico preserva os pixels e transições originais exclusivamente na sala do boss", async t => {
+  let referencia;
+  for (const desktop of [null, true, false]) {
+    const ambienteBasico = desktop !== null;
+    await t.test(ambienteBasico ? `boss com fábrica simplificada: ${desktop ? "PC" : "celular"}` : "boss original", t => {
+      const objects = {
+        ZonaBoss: [{ x: 250, y: 50, width: 400, height: 350 }],
+        LuzesFabrica: [ponto({ Piscando: false }, 400, 225)],
+        Luzedeemergencia: [ponto({ Neon: true, Cor: "#FF101C" }, 390, 200),
+          { ...ponto({ Neon: true }, -800, -800), id: 2 }],
+        IluminaçãoBoss: [ponto({ Esquerda: true, Cor: "#FFD35A" }, 640, 180)],
+      };
+      const map = { getObjectLayer: name => ({ objects: objects[name] ?? [] }) };
+      const introducao = { ambiente: 0, revisao: 0, fatorLuz: () => introducao.ambiente };
+      const novoBoss = { jogadorNaArena: true, introducao: { iluminacao: introducao },
+        projeteisBoss: [{ active: true, visible: true, alpha: 1, x: 450, y: 250 }] };
+      const { scene, render, texture, images } = cenaComMascara(t, [], true, { map, novoBoss, ambienteBasico, sys: { game: { device: { os: { desktop }, input: { touch: !desktop } } } } });
+      const quadros = [];
+      for (const progresso of [0, 0.25, 0.5, 1]) {
+        introducao.ambiente = progresso;
+        introducao.revisao++;
+        render();
+        quadros.push([[400, 225], [390, 200], [450, 250], [600, 180], [280, 370]].map(([x, y]) =>
+          texture.canvas.rgbaEm(x, y)));
+        if (ambienteBasico) assert.deepEqual(texture.canvas.rgbaEm(10, 10), [0, 0, 0, 0.4],
+          "o exterior do boss usa ambiente neutro mesmo com a sala na mesma tela");
+      }
+      if (!ambienteBasico) referencia = quadros;
+      else {
+        assert.deepEqual(quadros, referencia, "sombras, cores, máscaras e transições do boss permanecem idênticas");
+        assert.equal(scene.iluminacaoBoss.luzes.length, 1, "arandela original preservada");
+        assert.equal(scene.iluminacaoEmergencia.luzes.length, 1, "neons externos não são reativados");
+        assert.equal(images[0].alpha, 1, "o ambiente simples não reduz a opacidade da sala do boss");
+        assert.equal(scene.game.renderer.listenerCount("render"), 1, "não há compositor duplicado");
+        const atualizar = scene.iluminacaoEnergiaBoss.atualizar;
+        scene.iluminacaoEnergiaBoss.atualizar = () => { throw Error("efeito pesado fora da sala"); };
+        scene.cameras.main.setScroll(-3000, -3000);
+        render();
+        const uploads = texture.refreshes;
+        scene.cameras.main.setScroll(-3200, -3100);
+        render();
+        assert.equal(texture.refreshes, uploads, "movimentar a câmera na fábrica não redesenha a máscara pesada");
+        scene.iluminacaoEnergiaBoss.atualizar = atualizar;
+        scene.cameras.main.setScroll(0, 0);
+        render();
+        assert.deepEqual([[400, 225], [390, 200], [450, 250], [600, 180], [280, 370]].map(([x, y]) =>
+          texture.canvas.rgbaEm(x, y)), referencia.at(-1), "voltar à sala restaura a composição original");
+      }
+    });
+  }
 });

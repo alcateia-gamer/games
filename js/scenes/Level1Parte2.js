@@ -67,7 +67,7 @@ import {
 } from "../player/PlayerProjectiles.js";
 
 import { prepararBoss, atualizarBoss } from "../enemies/BossPrincipal.js";
-import criarIluminacaoTerror from "../effects/TerrorLighting.js";
+import criarIluminacaoBasicaFabrica from "../effects/FactoryAmbientLighting.js";
 import {
   atualizarSistemaInventario,
   criarSistemaInventario,
@@ -246,7 +246,7 @@ class Level1Parte2 extends Phaser.Scene {
 
     this.definirProfundidadePersonagem(this.profundidadePersonagemParte2);
     // Os pontos de LuzesFabrica só ficam disponíveis depois da criação do mapa.
-    this.removerLanternaParte2 = criarIluminacaoTerror(this);
+    this.removerLanternaParte2 = criarIluminacaoBasicaFabrica(this);
 
     if (!this.multiplayer) {
       criarCompanionPet(this);

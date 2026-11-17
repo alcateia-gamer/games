@@ -74,7 +74,24 @@ function encontrarInicioEstalo(buffer) {
   return 0;
 }
 
-function criarSomLuzFabrica(scene, quedas) {
+// O ambiente básico usa os mesmos instantes e durações do áudio original.
+function obterPiscadasPartida(quedas, { consecutivas = false } = {}) {
+  let proximoInicio = 1.8; // Após a ativação e a confirmação visual do painel do gerador.
+  const ordenadas = quedas.filter(({ intensidade }) => intensidade > 0)
+    .sort((a, b) => a.inicio - b.inicio);
+  return [...new Set([ordenadas[0], ordenadas[Math.floor((ordenadas.length - 1) / 2)],
+    ordenadas.at(-1)])].filter(Boolean).map((queda, indice) => {
+      const inicioSom = consecutivas ? proximoInicio
+        : (queda.inicio + (queda.fim - queda.inicio) * FRACAO_QUEDA_ANTES_DO_SOM)
+          * GENERATOR_LOOP_START_SECONDS;
+      const duracaoSom = DURACOES_ESTALO[indice];
+      const duracaoOscilacao = consecutivas ? 1 : duracaoSom;
+      proximoInicio = inicioSom + duracaoOscilacao;
+      return { ...queda, inicioSom, duracaoSom, duracaoOscilacao };
+    });
+}
+
+function criarSomLuzFabrica(scene, quedas, { consecutivas = false } = {}) {
   if (!scene.cache?.audio?.exists(CHAVE_SOM_LUZ)) {
     return { update() {}, stop() {}, destroy() {} };
   }
@@ -82,23 +99,13 @@ function criarSomLuzFabrica(scene, quedas) {
   const som = scene.sound.add(CHAVE_SOM_LUZ, { volume: 0, loop: false });
   const maiorQueda = Math.max(0, ...quedas.map(({ intensidade }) => intensidade));
   const inicioAudio = encontrarInicioEstalo(som.audioBuffer);
-  // Distribui três trechos pela sequência inteira e aguarda a queda ficar
-  // perceptível antes de disparar, sem alterar a duração dos trechos.
-  const ordenadas = quedas
-    .filter(({ intensidade }) => intensidade > 0)
-    .sort((a, b) => a.inicio - b.inicio);
-  const selecionadas = [...new Set([
-    ordenadas[0],
-    ordenadas[Math.floor((ordenadas.length - 1) / 2)],
-    ordenadas.at(-1),
-  ])].filter(Boolean);
-  const estalos = selecionadas
-    .map(({ inicio, fim, intensidade }, indice) => {
-      const inicioSom = (inicio + (fim - inicio) * FRACAO_QUEDA_ANTES_DO_SOM)
-        * GENERATOR_LOOP_START_SECONDS;
+  // O ambiente simples encadeia os três trechos; o compositor original conserva seus horários.
+  // Ambos mantêm a duração e a velocidade originais do áudio.
+  const estalos = obterPiscadasPartida(quedas, { consecutivas })
+    .map(({ inicio, fim, intensidade, inicioSom, duracaoSom }, indice) => {
       const inicioTrecho = inicioAudio + indice * 0.025;
       const duracao = Math.min(
-        DURACOES_ESTALO[indice],
+        duracaoSom,
         som.totalDuration - inicioTrecho,
       );
       const nome = `mau-contato-${indice}`;
@@ -109,8 +116,8 @@ function criarSomLuzFabrica(scene, quedas) {
         nome,
         inicio: inicioSom,
         duracao,
-        inicioQueda: inicio * GENERATOR_LOOP_START_SECONDS,
-        duracaoQueda: (fim - inicio) * GENERATOR_LOOP_START_SECONDS,
+        inicioQueda: consecutivas ? inicioSom : inicio * GENERATOR_LOOP_START_SECONDS,
+        duracaoQueda: consecutivas ? duracaoSom : (fim - inicio) * GENERATOR_LOOP_START_SECONDS,
         perfil: PERFIS_CONTATO[indice],
         volume: VOLUME_SOM_LUZ * Math.max(0.85, intensidade / maiorQueda) * (indice === 2 ? 0.9 : 1),
       };
@@ -232,4 +239,4 @@ function criarSomPiscadasAmbiente(scene) {
   };
 }
 
-export { carregarSomLuzFabrica, criarSomLuzFabrica, criarSomPiscadasAmbiente };
+export { obterPiscadasPartida, carregarSomLuzFabrica, criarSomLuzFabrica, criarSomPiscadasAmbiente };

@@ -289,8 +289,7 @@ class FactoryLighting {
     for (const e of this.estados) if (!ativos.has(e.indice)) e.falha = null;
   }
 
-  atualizar(agora, camera, zonas = null) {
-    this.falhasIniciadas.length = 0;
+  atualizarPartida(agora) {
     let progresso = 1;
     this.progressoPartida = null;
     if (this.partida) {
@@ -301,6 +300,12 @@ class FactoryLighting {
       this.progressoPartida = progresso;
       if (progresso >= 1) this.partida = null;
     }
+    return progresso;
+  }
+
+  atualizar(agora, camera, zonas = null) {
+    this.falhasIniciadas.length = 0;
+    const progresso = this.atualizarPartida(agora);
     const energia = this.energia ? intensidadeLuzPartida(progresso) : 0;
     // Só a falha ativa avança fora da câmera, para liberar seu horário sem acumular eventos.
     if (this.estadoEmFalha && !this.partida) {

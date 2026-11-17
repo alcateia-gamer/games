@@ -21,6 +21,7 @@ import BossEnergyLightBuffer from "./BossEnergyLightBuffer.js";
 import BossAuraLightCache from "./BossAuraLightCache.js";
 import { ocultarBrilhoAtrasSprite as ocultarBrilhoAtrasPersonagem } from "./SpriteLightOcclusion.js";
 import { criarTexturaIluminacao } from "./LightingTexture.js";
+import { alphaOscilacaoFabrica } from "./FactoryAmbientOscillation.js";
 export { intensidadeLuzPartida, QUEDAS_LUZ_FABRICA } from "./FactoryLighting.js";
 
 const TEXTURA_ESCURIDAO_PARTE2 = "level1-parte2-escuridao";
@@ -195,7 +196,7 @@ function desenharLuminaria(context, canvas, luz, limites) {
 }
 
 /** Uma única máscara combina sombra ambiente, luzes do teto e lanterna sem energia. */
-function criarIluminacaoTerror(scene) {
+function criarIluminacaoTerror(scene, { ambienteBasico = false } = {}) {
   const camera = scene.cameras.main;
   const renderer = scene.game.renderer;
   let width = Math.ceil(camera.width);
@@ -206,22 +207,33 @@ function criarIluminacaoTerror(scene) {
     revisaoIntroducao: -1 };
   let encerrada = false;
   const iluminacao = new FactoryLighting(scene.map);
+  const salaBoss = new BossRoomLighting(scene.map);
+  // Os controladores de energia e rede conservam seus dados; só as fontes visuais são limitadas.
+  const mapaLuzes = ambienteBasico ? Object.assign(Object.create(scene.map), {
+    getObjectLayer(nome) {
+      const layer = scene.map.getObjectLayer(nome);
+      if (!["Luzedeemergencia", "IluminaçãoBoss"].includes(nome) || !layer) return layer;
+      return { ...layer, objects: (layer.objects ?? []).filter(luz => salaBoss.contem(luz)) };
+    },
+  }) : scene.map;
+  let bossVisivelAnterior = null, modoBasico = false, ultimoAlphaBasico = null;
   const dispositivo = scene.sys?.game?.device;
   const celular = dispositivo?.os?.desktop === false || dispositivo?.input?.touch === true;
   // Só a composição de luz usa menos pixels no celular; a máscara é ampliada com filtro linear.
-  const resolucao = dispositivo?.os?.desktop === false ? 0.5 : 1;
+  const resolucao = ambienteBasico ? 1 : dispositivo?.os?.desktop === false ? 0.5 : 1;
   let larguraMascara = Math.ceil(width * resolucao), alturaMascara = Math.ceil(height * resolucao);
   const transformarMascara = (ctx, a = 1, b = 0, c = 0, d = 1, e = 0, f = 0) => {
     const sx = larguraMascara / width, sy = alturaMascara / height;
     ctx.setTransform(a * sx, b * sy, c * sx, d * sy, e * sx, f * sy);
   };
-  const emergencia = new EmergencyLighting(scene.map);
-  const arandelas = new BossWallLighting(scene.map);
+  const emergencia = new EmergencyLighting(mapaLuzes);
+  const arandelas = new BossWallLighting(mapaLuzes);
   const energiaBoss = new BossEnergyLighting(scene);
   const luzesIndependentes = [...emergencia.luzes, ...arandelas.luzes];
   const zonas = new DoorLightingZones(scene.map, iluminacao.lampadas, luzesIndependentes);
   const obterLuzesIntroducao = () => scene.novoBoss?.introducao?.iluminacao ?? scene.iluminacaoEntradaBossReplica;
   const zonasCena = { fatorLuz(luz, agora) {
+    if (ambienteBasico && !salaBoss.contem(luz)) return 0;
     return zonas.fatorLuz(luz, agora) * (obterLuzesIntroducao()?.fatorLuz(luz) ?? 1);
   } };
   const paredesLanterna = new FlashlightWalls(scene);
@@ -233,7 +245,7 @@ function criarIluminacaoTerror(scene) {
   scene.iluminacaoBoss = arandelas;
   scene.iluminacaoEnergiaBoss = energiaBoss;
   scene.zonasLuzApagada = zonas;
-  const somPartida = criarSomLuzFabrica(scene, QUEDAS_LUZ_FABRICA);
+  const somPartida = criarSomLuzFabrica(scene, QUEDAS_LUZ_FABRICA, { consecutivas: ambienteBasico });
   const somPiscadas = criarSomPiscadasAmbiente(scene);
 
   if (scene.textures.exists(TEXTURA_ESCURIDAO_PARTE2)) {
@@ -243,7 +255,6 @@ function criarIluminacaoTerror(scene) {
   // A máscara é um gradiente; esse filtro não altera o pixel art dos tiles e personagens.
   texture.setFilter(Phaser.Textures.FilterMode.LINEAR);
   const context = texture.getContext();
-  const salaBoss = new BossRoomLighting(scene.map);
   const perfil = criarPerfilLuminaria();
   const luminariaCanvas = criarMascaraLuminaria(perfil);
   const perfilPulso = criarPerfilLuminaria(true);
@@ -335,6 +346,7 @@ function criarIluminacaoTerror(scene) {
   const coresCanvas = new Map();
   const areasCanvas = new Map();
   for (const luz of iluminacao.lampadas) {
+    if (ambienteBasico && !salaBoss.contem(luz)) continue;
     if (!coresCanvas.has(luz.cor.css)) coresCanvas.set(luz.cor.css, criarMascaraLuminaria(perfil, luz.cor.phaser));
     if (luz.area) {
       const perfilArea = new Uint8Array(TAMANHO_MASCARA * TAMANHO_MASCARA);
@@ -353,7 +365,20 @@ function criarIluminacaoTerror(scene) {
   const overlay = scene.add.image(0, 0, TEXTURA_ESCURIDAO_PARTE2)
     .setOrigin(0).setScrollFactor(0).setDepth(DEPTH_ESCURIDAO);
 
+  // As zonas usam a geometria/opacidade originais. No caminho leve, são apenas retângulos reutilizados.
+  const mascarasPortas = ambienteBasico ? zonas.zonas.map(zona =>
+    scene.add.rectangle(zona.x, zona.y, zona.largura, zona.altura, 0x000000)
+      .setOrigin(0).setRotation(Math.atan2(zona.sin, zona.cos)).setDepth(DEPTH_ESCURIDAO).setVisible(false)) : [];
+  const alphaBasico = () => alphaOscilacaoFabrica(
+    iluminacao.progressoPartida ?? 1, iluminacao.progressoPartida !== null);
+  let energiaInicializada = false;
   const definirIluminacaoFabrica = (ligada, obterProgresso = null) => {
+    if (ambienteBasico && energiaInicializada && iluminacao.energia === (ligada === true)) return;
+    // DEV usa o mesmo caminho do gerador, com o relógio da cena quando não existe áudio do motor.
+    if (ambienteBasico && energiaInicializada && ligada === true && typeof obterProgresso !== "function") {
+      obterProgresso = () => null;
+    }
+    energiaInicializada = true;
     somPartida.stop();
     somPiscadas.stop();
     iluminacao.definirEnergia(ligada, obterProgresso, scene.time.now);
@@ -400,17 +425,47 @@ function criarIluminacaoTerror(scene) {
       invalidada = true;
     }
     zonas.atualizar(scene.time.now, scene.portasFabrica ?? [], iluminacao.energia);
+    const bossVisivel = !ambienteBasico || salaBoss.visivel(camera);
+    if (bossVisivelAnterior !== bossVisivel) {
+      invalidada = true;
+      if (bossVisivelAnterior === true && !bossVisivel) somPiscadas.stop();
+      bossVisivelAnterior = bossVisivel;
+    }
+    if (!bossVisivel) iluminacao.atualizarPartida(scene.time.now);
+    if (ambienteBasico && iluminacao.energia && !bossVisivel) {
+      if (iluminacao.progressoPartida !== null) somPartida.update(iluminacao.progressoPartida);
+      if (!modoBasico || invalidada) {
+        transformarMascara(context);
+        context.globalAlpha = 1;
+        context.globalCompositeOperation = "source-over";
+        context.fillStyle = "#000000";
+        context.fillRect(0, 0, width, height);
+        texture.refresh();
+        invalidada = false;
+      }
+      overlay.setAlpha(alphaBasico());
+      mascarasPortas.forEach((sprite, i) => sprite.setAlpha(zonas.zonas[i].opacidade).setVisible(true));
+      atualizarLanternasAliadas(scene, lanternasAliadas, iluminacao.energia);
+      modoBasico = true;
+      return;
+    }
+    if (ambienteBasico) {
+      if (modoBasico) invalidada = true;
+      modoBasico = false;
+      overlay.setAlpha(1);
+      for (const sprite of mascarasPortas) sprite.setVisible(false);
+    }
     const luzesIntroducao = obterLuzesIntroducao();
-    const fontes = iluminacao.atualizar(scene.time.now, camera, zonasCena);
-    const fontesNeon = emergencia.atualizar(scene.time.now, camera, zonasCena);
-    const fontesParede = arandelas.atualizar(scene.time.now, camera, zonasCena);
-    const fontesEnergiaBoss = energiaBoss.atualizar(camera);
-    auraBoss.sincronizar(fontesEnergiaBoss);
+    const fontes = bossVisivel ? iluminacao.atualizar(scene.time.now, camera, zonasCena) : [];
+    const fontesNeon = bossVisivel ? emergencia.atualizar(scene.time.now, camera, zonasCena) : [];
+    const fontesParede = bossVisivel ? arandelas.atualizar(scene.time.now, camera, zonasCena) : [];
+    const fontesEnergiaBoss = bossVisivel ? energiaBoss.atualizar(camera) : [];
+    if (bossVisivel) auraBoss.sincronizar(fontesEnergiaBoss);
     if (fontesParede.some(fonte => fonte.luz.direcao === "Cima") && oclusaoEmissorBoss.atualizar(camera)) invalidada = true;
     if ((fontesNeon.length || fontesParede.length) && oclusaoEstatuas.atualizar()) invalidada = true;
     const player = scene.player;
     const temBrilho = fontesNeon.length || fontesParede.length || fontesEnergiaBoss.length ||
-      luzesFixas.fontes.length || fontes.some(fonte => fonte.luz.pulsando);
+      (bossVisivel && luzesFixas.fontes.length) || fontes.some(fonte => fonte.luz.pulsando);
     const atoresSobreBrilho = new Set();
     if (temBrilho) {
       for (const ator of [scene.companionPet,
@@ -454,7 +509,7 @@ function criarIluminacaoTerror(scene) {
         revisaoParedes = paredesLanterna.revisao;
       }
     }
-    luzesFixas.atualizar(scene.time.now, zonasCena, paredesLanterna, oclusaoEstatuas, oclusaoEmissorBoss);
+    if (bossVisivel) luzesFixas.atualizar(scene.time.now, zonasCena, paredesLanterna, oclusaoEstatuas, oclusaoEmissorBoss);
     if (lanternaAtiva) {
       atualizarPoseLanterna(scene, poseLanterna);
       angulo = poseLanterna.angulo;
@@ -498,7 +553,11 @@ function criarIluminacaoTerror(scene) {
     // Usa a mesma leitura do relógio do gerador que move as luzes, inclusive no último quadro.
     // O som da partida e os estalos ambientes têm volumes e controles próprios.
     if (iluminacao.progressoPartida !== null) somPartida.update(iluminacao.progressoPartida);
-    somPiscadas.update(iluminacao.falhasIniciadas);
+    if (bossVisivel) somPiscadas.update(iluminacao.falhasIniciadas);
+    if (ambienteBasico && iluminacao.energia && ultimoAlphaBasico !== alphaBasico()) {
+      ultimoAlphaBasico = alphaBasico();
+      invalidada = true;
+    }
     const m = camera.matrix;
     // Compara valores em memória reutilizada, sem criar arrays ou strings a cada frame.
     if (!invalidada && ultimoQuadro.width === width && ultimoQuadro.height === height &&
@@ -536,12 +595,12 @@ function criarIluminacaoTerror(scene) {
     context.save();
     transformarMascara(context, m.a, m.b, m.c, m.d, m.e, m.f);
     context.globalCompositeOperation = "destination-out";
-    salaBoss.desenhar(context, camera, luzesIntroducao?.ambiente ?? 1);
+    if (bossVisivel) salaBoss.desenhar(context, camera, luzesIntroducao?.ambiente ?? 1);
     for (const { luz, intensidade } of fontes) {
       context.globalAlpha = intensidade;
       desenharLuminaria(context, areasCanvas.get(luz)?.mascara ?? (luz.pulsando ? luminariaPulsoCanvas : luminariaCanvas), luz, limitesLampadas);
     }
-    luzesFixas.desenhar(context, false, camera);
+    if (bossVisivel) luzesFixas.desenhar(context, false, camera);
     if (energiaReduzida) campoEnergiaBoss.desenhar(context, false, larguraMascara, alturaMascara);
     else for (const fonte of fontesEnergiaBoss) {
       context.globalAlpha = fonte.intensidade;
@@ -608,7 +667,7 @@ function criarIluminacaoTerror(scene) {
       corContext.globalAlpha = intensidade * 0.45;
       desenharLuminaria(corContext, areasCanvas.get(luz)?.cor ?? corPulsoCanvas, luz, limitesLampadas);
     }
-    luzesFixas.desenhar(corContext, true, camera);
+    if (bossVisivel) luzesFixas.desenhar(corContext, true, camera);
     if (energiaReduzida) campoEnergiaBoss.desenhar(corContext, true, larguraMascara, alturaMascara);
     else for (const fonte of fontesEnergiaBoss) {
       corContext.globalAlpha = fonte.intensidade * 0.45;
@@ -629,6 +688,9 @@ function criarIluminacaoTerror(scene) {
       context.globalCompositeOperation = "source-over";
       context.drawImage(brilhoCanvas, 0, 0);
       context.restore();
+    }
+    if (ambienteBasico && iluminacao.energia) {
+      salaBoss.preencherExterior(context, camera, width, height, alphaBasico());
     }
     context.save();
     transformarMascara(context, m.a, m.b, m.c, m.d, m.e, m.f);
@@ -673,6 +735,7 @@ function criarIluminacaoTerror(scene) {
     lanternasAliadas.clear();
     if (scene.lanternasAliadas === lanternasAliadas) scene.lanternasAliadas = null;
     limitesLampadas?.destroy();
+    for (const sprite of mascarasPortas) sprite.destroy();
     overlay.destroy();
     if (scene.textures.exists(TEXTURA_ESCURIDAO_PARTE2)) scene.textures.remove(TEXTURA_ESCURIDAO_PARTE2);
     for (const canvas of [luminariaCanvas, luminariaPulsoCanvas, corPulsoCanvas, lanternaCanvas,
