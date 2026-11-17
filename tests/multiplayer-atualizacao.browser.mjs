@@ -43,7 +43,10 @@ async function pageBoot(name) {
   await page.goto(process.env.BASE_URL || "http://127.0.0.1:8765/", { waitUntil: "networkidle" });
   await page.waitForFunction(() => window.__coopBootReady);
   await page.keyboard.press("k");
+  if (process.env.BROWSER_SKIP_INTRO === "1") await page.locator(".cutscene-skip").click();
   await page.waitForFunction(() => window.__game?.scene.getScene("Level1")?.player?.active, null, { timeout: 60000 });
+  check(`${name}: pet continua presente no modo solo`, await page.evaluate(() =>
+    window.__game.scene.getScene("Level1").companionPet?.active === true));
   await page.addScriptTag({ path: `${toolsRoot}/node_modules/mqtt/dist/mqtt.min.js` });
   await page.evaluate(async () => {
     const { default: Client } = await import("/js/mqttClient.js");
@@ -104,9 +107,13 @@ try {
       remotes: [...r.players.remotes.values()].map(e => ({ id: e.data.id, ctx: !!e.context, pet: !!e.context?.companionPet?.active })) };
   });
   console.log("CONTEXTS", report.contexts);
-  check("host mantém pet e contexto independente do aliado", await get(host, () => {
+  // CompanionPet.js documenta o pet como solo; as duas cenas só o criam fora do multiplayer.
+  check("cooperativo mantém contextos independentes e não cria pets do modo solo", await get(host, () => {
     const r = window.__game.scene.getScene("Level1").coopRuntime;
-    return r.scene.companionPet?.active && r.players.contexts()[0]?.companionPet?.active;
+    const remote = r.players.contexts()[0];
+    return r.host && r.localContext.player === r.scene.player && remote &&
+      remote !== r.localContext && remote.player !== r.scene.player && remote.events !== r.scene.events &&
+      !r.scene.companionPet?.active && !remote.companionPet?.active;
   }));
   if (phase === "music") {
     for (const page of pages) {

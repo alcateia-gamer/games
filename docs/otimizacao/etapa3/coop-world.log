@@ -1,0 +1,27 @@
+BOOT: dois navegadores e broker MQTT/WebSocket real.
+OK client: pet continua presente no modo solo
+OK host: pet continua presente no modo solo
+OK dois personagens atuais presentes no mesmo mapa
+CONTEXTS {
+  host: true,
+  ownPet: false,
+  localPet: false,
+  remotes: [ { id: 'R8QNDLBR', ctx: true, pet: false } ]
+}
+OK cooperativo mantém contextos independentes e não cria pets do modo solo
+OK aura da Nyx segue o movimento local no mesmo quadro
+OK cura da Nyx chega ao cliente pela autoridade do host
+OK habilidade do Kai no host continua ativa após preparar o aliado
+OK Robô Bola preserva tipo, sprite e alvo remoto
+OK sem erros JavaScript até a integração inicial
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+page.waitForFunction: Timeout 25000ms exceeded.
+    at /workspaces/games/tests/multiplayer-atualizacao.browser.mjs:362:16 {
+  log: [],
+  name: 'TimeoutError'
+}
+
+Node.js v24.22.2

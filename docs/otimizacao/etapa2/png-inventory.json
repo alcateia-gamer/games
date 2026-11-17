@@ -1,0 +1,147 @@
+{
+  "note": "PNG inventory; RGBA8 estimate per file, not measured RAM/VRAM; may include unused files.",
+  "files": 292,
+  "rgba8TotalMiB": 1439.5639266967773,
+  "largest": [
+    {
+      "path": "assets/PERSONAGENS/INIMIGOS PRINCIPAIS/BossPrincipal/derivados/tentaculo/tentaculo-vermelho-quadros.png",
+      "width": 8000,
+      "height": 8400,
+      "fileBytes": 3482731,
+      "rgba8MiB": 256.34765625
+    },
+    {
+      "path": "assets/PERSONAGENS/INIMIGOS PRINCIPAIS/BossPrincipal/derivados/disparo-energia-quadros.png",
+      "width": 5280,
+      "height": 3992,
+      "fileBytes": 452079,
+      "rgba8MiB": 80.4052734375
+    },
+    {
+      "path": "assets/efeitos/especiais/magnus.png",
+      "width": 3968,
+      "height": 3036,
+      "fileBytes": 916243,
+      "rgba8MiB": 45.955078125
+    },
+    {
+      "path": "assets/PERSONAGENS/INIMIGOS PRINCIPAIS/BossPrincipal/derivados/tentaculo/tentaculo-atlas-1.png",
+      "width": 4072,
+      "height": 2632,
+      "fileBytes": 3123310,
+      "rgba8MiB": 40.884033203125
+    },
+    {
+      "path": "assets/PERSONAGENS/INIMIGOS PRINCIPAIS/BossPrincipal/derivados/disparo-energia-pagina-2.png",
+      "width": 2640,
+      "height": 3992,
+      "fileBytes": 207788,
+      "rgba8MiB": 40.20263671875
+    },
+    {
+      "path": "assets/PERSONAGENS/INIMIGOS PRINCIPAIS/BossPrincipal/derivados/disparo-energia-pagina-1.png",
+      "width": 2640,
+      "height": 3992,
+      "fileBytes": 236241,
+      "rgba8MiB": 40.20263671875
+    },
+    {
+      "path": "assets/PERSONAGENS/INIMIGOS PRINCIPAIS/BossPrincipal/derivados/tentaculo/tentaculo-agarrao-quadros.png",
+      "width": 4000,
+      "height": 2400,
+      "fileBytes": 334768,
+      "rgba8MiB": 36.62109375
+    },
+    {
+      "path": "assets/efeitos/especiais/magnus (1).png",
+      "width": 2976,
+      "height": 3036,
+      "fileBytes": 1308534,
+      "rgba8MiB": 34.46630859375
+    },
+    {
+      "path": "assets/PERSONAGENS/INIMIGOS PRINCIPAIS/BossPrincipal/derivados/tentaculo-previa/comparacao.png",
+      "width": 2400,
+      "height": 3150,
+      "fileBytes": 3065304,
+      "rgba8MiB": 28.839111328125
+    },
+    {
+      "path": "assets/PERSONAGENS/INIMIGOS PRINCIPAIS/BossPrincipal/derivados/teleporte/teleporte-saida.png",
+      "width": 2048,
+      "height": 3200,
+      "fileBytes": 101674,
+      "rgba8MiB": 25.0
+    },
+    {
+      "path": "assets/PERSONAGENS/PERSONAGENS PRICIPAIS/BARRA DE VIDA/barra_vida_PERSONAGENS_1.png",
+      "width": 2169,
+      "height": 2900,
+      "fileBytes": 950406,
+      "rgba8MiB": 23.994827270507812
+    },
+    {
+      "path": "assets/PERSONAGENS/PERSONAGENS PRICIPAIS/BARRA DE VIDA/barra_vida_PERSONAGENS.png",
+      "width": 2169,
+      "height": 2900,
+      "fileBytes": 957018,
+      "rgba8MiB": 23.994827270507812
+    },
+    {
+      "path": "assets/PERSONAGENS/INIMIGOS PRINCIPAIS/BossPrincipal/boss-ataque.png",
+      "width": 2688,
+      "height": 2016,
+      "fileBytes": 195137,
+      "rgba8MiB": 20.671875
+    },
+    {
+      "path": "assets/PERSONAGENS/PERSONAGENS PRICIPAIS/KAI_MERCER 1/KAI_MOVE_1.png",
+      "width": 1152,
+      "height": 4480,
+      "fileBytes": 495855,
+      "rgba8MiB": 19.6875
+    },
+    {
+      "path": "assets/PERSONAGENS/PERSONAGENS PRICIPAIS/ROBO_PET/robo_pet.png",
+      "width": 2124,
+      "height": 2304,
+      "fileBytes": 1437681,
+      "rgba8MiB": 18.66796875
+    },
+    {
+      "path": "assets/PERSONAGENS/PERSONAGENS PRICIPAIS/MAGNUS_FORCE 2/magnus_1.png",
+      "width": 1152,
+      "height": 4224,
+      "fileBytes": 476543,
+      "rgba8MiB": 18.5625
+    },
+    {
+      "path": "assets/PERSONAGENS/PERSONAGENS PRICIPAIS/KAI_MERCER 1/KAI_MOVE_2.png",
+      "width": 1152,
+      "height": 4224,
+      "fileBytes": 466386,
+      "rgba8MiB": 18.5625
+    },
+    {
+      "path": "assets/PERSONAGENS/PERSONAGENS PRICIPAIS/MAGNUS_FORCE 2/magnus_2.png",
+      "width": 1152,
+      "height": 3968,
+      "fileBytes": 461117,
+      "rgba8MiB": 17.4375
+    },
+    {
+      "path": "assets/PERSONAGENS/PERSONAGENS PRICIPAIS/ARIA_KADE 3/ARIA_ARCO.png",
+      "width": 1152,
+      "height": 3968,
+      "fileBytes": 484471,
+      "rgba8MiB": 17.4375
+    },
+    {
+      "path": "assets/PERSONAGENS/NPC/character-spritesheet.png",
+      "width": 1152,
+      "height": 3968,
+      "fileBytes": 438416,
+      "rgba8MiB": 17.4375
+    }
+  ]
+}

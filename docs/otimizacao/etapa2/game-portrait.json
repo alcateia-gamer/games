@@ -1,0 +1,1886 @@
+{
+  "cpuRate": 4,
+  "requestedDurationMs": 5000,
+  "reports": [
+    {
+      "scenario": "factory-portrait",
+      "metrics": {
+        "Level1Parte2.physics": {
+          "calls": 19,
+          "mean": 0.00526315789963854,
+          "max": 0.10000000009313226,
+          "samples": 19,
+          "median": 0,
+          "p95": 0.10000000009313226,
+          "p99": 0.10000000009313226
+        },
+        "Level1Parte2.minimap": {
+          "calls": 19,
+          "mean": 0.30526315795845893,
+          "max": 1.1000000000931323,
+          "samples": 19,
+          "median": 0.19999999972060323,
+          "p95": 1.1000000000931323,
+          "p99": 1.1000000000931323
+        },
+        "Level1Parte2.update": {
+          "calls": 19,
+          "mean": 1.5421052631725998,
+          "max": 3.6999999997206032,
+          "samples": 19,
+          "median": 1.5,
+          "p95": 3.6999999997206032,
+          "p99": 3.6999999997206032
+        },
+        "Level1Parte2.step": {
+          "calls": 19,
+          "mean": 2.705263157840818,
+          "max": 8.200000000186265,
+          "samples": 19,
+          "median": 2.5,
+          "p95": 8.200000000186265,
+          "p99": 8.200000000186265
+        },
+        "scenes.update": {
+          "calls": 19,
+          "mean": 2.715789473640095,
+          "max": 8.200000000186265,
+          "samples": 19,
+          "median": 2.5,
+          "p95": 8.200000000186265,
+          "p99": 8.200000000186265
+        },
+        "gl.texImage2D.cpu": {
+          "calls": 19,
+          "mean": 33.626315789468784,
+          "max": 53.60000000009313,
+          "samples": 19,
+          "median": 31.700000000186265,
+          "p95": 53.60000000009313,
+          "p99": 53.60000000009313
+        },
+        "renderer.renderListeners": {
+          "calls": 19,
+          "mean": 77.00000000002451,
+          "max": 226.40000000037253,
+          "samples": 19,
+          "median": 71.60000000009313,
+          "p95": 226.40000000037253,
+          "p99": 226.40000000037253
+        },
+        "scenes.render": {
+          "calls": 19,
+          "mean": 84.5421052631726,
+          "max": 235.60000000009313,
+          "samples": 19,
+          "median": 78.10000000009313,
+          "p95": 235.60000000009313,
+          "p99": 235.60000000009313
+        },
+        "frame.cpu": {
+          "calls": 19,
+          "mean": 87.87894736845537,
+          "max": 236.40000000037253,
+          "samples": 19,
+          "median": 80.20000000018626,
+          "p95": 236.40000000037253,
+          "p99": 236.40000000037253
+        },
+        "browser.longtask": {
+          "calls": 16,
+          "mean": 94.5,
+          "max": 236,
+          "samples": 16,
+          "median": 84,
+          "p95": 236,
+          "p99": 236
+        },
+        "frame.interval": {
+          "calls": 18,
+          "mean": 402.1444444444496,
+          "max": 1951,
+          "samples": 18,
+          "median": 298.10000000009313,
+          "p95": 1951,
+          "p99": 1951
+        }
+      },
+      "canvas": {
+        "width": 800,
+        "height": 1731
+      },
+      "scenes": [
+        {
+          "key": "Level1Parte2",
+          "objects": 128,
+          "enemies": 0
+        }
+      ],
+      "textures": [
+        {
+          "key": "__NORMAL",
+          "sources": [
+            {
+              "width": 1,
+              "height": 1,
+              "imageId": 1
+            }
+          ]
+        },
+        {
+          "key": "__DEFAULT",
+          "sources": [
+            {
+              "width": 32,
+              "height": 32,
+              "imageId": 2
+            }
+          ]
+        },
+        {
+          "key": "__MISSING",
+          "sources": [
+            {
+              "width": 32,
+              "height": 32,
+              "imageId": 3
+            }
+          ]
+        },
+        {
+          "key": "__WHITE",
+          "sources": [
+            {
+              "width": 4,
+              "height": 4,
+              "imageId": 4
+            }
+          ]
+        },
+        {
+          "key": "upgrade-npc",
+          "sources": [
+            {
+              "width": 1152,
+              "height": 3968,
+              "imageId": 5
+            }
+          ]
+        },
+        {
+          "key": "scrap-components",
+          "sources": [
+            {
+              "width": 768,
+              "height": 784,
+              "imageId": 6
+            }
+          ]
+        },
+        {
+          "key": "novo-boss-idle",
+          "sources": [
+            {
+              "width": 1152,
+              "height": 1152,
+              "imageId": 7
+            }
+          ]
+        },
+        {
+          "key": "novo-boss-ataque",
+          "sources": [
+            {
+              "width": 2688,
+              "height": 2016,
+              "imageId": 8
+            }
+          ]
+        },
+        {
+          "key": "novo-boss-heavens-fury",
+          "sources": [
+            {
+              "width": 1536,
+              "height": 1536,
+              "imageId": 9
+            }
+          ]
+        },
+        {
+          "key": "novo-boss-escudo-energia",
+          "sources": [
+            {
+              "width": 2400,
+              "height": 1600,
+              "imageId": 10
+            }
+          ]
+        },
+        {
+          "key": "novo-boss-explosao",
+          "sources": [
+            {
+              "width": 1800,
+              "height": 1800,
+              "imageId": 11
+            }
+          ]
+        },
+        {
+          "key": "novo-boss-disparo-energia",
+          "sources": [
+            {
+              "width": 2640,
+              "height": 3992,
+              "imageId": 12
+            }
+          ]
+        },
+        {
+          "key": "novo-boss-disparo-energia-final",
+          "sources": [
+            {
+              "width": 2640,
+              "height": 3992,
+              "imageId": 13
+            }
+          ]
+        },
+        {
+          "key": "novo-boss-tentaculo",
+          "sources": [
+            {
+              "width": 4072,
+              "height": 2632,
+              "imageId": 14
+            }
+          ]
+        },
+        {
+          "key": "novo-boss-tentaculo-agarrao",
+          "sources": [
+            {
+              "width": 3944,
+              "height": 712,
+              "imageId": 15
+            }
+          ]
+        },
+        {
+          "key": "novo-boss-morte",
+          "sources": [
+            {
+              "width": 216,
+              "height": 216,
+              "imageId": 16
+            }
+          ]
+        },
+        {
+          "key": "novo-boss-teleporte-saida",
+          "sources": [
+            {
+              "width": 2048,
+              "height": 3200,
+              "imageId": 17
+            }
+          ]
+        },
+        {
+          "key": "novo-boss-teleporte-entrada",
+          "sources": [
+            {
+              "width": 2048,
+              "height": 1920,
+              "imageId": 18
+            }
+          ]
+        },
+        {
+          "key": "novo-boss-area-ataque",
+          "sources": [
+            {
+              "width": 3536,
+              "height": 1099,
+              "imageId": 19
+            }
+          ]
+        },
+        {
+          "key": "novo-boss-torre-summon",
+          "sources": [
+            {
+              "width": 768,
+              "height": 1032,
+              "imageId": 20
+            }
+          ]
+        },
+        {
+          "key": "novo-boss-torre-idle",
+          "sources": [
+            {
+              "width": 768,
+              "height": 1032,
+              "imageId": 21
+            }
+          ]
+        },
+        {
+          "key": "novo-boss-torre-attacked",
+          "sources": [
+            {
+              "width": 768,
+              "height": 258,
+              "imageId": 22
+            }
+          ]
+        },
+        {
+          "key": "novo-boss-torre-death",
+          "sources": [
+            {
+              "width": 192,
+              "height": 258,
+              "imageId": 23
+            }
+          ]
+        },
+        {
+          "key": "novo-boss-portal",
+          "sources": [
+            {
+              "width": 2240,
+              "height": 320,
+              "imageId": 24
+            }
+          ]
+        },
+        {
+          "key": "magnus-especial-marreta",
+          "sources": [
+            {
+              "width": 1152,
+              "height": 770,
+              "imageId": 25
+            }
+          ]
+        },
+        {
+          "key": "especial-kai",
+          "sources": [
+            {
+              "width": 3536,
+              "height": 1099,
+              "imageId": 26
+            }
+          ]
+        },
+        {
+          "key": "especial-nyx",
+          "sources": [
+            {
+              "width": 1536,
+              "height": 576,
+              "imageId": 27
+            }
+          ]
+        },
+        {
+          "key": "especial-nyx-cura",
+          "sources": [
+            {
+              "width": 768,
+              "height": 768,
+              "imageId": 28
+            }
+          ]
+        },
+        {
+          "key": "especial-magnus",
+          "sources": [
+            {
+              "width": 2976,
+              "height": 3036,
+              "imageId": 29
+            }
+          ]
+        },
+        {
+          "key": "inventory-gasolina-icon",
+          "sources": [
+            {
+              "width": 443,
+              "height": 405,
+              "imageId": 30
+            }
+          ]
+        },
+        {
+          "key": "inventory-bateria-icon",
+          "sources": [
+            {
+              "width": 192,
+              "height": 144,
+              "imageId": 31
+            }
+          ]
+        },
+        {
+          "key": "coop-down-kai-mercer",
+          "sources": [
+            {
+              "width": 384,
+              "height": 64,
+              "imageId": 32
+            }
+          ]
+        },
+        {
+          "key": "inventory-card-icon",
+          "sources": [
+            {
+              "width": 256,
+              "height": 196,
+              "imageId": 33
+            }
+          ]
+        },
+        {
+          "key": "hand_icon",
+          "sources": [
+            {
+              "width": 1254,
+              "height": 1254,
+              "imageId": 34
+            }
+          ]
+        },
+        {
+          "key": "coop-down-magnus-force",
+          "sources": [
+            {
+              "width": 384,
+              "height": 64,
+              "imageId": 35
+            }
+          ]
+        },
+        {
+          "key": "coop-down-aria-kade",
+          "sources": [
+            {
+              "width": 384,
+              "height": 64,
+              "imageId": 36
+            }
+          ]
+        },
+        {
+          "key": "coop-down-nyx",
+          "sources": [
+            {
+              "width": 384,
+              "height": 64,
+              "imageId": 37
+            }
+          ]
+        },
+        {
+          "key": "walk",
+          "sources": [
+            {
+              "width": 768,
+              "height": 768,
+              "imageId": 38
+            }
+          ]
+        },
+        {
+          "key": "attack",
+          "sources": [
+            {
+              "width": 768,
+              "height": 512,
+              "imageId": 39
+            }
+          ]
+        },
+        {
+          "key": "personagem2-walk",
+          "sources": [
+            {
+              "width": 384,
+              "height": 384,
+              "imageId": 40
+            }
+          ]
+        },
+        {
+          "key": "personagem2-attack",
+          "sources": [
+            {
+              "width": 768,
+              "height": 768,
+              "imageId": 41
+            }
+          ]
+        },
+        {
+          "key": "personagem2-idle",
+          "sources": [
+            {
+              "width": 1152,
+              "height": 4224,
+              "imageId": 42
+            }
+          ]
+        },
+        {
+          "key": "personagem3-walk",
+          "sources": [
+            {
+              "width": 1152,
+              "height": 512,
+              "imageId": 43
+            }
+          ]
+        },
+        {
+          "key": "aria-arrow",
+          "sources": [
+            {
+              "width": 128,
+              "height": 128,
+              "imageId": 44
+            }
+          ]
+        },
+        {
+          "key": "personagem3-attack",
+          "sources": [
+            {
+              "width": 448,
+              "height": 512,
+              "imageId": 45
+            }
+          ]
+        },
+        {
+          "key": "personagem4-walk",
+          "sources": [
+            {
+              "width": 576,
+              "height": 256,
+              "imageId": 46
+            }
+          ]
+        },
+        {
+          "key": "personagem4-attack",
+          "sources": [
+            {
+              "width": 1152,
+              "height": 768,
+              "imageId": 47
+            }
+          ]
+        },
+        {
+          "key": "robo-teste",
+          "sources": [
+            {
+              "width": 934,
+              "height": 1685,
+              "imageId": 48
+            }
+          ]
+        },
+        {
+          "key": "robo-serra",
+          "sources": [
+            {
+              "width": 1112,
+              "height": 1350,
+              "imageId": 49
+            }
+          ]
+        },
+        {
+          "key": "robo-serra-morte",
+          "sources": [
+            {
+              "width": 1112,
+              "height": 1080,
+              "imageId": 50
+            }
+          ]
+        },
+        {
+          "key": "robo-olhao",
+          "sources": [
+            {
+              "width": 1120,
+              "height": 1400,
+              "imageId": 51
+            }
+          ]
+        },
+        {
+          "key": "robo-pet",
+          "sources": [
+            {
+              "width": 2124,
+              "height": 2304,
+              "imageId": 52
+            }
+          ]
+        },
+        {
+          "key": "robo-morte",
+          "sources": [
+            {
+              "width": 934,
+              "height": 1684,
+              "imageId": 53
+            }
+          ]
+        },
+        {
+          "key": "robo-teste-normal",
+          "sources": [
+            {
+              "width": 934,
+              "height": 1685,
+              "imageId": 54
+            }
+          ]
+        },
+        {
+          "key": "robo-bola",
+          "sources": [
+            {
+              "width": 254,
+              "height": 381,
+              "imageId": 55
+            }
+          ]
+        },
+        {
+          "key": "robo-bola-morte",
+          "sources": [
+            {
+              "width": 508,
+              "height": 508,
+              "imageId": 56
+            }
+          ]
+        },
+        {
+          "key": "cityShopping",
+          "sources": [
+            {
+              "width": 768,
+              "height": 768,
+              "imageId": 57
+            }
+          ]
+        },
+        {
+          "key": "street",
+          "sources": [
+            {
+              "width": 768,
+              "height": 768,
+              "imageId": 58
+            }
+          ]
+        },
+        {
+          "key": "robo-olhao-morte",
+          "sources": [
+            {
+              "width": 1120,
+              "height": 1120,
+              "imageId": 59
+            }
+          ]
+        },
+        {
+          "key": "street2",
+          "sources": [
+            {
+              "width": 768,
+              "height": 768,
+              "imageId": 60
+            }
+          ]
+        },
+        {
+          "key": "garbage",
+          "sources": [
+            {
+              "width": 768,
+              "height": 768,
+              "imageId": 61
+            }
+          ]
+        },
+        {
+          "key": "publicTransportation",
+          "sources": [
+            {
+              "width": 768,
+              "height": 768,
+              "imageId": 62
+            }
+          ]
+        },
+        {
+          "key": "a5Street",
+          "sources": [
+            {
+              "width": 384,
+              "height": 768,
+              "imageId": 63
+            }
+          ]
+        },
+        {
+          "key": "slums",
+          "sources": [
+            {
+              "width": 768,
+              "height": 768,
+              "imageId": 64
+            }
+          ]
+        },
+        {
+          "key": "a4Outside",
+          "sources": [
+            {
+              "width": 768,
+              "height": 720,
+              "imageId": 65
+            }
+          ]
+        },
+        {
+          "key": "A5_SciFi_Outside_Rasak",
+          "sources": [
+            {
+              "width": 384,
+              "height": 768,
+              "imageId": 66
+            }
+          ]
+        },
+        {
+          "key": "a3Outside",
+          "sources": [
+            {
+              "width": 768,
+              "height": 384,
+              "imageId": 67
+            }
+          ]
+        },
+        {
+          "key": "torre",
+          "sources": [
+            {
+              "width": 384,
+              "height": 1008,
+              "imageId": 68
+            }
+          ]
+        },
+        {
+          "key": "buildingExtras",
+          "sources": [
+            {
+              "width": 768,
+              "height": 768,
+              "imageId": 69
+            }
+          ]
+        },
+        {
+          "key": "cabineTelefonica",
+          "sources": [
+            {
+              "width": 150,
+              "height": 200,
+              "imageId": 70
+            }
+          ]
+        },
+        {
+          "key": "apartment2",
+          "sources": [
+            {
+              "width": 768,
+              "height": 768,
+              "imageId": 71
+            }
+          ]
+        },
+        {
+          "key": "insideA1",
+          "sources": [
+            {
+              "width": 768,
+              "height": 576,
+              "imageId": 72
+            }
+          ]
+        },
+        {
+          "key": "club",
+          "sources": [
+            {
+              "width": 768,
+              "height": 768,
+              "imageId": 73
+            }
+          ]
+        },
+        {
+          "key": "insideA2",
+          "sources": [
+            {
+              "width": 768,
+              "height": 576,
+              "imageId": 74
+            }
+          ]
+        },
+        {
+          "key": "ModernIndustrial2",
+          "sources": [
+            {
+              "width": 768,
+              "height": 768,
+              "imageId": 75
+            }
+          ]
+        },
+        {
+          "key": "ModernInsideFactoryA1",
+          "sources": [
+            {
+              "width": 768,
+              "height": 576,
+              "imageId": 76
+            }
+          ]
+        },
+        {
+          "key": "factoryInsideA1",
+          "sources": [
+            {
+              "width": 768,
+              "height": 576,
+              "imageId": 77
+            }
+          ]
+        },
+        {
+          "key": "industrialGenerator",
+          "sources": [
+            {
+              "width": 296,
+              "height": 197,
+              "imageId": 78
+            }
+          ]
+        },
+        {
+          "key": "industrialElectrical",
+          "sources": [
+            {
+              "width": 260,
+              "height": 120,
+              "imageId": 79
+            }
+          ]
+        },
+        {
+          "key": "industrialA2",
+          "sources": [
+            {
+              "width": 768,
+              "height": 576,
+              "imageId": 80
+            }
+          ]
+        },
+        {
+          "key": "industrialA4",
+          "sources": [
+            {
+              "width": 768,
+              "height": 720,
+              "imageId": 81
+            }
+          ]
+        },
+        {
+          "key": "industrialA5",
+          "sources": [
+            {
+              "width": 384,
+              "height": 768,
+              "imageId": 82
+            }
+          ]
+        },
+        {
+          "key": "industrial1",
+          "sources": [
+            {
+              "width": 768,
+              "height": 768,
+              "imageId": 83
+            }
+          ]
+        },
+        {
+          "key": "industrial3",
+          "sources": [
+            {
+              "width": 768,
+              "height": 768,
+              "imageId": 84
+            }
+          ]
+        },
+        {
+          "key": "insideA4",
+          "sources": [
+            {
+              "width": 768,
+              "height": 720,
+              "imageId": 85
+            }
+          ]
+        },
+        {
+          "key": "insideA5",
+          "sources": [
+            {
+              "width": 384,
+              "height": 768,
+              "imageId": 86
+            }
+          ]
+        },
+        {
+          "key": "a2Outside",
+          "sources": [
+            {
+              "width": 768,
+              "height": 576,
+              "imageId": 87
+            }
+          ]
+        },
+        {
+          "key": "entertainingDistrict",
+          "sources": [
+            {
+              "width": 768,
+              "height": 768,
+              "imageId": 88
+            }
+          ]
+        },
+        {
+          "key": "insideA3",
+          "sources": [
+            {
+              "width": 768,
+              "height": 384,
+              "imageId": 89
+            }
+          ]
+        },
+        {
+          "key": "apartment1",
+          "sources": [
+            {
+              "width": 768,
+              "height": 768,
+              "imageId": 90
+            }
+          ]
+        },
+        {
+          "key": "securityDoor",
+          "sources": [
+            {
+              "width": 1728,
+              "height": 576,
+              "imageId": 91
+            }
+          ]
+        },
+        {
+          "key": "industrialGate",
+          "sources": [
+            {
+              "width": 1152,
+              "height": 768,
+              "imageId": 92
+            }
+          ]
+        },
+        {
+          "key": "industrialControls",
+          "sources": [
+            {
+              "width": 432,
+              "height": 384,
+              "imageId": 93
+            }
+          ]
+        },
+        {
+          "key": "industrialMachines",
+          "sources": [
+            {
+              "width": 576,
+              "height": 384,
+              "imageId": 94
+            }
+          ]
+        },
+        {
+          "key": "industrialSwitch",
+          "sources": [
+            {
+              "width": 576,
+              "height": 384,
+              "imageId": 95
+            }
+          ]
+        },
+        {
+          "key": "electricGenerator",
+          "sources": [
+            {
+              "width": 288,
+              "height": 384,
+              "imageId": 96
+            }
+          ]
+        },
+        {
+          "key": "generatorCharacter",
+          "sources": [
+            {
+              "width": 144,
+              "height": 192,
+              "imageId": 97
+            }
+          ]
+        },
+        {
+          "key": "satellite",
+          "sources": [
+            {
+              "width": 144,
+              "height": 192,
+              "imageId": 98
+            }
+          ]
+        },
+        {
+          "key": "ventilationSystem",
+          "sources": [
+            {
+              "width": 576,
+              "height": 384,
+              "imageId": 99
+            }
+          ]
+        },
+        {
+          "key": "shieldGenerator",
+          "sources": [
+            {
+              "width": 288,
+              "height": 384,
+              "imageId": 100
+            }
+          ]
+        },
+        {
+          "key": "tanqueCombustivel",
+          "sources": [
+            {
+              "width": 300,
+              "height": 150,
+              "imageId": 101
+            }
+          ]
+        },
+        {
+          "key": "chemTank",
+          "sources": [
+            {
+              "width": 576,
+              "height": 520,
+              "imageId": 102
+            }
+          ]
+        },
+        {
+          "key": "shieldDoorCharacter",
+          "sources": [
+            {
+              "width": 144,
+              "height": 192,
+              "imageId": 103
+            }
+          ]
+        },
+        {
+          "key": "neonTubes2",
+          "sources": [
+            {
+              "width": 144,
+              "height": 192,
+              "imageId": 104
+            }
+          ]
+        },
+        {
+          "key": "neonTubes1",
+          "sources": [
+            {
+              "width": 144,
+              "height": 384,
+              "imageId": 105
+            }
+          ]
+        },
+        {
+          "key": "modernFloorLights",
+          "sources": [
+            {
+              "width": 576,
+              "height": 384,
+              "imageId": 106
+            }
+          ]
+        },
+        {
+          "key": "industrialLights1",
+          "sources": [
+            {
+              "width": 576,
+              "height": 384,
+              "imageId": 107
+            }
+          ]
+        },
+        {
+          "key": "roboV",
+          "sources": [
+            {
+              "width": 288,
+              "height": 700,
+              "imageId": 108
+            }
+          ]
+        },
+        {
+          "key": "roboPB",
+          "sources": [
+            {
+              "width": 288,
+              "height": 700,
+              "imageId": 109
+            }
+          ]
+        },
+        {
+          "key": "botao-dash",
+          "sources": [
+            {
+              "width": 1254,
+              "height": 1254,
+              "imageId": 110
+            }
+          ]
+        },
+        {
+          "key": "shopDoor",
+          "sources": [
+            {
+              "width": 576,
+              "height": 768,
+              "imageId": 111
+            }
+          ]
+        },
+        {
+          "key": "botoes-ulti",
+          "sources": [
+            {
+              "width": 1200,
+              "height": 1200,
+              "imageId": 112
+            }
+          ]
+        },
+        {
+          "key": "supercomputer",
+          "sources": [
+            {
+              "width": 1728,
+              "height": 1152,
+              "imageId": 113
+            }
+          ]
+        },
+        {
+          "key": "wallBorders",
+          "sources": [
+            {
+              "width": 288,
+              "height": 336,
+              "imageId": 114
+            }
+          ]
+        },
+        {
+          "key": "wallBorder",
+          "sources": [
+            {
+              "width": 288,
+              "height": 336,
+              "imageId": 115
+            }
+          ]
+        },
+        {
+          "key": "VehiclesSpeederCivil5",
+          "sources": [
+            {
+              "width": 1728,
+              "height": 1152,
+              "imageId": 116
+            }
+          ]
+        },
+        {
+          "key": "Speeder_civil2",
+          "sources": [
+            {
+              "width": 1728,
+              "height": 1152,
+              "imageId": 117
+            }
+          ]
+        },
+        {
+          "key": "Transporter_Ambulance",
+          "sources": [
+            {
+              "width": 2880,
+              "height": 1536,
+              "imageId": 118
+            }
+          ]
+        },
+        {
+          "key": "Transporter_Private",
+          "sources": [
+            {
+              "width": 2880,
+              "height": 1536,
+              "imageId": 119
+            }
+          ]
+        },
+        {
+          "key": "Transporter_PoliceSwat",
+          "sources": [
+            {
+              "width": 2880,
+              "height": 1536,
+              "imageId": 120
+            }
+          ]
+        },
+        {
+          "key": "feixe-laranja-olhao",
+          "sources": [
+            {
+              "width": 112,
+              "height": 24,
+              "imageId": 121
+            }
+          ]
+        },
+        {
+          "key": "feixe-laranja-olhao-lateral",
+          "sources": [
+            {
+              "width": 112,
+              "height": 10,
+              "imageId": 122
+            }
+          ]
+        },
+        {
+          "key": "luz-poste-radial",
+          "sources": [
+            {
+              "width": 256,
+              "height": 256,
+              "imageId": 123
+            }
+          ]
+        },
+        {
+          "key": "luz-poste-feixe",
+          "sources": [
+            {
+              "width": 256,
+              "height": 384,
+              "imageId": 124
+            }
+          ]
+        },
+        {
+          "key": "botoes-ulti-quadros",
+          "sources": [
+            {
+              "width": 1200,
+              "height": 1200,
+              "imageId": 112
+            }
+          ]
+        },
+        {
+          "key": "inventory-scrap-icon",
+          "sources": [
+            {
+              "width": 24,
+              "height": 24,
+              "imageId": 125
+            }
+          ]
+        },
+        {
+          "key": "pickup-filtered:inventory-gasolina-icon:__BASE:73",
+          "sources": [
+            {
+              "width": 73,
+              "height": 73,
+              "imageId": 126
+            }
+          ]
+        },
+        {
+          "key": "pickup-filtered:inventory-bateria-icon:__BASE:56",
+          "sources": [
+            {
+              "width": 56,
+              "height": 56,
+              "imageId": 127
+            }
+          ]
+        },
+        {
+          "key": "chemTank-tileset-corrigido",
+          "sources": [
+            {
+              "width": 576,
+              "height": 480,
+              "imageId": 128
+            }
+          ]
+        },
+        {
+          "key": "roboPB-tileset-corrigido",
+          "sources": [
+            {
+              "width": 288,
+              "height": 672,
+              "imageId": 129
+            }
+          ]
+        },
+        {
+          "key": "roboV-tileset-corrigido",
+          "sources": [
+            {
+              "width": 288,
+              "height": 672,
+              "imageId": 130
+            }
+          ]
+        },
+        {
+          "key": "industrialGenerator-tileset-corrigido",
+          "sources": [
+            {
+              "width": 288,
+              "height": 192,
+              "imageId": 131
+            }
+          ]
+        },
+        {
+          "key": "industrialElectrical-tileset-corrigido",
+          "sources": [
+            {
+              "width": 240,
+              "height": 96,
+              "imageId": 132
+            }
+          ]
+        },
+        {
+          "key": "level1-parte2-escuridao",
+          "sources": [
+            {
+              "width": 400,
+              "height": 866,
+              "imageId": 133
+            }
+          ]
+        },
+        {
+          "key": "301bdf1f-42f7-492b-ab4f-8fd225a9225f",
+          "sources": [
+            {
+              "width": 26,
+              "height": 17,
+              "imageId": 134
+            }
+          ]
+        },
+        {
+          "key": "629a49b5-ee51-4421-bdaa-31ce0c2d57f6",
+          "sources": [
+            {
+              "width": 51,
+              "height": 15,
+              "imageId": 135
+            }
+          ]
+        },
+        {
+          "key": "20bf5a44-2685-41d8-9a55-d38dbdcf54cf",
+          "sources": [
+            {
+              "width": 51,
+              "height": 15,
+              "imageId": 136
+            }
+          ]
+        },
+        {
+          "key": "931d27dd-f2ae-4cc6-a282-63982adcc027",
+          "sources": [
+            {
+              "width": 29,
+              "height": 15,
+              "imageId": 137
+            }
+          ]
+        },
+        {
+          "key": "4691fc78-2b37-4c89-97fe-f8f7e9146f19",
+          "sources": [
+            {
+              "width": 54,
+              "height": 81,
+              "imageId": 138
+            }
+          ]
+        },
+        {
+          "key": "c50197a8-2b32-416f-89aa-c41893353416",
+          "sources": [
+            {
+              "width": 1,
+              "height": 39,
+              "imageId": 139
+            }
+          ]
+        },
+        {
+          "key": "pickup-filtered:inventory-card-icon:__BASE:56",
+          "sources": [
+            {
+              "width": 56,
+              "height": 56,
+              "imageId": 140
+            }
+          ]
+        },
+        {
+          "key": "inventory-ui-icon:bateria:128",
+          "sources": [
+            {
+              "width": 128,
+              "height": 128,
+              "imageId": 141
+            }
+          ]
+        },
+        {
+          "key": "inventory-ui-icon:gasolina:128",
+          "sources": [
+            {
+              "width": 128,
+              "height": 128,
+              "imageId": 142
+            }
+          ]
+        },
+        {
+          "key": "4d699b37-23ce-4236-9ca8-4fdcd3eac9c9",
+          "sources": [
+            {
+              "width": 54,
+              "height": 81,
+              "imageId": 143
+            }
+          ]
+        },
+        {
+          "key": "b625beb0-654e-4c9c-9a01-e0d8e03961b7",
+          "sources": [
+            {
+              "width": 203,
+              "height": 25,
+              "imageId": 144
+            }
+          ]
+        },
+        {
+          "key": "dfce5c2a-55ff-41a1-8f63-df2a668fa731",
+          "sources": [
+            {
+              "width": 203,
+              "height": 25,
+              "imageId": 145
+            }
+          ]
+        },
+        {
+          "key": "b5ba7250-7939-4a70-8857-c54397a72e76",
+          "sources": [
+            {
+              "width": 227,
+              "height": 25,
+              "imageId": 146
+            }
+          ]
+        },
+        {
+          "key": "6b22cd7f-3b3d-4c6a-ad0d-3e574086bf9c",
+          "sources": [
+            {
+              "width": 17,
+              "height": 34,
+              "imageId": 147
+            }
+          ]
+        },
+        {
+          "key": "8c45e0c2-fd10-436a-b5e3-d2f4c7014ff3",
+          "sources": [
+            {
+              "width": 76,
+              "height": 17,
+              "imageId": 148
+            }
+          ]
+        },
+        {
+          "key": "75bfbb3e-e917-4a42-af01-28603ee9f583",
+          "sources": [
+            {
+              "width": 139,
+              "height": 13,
+              "imageId": 149
+            }
+          ]
+        },
+        {
+          "key": "feb00f89-004c-46bc-984c-198d8bbb3be4",
+          "sources": [
+            {
+              "width": 15,
+              "height": 30,
+              "imageId": 150
+            }
+          ]
+        },
+        {
+          "key": "560aa49b-4e92-45fd-830f-299a7538b854",
+          "sources": [
+            {
+              "width": 203,
+              "height": 29,
+              "imageId": 151
+            }
+          ]
+        },
+        {
+          "key": "4456ae5d-c1db-45a3-b63a-3b5950700221",
+          "sources": [
+            {
+              "width": 167,
+              "height": 15,
+              "imageId": 152
+            }
+          ]
+        },
+        {
+          "key": "d8e4011b-7dc6-4f68-a95f-b4766ffea72c",
+          "sources": [
+            {
+              "width": 103,
+              "height": 13,
+              "imageId": 153
+            }
+          ]
+        },
+        {
+          "key": "eae738fc-684e-42de-b946-2aec8f7e1500",
+          "sources": [
+            {
+              "width": 85,
+              "height": 17,
+              "imageId": 154
+            }
+          ]
+        },
+        {
+          "key": "988de458-f212-407d-bf42-106f022bf245",
+          "sources": [
+            {
+              "width": 106,
+              "height": 13,
+              "imageId": 155
+            }
+          ]
+        },
+        {
+          "key": "inventory-ui-icon:card:128",
+          "sources": [
+            {
+              "width": 128,
+              "height": 128,
+              "imageId": 156
+            }
+          ]
+        },
+        {
+          "key": "e6989aea-1a58-43b4-b6c6-0b64996d157b",
+          "sources": [
+            {
+              "width": 67,
+              "height": 13,
+              "imageId": 157
+            }
+          ]
+        },
+        {
+          "key": "4ced833d-26a3-46b7-a582-2237f05c175b",
+          "sources": [
+            {
+              "width": 120,
+              "height": 13,
+              "imageId": 158
+            }
+          ]
+        },
+        {
+          "key": "ad3fedd4-3274-46ce-91e0-7d22ba7288fc",
+          "sources": [
+            {
+              "width": 167,
+              "height": 15,
+              "imageId": 159
+            }
+          ]
+        },
+        {
+          "key": "f9522a66-4705-4ea9-ae32-cf2f71c07f89",
+          "sources": [
+            {
+              "width": 154,
+              "height": 19,
+              "imageId": 160
+            }
+          ]
+        },
+        {
+          "key": "bf100aed-42b0-40fd-af22-7c1670a0615b",
+          "sources": [
+            {
+              "width": 67,
+              "height": 13,
+              "imageId": 161
+            }
+          ]
+        },
+        {
+          "key": "b6c7a370-7d55-4eb1-af92-b68ec9df8826",
+          "sources": [
+            {
+              "width": 73,
+              "height": 15,
+              "imageId": 162
+            }
+          ]
+        },
+        {
+          "key": "618f2b26-1114-44c9-a2ca-8dbd2f6d70ed",
+          "sources": [
+            {
+              "width": 47,
+              "height": 13,
+              "imageId": 163
+            }
+          ]
+        },
+        {
+          "key": "71a672f5-4d0e-4b07-9fd6-6a9317c3b12f",
+          "sources": [
+            {
+              "width": 424,
+              "height": 13,
+              "imageId": 164
+            }
+          ]
+        },
+        {
+          "key": "nullborns-minimap-2",
+          "sources": [
+            {
+              "width": 172,
+              "height": 172,
+              "imageId": 165
+            }
+          ]
+        },
+        {
+          "key": "8488089e-996c-4a82-bdda-0aa3ac9998c8",
+          "sources": [
+            {
+              "width": 38,
+              "height": 10,
+              "imageId": 166
+            }
+          ]
+        },
+        {
+          "key": "novo-boss-torre-summon-piso-A5_SciFi_Inside_Rasak-2532-0.4895833333333333-0.5-15.6875",
+          "sources": [
+            {
+              "width": 768,
+              "height": 1032,
+              "imageId": 167
+            }
+          ]
+        },
+        {
+          "key": "novo-boss-torre-idle-piso-A5_SciFi_Inside_Rasak-2532-0.4895833333333333-0.5-15.6875",
+          "sources": [
+            {
+              "width": 768,
+              "height": 1032,
+              "imageId": 168
+            }
+          ]
+        },
+        {
+          "key": "novo-boss-torre-attacked-piso-A5_SciFi_Inside_Rasak-2532-0.4895833333333333-0.5-15.6875",
+          "sources": [
+            {
+              "width": 768,
+              "height": 258,
+              "imageId": 169
+            }
+          ]
+        },
+        {
+          "key": "novo-boss-torre-death-piso-A5_SciFi_Inside_Rasak-2532-0.4895833333333333-0.5-15.6875",
+          "sources": [
+            {
+              "width": 192,
+              "height": 258,
+              "imageId": 170
+            }
+          ]
+        },
+        {
+          "key": "23734b35-be79-4ea5-9902-9d9f612fd696",
+          "sources": [
+            {
+              "width": 70,
+              "height": 16,
+              "imageId": 171
+            }
+          ]
+        },
+        {
+          "key": "ee24f259-a35d-4234-b87d-2d9871904b92",
+          "sources": [
+            {
+              "width": 129,
+              "height": 16,
+              "imageId": 172
+            }
+          ]
+        },
+        {
+          "key": "2140667f-2030-4341-bab3-279958fb2f21",
+          "sources": [
+            {
+              "width": 137,
+              "height": 25,
+              "imageId": 173
+            }
+          ]
+        },
+        {
+          "key": "721fbbc9-66e1-4295-9ff3-4b8635a06b34",
+          "sources": [
+            {
+              "width": 85,
+              "height": 21,
+              "imageId": 174
+            }
+          ]
+        }
+      ],
+      "device": {
+        "userAgent": "Mozilla/5.0 (Linux; Android 12; Mobile) AppleWebKit/537.36 Chrome/120.0.0.0 Mobile Safari/537.36",
+        "dpr": 1,
+        "renderer": "WebKit WebGL",
+        "maxTextureSize": 8192
+      },
+      "heap": {
+        "used": 131000000,
+        "total": 177000000
+      }
+    }
+  ],
+  "errors": [],
+  "assetErrors": [],
+  "consoleErrors": []
+}

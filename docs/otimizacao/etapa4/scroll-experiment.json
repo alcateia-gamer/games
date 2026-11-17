@@ -1,0 +1,1337 @@
+{
+  "reports": [
+    {
+      "canvas": {
+        "width": 800,
+        "height": 450
+      },
+      "mask": {
+        "width": 400,
+        "height": 225
+      },
+      "heap": 199000000,
+      "adapter": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+      "gpuTimerAvailable": false,
+      "extraCanvasBytes": 360000,
+      "batches": [
+        {
+          "optimized": false,
+          "frames": 40,
+          "mean": 58.4125,
+          "median": 55.89999999990687,
+          "p95": 100.80000000004657,
+          "p99": 128.10000000009313,
+          "max": 128.10000000009313,
+          "overBudget": 37,
+          "metrics": {
+            "scenes.update": {
+              "calls": 40,
+              "mean": 0.022499999997671695,
+              "max": 0.10000000009313226,
+              "samples": 40,
+              "median": 0,
+              "p95": 0.10000000009313226,
+              "p99": 0.10000000009313226,
+              "overBudget": 0
+            },
+            "Level1Parte2.lighting.logic.zones": {
+              "calls": 40,
+              "mean": 0.23499999999767168,
+              "max": 8,
+              "samples": 40,
+              "median": 0,
+              "p95": 0.5,
+              "p99": 8,
+              "overBudget": 0
+            },
+            "Level1Parte2.lighting.logic.factory": {
+              "calls": 40,
+              "mean": 0.4825000000244472,
+              "max": 7.100000000093132,
+              "samples": 40,
+              "median": 0.10000000009313226,
+              "p95": 2.4000000001396984,
+              "p99": 7.100000000093132,
+              "overBudget": 0
+            },
+            "Level1Parte2.lighting.logic.emergency": {
+              "calls": 40,
+              "mean": 0.5250000000058208,
+              "max": 9.300000000046566,
+              "samples": 40,
+              "median": 0,
+              "p95": 2.199999999953434,
+              "p99": 9.300000000046566,
+              "overBudget": 0
+            },
+            "Level1Parte2.lighting.logic.walls": {
+              "calls": 40,
+              "mean": 0.040000000002328305,
+              "max": 0.7000000001862645,
+              "samples": 40,
+              "median": 0,
+              "p95": 0.10000000009313226,
+              "p99": 0.7000000001862645,
+              "overBudget": 0
+            },
+            "Level1Parte2.lighting.logic.bossEnergy": {
+              "calls": 40,
+              "mean": 0.0025000000023283064,
+              "max": 0.10000000009313226,
+              "samples": 40,
+              "median": 0,
+              "p95": 0,
+              "p99": 0.10000000009313226,
+              "overBudget": 0
+            },
+            "gl.texImage2D.cpu": {
+              "calls": 40,
+              "mean": 36.09000000000233,
+              "max": 94.89999999990687,
+              "samples": 40,
+              "median": 30.9000000001397,
+              "p95": 66.5,
+              "p99": 94.89999999990687,
+              "overBudget": 17
+            },
+            "Level1Parte2.lighting.refreshCPU": {
+              "calls": 40,
+              "mean": 36.262499999994176,
+              "max": 95,
+              "samples": 40,
+              "median": 31.300000000046566,
+              "p95": 66.5,
+              "p99": 95,
+              "overBudget": 17
+            },
+            "renderer.renderListeners": {
+              "calls": 40,
+              "mean": 40.27000000000699,
+              "max": 118.30000000004657,
+              "samples": 40,
+              "median": 34.9000000001397,
+              "p95": 67.10000000009313,
+              "p99": 118.30000000004657,
+              "overBudget": 23
+            },
+            "renderer.renderListeners.excludingLightingRefresh": {
+              "calls": 40,
+              "mean": 4.007500000012806,
+              "max": 23.300000000046566,
+              "samples": 40,
+              "median": 2.7000000001862645,
+              "p95": 11.700000000186265,
+              "p99": 23.300000000046566,
+              "overBudget": 0
+            },
+            "scenes.render": {
+              "calls": 40,
+              "mean": 58.07249999998603,
+              "max": 128.10000000009313,
+              "samples": 40,
+              "median": 55.39999999990687,
+              "p95": 100.80000000004657,
+              "p99": 128.10000000009313,
+              "overBudget": 37
+            }
+          },
+          "counters": {
+            "lightingRefreshes": 40,
+            "lightingSubmittedPixels": 3600000
+          },
+          "scroll": {
+            "compositions": 40,
+            "stable": 40,
+            "fractional": 0,
+            "used": 0
+          }
+        },
+        {
+          "optimized": true,
+          "frames": 40,
+          "mean": 23.179999999998834,
+          "median": 20.899999999906868,
+          "p95": 45.699999999953434,
+          "p99": 50.60000000009313,
+          "max": 50.60000000009313,
+          "overBudget": 6,
+          "metrics": {
+            "scenes.update": {
+              "calls": 40,
+              "mean": 0.03250000000116415,
+              "max": 0.5,
+              "samples": 40,
+              "median": 0,
+              "p95": 0.19999999995343387,
+              "p99": 0.5,
+              "overBudget": 0
+            },
+            "Level1Parte2.lighting.logic.zones": {
+              "calls": 40,
+              "mean": 0.06749999999883585,
+              "max": 2.3999999999068677,
+              "samples": 40,
+              "median": 0,
+              "p95": 0.10000000009313226,
+              "p99": 2.3999999999068677,
+              "overBudget": 0
+            },
+            "Level1Parte2.lighting.logic.factory": {
+              "calls": 40,
+              "mean": 0.325,
+              "max": 2.300000000046566,
+              "samples": 40,
+              "median": 0,
+              "p95": 2.199999999953434,
+              "p99": 2.300000000046566,
+              "overBudget": 0
+            },
+            "Level1Parte2.lighting.logic.emergency": {
+              "calls": 40,
+              "mean": 0.04750000001513399,
+              "max": 0.7000000001862645,
+              "samples": 40,
+              "median": 0,
+              "p95": 0.10000000009313226,
+              "p99": 0.7000000001862645,
+              "overBudget": 0
+            },
+            "Level1Parte2.lighting.logic.walls": {
+              "calls": 40,
+              "mean": 0.0375,
+              "max": 0.8999999999068677,
+              "samples": 40,
+              "median": 0,
+              "p95": 0,
+              "p99": 0.8999999999068677,
+              "overBudget": 0
+            },
+            "Level1Parte2.lighting.logic.bossEnergy": {
+              "calls": 40,
+              "mean": 0.0025000000023283064,
+              "max": 0.10000000009313226,
+              "samples": 40,
+              "median": 0,
+              "p95": 0,
+              "p99": 0.10000000009313226,
+              "overBudget": 0
+            },
+            "gl.texImage2D.cpu": {
+              "calls": 40,
+              "mean": 3.65250000001397,
+              "max": 12.299999999813735,
+              "samples": 40,
+              "median": 2.5,
+              "p95": 10.899999999906868,
+              "p99": 12.299999999813735,
+              "overBudget": 0
+            },
+            "Level1Parte2.lighting.refreshCPU": {
+              "calls": 40,
+              "mean": 3.9200000000186264,
+              "max": 14.599999999860302,
+              "samples": 40,
+              "median": 2.6000000000931323,
+              "p95": 12.299999999813735,
+              "p99": 14.599999999860302,
+              "overBudget": 0
+            },
+            "renderer.renderListeners": {
+              "calls": 40,
+              "mean": 7.980000000022119,
+              "max": 23.299999999813735,
+              "samples": 40,
+              "median": 7.199999999953434,
+              "p95": 17.699999999953434,
+              "p99": 23.299999999813735,
+              "overBudget": 0
+            },
+            "renderer.renderListeners.excludingLightingRefresh": {
+              "calls": 40,
+              "mean": 4.060000000003493,
+              "max": 11,
+              "samples": 40,
+              "median": 3.5999999998603016,
+              "p95": 8.199999999953434,
+              "p99": 11,
+              "overBudget": 0
+            },
+            "scenes.render": {
+              "calls": 40,
+              "mean": 22.809999999991852,
+              "max": 49.800000000046566,
+              "samples": 40,
+              "median": 20.300000000046566,
+              "p95": 45.60000000009313,
+              "p99": 49.800000000046566,
+              "overBudget": 6
+            }
+          },
+          "counters": {
+            "lightingRefreshes": 40,
+            "lightingSubmittedPixels": 3600000
+          },
+          "scroll": {
+            "compositions": 40,
+            "stable": 40,
+            "fractional": 0,
+            "used": 40
+          }
+        },
+        {
+          "optimized": false,
+          "frames": 40,
+          "mean": 59.75499999999884,
+          "median": 56.300000000046566,
+          "p95": 92.70000000018626,
+          "p99": 146.5,
+          "max": 146.5,
+          "overBudget": 40,
+          "metrics": {
+            "scenes.update": {
+              "calls": 40,
+              "mean": 0.017499999993015082,
+              "max": 0.10000000009313226,
+              "samples": 40,
+              "median": 0,
+              "p95": 0.10000000009313226,
+              "p99": 0.10000000009313226,
+              "overBudget": 0
+            },
+            "Level1Parte2.lighting.logic.zones": {
+              "calls": 40,
+              "mean": 0.11250000000582076,
+              "max": 2.4000000001396984,
+              "samples": 40,
+              "median": 0,
+              "p95": 0.10000000009313226,
+              "p99": 2.4000000001396984,
+              "overBudget": 0
+            },
+            "Level1Parte2.lighting.logic.factory": {
+              "calls": 40,
+              "mean": 0.23249999998370185,
+              "max": 1,
+              "samples": 40,
+              "median": 0.10000000009313226,
+              "p95": 0.8999999999068677,
+              "p99": 1,
+              "overBudget": 0
+            },
+            "Level1Parte2.lighting.logic.emergency": {
+              "calls": 40,
+              "mean": 0.08499999998603017,
+              "max": 1.8999999999068677,
+              "samples": 40,
+              "median": 0,
+              "p95": 0.10000000009313226,
+              "p99": 1.8999999999068677,
+              "overBudget": 0
+            },
+            "Level1Parte2.lighting.logic.walls": {
+              "calls": 40,
+              "mean": 0.004999999998835847,
+              "max": 0.19999999995343387,
+              "samples": 40,
+              "median": 0,
+              "p95": 0,
+              "p99": 0.19999999995343387,
+              "overBudget": 0
+            },
+            "Level1Parte2.lighting.logic.bossEnergy": {
+              "calls": 40,
+              "mean": 0.059999999997671694,
+              "max": 2.300000000046566,
+              "samples": 40,
+              "median": 0,
+              "p95": 0,
+              "p99": 2.300000000046566,
+              "overBudget": 0
+            },
+            "gl.texImage2D.cpu": {
+              "calls": 40,
+              "mean": 39.409999999991854,
+              "max": 85.39999999990687,
+              "samples": 40,
+              "median": 34.199999999953434,
+              "p95": 68.80000000004657,
+              "p99": 85.39999999990687,
+              "overBudget": 22
+            },
+            "Level1Parte2.lighting.refreshCPU": {
+              "calls": 40,
+              "mean": 39.70999999999767,
+              "max": 85.5,
+              "samples": 40,
+              "median": 35.10000000009313,
+              "p95": 68.80000000004657,
+              "p99": 85.5,
+              "overBudget": 22
+            },
+            "renderer.renderListeners": {
+              "calls": 40,
+              "mean": 43.0324999999837,
+              "max": 94,
+              "samples": 40,
+              "median": 37.60000000009313,
+              "p95": 72,
+              "p99": 94,
+              "overBudget": 29
+            },
+            "renderer.renderListeners.excludingLightingRefresh": {
+              "calls": 40,
+              "mean": 3.32249999998603,
+              "max": 9.399999999906868,
+              "samples": 40,
+              "median": 2.8999999999068677,
+              "p95": 7.5,
+              "p99": 9.399999999906868,
+              "overBudget": 0
+            },
+            "scenes.render": {
+              "calls": 40,
+              "mean": 59.33249999998952,
+              "max": 141.69999999995343,
+              "samples": 40,
+              "median": 55.39999999990687,
+              "p95": 92.70000000018626,
+              "p99": 141.69999999995343,
+              "overBudget": 40
+            }
+          },
+          "counters": {
+            "lightingRefreshes": 40,
+            "lightingSubmittedPixels": 3600000
+          },
+          "scroll": {
+            "compositions": 40,
+            "stable": 40,
+            "fractional": 0,
+            "used": 0
+          }
+        },
+        {
+          "optimized": true,
+          "frames": 40,
+          "mean": 24.36000000000349,
+          "median": 22.800000000046566,
+          "p95": 37.9000000001397,
+          "p99": 41.300000000046566,
+          "max": 41.300000000046566,
+          "overBudget": 6,
+          "metrics": {
+            "scenes.update": {
+              "calls": 40,
+              "mean": 0,
+              "max": 0,
+              "samples": 40,
+              "median": 0,
+              "p95": 0,
+              "p99": 0,
+              "overBudget": 0
+            },
+            "Level1Parte2.lighting.logic.zones": {
+              "calls": 40,
+              "mean": 0.0974999999976717,
+              "max": 3.199999999953434,
+              "samples": 40,
+              "median": 0,
+              "p95": 0.10000000009313226,
+              "p99": 3.199999999953434,
+              "overBudget": 0
+            },
+            "Level1Parte2.lighting.logic.factory": {
+              "calls": 40,
+              "mean": 0.452499999984866,
+              "max": 6.399999999906868,
+              "samples": 40,
+              "median": 0.09999999986030161,
+              "p95": 3.7000000001862645,
+              "p99": 6.399999999906868,
+              "overBudget": 0
+            },
+            "Level1Parte2.lighting.logic.emergency": {
+              "calls": 40,
+              "mean": 0.13999999999068677,
+              "max": 2,
+              "samples": 40,
+              "median": 0,
+              "p95": 0.5,
+              "p99": 2,
+              "overBudget": 0
+            },
+            "Level1Parte2.lighting.logic.walls": {
+              "calls": 40,
+              "mean": 0.11999999999534339,
+              "max": 4.600000000093132,
+              "samples": 40,
+              "median": 0,
+              "p95": 0.09999999986030161,
+              "p99": 4.600000000093132,
+              "overBudget": 0
+            },
+            "Level1Parte2.lighting.logic.bossEnergy": {
+              "calls": 40,
+              "mean": 0,
+              "max": 0,
+              "samples": 40,
+              "median": 0,
+              "p95": 0,
+              "p99": 0,
+              "overBudget": 0
+            },
+            "gl.texImage2D.cpu": {
+              "calls": 40,
+              "mean": 3.0874999999883586,
+              "max": 9.199999999953434,
+              "samples": 40,
+              "median": 2.6000000000931323,
+              "p95": 8.200000000186265,
+              "p99": 9.199999999953434,
+              "overBudget": 0
+            },
+            "Level1Parte2.lighting.refreshCPU": {
+              "calls": 40,
+              "mean": 3.354999999993015,
+              "max": 12.100000000093132,
+              "samples": 40,
+              "median": 2.6000000000931323,
+              "p95": 8.200000000186265,
+              "p99": 12.100000000093132,
+              "overBudget": 0
+            },
+            "renderer.renderListeners": {
+              "calls": 40,
+              "mean": 7.009999999991851,
+              "max": 19.699999999953434,
+              "samples": 40,
+              "median": 5.399999999906868,
+              "p95": 13.100000000093132,
+              "p99": 19.699999999953434,
+              "overBudget": 0
+            },
+            "renderer.renderListeners.excludingLightingRefresh": {
+              "calls": 40,
+              "mean": 3.654999999998836,
+              "max": 10.199999999953434,
+              "samples": 40,
+              "median": 2.9000000001396984,
+              "p95": 7.599999999860302,
+              "p99": 10.199999999953434,
+              "overBudget": 0
+            },
+            "scenes.render": {
+              "calls": 40,
+              "mean": 24.102499999996507,
+              "max": 41.200000000186265,
+              "samples": 40,
+              "median": 22.800000000046566,
+              "p95": 37.9000000001397,
+              "p99": 41.200000000186265,
+              "overBudget": 6
+            }
+          },
+          "counters": {
+            "lightingRefreshes": 40,
+            "lightingSubmittedPixels": 3600000
+          },
+          "scroll": {
+            "compositions": 40,
+            "stable": 40,
+            "fractional": 0,
+            "used": 40
+          }
+        }
+      ],
+      "comparisons": [
+        {
+          "name": "integer-x",
+          "frames": 20,
+          "channels": 10,
+          "maxDifference": 1,
+          "stats": [
+            {
+              "compositions": 20,
+              "stable": 19,
+              "fractional": 0,
+              "used": 0
+            },
+            {
+              "compositions": 20,
+              "stable": 19,
+              "fractional": 0,
+              "used": 19
+            }
+          ]
+        },
+        {
+          "name": "fractional",
+          "frames": 20,
+          "channels": 0,
+          "maxDifference": 0,
+          "stats": [
+            {
+              "compositions": 20,
+              "stable": 19,
+              "fractional": 19,
+              "used": 0
+            },
+            {
+              "compositions": 20,
+              "stable": 19,
+              "fractional": 19,
+              "used": 0
+            }
+          ]
+        },
+        {
+          "name": "integer-y",
+          "frames": 20,
+          "channels": 84,
+          "maxDifference": 1,
+          "stats": [
+            {
+              "compositions": 20,
+              "stable": 19,
+              "fractional": 0,
+              "used": 0
+            },
+            {
+              "compositions": 20,
+              "stable": 19,
+              "fractional": 0,
+              "used": 19
+            }
+          ]
+        },
+        {
+          "name": "reverse",
+          "frames": 20,
+          "channels": 10,
+          "maxDifference": 1,
+          "stats": [
+            {
+              "compositions": 20,
+              "stable": 19,
+              "fractional": 0,
+              "used": 0
+            },
+            {
+              "compositions": 20,
+              "stable": 19,
+              "fractional": 0,
+              "used": 19
+            }
+          ]
+        },
+        {
+          "name": "shake-zoom",
+          "frames": 20,
+          "channels": 0,
+          "maxDifference": 0,
+          "stats": [
+            {
+              "compositions": 20,
+              "stable": 0,
+              "fractional": 0,
+              "used": 0
+            },
+            {
+              "compositions": 20,
+              "stable": 0,
+              "fractional": 0,
+              "used": 0
+            }
+          ]
+        },
+        {
+          "name": "dynamic",
+          "frames": 20,
+          "channels": 0,
+          "maxDifference": 0,
+          "stats": [
+            {
+              "compositions": 20,
+              "stable": 0,
+              "fractional": 0,
+              "used": 0
+            },
+            {
+              "compositions": 20,
+              "stable": 0,
+              "fractional": 0,
+              "used": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "canvas": {
+        "width": 800,
+        "height": 1731
+      },
+      "mask": {
+        "width": 400,
+        "height": 866
+      },
+      "heap": 199000000,
+      "adapter": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+      "gpuTimerAvailable": false,
+      "extraCanvasBytes": 1385600,
+      "batches": [
+        {
+          "optimized": false,
+          "frames": 40,
+          "mean": 167.73750000001164,
+          "median": 172.10000000009313,
+          "p95": 249.5,
+          "p99": 290.19999999995343,
+          "max": 290.19999999995343,
+          "overBudget": 40,
+          "metrics": {
+            "scenes.update": {
+              "calls": 40,
+              "mean": 0.01999999999534339,
+              "max": 0.5999999998603016,
+              "samples": 40,
+              "median": 0,
+              "p95": 0.09999999986030161,
+              "p99": 0.5999999998603016,
+              "overBudget": 0
+            },
+            "Level1Parte2.lighting.logic.zones": {
+              "calls": 40,
+              "mean": 0.057500000001164155,
+              "max": 0.8000000000465661,
+              "samples": 40,
+              "median": 0,
+              "p95": 0.4000000001396984,
+              "p99": 0.8000000000465661,
+              "overBudget": 0
+            },
+            "Level1Parte2.lighting.logic.factory": {
+              "calls": 40,
+              "mean": 0.6974999999802094,
+              "max": 5.2999999998137355,
+              "samples": 40,
+              "median": 0.10000000009313226,
+              "p95": 3.300000000046566,
+              "p99": 5.2999999998137355,
+              "overBudget": 0
+            },
+            "Level1Parte2.lighting.logic.emergency": {
+              "calls": 40,
+              "mean": 0.1375,
+              "max": 1.4000000001396984,
+              "samples": 40,
+              "median": 0,
+              "p95": 0.8999999999068677,
+              "p99": 1.4000000001396984,
+              "overBudget": 0
+            },
+            "Level1Parte2.lighting.logic.walls": {
+              "calls": 40,
+              "mean": 0.03499999999767169,
+              "max": 1,
+              "samples": 40,
+              "median": 0,
+              "p95": 0,
+              "p99": 1,
+              "overBudget": 0
+            },
+            "Level1Parte2.lighting.logic.bossEnergy": {
+              "calls": 40,
+              "mean": 0.0025000000023283064,
+              "max": 0.10000000009313226,
+              "samples": 40,
+              "median": 0,
+              "p95": 0,
+              "p99": 0.10000000009313226,
+              "overBudget": 0
+            },
+            "gl.texImage2D.cpu": {
+              "calls": 40,
+              "mean": 140.3900000000198,
+              "max": 245.9000000001397,
+              "samples": 40,
+              "median": 140.9000000001397,
+              "p95": 205.10000000009313,
+              "p99": 245.9000000001397,
+              "overBudget": 40
+            },
+            "Level1Parte2.lighting.refreshCPU": {
+              "calls": 40,
+              "mean": 140.64749999999768,
+              "max": 247.9000000001397,
+              "samples": 40,
+              "median": 140.9000000001397,
+              "p95": 205.20000000018626,
+              "p99": 247.9000000001397,
+              "overBudget": 40
+            },
+            "renderer.renderListeners": {
+              "calls": 40,
+              "mean": 144.48749999999418,
+              "max": 248.69999999995343,
+              "samples": 40,
+              "median": 145.19999999995343,
+              "p95": 207.9000000001397,
+              "p99": 248.69999999995343,
+              "overBudget": 40
+            },
+            "renderer.renderListeners.excludingLightingRefresh": {
+              "calls": 40,
+              "mean": 3.8399999999965075,
+              "max": 15.600000000093132,
+              "samples": 40,
+              "median": 3.3999999999068677,
+              "p95": 8.599999999860302,
+              "p99": 15.600000000093132,
+              "overBudget": 0
+            },
+            "scenes.render": {
+              "calls": 40,
+              "mean": 167.25500000000466,
+              "max": 290.19999999995343,
+              "samples": 40,
+              "median": 171.69999999995343,
+              "p95": 249.19999999995343,
+              "p99": 290.19999999995343,
+              "overBudget": 40
+            }
+          },
+          "counters": {
+            "lightingRefreshes": 40,
+            "lightingSubmittedPixels": 13856000
+          },
+          "scroll": {
+            "compositions": 40,
+            "stable": 39,
+            "fractional": 0,
+            "used": 0
+          }
+        },
+        {
+          "optimized": true,
+          "frames": 40,
+          "mean": 91.59000000000233,
+          "median": 65.39999999990687,
+          "p95": 105.29999999981374,
+          "p99": 1139.6000000000931,
+          "max": 1139.6000000000931,
+          "overBudget": 39,
+          "metrics": {
+            "scenes.update": {
+              "calls": 40,
+              "mean": 0.007499999995343387,
+              "max": 0.10000000009313226,
+              "samples": 40,
+              "median": 0,
+              "p95": 0.09999999986030161,
+              "p99": 0.10000000009313226,
+              "overBudget": 0
+            },
+            "Level1Parte2.lighting.logic.zones": {
+              "calls": 40,
+              "mean": 0.024999999994179234,
+              "max": 0.6999999999534339,
+              "samples": 40,
+              "median": 0,
+              "p95": 0.09999999986030161,
+              "p99": 0.6999999999534339,
+              "overBudget": 0
+            },
+            "Level1Parte2.lighting.logic.factory": {
+              "calls": 40,
+              "mean": 0.3025000000023283,
+              "max": 2,
+              "samples": 40,
+              "median": 0.09999999986030161,
+              "p95": 1,
+              "p99": 2,
+              "overBudget": 0
+            },
+            "Level1Parte2.lighting.logic.emergency": {
+              "calls": 40,
+              "mean": 0.16000000000349246,
+              "max": 3.300000000046566,
+              "samples": 40,
+              "median": 0,
+              "p95": 0.10000000009313226,
+              "p99": 3.300000000046566,
+              "overBudget": 0
+            },
+            "Level1Parte2.lighting.logic.walls": {
+              "calls": 40,
+              "mean": 0.01000000000349246,
+              "max": 0.10000000009313226,
+              "samples": 40,
+              "median": 0,
+              "p95": 0.10000000009313226,
+              "p99": 0.10000000009313226,
+              "overBudget": 0
+            },
+            "Level1Parte2.lighting.logic.bossEnergy": {
+              "calls": 40,
+              "mean": 0,
+              "max": 0,
+              "samples": 40,
+              "median": 0,
+              "p95": 0,
+              "p99": 0,
+              "overBudget": 0
+            },
+            "gl.texImage2D.cpu": {
+              "calls": 40,
+              "mean": 58.26999999999534,
+              "max": 1082.1999999999534,
+              "samples": 40,
+              "median": 31.600000000093132,
+              "p95": 46.60000000009313,
+              "p99": 1082.1999999999534,
+              "overBudget": 18
+            },
+            "Level1Parte2.lighting.refreshCPU": {
+              "calls": 40,
+              "mean": 58.50749999998952,
+              "max": 1086.1000000000931,
+              "samples": 40,
+              "median": 31.600000000093132,
+              "p95": 46.60000000009313,
+              "p99": 1086.1000000000931,
+              "overBudget": 18
+            },
+            "renderer.renderListeners": {
+              "calls": 40,
+              "mean": 66.2699999999837,
+              "max": 1101,
+              "samples": 40,
+              "median": 38.9000000001397,
+              "p95": 53,
+              "p99": 1101,
+              "overBudget": 28
+            },
+            "renderer.renderListeners.excludingLightingRefresh": {
+              "calls": 40,
+              "mean": 7.762499999994179,
+              "max": 15.099999999860302,
+              "samples": 40,
+              "median": 5.899999999906868,
+              "p95": 14,
+              "p99": 15.099999999860302,
+              "overBudget": 0
+            },
+            "scenes.render": {
+              "calls": 40,
+              "mean": 90.75,
+              "max": 1138.1999999999534,
+              "samples": 40,
+              "median": 64,
+              "p95": 105.29999999981374,
+              "p99": 1138.1999999999534,
+              "overBudget": 38
+            }
+          },
+          "counters": {
+            "lightingRefreshes": 40,
+            "lightingSubmittedPixels": 13856000
+          },
+          "scroll": {
+            "compositions": 40,
+            "stable": 39,
+            "fractional": 0,
+            "used": 39
+          }
+        },
+        {
+          "optimized": false,
+          "frames": 40,
+          "mean": 264.59999999999417,
+          "median": 179.39999999990687,
+          "p95": 303.30000000004657,
+          "p99": 1816.6999999999534,
+          "max": 1816.6999999999534,
+          "overBudget": 40,
+          "metrics": {
+            "scenes.update": {
+              "calls": 40,
+              "mean": 0.05250000000232831,
+              "max": 0.7000000001862645,
+              "samples": 40,
+              "median": 0,
+              "p95": 0.10000000009313226,
+              "p99": 0.7000000001862645,
+              "overBudget": 0
+            },
+            "Level1Parte2.lighting.logic.zones": {
+              "calls": 40,
+              "mean": 0.009999999991850927,
+              "max": 0.10000000009313226,
+              "samples": 40,
+              "median": 0,
+              "p95": 0.09999999986030161,
+              "p99": 0.10000000009313226,
+              "overBudget": 0
+            },
+            "Level1Parte2.lighting.logic.factory": {
+              "calls": 40,
+              "mean": 0.4700000000128057,
+              "max": 3.6000000000931323,
+              "samples": 40,
+              "median": 0.10000000009313226,
+              "p95": 2.1000000000931323,
+              "p99": 3.6000000000931323,
+              "overBudget": 0
+            },
+            "Level1Parte2.lighting.logic.emergency": {
+              "calls": 40,
+              "mean": 0.05,
+              "max": 0.6999999999534339,
+              "samples": 40,
+              "median": 0,
+              "p95": 0.10000000009313226,
+              "p99": 0.6999999999534339,
+              "overBudget": 0
+            },
+            "Level1Parte2.lighting.logic.walls": {
+              "calls": 40,
+              "mean": 0.005000000004656613,
+              "max": 0.10000000009313226,
+              "samples": 40,
+              "median": 0,
+              "p95": 0,
+              "p99": 0.10000000009313226,
+              "overBudget": 0
+            },
+            "Level1Parte2.lighting.logic.bossEnergy": {
+              "calls": 40,
+              "mean": 0,
+              "max": 0,
+              "samples": 40,
+              "median": 0,
+              "p95": 0,
+              "p99": 0,
+              "overBudget": 0
+            },
+            "gl.texImage2D.cpu": {
+              "calls": 40,
+              "mean": 192.19999999998254,
+              "max": 1761,
+              "samples": 40,
+              "median": 143.5,
+              "p95": 258.19999999995343,
+              "p99": 1761,
+              "overBudget": 40
+            },
+            "Level1Parte2.lighting.refreshCPU": {
+              "calls": 40,
+              "mean": 192.5049999999872,
+              "max": 1761,
+              "samples": 40,
+              "median": 145.5,
+              "p95": 258.89999999990687,
+              "p99": 1761,
+              "overBudget": 40
+            },
+            "renderer.renderListeners": {
+              "calls": 40,
+              "mean": 196.85499999998137,
+              "max": 1768.9000000001397,
+              "samples": 40,
+              "median": 148.39999999990687,
+              "p95": 268.5,
+              "p99": 1768.9000000001397,
+              "overBudget": 40
+            },
+            "renderer.renderListeners.excludingLightingRefresh": {
+              "calls": 40,
+              "mean": 4.349999999994179,
+              "max": 13.900000000139698,
+              "samples": 40,
+              "median": 3.6000000000931323,
+              "p95": 9.700000000186265,
+              "p99": 13.900000000139698,
+              "overBudget": 0
+            },
+            "scenes.render": {
+              "calls": 40,
+              "mean": 264.20999999999185,
+              "max": 1816.6999999999534,
+              "samples": 40,
+              "median": 179.19999999995343,
+              "p95": 303.20000000018626,
+              "p99": 1816.6999999999534,
+              "overBudget": 40
+            }
+          },
+          "counters": {
+            "lightingRefreshes": 40,
+            "lightingSubmittedPixels": 13856000
+          },
+          "scroll": {
+            "compositions": 40,
+            "stable": 39,
+            "fractional": 0,
+            "used": 0
+          }
+        },
+        {
+          "optimized": true,
+          "frames": 40,
+          "mean": 236.3649999999907,
+          "median": 54.5999999998603,
+          "p95": 165.10000000009313,
+          "p99": 3680.4000000001397,
+          "max": 3680.4000000001397,
+          "overBudget": 38,
+          "metrics": {
+            "scenes.update": {
+              "calls": 40,
+              "mean": 0.0075000000011641536,
+              "max": 0.10000000009313226,
+              "samples": 40,
+              "median": 0,
+              "p95": 0.09999999986030161,
+              "p99": 0.10000000009313226,
+              "overBudget": 0
+            },
+            "Level1Parte2.lighting.logic.zones": {
+              "calls": 40,
+              "mean": 0.14500000000698493,
+              "max": 3.6000000000931323,
+              "samples": 40,
+              "median": 0,
+              "p95": 0.8000000000465661,
+              "p99": 3.6000000000931323,
+              "overBudget": 0
+            },
+            "Level1Parte2.lighting.logic.factory": {
+              "calls": 40,
+              "mean": 0.2624999999825377,
+              "max": 2,
+              "samples": 40,
+              "median": 0.10000000009313226,
+              "p95": 0.8999999999068677,
+              "p99": 2,
+              "overBudget": 0
+            },
+            "Level1Parte2.lighting.logic.emergency": {
+              "calls": 40,
+              "mean": 0.09000000000814908,
+              "max": 0.9000000001396984,
+              "samples": 40,
+              "median": 0,
+              "p95": 0.6999999999534339,
+              "p99": 0.9000000001396984,
+              "overBudget": 0
+            },
+            "Level1Parte2.lighting.logic.walls": {
+              "calls": 40,
+              "mean": 0.07000000000116416,
+              "max": 2.7000000001862645,
+              "samples": 40,
+              "median": 0,
+              "p95": 0,
+              "p99": 2.7000000001862645,
+              "overBudget": 0
+            },
+            "Level1Parte2.lighting.logic.bossEnergy": {
+              "calls": 40,
+              "mean": 0.004999999998835847,
+              "max": 0.10000000009313226,
+              "samples": 40,
+              "median": 0,
+              "p95": 0,
+              "p99": 0.10000000009313226,
+              "overBudget": 0
+            },
+            "gl.texImage2D.cpu": {
+              "calls": 40,
+              "mean": 119.41750000001048,
+              "max": 3629.8000000000466,
+              "samples": 40,
+              "median": 23.9000000001397,
+              "p95": 57.699999999953434,
+              "p99": 3629.8000000000466,
+              "overBudget": 11
+            },
+            "Level1Parte2.lighting.refreshCPU": {
+              "calls": 40,
+              "mean": 119.73750000001164,
+              "max": 3630,
+              "samples": 40,
+              "median": 23.9000000001397,
+              "p95": 57.699999999953434,
+              "p99": 3630,
+              "overBudget": 11
+            },
+            "renderer.renderListeners": {
+              "calls": 40,
+              "mean": 124.64249999999883,
+              "max": 3639.8000000000466,
+              "samples": 40,
+              "median": 28.600000000093132,
+              "p95": 65.19999999995343,
+              "p99": 3639.8000000000466,
+              "overBudget": 15
+            },
+            "renderer.renderListeners.excludingLightingRefresh": {
+              "calls": 40,
+              "mean": 4.9049999999871945,
+              "max": 12.199999999953434,
+              "samples": 40,
+              "median": 4.199999999953434,
+              "p95": 10.899999999906868,
+              "p99": 12.199999999953434,
+              "overBudget": 0
+            },
+            "scenes.render": {
+              "calls": 40,
+              "mean": 236.16249999998837,
+              "max": 3680.3000000000466,
+              "samples": 40,
+              "median": 54.5,
+              "p95": 165.10000000009313,
+              "p99": 3680.3000000000466,
+              "overBudget": 38
+            }
+          },
+          "counters": {
+            "lightingRefreshes": 40,
+            "lightingSubmittedPixels": 13856000
+          },
+          "scroll": {
+            "compositions": 40,
+            "stable": 39,
+            "fractional": 0,
+            "used": 39
+          }
+        }
+      ],
+      "comparisons": [
+        {
+          "name": "integer-x",
+          "frames": 20,
+          "channels": 70,
+          "maxDifference": 1,
+          "stats": [
+            {
+              "compositions": 20,
+              "stable": 19,
+              "fractional": 0,
+              "used": 0
+            },
+            {
+              "compositions": 20,
+              "stable": 19,
+              "fractional": 0,
+              "used": 19
+            }
+          ]
+        },
+        {
+          "name": "fractional",
+          "frames": 20,
+          "channels": 0,
+          "maxDifference": 0,
+          "stats": [
+            {
+              "compositions": 20,
+              "stable": 19,
+              "fractional": 19,
+              "used": 0
+            },
+            {
+              "compositions": 20,
+              "stable": 19,
+              "fractional": 19,
+              "used": 0
+            }
+          ]
+        },
+        {
+          "name": "integer-y",
+          "frames": 20,
+          "channels": 144,
+          "maxDifference": 1,
+          "stats": [
+            {
+              "compositions": 20,
+              "stable": 18,
+              "fractional": 0,
+              "used": 0
+            },
+            {
+              "compositions": 20,
+              "stable": 18,
+              "fractional": 0,
+              "used": 18
+            }
+          ]
+        },
+        {
+          "name": "reverse",
+          "frames": 20,
+          "channels": 70,
+          "maxDifference": 1,
+          "stats": [
+            {
+              "compositions": 20,
+              "stable": 19,
+              "fractional": 0,
+              "used": 0
+            },
+            {
+              "compositions": 20,
+              "stable": 19,
+              "fractional": 0,
+              "used": 19
+            }
+          ]
+        },
+        {
+          "name": "shake-zoom",
+          "frames": 20,
+          "channels": 0,
+          "maxDifference": 0,
+          "stats": [
+            {
+              "compositions": 20,
+              "stable": 0,
+              "fractional": 0,
+              "used": 0
+            },
+            {
+              "compositions": 20,
+              "stable": 0,
+              "fractional": 0,
+              "used": 0
+            }
+          ]
+        },
+        {
+          "name": "dynamic",
+          "frames": 20,
+          "channels": 0,
+          "maxDifference": 0,
+          "stats": [
+            {
+              "compositions": 20,
+              "stable": 0,
+              "fractional": 0,
+              "used": 0
+            },
+            {
+              "compositions": 20,
+              "stable": 0,
+              "fractional": 0,
+              "used": 0
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": []
+}

@@ -1,0 +1,50 @@
+{
+  "result": {
+    "frames": 16,
+    "channels": 0,
+    "maxDifference": 0,
+    "batches": [
+      {
+        "enabled": false,
+        "stats": {
+          "hits": 0,
+          "builds": 0,
+          "fallbacks": 0,
+          "bytes": 0
+        }
+      },
+      {
+        "enabled": true,
+        "stats": {
+          "hits": 0,
+          "builds": 0,
+          "fallbacks": 32,
+          "bytes": 0,
+          "firstFallback": {
+            "individual": false,
+            "area": {
+              "area": true,
+              "x": -1807,
+              "y": -6326,
+              "largura": 1454,
+              "altura": 1112,
+              "rotacao": 0
+            },
+            "view": {
+              "x": -1502.2222222222222,
+              "y": -4989,
+              "width": 444.44444444444446,
+              "height": 250,
+              "right": -1057.7777777777778,
+              "bottom": -4739
+            },
+            "x": -1536,
+            "y": -5120
+          }
+        }
+      }
+    ],
+    "heap": 131000000
+  },
+  "errors": []
+}

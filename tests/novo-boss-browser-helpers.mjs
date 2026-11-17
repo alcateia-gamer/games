@@ -1,7 +1,7 @@
 /** Utilitários para os roteiros integrados do novo encontro no Phaser real. */
 import assert from "node:assert/strict";
 
-export async function abrirSessaoNovoBoss(config, opcoes = {}, opcoesContexto = {}) {
+export async function abrirSessaoNovoBoss(config, opcoes = {}, opcoesContexto = {}, { waitForBoss = true } = {}) {
   const { chromium } = process.env.PLAYWRIGHT_MODULE
     ? await import(process.env.PLAYWRIGHT_MODULE)
     : await import("playwright").catch(() => import("playwright-core"));
@@ -38,6 +38,31 @@ export async function abrirSessaoNovoBoss(config, opcoes = {}, opcoesContexto = 
       "const game = window.__game = new Game(jogoRapido);");
     assert.notEqual(body, source, "O teste deve expor a instância real do jogo.");
     await route.fulfill({ response, body: `${body}\nwindow.__novoBossBootReady = true;\n` });
+  });
+  if (process.env.LIGHTING_REASON_TRACE === "1") await page.route("**/js/effects/TerrorLighting.js*", async route => {
+    const response = await route.fetch(), source = await response.text();
+    // Instrumentação só na resposta do servidor de teste; mantém cada atribuição como expressão.
+    const body = source.replace(/invalidada = true/g, (match, offset) => {
+      if (source.slice(offset - 4, offset) === "let ") return match;
+      const line = source.slice(0, offset).split("\n").length;
+      return `(invalidada = true, globalThis.__lightReasons["line${line}"] = (globalThis.__lightReasons["line${line}"] || 0) + 1)`;
+    }).replace("// Compara valores em memória reutilizada", `
+      for (const key of ["a", "b", "c", "d", "e", "f"]) if (ultimoQuadro[key] !== m[key])
+        globalThis.__lightReasons["camera."+key] = (globalThis.__lightReasons["camera."+key] || 0) + 1;
+      // Compara valores em memória reutilizada`);
+    await route.fulfill({ response, body: "globalThis.__lightReasons = {};\n" + body });
+  });
+  if (process.env.LIGHTING_CANVAS_EXPERIMENT === "1") await page.route("**/js/effects/LightingTexture.js*", async route => {
+    const response = await route.fetch(), source = await response.text();
+    await route.fulfill({ response, body: source.replace("willReadFrequently: false",
+      "willReadFrequently: globalThis.__lightingCanvasCPU === true") });
+  });
+  if (process.env.LIGHTING_SPRITE_EXPERIMENT === "1") await page.route("**/js/effects/TerrorLighting.js*", async route => {
+    const response = await route.fetch(), source = await response.text();
+    const original = "!spriteIntersectsLightingCanvas(ator, camera.matrix, width, height)";
+    const body = source.replace(original, `(globalThis.__lightingSpriteCull && ${original})`);
+    assert.notEqual(body, source);
+    await route.fulfill({ response, body });
   });
 
   async function avancar(ms, passo = 20) {
@@ -84,13 +109,14 @@ export async function abrirSessaoNovoBoss(config, opcoes = {}, opcoesContexto = 
   }
 
   async function esperarFabrica(antiga = false) {
-    await page.waitForFunction(antiga => {
+    await page.waitForFunction(({ antiga, waitForBoss }) => {
       const scene = window.__game.scene.getScene("Level1Parte2");
-      return scene.scene.isActive() && scene.player?.active && scene.novoBoss &&
-        (scene.multiplayer ? !scene.novoBoss.sprite : Boolean(scene.novoBoss.sprite)) &&
+      return scene.scene.isActive() && scene.player?.active && (!waitForBoss || scene.novoBoss &&
+        (scene.multiplayer ? !scene.novoBoss.sprite : Boolean(scene.novoBoss.sprite))) &&
         !scene.cameras.main.fadeEffect.isRunning &&
-        (!antiga || scene.novoBoss !== window.__encontroAntesReinicioBrowser);
-    }, antiga, { timeout: 60000, polling: 100 });
+        (!antiga || scene.player !== window.__playerBeforeRestart &&
+          (!waitForBoss || scene.novoBoss !== window.__encontroAntesReinicioBrowser));
+    }, { antiga, waitForBoss }, { timeout: 60000, polling: 100 });
     assert.equal(await page.evaluate(() =>
       window.__game.scene.getScene("Level1Parte2").cameras.main.fadeEffect.alpha), 0,
     "A transição de entrada precisa terminar antes de pausar ou avaliar a imagem.");
@@ -102,6 +128,7 @@ export async function abrirSessaoNovoBoss(config, opcoes = {}, opcoesContexto = 
     await page.evaluate(({ config, opcoes, dados }) => {
       const scene = window.__game.scene.getScene("Level1Parte2");
       window.__encontroAntesReinicioBrowser = scene.novoBoss;
+      window.__playerBeforeRestart = scene.player;
       scene.scene.resume();
       scene.scene.restart({
         personagem: "kai-mercer", spawnX: -1093, spawnY: -5520,
@@ -123,6 +150,8 @@ export async function abrirSessaoNovoBoss(config, opcoes = {}, opcoesContexto = 
     });
     await page.waitForFunction(() => window.__novoBossBootReady === true);
     await page.keyboard.press("k");
+    // Diagnóstico ignora só a transmissão pelo controle público; o loader continua obrigatório.
+    if (process.env.BROWSER_SKIP_INTRO === "1") await page.locator(".cutscene-skip").click();
     await page.waitForFunction(() => window.__game?.scene.getScene("Level1")?.player?.active,
       null, { timeout: 60000, polling: 100 });
     await page.evaluate(({ config, opcoes }) => {

@@ -122,10 +122,12 @@ export class VisualSender {
   }
   capture(objects, full = false) {
     const current = new Map(), changed = [];
+    // Inclui também pais além de maxNodes, como a consulta original no array completo.
+    let membership;
     for (const o of objects.slice(0, COOP.maxNodes)) {
       const s = describeVisual(o);
       if (!s) continue;
-      const id = this.id(o), parent = o.parentContainer && objects.includes(o.parentContainer)
+      const id = this.id(o), parent = o.parentContainer && (membership ??= new Set(objects)).has(o.parentContainer)
         ? this.id(o.parentContainer) : null;
       const entry = { ...s, parent, owner: o.coopOwner || null };
       const before = this.previous.get(id);
