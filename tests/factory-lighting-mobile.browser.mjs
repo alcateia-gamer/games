@@ -8,7 +8,7 @@ const session = await abrirSessaoNovoBoss({ ...novoBossConfig,
   geradores: { ...novoBossConfig.geradores, ativo: false },
   fase2: { ...novoBossConfig.fase2, ativo: false },
 }, { spawnX: -1100, spawnY: -4800 }, { viewport: { width: 960, height: 540 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2,
-  userAgent: "Mozilla/5.0 (Linux; Android 12; Mobile) AppleWebKit/537.36 Chrome/120.0.0.0 Mobile Safari/537.36" }, { waitForBoss: false });
+  userAgent: "Mozilla/5.0 (Linux; Android 12; Mobile) AppleWebKit/537.36 Chrome/120.0.0.0 Mobile Safari/537.36" });
 const { page } = session;
 try {
   const result = await page.evaluate(async () => {
@@ -77,7 +77,6 @@ try {
   } finally { await page.keyboard.up("d"); }
   await session.pausar();
   await page.screenshot({ path: "/tmp/factory-lighting-mobile-landscape.png" });
-  await page.evaluate(async () => { if (document.fullscreenElement) await document.exitFullscreen(); });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.screenshot({ path: "/tmp/factory-lighting-mobile-portrait.png" });
   assert.deepEqual(session.errors, []);

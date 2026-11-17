@@ -63,19 +63,6 @@ function iniciarJogo(jogoRapido = false) {
   }
   void solicitarTelaCheiaMobile();
   const game = new Game(jogoRapido);
-  // Diagnóstico explícito; desligado não importa o módulo nem instala trabalho por quadro.
-  if (new URLSearchParams(window.location.search).get("perf") === "1") {
-    game.events.once("poststep", () => {
-      void import("../../debug/PerformanceProbe.js").then(({ installPerformanceProbe }) => {
-        if (!game.scene || game.pendingDestroy) return;
-        const probe = installPerformanceProbe(game);
-        window.nullbornsPerformance = probe;
-        game.events.once("destroy", () => {
-          if (window.nullbornsPerformance === probe) delete window.nullbornsPerformance;
-        });
-      }).catch(error => console.warn("Diagnóstico de desempenho indisponível:", error));
-    });
-  }
   game._viewportCleanup = registrarAtualizacaoDeViewport(game);
   botaoJogar.remove();
   window.removeEventListener("keydown", iniciarComAtalho);

@@ -21,7 +21,6 @@ import BossEnergyLightBuffer from "./BossEnergyLightBuffer.js";
 import BossAuraLightCache from "./BossAuraLightCache.js";
 import { ocultarBrilhoAtrasSprite as ocultarBrilhoAtrasPersonagem } from "./SpriteLightOcclusion.js";
 import { criarTexturaIluminacao } from "./LightingTexture.js";
-import { spriteIntersectsLightingCanvas } from "./SpriteLightingBounds.js";
 export { intensidadeLuzPartida, QUEDAS_LUZ_FABRICA } from "./FactoryLighting.js";
 
 const TEXTURA_ESCURIDAO_PARTE2 = "level1-parte2-escuridao";
@@ -419,8 +418,7 @@ function criarIluminacaoTerror(scene) {
         ...(scene.remotePlayers?.values?.() ?? [])]) {
         if (!ator ||
             ator.active === false || ator.visible === false || (ator.alpha ?? 1) <= 0 ||
-            !ator.frame?.source?.image || !Number.isFinite(ator.x) || !Number.isFinite(ator.y) ||
-            !spriteIntersectsLightingCanvas(ator, camera.matrix, width, height)) continue;
+            !ator.frame?.source?.image || !Number.isFinite(ator.x) || !Number.isFinite(ator.y)) continue;
         atoresSobreBrilho.add(ator);
         let anterior = brilhoAtoresAnteriores.get(ator);
         if (!anterior) { anterior = {}; brilhoAtoresAnteriores.set(ator, anterior); invalidada = true; }
