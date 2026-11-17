@@ -1,3 +1,4 @@
+import { createItemSpawnSeed } from '../inventory/RunItemSpawns.js';
 import { createHollowSession, updateHollowSession, validHollowSession } from './HollowSession.js';
 import { maximumHealth, modifiers } from '../systems/UpgradeSystem.js';
 /**
@@ -337,6 +338,7 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
     } else if (action.type === "start_game" && this.room.status !== "PLAYING" &&
       action.playerId === this.room.hostId && this.canStart()) {
       this.coopTransitionUntil = Date.now() + COOP.transitionGraceMs;
+      this.room.itemSpawnSeed = createItemSpawnSeed();
       this.room.status = "PLAYING";
       this.room.hollow = createHollowSession(this.room.players, Date.now());
       this.publishState();

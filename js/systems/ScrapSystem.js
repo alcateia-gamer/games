@@ -1,7 +1,7 @@
 import { recursosHUDOcultosNoBoss } from '../ui/HudCinematic.js';
 import { criarCanvasHUDNitido } from '../ui/HudCanvas.js';
-import { SCRAP_BALANCE, rollScrap, UPGRADE_NPCS } from './UpgradeBalance.js';
-import { economyFor, localPlayerId, playerAccount, purchase, applyUpgrades, accountFor } from './UpgradeSystem.js';
+import { SCRAP_BALANCE, rollScrap, scrapPartySize, UPGRADE_NPCS } from './UpgradeBalance.js';
+import { economyFor, localPlayerId, scrapAccount, purchase, applyUpgrades, walletFor } from './UpgradeSystem.js';
 
 // Recortes das 12 variações de sucatas.png, sem as margens transparentes.
 const SCRAP_FRAMES = [[112, 74, 32, 48], [367, 71, 34, 54], [623, 75, 34, 45], [110, 267, 36, 54], [368, 271, 32, 45], [621, 268, 37, 52], [106, 471, 43, 38], [371, 471, 25, 38], [619, 471, 41, 38], [104, 664, 48, 43], [354, 661, 59, 50], [627, 669, 26, 34]];
@@ -17,7 +17,7 @@ export function claimScrap(economy, id, playerId, character, mapKey, position) {
   if (!drop || drop.mapKey !== mapKey || !position || Math.hypot(position.x - drop.x, position.y - drop.y) > 62) return 0;
   // Retira antes de creditar: duas solicitações não podem receber o mesmo componente.
   delete economy.drops[id];
-  playerAccount(economy, playerId, character).scrap += drop.quantity;
+  scrapAccount(economy, playerId, character).scrap += drop.quantity;
   economy.revision++;
   return drop.quantity;
 }
@@ -58,10 +58,10 @@ export class ScrapSystem {
       this.refreshCounterIcon();
       scene.scale.on('resize', this.refreshCounterIcon);
     }
-    this.counter = scene.add.text(52, 130, `SUCATAS: ${accountFor(scene).scrap}`, {
+    this.counter = scene.add.text(52, 130, `${economyFor(scene).sharedScrap ? 'SUCATAS EQUIPE' : 'SUCATAS'}: ${walletFor(scene).scrap}`, {
       fontFamily: 'monospace', fontSize: '12px', color: '#55ffad', backgroundColor: '#020b08', padding: { x: 6, y: 3 },
     }).setScrollFactor(0).setDepth(221).setName('scrap-balance');
-    this.seen = new WeakSet(); this.lastRevision = -1; this.lastBalance = accountFor(scene).scrap;
+    this.seen = new WeakSet(); this.lastRevision = -1; this.lastBalance = walletFor(scene).scrap;
     this.update = this.update.bind(this); this.destroy = this.destroy.bind(this);
     scene.events.on('update', this.update); scene.events.once('shutdown', this.destroy);
     this.updateHUDVisibility();
@@ -87,7 +87,7 @@ export class ScrapSystem {
     const quota = this.mapKey === 'Level1' ? SCRAP_BALANCE.maxPerZone : 7;
     if ((e.zones[zone] || 0) >= quota || e.rewarded >= SCRAP_BALANCE.maxCampaign) return;
     e.zones[zone] = (e.zones[zone] || 0) + 1; e.rewarded++; e.revision++;
-    const quantity = rollScrap(enemy.tipoRobo);
+    const quantity = rollScrap(enemy.tipoRobo, Math.random, scrapPartySize(this.scene));
     if (quantity) {
       const id = `scrap:${++e.sequence}`;
       const ids = Object.keys(e.drops);
@@ -140,7 +140,7 @@ export class ScrapSystem {
     if (this.lastRevision === e.revision) return;
     this.lastRevision = e.revision;
     applyUpgrades(s);
-    this.counter?.setText(`SUCATAS: ${accountFor(s).scrap}`);
+    this.counter?.setText(`${e.sharedScrap ? 'SUCATAS EQUIPE' : 'SUCATAS'}: ${walletFor(s).scrap}`);
     for (const [id, image] of this.visuals) if (!e.drops[id] || e.drops[id].mapKey !== this.mapKey) {
       s.tweens.killTweensOf(image); image.destroy(); this.visuals.delete(id); this.pending.delete(id);
     }
@@ -154,9 +154,9 @@ export class ScrapSystem {
       s.tweens.add({ targets: image, alpha: .5, duration: 850, yoyo: true, repeat: -1 });
       this.visuals.set(drop.id, image);
     }
-    const balance = accountFor(s).scrap;
+    const balance = walletFor(s).scrap;
     if (balance > this.lastBalance && s.player?.active) {
-      const text = s.add.text(s.player.x, s.player.y - 44, `+${balance - this.lastBalance} SUCATAS`,
+      const text = s.add.text(s.player.x, s.player.y - 44, `+${balance - this.lastBalance} ${e.sharedScrap ? 'SUCATAS DA EQUIPE' : 'SUCATAS'}`,
         { fontFamily: 'monospace', fontSize: '12px', color: '#55ffad', stroke: '#020b08', strokeThickness: 3 }).setDepth(300).setOrigin(.5);
       text.coopLocalVisual = true;
       s.tweens.add({ targets: text, y: text.y - 24, alpha: 0, duration: 900, onComplete: () => text.destroy() });

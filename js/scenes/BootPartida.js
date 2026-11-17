@@ -1,3 +1,4 @@
+import { ITEM_SPAWN_SEED_KEY } from '../inventory/RunItemSpawns.js';
 import { ECONOMY_KEY } from '../systems/UpgradeSystem.js';
 import { CutsceneLoading } from "../ui/CutsceneLoading.js";
 import { reiniciarResgatesSolo } from "../player/SoloRunState.js";
@@ -13,6 +14,9 @@ export default class BootPartida extends Phaser.Scene {
     for (const key of Object.values(HACKING_KEYS)) this.registry.remove(key);
     if (data.multiplayer !== true) reiniciarResgatesSolo(this.registry);
     this.registry.remove(ECONOMY_KEY);
+    this.registry.remove(ITEM_SPAWN_SEED_KEY);
+    this.registry.remove("inventoriesByPlayer");
+    this.registry.remove("nullborns:generator-escrow");
     const manager = this.registry.get("multiplayer");
     if (manager?.room) delete manager.room.upgradeEconomy;
     this.registry.set("lojaArmasVisitada", false);

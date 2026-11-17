@@ -1,7 +1,9 @@
 import { upgradeDefinitions, CHARACTER_NAMES } from '../systems/UpgradeDefinitions.js';
-import { accountFor, modifiers, maximumHealth, cooldownWithModifiers } from '../systems/UpgradeSystem.js';
+import { accountFor, walletFor, economyFor, modifiers, maximumHealth, cooldownWithModifiers } from '../systems/UpgradeSystem.js';
 import { obterBalanceamento } from '../combat/CharacterBalance.js';
 import { canUseShop } from '../systems/ScrapSystem.js';
+
+import { SHOP_LINES } from '../narrative/NPCDialogues.js';
 
 const categories = { cyber: 'CIBERNÉTICAS', weapon: 'ARMAMENTO', special: 'HABILIDADES' };
 const percent = value => `${Math.round(value * 100)}%`;
@@ -15,7 +17,8 @@ export class UpgradeShopUI {
     this.refresh = () => { if (scene.upgradeMenuOpen) this.render(); };
     this.result = result => {
       if (!scene.upgradeMenuOpen) return;
-      this.message = result.reason; this.pending = false;
+      clearTimeout(this.purchaseTimer);
+      this.message = result.ok ? SHOP_LINES.purchase : result.reason === 'SUCATAS INSUFICIENTES' ? SHOP_LINES.insufficient : result.reason; this.pending = false;
       clearTimeout(this.timer);
       this.timer = setTimeout(() => { this.busy = false; this.refresh(); }, 350);
       this.refresh();
@@ -56,6 +59,7 @@ export class UpgradeShopUI {
         if (this.busy || this.pending) return;
         const d = this.definitions().find(d => d.id === this.selected), level = this.level(d.id);
         this.busy = this.pending = true; this.message = 'SINCRONIZANDO INSTALAÇÃO...'; this.render();
+        this.purchaseTimer = setTimeout(() => { if (this.pending) this.result({ reason: SHOP_LINES.unavailable }); }, 6000);
         const sent = this.scene.scrapSystem.requestPurchase(d.id, level);
         if (!sent && this.pending) this.result({ reason: 'INSTALAÇÃO INDISPONÍVEL. APROXIME-SE DO COMERCIANTE.' });
         return;
@@ -99,9 +103,9 @@ export class UpgradeShopUI {
     const q = selector => this.root.querySelector(selector), defs = this.definitions();
     const visible = defs.filter(d => (!this.category || d.category === this.category) && (!this.region || d.region === this.region));
     if (!visible.some(d => d.id === this.selected)) this.selected = visible[0]?.id;
-    const d = defs.find(d => d.id === this.selected), account = accountFor(this.scene);
+    const d = defs.find(d => d.id === this.selected), account = walletFor(this.scene);
     q('[data-character]').textContent = CHARACTER_NAMES[this.scene.personagemSelecionada];
-    q('[data-balance]').textContent = `SUCATAS DISPONÍVEIS: ${account.scrap}`;
+    q('[data-balance]').textContent = `${economyFor(this.scene).sharedScrap ? 'SUCATAS DA EQUIPE' : 'SUCATAS DISPONÍVEIS'}: ${account.scrap}`;
     q('[data-filter]').textContent = this.region || categories[this.category] || 'TODOS OS COMPONENTES';
     q('[data-list]').innerHTML = visible.map(d => {
       const level = this.level(d.id);
@@ -118,33 +122,47 @@ export class UpgradeShopUI {
     const install = q('[data-install]');
     install.disabled = max || insufficient || this.pending || this.busy;
     install.textContent = max ? '[ NÍVEL MÁXIMO ]' : insufficient ? '[ SUCATAS INSUFICIENTES ]' : this.pending ? '[ SINCRONIZANDO... ]' : '[ INSTALAR MELHORIA ]';
-    q('.upgrade-message').textContent = this.message || 'SISTEMA NEURAL SINCRONIZADO';
-    q('.upgrade-message').classList.toggle('success', this.message === 'MELHORIA INSTALADA COM SUCESSO');
+    q('.upgrade-message').textContent = this.message || (defs.every(d => this.level(d.id) >= d.max) ? SHOP_LINES.maximum : insufficient ? SHOP_LINES.insufficient : 'SISTEMA NEURAL SINCRONIZADO');
+    q('.upgrade-message').classList.toggle('success', this.message === SHOP_LINES.purchase);
   }
   open() {
     const s = this.scene;
-    if (s.upgradeMenuOpen || !canUseShop(s, s.sys.settings.key) || s.movimentoBloqueado || s.atacando || s.estadoDash?.ativo || s.generatorMenuOpen || s.devItemMenuOpen) return false;
+    if (s.upgradeDialogueOpen || s.upgradeMenuOpen || !canUseShop(s, s.sys.settings.key) || s.movimentoBloqueado || s.atacando || s.estadoDash?.ativo || s.generatorMenuOpen || s.devItemMenuOpen) return false;
     if (!this.root) this.create();
     this.previous = { input: s.input.enabled, keyboard: s.input.keyboard.enabled, lock: s.movimentoBloqueado };
     this.focused = document.activeElement;
     s.upgradeMenuOpen = true; s.movimentoBloqueado = true; s.player.setVelocity(0,0);
     s.joystick?.reset?.(); s.input.keyboard.resetKeys(); s.input.enabled = false; s.input.keyboard.enabled = false;
+    this.dismissFarewell();
     this.root.hidden = false; this.message = ''; this.portrait(); this.render();
     this.root.querySelector('[data-close]').focus();
     return true;
   }
-  close() {
+  close(silent = false) {
     const s = this.scene;
+    if (silent) { clearTimeout(this.farewellTimer); this.farewell?.remove(); }
     if (!s.upgradeMenuOpen) return;
     s.upgradeMenuOpen = false; this.root.hidden = true;
-    clearTimeout(this.timer); this.busy = this.pending = false;
+    if (!silent) this.showFarewell();
+    else { clearTimeout(this.farewellTimer); this.farewell?.remove(); }
+    clearTimeout(this.timer); clearTimeout(this.purchaseTimer); this.busy = this.pending = false;
     s.input.enabled = this.previous.input;
     s.input.keyboard.resetKeys(); s.input.keyboard.enabled = this.previous.keyboard;
     if (!s.morteEmAndamento && !s.transicaoEmAndamento && !s.cenaEntradaBossAtiva) s.movimentoBloqueado = this.previous.lock;
     this.focused?.focus?.();
   }
+  dismissFarewell() {
+    clearTimeout(this.farewellTimer); this.farewell?.remove(); this.farewell = null;
+  }
+  showFarewell() {
+    this.dismissFarewell();
+    this.farewell = document.createElement('div'); this.farewell.className = 'upgrade-farewell';
+    this.farewell.setAttribute('role', 'status'); this.farewell.textContent = SHOP_LINES.goodbye;
+    document.getElementById('game-container').append(this.farewell);
+    this.farewellTimer = setTimeout(() => { this.farewell?.remove(); this.farewell = null; }, 2200);
+  }
   destroy() {
-    this.close(); clearTimeout(this.timer);
+    this.close(true); clearTimeout(this.timer); clearTimeout(this.purchaseTimer); clearTimeout(this.farewellTimer); this.farewell?.remove();
     this.scene.events.off('upgradesChanged', this.refresh); this.scene.events.off('upgradeResult', this.result);
     window.removeEventListener('keydown', this.onKey, true); window.removeEventListener('keyup', this.onKey, true);
     this.root?.remove();

@@ -1,3 +1,4 @@
+import { depthAcimaTorres } from './EffectDepth.js';
 /**
  * @file Máscara de escuridão da fábrica: cápsulas difusas revelam o cenário sem pintar luz
  * branca no chão. A sombra residual limita a exposição mesmo entre fontes sobrepostas.
@@ -417,6 +418,9 @@ function criarIluminacaoTerror(scene, { ambienteBasico = false } = {}) {
       overlay.setTexture(TEXTURA_ESCURIDAO_PARTE2);
       invalidada = true;
     }
+    const depthLuz = depthAcimaTorres(scene, DEPTH_ESCURIDAO);
+    if (overlay.depth !== depthLuz) overlay.setDepth(depthLuz);
+    for (const mascara of mascarasPortas) if (mascara.depth !== depthLuz) mascara.setDepth(depthLuz);
     posicionarOverlay();
     const limite = scene.limiteFabricaDescarregadaY;
     if (Number.isFinite(limite) && limiteLuzesDescartadas !== limite) {

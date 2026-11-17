@@ -2,14 +2,14 @@
 import assert from 'node:assert/strict';
 import {mkdirSync} from 'node:fs';
 const {chromium}=await import(process.env.PLAYWRIGHT_MODULE || '/tmp/nullborns-test-tools/node_modules/playwright/index.mjs');
-const browser=await chromium.launch({headless:true,args:['--no-sandbox','--disable-dev-shm-usage','--enable-unsafe-swiftshader']});
+const browser=await chromium.launch({executablePath:process.env.CHROME_PATH,headless:true,args:['--no-sandbox','--disable-dev-shm-usage','--enable-unsafe-swiftshader']});
 const artifacts=process.env.ARTIFACT_DIR || '/tmp/upgrade-factory';mkdirSync(artifacts,{recursive:true});
 let page;const errors=[];
 const check=(label,result)=>{assert.ok(result,label);console.log('OK',label);};
 try {
  page=await browser.newPage({viewport:{width:1280,height:720}});page.on('pageerror',e=>errors.push(e.stack));
  await page.route('**/js/core/game.js*',async r=>{const response=await r.fetch();await r.fulfill({response,body:(await response.text()).replace('const game = new Game(jogoRapido);','const game = window.__game = new Game(jogoRapido);')});});
- await page.goto(process.env.GAME_URL || 'http://127.0.0.1:8765');await page.keyboard.press('k');
+ await page.goto(process.env.GAME_URL || 'http://127.0.0.1:8765');await page.keyboard.press('k',{delay:100});
  await page.locator('.cutscene-skip').waitFor();await page.locator('.cutscene-skip').click();
  await page.waitForFunction(()=>__game.scene.getScene('Level1')?.player?.active,null,{timeout:120000});
  await page.evaluate(async()=>{
@@ -65,7 +65,7 @@ try {
  assert.deepEqual(errors,[]);console.log('PASSOU: oficina compartilhada e HUD de recursos durante o boss.');
 } catch(error) {
  if(page && !page.isClosed()) {
-  console.error('DIAGNÓSTICO',await page.evaluate(()=>__game.scene.getScenes(true).map(s=>({key:s.sys.settings.key,player:[s.player?.x,s.player?.y],shop:!!s.upgradeShop,near:!!s.interacaoCiberneticasProxima,lock:s.movimentoBloqueado,open:s.upgradeMenuOpen,input:s.input.enabled,keyboard:s.input.keyboard.enabled,attack:s.atacando,dash:s.estadoDash?.ativo,generator:s.generatorMenuOpen,dev:s.devItemMenuOpen}))));await page.screenshot({path:`${artifacts}/falha.png`});
+  console.error('DIAGNÓSTICO',await page.evaluate(()=>__game.scene.getScenes(true).map(s=>({key:s.sys.settings.key,player:[s.player?.x,s.player?.y],shop:!!s.upgradeShop,near:!!s.interacaoCiberneticasProxima,lock:s.movimentoBloqueado,open:s.upgradeMenuOpen,input:s.input.enabled,keyboard:s.input.keyboard.enabled,attack:s.atacando,dash:s.estadoDash?.ativo,generator:s.generatorMenuOpen,dev:s.devItemMenuOpen}))).catch(()=>({errors})));await page.screenshot({path:`${artifacts}/falha.png`});
  }
  throw error;
 } finally {await browser.close();}

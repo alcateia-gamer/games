@@ -1458,8 +1458,8 @@
                  "type":"",
                  "visible":true,
                  "width":0,
-                 "x":-1079.08333333333,
-                 "y":412.083333333333
+                 "x":288.734848484852,
+                 "y":-418.825757575758
                 }, 
                 {
                  "height":0,
@@ -1482,8 +1482,152 @@
                  "type":"",
                  "visible":true,
                  "width":0,
-                 "x":-1060.41666666667,
-                 "y":411.5
+                 "x":-538.91666666667,
+                 "y":899
+                }, 
+                {
+                 "height":0,
+                 "id":651,
+                 "name":"Gal\u00e3o",
+                 "opacity":1,
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"ItemID",
+                         "type":"string",
+                         "value":"gasolina"
+                        }, 
+                        {
+                         "name":"Quantidade",
+                         "type":"int",
+                         "value":1
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":660,
+                 "y":362.333333333333
+                }, 
+                {
+                 "height":0,
+                 "id":652,
+                 "name":"Gal\u00e3o",
+                 "opacity":1,
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"ItemID",
+                         "type":"string",
+                         "value":"gasolina"
+                        }, 
+                        {
+                         "name":"Quantidade",
+                         "type":"int",
+                         "value":1
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":875.333333333333,
+                 "y":1698.66666666667
+                }, 
+                {
+                 "height":0,
+                 "id":653,
+                 "name":"Gal\u00e3o",
+                 "opacity":1,
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"ItemID",
+                         "type":"string",
+                         "value":"gasolina"
+                        }, 
+                        {
+                         "name":"Quantidade",
+                         "type":"int",
+                         "value":1
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":654,
+                 "y":-1662
+                }, 
+                {
+                 "height":0,
+                 "id":654,
+                 "name":"Bateria",
+                 "opacity":1,
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"ItemID",
+                         "type":"string",
+                         "value":"bateria"
+                        }, 
+                        {
+                         "name":"Quantidade",
+                         "type":"int",
+                         "value":1
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":358,
+                 "y":1715.5
+                }, 
+                {
+                 "height":0,
+                 "id":655,
+                 "name":"Bateria",
+                 "opacity":1,
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"ItemID",
+                         "type":"string",
+                         "value":"bateria"
+                        }, 
+                        {
+                         "name":"Quantidade",
+                         "type":"int",
+                         "value":1
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":934.666666666667,
+                 "y":1066.33333333333
+                }, 
+                {
+                 "height":0,
+                 "id":656,
+                 "name":"Bateria",
+                 "opacity":1,
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"ItemID",
+                         "type":"string",
+                         "value":"bateria"
+                        }, 
+                        {
+                         "name":"Quantidade",
+                         "type":"int",
+                         "value":1
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":-274.666666666667,
+                 "y":-2152
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -5926,7 +6070,7 @@
                  "y":352.666666666667
                 }, 
                 {
-                 "height":10.6666666666666,
+                 "height":20.6666666666666,
                  "id":33,
                  "name":"",
                  "opacity":1,
@@ -5935,7 +6079,7 @@
                  "visible":true,
                  "width":504.666666666667,
                  "x":-558.666666666667,
-                 "y":356
+                 "y":346
                 }, 
                 {
                  "height":24,
@@ -8487,15 +8631,15 @@
                  "y":-2171.66666666667
                 }, 
                 {
-                 "height":4.66666666666652,
+                 "height":5.97777777777765,
                  "id":392,
                  "name":"",
                  "opacity":1,
                  "rotation":0,
                  "type":"",
                  "visible":true,
-                 "width":382.666666666667,
-                 "x":144.666666666667,
+                 "width":434.333333333334,
+                 "x":93.0000000000003,
                  "y":-2166
                 }, 
                 {
@@ -8945,7 +9089,7 @@
                  "y":-2188.75
                 }, 
                 {
-                 "height":77.3333333333335,
+                 "height":75.8958333333335,
                  "id":438,
                  "name":"",
                  "opacity":1,
@@ -8964,7 +9108,7 @@
                  "rotation":0,
                  "type":"",
                  "visible":true,
-                 "width":98,
+                 "width":49.3333333333333,
                  "x":46.5,
                  "y":-2200.33333333333
                 },
@@ -9426,7 +9570,7 @@
                  "y":8868.33333333333
                 }, 
                 {
-                 "height":6,
+                 "height":22,
                  "id":564,
                  "name":"",
                  "opacity":1,
@@ -9435,7 +9579,7 @@
                  "visible":true,
                  "width":503,
                  "x":973.5,
-                 "y":-119.5
+                 "y":-135.5
                 }, 
                 {
                  "height":87.5,
@@ -9474,7 +9618,7 @@
                  "y":-196.75
                 }, 
                 {
-                 "height":10.6666666666667,
+                 "height":22.0000000000001,
                  "id":569,
                  "name":"",
                  "opacity":1,
@@ -9483,7 +9627,7 @@
                  "visible":true,
                  "width":522.666666666667,
                  "x":-572,
-                 "y":-736
+                 "y":-747.333333333333
                 }, 
                 {
                  "height":80,
@@ -9730,6 +9874,18 @@
                  "width":87.5,
                  "x":56,
                  "y":1606.66666666667
+                }, 
+                {
+                 "height":35,
+                 "id":650,
+                 "name":"",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":6.66666666666667,
+                 "x":92.6666666666667,
+                 "y":-2195.33333333333
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -9738,10 +9894,10 @@
          "y":0
         }],
  "nextlayerid":54,
- "nextobjectid":650,
+ "nextobjectid":657,
  "orientation":"orthogonal",
  "renderorder":"right-down",
- "tiledversion":"1.12.2-2-geb83ddb9",
+ "tiledversion":"1.12.2",
  "tileheight":48,
  "tilesets":[
         {

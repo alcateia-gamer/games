@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
 import { readFileSync } from 'node:fs';
 import { createEconomy, economyFor, accountFor, playerAccount, purchase, modifiers, modifiersFor,
-  applyUpgrades, basicDamage, specialCooldown, localPlayerId } from './UpgradeSystem.js';
+  applyUpgrades, basicDamage, specialCooldown, localPlayerId, walletFor, enableSharedScrap } from './UpgradeSystem.js';
 import { rollScrap, SCRAP_BALANCE, UPGRADE_NPC, UPGRADE_NPCS } from './UpgradeBalance.js';
 import { upgradeDefinitions, CHARACTER_NAMES } from './UpgradeDefinitions.js';
 import { ScrapSystem, claimScrap, canUseShop } from './ScrapSystem.js';
@@ -42,7 +42,7 @@ function scene(character = 'kai-mercer', registry = new Map()) {
   };
   return s;
 }
-function grant(s, scrap = 300) { const a = accountFor(s); a.scrap = scrap; return a; }
+function grant(s, scrap = 300) { const a = accountFor(s); walletFor(s).scrap = scrap; return a; }
 
 test('compras são atômicas, preços são por nível e reenvio não compra o próximo nível', () => {
   const e = createEconomy(), a = playerAccount(e,'p','kai-mercer'); a.scrap = 44;
@@ -77,7 +77,7 @@ for (const character of Object.keys(CHARACTER_NAMES)) test(`${character}: nívei
   assert.equal(s.speed,200, 'não acumula multiplicadores na velocidade original');
 });
 
-test('cada jogador tem saldo próprio e níveis por personagem', () => {
+test('economias individuais preservam saldo próprio e níveis por personagem', () => {
   const e = createEconomy(); playerAccount(e,'a','kai-mercer').scrap=100;
   purchase(e,'a','kai-mercer','weapon',0);
   assert.equal(playerAccount(e,'b','kai-mercer').scrap,0);
@@ -184,12 +184,12 @@ test('host rejeita compra distante e valida níveis e saldo sem aceitar dados do
   s.multiplayer=true;s.multiplayerManager={playerId:'host',room:{}};s.coopRuntime=r;
   const guest=soloContext(s,{coopRemotePlayerId:'guest',personagemSelecionada:'nyx',player:visual(0,0),vida:95},true);
   r.players.remotes.set('guest',{context:guest});
-  const a=playerAccount(economyFor(s),'guest','nyx');a.scrap=10;
+  const a=playerAccount(economyFor(s),'guest','nyx');walletFor(s).scrap=10;
   const sys=new ScrapSystem(s);s.scrapSystem=sys;
   const buy={kind:'upgradeBuy',playerId:'guest',payload:{id:'weapon',level:0,scrap:99999,cost:0}};
-  sys.receive(buy);assert.equal(a.scrap,10);assert.deepEqual(a.characters.nyx,{});
+  sys.receive(buy);assert.equal(walletFor(s).scrap,10);assert.deepEqual(a.characters.nyx,{});
   guest.player.x=UPGRADE_NPC.x;guest.player.y=UPGRADE_NPC.y;
-  sys.receive(buy);sys.receive(buy);assert.equal(a.scrap,0);assert.equal(a.characters.nyx.weapon,1);
+  sys.receive(buy);sys.receive(buy);assert.equal(walletFor(s).scrap,0);assert.equal(a.characters.nyx.weapon,1);
   assert.equal(accountFor(s).scrap,0);sys.destroy();
 });
 
@@ -198,7 +198,7 @@ test('estado de rede não retrocede e snapshot repetido não cura', () => {
   const sys=new ScrapSystem(s);s.scrapSystem=sys;
   const e=createEconomy();e.revision=5;playerAccount(e,'local','kai-mercer').characters['kai-mercer'].health=3;
   sys.restore(e);const hp=s.vida;sys.restore(structuredClone(e));sys.restore({...e,revision:4});
-  assert.equal(s.vida,hp);assert.equal(economyFor(s).revision,5);sys.destroy();
+  assert.equal(s.vida,hp);assert.equal(economyFor(s).revision,6);sys.destroy();
 });
 
 test('compressão de quadros preserva economia do keyframe entre deltas', () => {
@@ -209,11 +209,11 @@ test('compressão de quadros preserva economia do keyframe entre deltas', () => 
 });
 
 test('NPC usa frame existente, coordenada exata e interação compartilhada por proximidade', () => {
-  const s=scene(), {npc,shop}=createUpgradeNPC(s);
+  const s=scene(), {npc,shop,dialogue}=createUpgradeNPC(s);
   assert.equal(npc.x,-410);assert.equal(npc.y,8817);assert.equal(npc.key,'upgrade-npc');assert.equal(npc.frame,180);
   assert.equal(s.physics,undefined, 'NPC não requer física nem participa do grupo de inimigos');
   s.events.emit('update');assert.equal('buttonOnly' in s.interacaoCiberneticasProxima,false);
-  let opened=0;shop.open=()=>{opened++;return true;};
+  let opened=0;dialogue.open=()=>{opened++;return true;};
   assert.equal(s.interacaoCiberneticasProxima.interact(),true);assert.equal(opened,1);
   assert.equal(s.input.keyboard.listenerCount('keydown-E'),0);
   s.player.x+=91;s.events.emit('update');assert.equal(s.interacaoCiberneticasProxima,null);
@@ -226,7 +226,7 @@ test('NPC usa frame existente, coordenada exata e interação compartilhada por 
 
 test('abrir/fechar repetidamente restaura input e não duplica listeners; soltar E não fecha', () => {
   const s=scene(),shop=new UpgradeShopUI(s);
-  shop.root={hidden:true,querySelector:()=>({focus(){}})};shop.render=()=>{};shop.portrait=()=>{};
+  shop.root={hidden:true,querySelector:()=>({focus(){}})};shop.render=()=>{};shop.portrait=()=>{};shop.showFarewell=()=>{};
   globalThis.document={activeElement:null};
   for(let n=0;n<5;n++){
     assert.equal(shop.open(),true);assert.equal(s.input.enabled,false);assert.equal(s.movimentoBloqueado,true);
@@ -317,9 +317,9 @@ test('saldo e instalação do cliente são confirmados pelo host através das a�
   const economy=economyFor(host);
   economy.drops.component={id:'component',x:UPGRADE_NPC.x,y:UPGRADE_NPC.y,mapKey:'Level1',quantity:10};economy.revision++;
   host.scrapSystem.changed();client.scrapSystem.update();
-  assert.equal(accountFor(client).scrap,10);assert.equal(accountFor(host).scrap,0);
+  assert.equal(walletFor(client).scrap,10);assert.equal(walletFor(host).scrap,10);
   assert.equal(client.scrapSystem.requestPurchase('weapon',0),true);
-  assert.equal(accountFor(client).scrap,0);assert.equal(modifiersFor(guest).healing,.06);
+  assert.equal(walletFor(client).scrap,0);assert.equal(walletFor(host).scrap,0);assert.equal(modifiersFor(guest).healing,.06);
   assert.equal(modifiersFor(client).healing,.06);
   host.scrapSystem.destroy();client.scrapSystem.destroy();
 });
@@ -328,11 +328,11 @@ test('saldo e instalação do cliente são confirmados pelo host através das a�
 test('comerciante da fábrica usa a coordenada informada e a mesma interação', () => {
   const s=scene();s.sys.settings.key='Level1Parte2';s.profundidadePersonagemParte2=16.5;
   const position=UPGRADE_NPCS.Level1Parte2;s.player.setPosition(position.x,position.y);
-  const {npc,shop}=createUpgradeNPC(s);
+  const {npc,shop,dialogue}=createUpgradeNPC(s);
   assert.equal(npc.x,-1253);assert.equal(npc.y,-1928);assert.equal(npc.frame,UPGRADE_NPC.frame);
   assert.equal(npc.depth,16.5);assert.equal(npc.coopLocalVisual,true);
   s.events.emit('update');assert.ok(s.interacaoCiberneticasProxima);
-  let opened=0;shop.open=()=>{opened++;return true;};s.interacaoCiberneticasProxima.interact();assert.equal(opened,1);
+  let opened=0;dialogue.open=()=>{opened++;return true;};s.interacaoCiberneticasProxima.interact();assert.equal(opened,1);
   s.player.x+=91;s.events.emit('update');assert.equal(s.interacaoCiberneticasProxima,null);
   s.player.setPosition(position.x,position.y);s.fabricaDescarregada=true;s.events.emit('update');
   assert.equal(canUseShop(s,'Level1Parte2'),false);assert.equal(npc.visible,false);
@@ -369,13 +369,13 @@ test('host valida compras remotas na fábrica preservando melhorias da cidade', 
   const r=s.coopRuntime={host:true,manager:{sendCoopAction(){}},players:{remotes:new Map()}};
   const guest=soloContext(s,{coopRemotePlayerId:'guest',personagemSelecionada:'nyx',player:visual(UPGRADE_NPC.x,UPGRADE_NPC.y),vida:95},true);
   r.players.remotes.set('guest',{context:guest});
-  const a=playerAccount(economyFor(s),'guest','nyx');a.scrap=100;a.characters.nyx.health=1;
+  const a=playerAccount(economyFor(s),'guest','nyx');walletFor(s).scrap=100;a.characters.nyx.health=1;
   const sys=new ScrapSystem(s);s.scrapSystem=sys;
   const request={kind:'upgradeBuy',playerId:'guest',payload:{id:'weapon',level:0}};
-  sys.receive(request);assert.equal(a.scrap,100,'posição da cidade não autoriza a loja da fábrica');
+  sys.receive(request);assert.equal(walletFor(s).scrap,100,'posição da cidade não autoriza a loja da fábrica');
   guest.player.setPosition(UPGRADE_NPCS.Level1Parte2.x,UPGRADE_NPCS.Level1Parte2.y);
   sys.receive(request);sys.receive(request);
-  assert.equal(a.scrap,90);assert.equal(a.characters.nyx.health,1);assert.equal(a.characters.nyx.weapon,1);
+  assert.equal(walletFor(s).scrap,90);assert.equal(a.characters.nyx.health,1);assert.equal(a.characters.nyx.weapon,1);
   sys.destroy();
 });
 
@@ -388,4 +388,57 @@ test('contador de sucatas some na luta sem perder saldo ou parar sincronização
   assert.equal(sys.counter.visible,false);assert.equal(a.scrap,45);
   s.novoBoss.morto=true;sys.update();assert.equal(sys.counter.visible,true);assert.equal(sys.counterIcon.visible,true);
   assert.equal(a.scrap,45);sys.destroy();
+});
+
+test('base e cúpula do Kai ficam acima das torres durante mudanças de profundidade', () => {
+  const s=scene(); s.player.depth=16.5;
+  s.novoBoss={geradores:[{torre:true,visual:{active:true,visible:true,depth:17}}]};
+  s.textures.exists=()=>true;
+  s.cache={json:{get:()=>({duracoesMs:[100],limitesEfeito:[0,0,100,100]})}};
+  Phaser.TintModes={FILL:1};
+  s.add.image=(...args)=>{const o=visual(...args);o.scaleX=1;o.setFrame=()=>o;o.setTintMode=()=>o;return o;};
+  s.add.graphics=()=>{
+    const g=visual();
+    for(const method of ['clear','fillStyle','fillTriangle','lineStyle','lineBetween'])g[method]=()=>g;
+    return g;
+  };
+  criarSistemaEspeciais(s);s.events.emit('player:especial');s.time.now=400;atualizarSistemaEspeciais(s);
+  const e=s.estadoEspecial;
+  assert.ok(e.parryEfeito.sprite.depth>17);assert.ok(e.parryGrafico.depth>17);
+  assert.equal(e.parryEfeito.sprite.aboveBossTowers,true);assert.equal(e.parryGrafico.aboveBossTowers,true);
+  s.novoBoss.geradores[0].visual.depth=60;atualizarSistemaEspeciais(s);
+  assert.ok(e.parryEfeito.sprite.depth>60);assert.ok(e.parryGrafico.depth>60);
+  s.events.emit('shutdown');
+});
+
+test('caixa cooperativo migra saldos antigos uma única vez e preserva níveis individuais', () => {
+  const e=createEconomy(),a=playerAccount(e,'a','kai-mercer'),b=playerAccount(e,'b','nyx');
+  a.scrap=17;b.scrap=23;a.characters['kai-mercer'].health=1;
+  enableSharedScrap(e);assert.equal(e.teamWallet.scrap,40);assert.equal(a.scrap,0);assert.equal(b.scrap,0);
+  const rev=e.revision;enableSharedScrap(e);assert.equal(e.teamWallet.scrap,40);assert.equal(e.revision,rev);
+  const restored=JSON.parse(JSON.stringify(e));enableSharedScrap(restored);assert.equal(restored.teamWallet.scrap,40);
+  assert.equal(purchase(e,'b','nyx','health',0).ok,true);assert.equal(e.teamWallet.scrap,32);
+  assert.equal(a.characters['kai-mercer'].health,1);assert.equal(b.characters.nyx.health,1);
+});
+test('coletas da equipe são únicas e compras simultâneas nunca gastam além do caixa', () => {
+  const e=enableSharedScrap(createEconomy());
+  e.drops.d={x:0,y:0,mapKey:'Level1',quantity:10};
+  assert.equal(claimScrap(e,'d','a','kai-mercer','Level1',{x:0,y:0}),10);
+  assert.equal(claimScrap(e,'d','b','nyx','Level1',{x:0,y:0}),0);
+  assert.equal(purchase(e,'a','kai-mercer','health',0).ok,true);
+  assert.equal(purchase(e,'b','nyx','health',0).ok,false);
+  assert.equal(purchase(e,'a','kai-mercer','health',0).ok,false);
+  assert.equal(e.teamWallet.scrap,2);assert.deepEqual(e.accounts.b.characters.nyx,{});
+});
+for(const count of [2,3,4]) test(`drops com ${count} jogadores: quantidade proporcional, chances e cotas preservadas`, () => {
+  for(const type of Object.keys(SCRAP_BALANCE.profiles)) for(const value of [0,.5,.99999]) {
+    let index=0;const solo=rollScrap(type,()=>[0,value][index++]);
+    index=0;assert.equal(rollScrap(type,()=>[0,value][index++],count),solo*count);
+    assert.equal(rollScrap(type,()=>1,count),0);
+  }
+  const s=scene();s.multiplayer=true;s.multiplayerManager={playerId:'host',room:{players:Array.from({length:count},(_,i)=>({id:`p${i}`}))}};
+  s.coopRuntime={host:true,manager:{sendCoopAction(){}}};
+  const sys=new ScrapSystem(s);sys.onRobotDeath({tipoRobo:'olhao',upgradeZoneId:1,x:0,y:0});
+  const e=economyFor(s),drop=Object.values(e.drops)[0];assert.ok(drop.quantity>=4*count && drop.quantity<=7*count);
+  assert.equal(e.rewarded,1);assert.equal(e.zones['Level1:1'],1);sys.destroy();
 });

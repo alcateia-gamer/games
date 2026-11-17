@@ -1,3 +1,4 @@
+import { depthAcimaTorres } from '../effects/EffectDepth.js';
 /** Replica os sprites e comandos vetoriais reais, sem transmitir imagens por quadro. */
 import { COOP, round } from "./CoopProtocol.js";
 
@@ -25,6 +26,7 @@ export function describeVisual(o) {
     a: round(o.alpha, 100), v: o.visible !== false, ox: round(o.originX ?? 0.5, 10000),
     oy: round(o.originY ?? 0.5, 10000), fx: !!o.flipX, fy: !!o.flipY,
     blend: o.blendMode || 0, tint: o.tintTopLeft ?? 0xffffff, tf: !!o.tintFill };
+  if (o.aboveBossTowers) state.aboveBossTowers = true;
   if (o.novoBossDisparoEnergia) state.bossProjectile = true;
   if (o.coopAnchor?.active) {
     const p = o.coopAnchor;
@@ -69,11 +71,12 @@ export function applyVisual(scene, o, s, interpolate = true) {
   if (s.k && prepareFrame(scene, s)) o.setTexture?.(s.k, s.f);
   if (interpolate) { o.coopTargetX = s.x; o.coopTargetY = s.y; }
   else o.setPosition(s.x, s.y);
-  o.setScale(s.sx, s.sy).setRotation(s.r).setDepth(s.d).setAlpha(s.a).setVisible(s.v);
+  o.setScale(s.sx, s.sy).setRotation(s.r).setDepth(s.aboveBossTowers ? depthAcimaTorres(scene, s.d) : s.d).setAlpha(s.a).setVisible(s.v);
   o.setOrigin?.(s.ox, s.oy); o.setFlip?.(s.fx, s.fy); o.setBlendMode?.(s.blend);
   // setTint também restaura MULTIPLY depois de um flash branco em FILL.
   if (s.tf && o.setTintFill) o.setTintFill(s.tint);
   else o.setTint?.(s.tint);
+  o.aboveBossTowers = !!s.aboveBossTowers;
   o.novoBossDisparoEnergia = !!s.bossProjectile;
   if (s.t === "Graphics" && Array.isArray(s.g) && s.g.length <= COOP.maxCommands) {
     o.commandBuffer = [...s.g]; o.dirty = true;
@@ -169,6 +172,10 @@ export class VisualReceiver {
   update(delta) {
     const alpha = 1 - Math.exp(-Math.min(100, Math.max(0, delta)) / 65);
     for (const { object: o, state } of this.entries.values()) {
+      if (o.active && state.aboveBossTowers) {
+        const depth = depthAcimaTorres(this.scene, state.d);
+        if (o.depth !== depth) o.setDepth(depth);
+      }
       const anchor = state.anchor;
       const player = anchor && (anchor.id === this.scene.multiplayerManager?.playerId
         ? this.scene.player : this.scene.remotePlayers?.get(anchor.id));

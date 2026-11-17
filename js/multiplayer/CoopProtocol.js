@@ -34,6 +34,10 @@ export function mergeCoopProgress(previous = {}, next = {}) {
     ...((previous?.inventoryDrops || next?.inventoryDrops) ? {
       inventoryDrops: { ...previous?.inventoryDrops, ...next?.inventoryDrops },
     } : {}),
+    ...((previous?.generator || next?.generator) ? { generator: {
+      revision: Math.max(previous.generator?.revision || 0, next.generator?.revision || 0),
+      slots: { ...previous.generator?.slots, ...next.generator?.slots },
+    } } : {}),
     generatorStartedAt: Number.isFinite(next?.generatorStartedAt)
       ? next.generatorStartedAt : previous?.generatorStartedAt };
 }

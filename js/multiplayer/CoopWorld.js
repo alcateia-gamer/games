@@ -1,4 +1,5 @@
 import { CoopBossLoading } from "./CoopBossLoading.js";
+import { CoopGenerator } from './CoopGenerator.js';
 import { desvanecerMusicaAmbiente, DURACAO_SAIDA_MUSICA_MS } from "../sounds/musicaAmbiente.js";
 import { tocarSomColocando } from "../sounds/colocando.js";
 import { COOP, mergeCoopProgress } from "./CoopProtocol.js";
@@ -23,6 +24,7 @@ export class CoopWorld {
     this.manager = runtime.manager;
     this.bossLoading = new CoopBossLoading(this);
     this.manager.room.coopProgress ||= { flags: {}, collected: {} };
+    this.generator = new CoopGenerator(this);
     this.onRegistry = (_parent, key, value) => {
       if (!this.applying && sharedKey(key) && value === true) {
         this.manager.sendCoopAction("progress", { key, value,
@@ -78,6 +80,7 @@ export class CoopWorld {
   }
   receive(action) {
     if (this.bossLoading.receive(action)) return;
+    if (this.generator.receive(action)) return;
     const p = action.payload || {}, r = this.r, s = this.scene;
     if (s.hackingTerminals?.receberAcao(action)) return;
     if (action.authority) {
@@ -141,7 +144,8 @@ export class CoopWorld {
       door.abrirPelaRede?.();
     } else if (action.kind === "progress" && sharedKey(p.key) && p.value === true) {
       if (hackingKey(p.key) && action.playerId !== this.manager.playerId) return;
-      // O evento só é publicado após a interação solo consumir/validar os requisitos.
+      // A partida normal exige o circuito compartilhado; atalhos DEV preservam a iluminação de teste.
+      if (p.key === "factoryGeneratorPowered" && !this.generator.ready() && !developer) return;
       if (r.mapKey !== "Level1Parte2") return;
       if (["factoryDoorOpen:porta02", "factoryDoorOpen:porta03"].includes(p.key) && !this.bossLoading.current()) return;
       progress.flags[p.key] = true;
@@ -212,6 +216,7 @@ export class CoopWorld {
   restore() {
     this.bossLoading.apply(this.manager.room.coopBossPreparation);
     const progress = this.manager.room.coopProgress;
+    this.generator.restore();
     this.applyFlags(progress?.flags);
     for (const grant of Object.values(progress?.collected || {})) this.applyCollected(grant);
     for (const drop of Object.values(progress?.inventoryDrops || {})) criarDropsInventario(this.scene, drop, progress.collected);
@@ -340,6 +345,7 @@ export class CoopWorld {
     this.update(0);
   }
   update(delta = 0) {
+    this.generator.update();
     const s = this.scene, camera = s.cameras.main, target = this.introCamera;
     if (!this.r.host && !s.preparacaoBoss?.aguardando && (!s.preparacaoBoss || this.bossLoading.canStart()) &&
         !this.transitioning && target && this.r.inArena(s.player) && !s.morteEmAndamento) {

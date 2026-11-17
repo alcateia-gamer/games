@@ -14,6 +14,8 @@ import { obterInventarioDoJogador } from "./Inventory.js";
 import { createCollectibleMarker } from "../ui/CollectibleMarker.js";
 import { criarSistemaCombustivel, FALAS_GALAO } from "../interactions/FuelRefill.js";
 
+import { getProperty, getItemPosition, itemSpawnSeedFor, selectRunItemObjects } from './RunItemSpawns.js';
+
 const ITEM_LAYER_NAMES = ["Coletaveis", "Itens"];
 const DEFAULT_PICKUP_RANGE = 64;
 const PICKUP_BUTTON_DEPTH = 230;
@@ -22,36 +24,6 @@ const CONFIG_BOTAO_COLETA = {
   distanciaXBotao: -10,
   distanciaYBotao: 90,
 };
-
-/**
- * Lê uma propriedade de um objeto Tiled sem diferenciar maiúsculas e minúsculas no nome.
- */
-function getProperty(object, propertyName) {
-  return object.properties?.find(
-    (property) => property.name?.toLowerCase() === propertyName.toLowerCase(),
-  )?.value;
-}
-
-/**
- * Converte pontos, retângulos e objetos de tile para a posição central onde o coletável será
- * desenhado.
- */
-function getItemPosition(object) {
-  if (object.point) return { x: object.x, y: object.y };
-
-  const width = Number(object.width || 0);
-  const height = Number(object.height || 0);
-
-  if (object.gid) {
-    return { x: object.x + width / 2, y: object.y - height / 2 };
-  }
-
-  if (width > 0 && height > 0) {
-    return { x: object.x + width / 2, y: object.y + height / 2 };
-  }
-
-  return { x: object.x, y: object.y };
-}
 
 /**
  * Pré-filtra texturas muito reduzidas para evitar cintilação durante o movimento da câmera.
@@ -167,7 +139,9 @@ function criarSistemaInventario(scene) {
   ).filter(Boolean);
   const avisosEmitidos = new Set();
 
-  for (const object of itemLayers.flatMap((layer) => layer.objects ?? [])) {
+  const spawnObjects = selectRunItemObjects(itemLayers.flatMap(layer => layer.objects ?? []),
+    scene.scene.key, itemSpawnSeedFor(scene));
+  for (const object of spawnObjects) {
     const itemId = getProperty(object, "itemId");
     // Áreas de porta e gerador podem dividir esta camada, mas não são itens.
     if (itemId == null) continue;
@@ -225,7 +199,7 @@ function criarSistemaInventario(scene) {
    * ou porta selecionados.
    */
   const coletarItemProximo = () => {
-    if (scene.morteEmAndamento || scene.vida <= 0 || (scene.generatorMenuOpen || scene.upgradeMenuOpen) || scene.devItemMenuOpen) return false;
+    if (scene.morteEmAndamento || scene.vida <= 0 || (scene.generatorMenuOpen || scene.upgradeMenuOpen || scene.upgradeDialogueOpen) || scene.devItemMenuOpen) return false;
     if (interagirComMundo) {
       const interagiu = interagirComMundo();
       if (interagiu) {
@@ -269,7 +243,7 @@ function criarSistemaInventario(scene) {
    */
   scene.atualizarColetaItens = () => {
     interagirComMundo = null;
-    if (scene.morteEmAndamento || scene.vida <= 0 || (scene.generatorMenuOpen || scene.upgradeMenuOpen) || scene.devItemMenuOpen) {
+    if (scene.morteEmAndamento || scene.vida <= 0 || (scene.generatorMenuOpen || scene.upgradeMenuOpen || scene.upgradeDialogueOpen) || scene.devItemMenuOpen) {
       // Descarta E durante os menus para não interagir com o mundo ao fechá-los.
       Phaser.Input.Keyboard.JustDown(scene.teclaColetarItem);
       scene.itemColetavelProximo = null;

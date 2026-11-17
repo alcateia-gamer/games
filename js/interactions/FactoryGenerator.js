@@ -188,6 +188,10 @@ function criarInteracaoGeradorFabrica(scene) {
   const ativarGerador = () => {
     if (!dialogOpen || isActivating || scene.luzFabricaAcesa || !painel.ready()) return;
 
+    if (scene.multiplayer) {
+      if (!scene.coopRuntime?.world.generator.requestStart()) painel.message("Não foi possível enviar a ativação. Tente novamente.");
+      return;
+    }
     isActivating = true;
     const removed = inventory.removeItems(
       GENERATOR_REQUIREMENTS.map(({ id, quantity, minFuel }) => ({
@@ -230,7 +234,12 @@ function criarInteracaoGeradorFabrica(scene) {
       : Infinity;
     generatorSound.update(distance);
 
+    if (dialogOpen && (!scene.player?.active || scene.morteEmAndamento || scene.vida <= 0 || distance > GENERATOR_INTERACTION_RANGE)) fecharModal();
     if (dialogOpen) {
+      if (scene.multiplayer && scene.luzFabricaAcesa && !isActivating) {
+        isActivating = true; painel.start();
+        activationCloseEvent = scene.time.delayedCall(1100, () => { isActivating = false; fecharModal(); });
+      }
       painel.refresh();
       return;
     }
@@ -248,6 +257,7 @@ function criarInteracaoGeradorFabrica(scene) {
     if (cleanedUp) return;
     cleanedUp = true;
     scene.events.off(Phaser.Scenes.Events.SHUTDOWN, cleanup);
+    scene.events.off("generatorSharedResult", sharedResult);
     activationCloseEvent?.remove(false);
     generatorSound.destroy();
     painel.destroy();
@@ -260,6 +270,8 @@ function criarInteracaoGeradorFabrica(scene) {
     scene.atualizarInteracaoGeradorFabrica = null;
   };
 
+  const sharedResult = message => { if (dialogOpen) painel.message(message); };
+  scene.events.on("generatorSharedResult", sharedResult);
   scene.events.once(Phaser.Scenes.Events.SHUTDOWN, cleanup);
   return cleanup;
 }

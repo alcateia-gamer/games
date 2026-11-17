@@ -16,6 +16,7 @@ const ROWS = [
 const inside = (p, x, y, w, h) => Math.abs(p.x - x) <= w / 2 && Math.abs(p.y - y) <= h / 2;
 
 export function criarPainelGerador(scene, { onActivate, onClose }) {
+  const shared = () => scene.multiplayer ? scene.coopRuntime?.world?.generator : null;
   const camera = scene.cameras.main;
   const inventory = scene.inventory;
   const availableQuantity = id => inventory.getQuantity(id, id === "gasolina" ? { minFuel: 1 } : {});
@@ -23,7 +24,8 @@ export function criarPainelGerador(scene, { onActivate, onClose }) {
     .filter(slot => slot.itemId === "gasolina").map(slot => slot.fuel ?? 0));
   const instructions = () => inventory.getQuantity("gasolina") > 0 && !availableQuantity("gasolina")
     ? "Encha o galão no ponto de gasolina antes de conectar ao gerador."
-    : "Arraste a bateria e o galão cheio para conectar o circuito.";
+    : scene.multiplayer ? "Conecte sua peça. A equipe compartilha os encaixes do gerador."
+      : "Arraste a bateria e o galão cheio para conectar o circuito.";
   const display = criarDisplayGerador(scene, WIDTH, HEIGHT, "generatorDisplay", { manualInvalidation: true });
   const root = scene.add.container(0, 0).setDepth(1000).setScrollFactor(0)
     .setName("generator-modal").setVisible(false);
@@ -39,6 +41,7 @@ export function criarPainelGerador(scene, { onActivate, onClose }) {
   let signature = "";
   let inventoryDirty = true;
   let lastUIState = "";
+  let lastSharedRevision = -1;
   let destroyed = false;
   const hiddenDOM = new Map();
   const installed = new Set();
@@ -172,13 +175,23 @@ export function criarPainelGerador(scene, { onActivate, onClose }) {
   const ghost = add(scene.add.image(0, 0, visuals[0].iconKey))
     .setDisplaySize(48, 48).setVisible(false).setName("generator-drag");
 
-  const ready = () => installed.size === 2 && ROWS.every(row => availableQuantity(row.id) >= 1);
+  const ready = () => shared() ? shared().ready() : installed.size === 2 && ROWS.every(row => availableQuantity(row.id) >= 1);
   const refresh = (force = false) => {
-    const uiState = `${activating}:${[...installed]}:${drag?.id}:${drag?.hover}`;
+    if (shared()) {
+      installed.clear();
+      for (const row of ROWS) if (shared().state.slots[row.id]) installed.add(row.id);
+    }
+    if (shared() && lastSharedRevision !== shared().state.revision) {
+      lastSharedRevision = shared().state.revision;
+      if (opened && !drag && !activating) feedback.setText(ready()
+        ? "Circuito da equipe completo. Qualquer jogador pode ligar."
+        : installed.size ? "Peça da equipe conectada. Falta completar o circuito." : instructions());
+    }
+    const uiState = `${shared()?.state.revision}:${activating}:${[...installed]}:${drag?.id}:${drag?.hover}`;
     if (!force && inventory.onChange && !inventoryDirty && uiState === lastUIState) return;
     inventoryDirty = false;
     lastUIState = uiState;
-    if (!activating) {
+    if (!activating && !shared()) {
       for (const row of ROWS) if (availableQuantity(row.id) < 1) installed.delete(row.id);
     }
     const next = `${activating}:${[...installed]}:${ROWS.map(row => availableQuantity(row.id))}:${fuelLevel()}:${inventory.getQuantity("gasolina")}:${drag?.id}:${drag?.hover}`;
@@ -192,7 +205,7 @@ export function criarPainelGerador(scene, { onActivate, onClose }) {
       const precisaEncher = visual.id === "gasolina" && !available && inventory.getQuantity("gasolina") > 0;
       visual.quantity.setText(connected ? "CONECTADO" : available ? "DISPONÍVEL" : precisaEncher
         ? `${Math.floor(fuelLevel() * 100)}% · ENCHA` : "NÃO COLETADO")
-        .setColor(available ? "#9dcdb0" : "#e3b891");
+        .setColor(connected || available ? "#9dcdb0" : "#e3b891");
       visual.source.setAlpha(connected ? 0.45 : available ? 1 : 0.35);
       visual.piece.setPosition(connected ? -82 : -312, connected ? visual.y - 5 : visual.sourceY)
         .setAlpha(connected || available ? 1 : 0.3).setVisible(!dragging);
@@ -201,7 +214,7 @@ export function criarPainelGerador(scene, { onActivate, onClose }) {
         .setColor(connected ? "#adffd4" : "#9dcdb0");
       visual.source.disableInteractive();
       visual.slot.disableInteractive();
-      if (!activating && available) {
+      if (!activating && available && (!shared() || !connected)) {
         (connected ? visual.slot : visual.source).setInteractive({ cursor: "grab" });
       }
     }
@@ -251,7 +264,7 @@ export function criarPainelGerador(scene, { onActivate, onClose }) {
       display?.invalidate();
       return;
     }
-    const visual = visuals.find(v => availableQuantity(v.id) >= 1 &&
+    const visual = visuals.find(v => availableQuantity(v.id) >= 1 && (!shared() || !installed.has(v.id)) &&
       (installed.has(v.id) ? inside(p, -82, v.y, 144, 88) : inside(p, -267, v.sourceY, 144, 65)));
     if (!visual) return;
     drag = { id: visual.id, pointerId: pointer.id, hover: false };
@@ -275,6 +288,11 @@ export function criarPainelGerador(scene, { onActivate, onClose }) {
       const visual = visuals.find(v => v.id === drag.id);
       if (inside(p, -82, visual.y, 144, 88) && availableQuantity(visual.id) >= 1) {
         const novoEncaixe = !installed.has(visual.id);
+        if (shared()) {
+          const sent = shared().requestInstall(visual.id);
+          feedback.setText(sent ? "Peça enviada ao gerador. Aguardando confirmação..." : "Peça indisponível ou outra instalação em andamento.");
+          cancelDrag(); return;
+        }
         installed.add(visual.id);
         if (novoEncaixe) tocarSomColocando(scene, "encaixe");
         feedback.setText(installed.size === 2 ? "Circuito completo. Pressione LIGAR para iniciar." : "Peça conectada. Arraste o próximo item.");
@@ -313,9 +331,9 @@ export function criarPainelGerador(scene, { onActivate, onClose }) {
     ready,
     refresh,
     open() {
-      installed.clear(); activating = false; opened = true; cancelDrag(); layout();
+      installed.clear(); activating = false; close.setAlpha(1).setInteractive({ useHandCursor: true }); opened = true; cancelDrag(); layout();
       hideDOM();
-      feedback.setText(instructions()).setColor("#b1dec3");
+      feedback.setText(shared()?.ready() ? "Circuito da equipe completo. Qualquer jogador pode ligar." : instructions()).setColor("#b1dec3");
       display?.invalidate();
       root.setVisible(true);
       tocarSomColocando(scene, "acesso");

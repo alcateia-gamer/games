@@ -1,3 +1,4 @@
+import { depthAcimaTorres } from '../effects/EffectDepth.js';
 import { modifiersFor, specialCooldown } from '../systems/UpgradeSystem.js';
 /**
  * Habilidades especiais de Kai, Magnus, Aria e Nyx.
@@ -181,14 +182,18 @@ function iniciarParry(scene, estado, agora) {
   estado.parryGrafico?.destroy();
   estado.parryEfeito?.sprite.destroy();
   estado.parryEfeito = criarEfeitoEspecial(scene,'kai',CONFIG.kaiRaio);
-  if (estado.parryEfeito) estado.parryEfeito.sprite.coopAnchor = scene.player;
+  if (estado.parryEfeito) {
+    estado.parryEfeito.sprite.coopAnchor = scene.player;
+    estado.parryEfeito.sprite.aboveBossTowers = true;
+  }
   estado.parryColisao?.destruir();
   estado.parryColisao = criarColisaoDomoKai(scene,estado,CONFIG.kaiRaio,CONFIG.kaiDuracao);
 
   estado.parryGrafico = scene.add
     .graphics()
-    .setDepth((scene.player.depth ?? 50) + 0.15);
+    .setDepth(depthAcimaTorres(scene, (scene.player.depth ?? 50) + 0.15));
   estado.parryGrafico.coopAnchor = scene.player;
+  estado.parryGrafico.aboveBossTowers = true;
   tocarSomEspecialKai(scene);
 }
 
@@ -218,9 +223,9 @@ function atualizarParry(scene, estado, agora) {
   const r = CONFIG.kaiRaio;
   const decorrido = agora-(estado.parryAte-CONFIG.kaiDuracao);
   atualizarEfeitoEspecial(estado.parryEfeito,player.x,player.y+deslocamentoChao(scene),decorrido,
-    (player.depth ?? 50)-.04,decorrido/CONFIG.kaiDuracao);
+    depthAcimaTorres(scene, (player.depth ?? 50)-.04),decorrido/CONFIG.kaiDuracao);
   desenharDomoKai(g,estado.parryEfeito,player.x,player.y+deslocamentoChao(scene),
-    r,decorrido,player.depth ?? 50);
+    r,decorrido,depthAcimaTorres(scene, player.depth ?? 50));
   estado.parryColisao?.atualizar(player.x,player.y+deslocamentoChao(scene));
 }
 

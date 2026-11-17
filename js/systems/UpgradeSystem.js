@@ -2,13 +2,37 @@ import { obterBalanceamento } from '../combat/CharacterBalance.js';
 import { upgradeDefinitions } from './UpgradeDefinitions.js';
 const modifierCache = new WeakMap();
 export const ECONOMY_KEY = 'nullborns:upgrades:run';
-export function createEconomy() { return { revision: 0, accounts: {}, drops: {}, zones: {}, rewarded: 0, sequence: 0 }; }
+export function createEconomy(shared = false) {
+  return { revision: 0, accounts: {}, drops: {}, zones: {}, rewarded: 0, sequence: 0,
+    ...(shared ? { sharedScrap: true, teamWallet: { scrap: 0 } } : {}) };
+}
 export function economyFor(scene) {
-  if ((scene.multiplayer || scene.coopRuntime) && scene.multiplayerManager?.room) return scene.multiplayerManager.room.upgradeEconomy ??= createEconomy();
+  if ((scene.multiplayer || scene.coopRuntime) && scene.multiplayerManager?.room) {
+    const state = scene.multiplayerManager.room.upgradeEconomy ??= createEconomy(true);
+    enableSharedScrap(state); return state;
+  }
   const registry = scene.game.registry;
   let state = registry.get(ECONOMY_KEY);
   if (!state) { state = createEconomy(); registry.set(ECONOMY_KEY, state); }
   return state;
+}
+/** Migra saldos antigos uma única vez; níveis continuam separados por jogador. */
+export function enableSharedScrap(economy) {
+  if (economy.sharedScrap) return economy;
+  economy.teamWallet = { scrap: 0 };
+  for (const account of Object.values(economy.accounts)) {
+    if (Number.isSafeInteger(account.scrap) && account.scrap > 0)
+      economy.teamWallet.scrap = Math.min(Number.MAX_SAFE_INTEGER, economy.teamWallet.scrap + account.scrap);
+    account.scrap = 0;
+  }
+  economy.sharedScrap = true; economy.revision++;
+  return economy;
+}
+export function scrapAccount(economy, id, character) {
+  return economy.sharedScrap ? economy.teamWallet : playerAccount(economy, id, character);
+}
+export function walletFor(scene) {
+  return scrapAccount(economyFor(scene), localPlayerId(scene), scene.personagemSelecionada);
 }
 export function playerAccount(economy, id, character) {
   const account = economy.accounts[id] ??= { scrap: 0, characters: {} };
@@ -37,9 +61,9 @@ export function purchase(economy, playerId, character, id, expectedLevel) {
   const account = playerAccount(economy, playerId, character), levels = account.characters[character], level = levels[id] || 0;
   if (level !== expectedLevel) return { ok: false, reason: 'ESTADO ATUALIZADO. SELECIONE NOVAMENTE.' };
   if (level >= d.max) return { ok: false, reason: 'NÍVEL MÁXIMO' };
-  const cost = d.prices[level];
-  if (!Number.isSafeInteger(account.scrap) || account.scrap < cost) return { ok: false, reason: 'SUCATAS INSUFICIENTES' };
-  account.scrap -= cost; levels[id] = level + 1; economy.revision++;
+  const cost = d.prices[level], wallet = scrapAccount(economy, playerId, character);
+  if (!Number.isSafeInteger(wallet.scrap) || wallet.scrap < cost) return { ok: false, reason: 'SUCATAS INSUFICIENTES' };
+  wallet.scrap -= cost; levels[id] = level + 1; economy.revision++;
   return { ok: true, cost, level: level + 1, reason: 'MELHORIA INSTALADA COM SUCESSO' };
 }
 export function maximumHealth(character, bonus = 0) { return obterBalanceamento(character).vida * (1 + bonus); }

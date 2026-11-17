@@ -32,6 +32,7 @@ test("flashlight updates on movement and direction changes only while factory po
   const overlay = { visible: true };
   for (const name of ["setOrigin", "setScrollFactor", "setDepth", "setDisplaySize", "setPosition", "setRotation", "setScale"])
     overlay[name] = () => overlay;
+  overlay.setDepth = depth => { overlay.depth = depth; return overlay; };
   overlay.setAlpha = alpha => { overlay.alpha = alpha; return overlay; };
   overlay.setVisible = visible => { overlay.visible = visible; return overlay; };
   overlay.destroy = () => {};
@@ -92,6 +93,10 @@ test("flashlight updates on movement and direction changes only while factory po
   scene.player.body.velocity.x = 0;
   render();
   assert.equal(uploads, animationUploads, "parar preserva a mira e reutiliza a máscara");
+  scene.novoBoss = { geradores: [{ torre: true, visual: { active: true, visible: true, depth: 60 } }] };
+  render(); assert.ok(overlay.depth > 60, "a luz da arena fica acima das torres");
+  scene.novoBoss.geradores[0].visual.depth = 70;
+  render(); assert.ok(overlay.depth > 70, "acompanha mudanças de depth sem recriar a máscara");
   cleanup();
   assert.equal(scene.game.renderer.listenerCount("render"), 0);
 });

@@ -226,6 +226,7 @@ test("acionar o gerador novamente encerra a iluminação DEV e recupera o estado
   manager.publishState = () => {};
   manager.room.coopDevLighting = false;
   scene.acenderLuzFabrica = () => { scene.luzFabricaAcesa = true; };
+  scene.developerMode = true;
   world.generatorProgress();
   assert.equal(sent[0][0], "progress");
   world.receive({ kind: sent[0][0], playerId: manager.playerId, payload: sent[0][1] });
@@ -555,4 +556,16 @@ test("réplicas reutilizam retângulos por inimigo, sem compartilhar entre salas
   r.receiveFrame(packet(102));
   assert.equal(actor.hitboxDano.x, 102);
   assert.notEqual(actor.hitboxDano, outra.actor.hitboxDano);
+});
+
+test('escudo do Kai replicado respeita a torre local e atualiza depth mesmo ancorado ao jogador', () => {
+  const scene=visualScene(),object=scene.add.sprite(0,0);
+  object.setDepth=d=>{object.depth=d;return object;};
+  scene.novoBoss={geradores:[{torre:true,visual:{active:true,visible:true,depth:60}}]};
+  const state={...pose,d:16.46,aboveBossTowers:true,anchor:{id:'client',x:0,y:0}};
+  applyVisual(scene,object,state,false);assert.ok(object.depth>60);
+  assert.equal(describeVisual(object).aboveBossTowers,true);
+  const receiver=new VisualReceiver(scene);receiver.entries.set('shield',{object,state});
+  scene.novoBoss.geradores[0].visual.depth=70;receiver.update(16);assert.ok(object.depth>70);
+  assert.equal(object.x,80);assert.equal(object.y,100);
 });
