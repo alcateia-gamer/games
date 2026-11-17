@@ -1,3 +1,4 @@
+import { enfileirarAssetsFabrica, verificarEntradaFabrica, assetsFabricaProntos } from "../core/FactoryAssetPack.js";
 import { createUpgradeNPC } from '../interactions/UpgradeNPC.js';
 import { ScrapSystem } from '../systems/ScrapSystem.js';
 import { prepararAudioCoop } from "../multiplayer/CoopAudio.js";
@@ -207,7 +208,24 @@ class Level1Parte2 extends Phaser.Scene {
   /**
    * Monta mapa, jogador, controles, inventário, interações e retorno à cidade.
    */
+  preload() {
+    // O loader pertence a esta visita: não concorre com a abertura ou outra cena.
+    // Tudo é preparado sob a transição, sem decodificação durante exploração/combate.
+    this.load.maxParallelDownloads = 2;
+    this.avisoAssetsFabrica = null;
+    if (!assetsFabricaProntos(this)) {
+      const camera = this.cameras.main;
+      camera.setBackgroundColor("#000000");
+      this.avisoAssetsFabrica = this.add.text(camera.width / 2, camera.height / 2, "PREPARANDO FÁBRICA...",
+        { fontFamily: "monospace", fontSize: "18px", color: "#ffffff" }).setOrigin(0.5);
+    }
+    enfileirarAssetsFabrica(this);
+  }
+
   create() {
+    this.avisoAssetsFabrica?.destroy();
+    this.avisoAssetsFabrica = null;
+    if (!verificarEntradaFabrica(this)) return;
     prepararAudioCoop(this);
     this.physics.resume();
     this.physics.world.resume();
@@ -371,6 +389,7 @@ class Level1Parte2 extends Phaser.Scene {
    * profundidade, inimigos e rede.
    */
   update(time, delta) {
+    if (this.aguardandoAssetsFabrica) return;
     atualizarBoss(this, time, delta);
     this.minimap?.update(time);
     if (this.morteEmAndamento) {

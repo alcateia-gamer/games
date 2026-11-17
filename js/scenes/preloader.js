@@ -1,3 +1,5 @@
+import { criarCarregadorCacheavel } from "../core/AssetLoading.js";
+import { enfileirarAssetsFabrica } from "../core/FactoryAssetPack.js";
 import { carregarQuedasCoop } from "../multiplayer/CoopRevival.js";
 import { CutsceneLoading } from "../ui/CutsceneLoading.js";
 /**
@@ -13,25 +15,10 @@ import { carregarSonsPersonagem } from "../sounds/personagem.js";
 import { carregarSomEspecialMagnus } from "../sounds/magnusEspecial.js";
 import { carregarSomEspecialKai } from "../sounds/kaiEspecial.js";
 import { carregarSomEspecialAria } from "../sounds/ariaEspecial.js";
-import { carregarSomImpactoChuvaBoss } from "../sounds/impactoChuvaBoss.js";
-import { carregarSomTeleporteBoss } from "../sounds/teleporteBoss.js";
-import { carregarSomExplosaoPulsoBoss } from "../sounds/explosaoPulsoBoss.js";
-import { carregarSomDisparoBoss } from "../sounds/disparoBoss.js";
 import { carregarSomAuraNyx } from "../sounds/SOUNDS_PERSONAGENS.js/sounds_Nyx,.js";
-import { carregarSomGerador } from "../sounds/gerador.js";
-import { carregarSomLuzFabrica } from "../sounds/luzFabrica.js";
-import { carregarMusicaNovoBoss } from "../sounds/novoBoss.js";
-import { carregarMusicaFabrica } from "../sounds/musicaFabrica.js";
 import { carregarMusicaCidade } from "../sounds/musicaCidade.js";
-import { carregarSonsLeitorCartao } from "../sounds/leitorCartao.js";
-import { carregarSomPortaFabrica } from "../sounds/portaFabrica.js";
 import { carregarSomEnchendoGalao } from "../sounds/enchendoGalao.js";
-import { carregarSomEscudoBoss } from "../sounds/escudoBoss.js";
-import { carregarSomEscotilhaBoss } from "../sounds/escotilhaBoss.js";
-import { carregarSomImpactoEscotilhaBoss, carregarSomExplosaoEscotilhaBoss } from "../sounds/impactoEscotilhaBoss.js";
-import { carregarSomRaioEscotilhaBoss } from "../sounds/raioEscotilhaBoss.js";
 import { preloadInventoryItemImages } from "../inventory/InventoryItems.js";
-import { carregarAssetsNovoBoss } from "../enemies/novoBoss/NovoBossAssets.js";
 import { carregarEfeitosEspeciais } from "../combat/SpecialAbilityEffects.js";
 
 class Preloader extends Phaser.Scene {
@@ -52,7 +39,8 @@ class Preloader extends Phaser.Scene {
   iniciarCarregamento() {
     this.carregandoAtivos = true;
 
-    this.load.once("complete", () => {
+    const aoConcluir = () => {
+      this.events.off("shutdown", cancelar);
       if (this.falhasCarregamento.length) {
         this.cutscene.showLoadError("Não foi possível carregar todos os recursos.", () => {
           this.cutscene.clearMessage();
@@ -65,7 +53,10 @@ class Preloader extends Phaser.Scene {
       prepararTexturaLaserOlhao(this);
       this.prepararRenderizacaoPersonagens();
       this.finalizarCarregamento();
-    });
+    };
+    const cancelar = () => this.load.off("complete", aoConcluir);
+    this.events.once("shutdown", cancelar);
+    this.load.once("complete", aoConcluir);
 
     this.carregarAssets();
     this.load.start();
@@ -130,62 +121,43 @@ class Preloader extends Phaser.Scene {
    * compartilhados pelos módulos.
    */
   carregarAssets() {
-    this.load.setPath("./assets/");
-    if (!this.textures.exists("upgrade-npc")) this.load.spritesheet("upgrade-npc", "PERSONAGENS/NPC/NPC.png", { frameWidth: 64, frameHeight: 64 });
-    if (!this.textures.exists("scrap-components")) this.load.image("scrap-components", "COLETAVEIS/sucatas.png");
-    carregarMusicaNovoBoss(this.load);
-    carregarMusicaCidade(this.load);
-    carregarMusicaFabrica(this.load);
-    carregarAssetsNovoBoss(this);
-    carregarEfeitosEspeciais(this);
+    const load = criarCarregadorCacheavel(this);
+    const assets = { load, textures: this.textures, cache: this.cache };
+    load.setPath("./assets/");
+    if (!this.textures.exists("upgrade-npc")) load.spritesheet("upgrade-npc", "PERSONAGENS/NPC/NPC.png", { frameWidth: 64, frameHeight: 64 });
+    if (!this.textures.exists("scrap-components")) load.image("scrap-components", "COLETAVEIS/sucatas.png");
+    carregarMusicaCidade(load);
+    carregarEfeitosEspeciais(assets);
 
-    preloadInventoryItemImages(this);
-    this.load.image("hand_icon", "../Tilesets/extras/Hand_icon.png");
+    preloadInventoryItemImages(assets);
+    load.image("hand_icon", "../Tilesets/extras/Hand_icon.png");
 
-    carregarQuedasCoop(this.load);
-    carregarSonsPersonagem(this.load);
-    carregarSomEspecialMagnus(this.load);
-    carregarSomEspecialKai(this.load);
-    carregarSomEspecialAria(this.load);
-    carregarSomImpactoChuvaBoss(this.load);
-    carregarSomTeleporteBoss(this.load);
-    carregarSomExplosaoPulsoBoss(this.load);
-    carregarSomDisparoBoss(this.load);
-    carregarSonsKatana(this.load);
-    carregarSonsInimigos(this.load);
-    carregarSomPropulsaoRoboBola(this.load);
-    carregarSomColocando(this.load);
-    carregarSomGerador(this.load);
-    carregarSomLuzFabrica(this.load);
-    carregarSonsLeitorCartao(this.load);
-    carregarSomPortaFabrica(this.load);
-    carregarSomEnchendoGalao(this.load);
-    carregarSomEscudoBoss(this.load);
-    carregarSomEscotilhaBoss(this.load);
-    carregarSomImpactoEscotilhaBoss(this.load);
-    carregarSomExplosaoEscotilhaBoss(this.load);
-    carregarSomRaioEscotilhaBoss(this.load);
-    carregarSomAuraNyx(this.load);
+    carregarQuedasCoop(load);
+    carregarSonsPersonagem(load);
+    carregarSomEspecialMagnus(load);
+    carregarSomEspecialKai(load);
+    carregarSomEspecialAria(load);
+    carregarSonsKatana(load);
+    carregarSonsInimigos(load);
+    carregarSomPropulsaoRoboBola(load);
+    carregarSomColocando(load);
+    carregarSomEnchendoGalao(load);
+    carregarSomAuraNyx(load);
 
     // =====================================================
     // MAPAS
     // =====================================================
 
-    this.load.tilemapTiledJSON(
+    load.tilemapTiledJSON(
       "mapa",
       "map/InicioFase1 (1).json?v=fuel-refill-1"
-    );
-
-    this.load.tilemapTiledJSON(
-      "mapaParte2",
-      "map/parte2-fase1.json"
     );
 
     // =====================================================
     // PERSONAGEM 1 - KAI MERCER
     // =====================================================
 
-    this.load.spritesheet(
+    load.spritesheet(
       "walk",
       "PERSONAGENS/PERSONAGENS PRICIPAIS/KAI_MERCER 1/KAI_WALK.png",
       {
@@ -194,7 +166,7 @@ class Preloader extends Phaser.Scene {
       }
     );
 
-    this.load.spritesheet(
+    load.spritesheet(
       "attack",
       "PERSONAGENS/PERSONAGENS PRICIPAIS/KAI_MERCER 1/KAI_ATAQUE_KATANA.png",
       {
@@ -207,7 +179,7 @@ class Preloader extends Phaser.Scene {
     // PERSONAGEM 2 - MAGNUS FORCE
     // =====================================================
 
-    this.load.spritesheet(
+    load.spritesheet(
       "personagem2-walk",
       "PERSONAGENS/PERSONAGENS PRICIPAIS/MAGNUS_FORCE 2/magnus_walk_LARANJA.png",
       {
@@ -216,7 +188,7 @@ class Preloader extends Phaser.Scene {
       }
     );
 
-    this.load.spritesheet(
+    load.spritesheet(
       "personagem2-attack",
       "PERSONAGENS/PERSONAGENS PRICIPAIS/MAGNUS_FORCE 2/magnus_ataque_LARANJA.png",
       {
@@ -225,7 +197,7 @@ class Preloader extends Phaser.Scene {
       }
     );
 
-    this.load.spritesheet(
+    load.spritesheet(
       "personagem2-idle",
       "PERSONAGENS/PERSONAGENS PRICIPAIS/MAGNUS_FORCE 2/magnus_1.png",
       {
@@ -238,7 +210,7 @@ class Preloader extends Phaser.Scene {
     // PERSONAGEM 3 - ARIA KADE
     // =====================================================
 
-    this.load.spritesheet(
+    load.spritesheet(
       "personagem3-walk",
       "PERSONAGENS/PERSONAGENS PRICIPAIS/ARIA_KADE 3/ARIA_WALK.png",
       {
@@ -247,7 +219,7 @@ class Preloader extends Phaser.Scene {
       }
     );
 
-    this.load.spritesheet(
+    load.spritesheet(
       "personagem3-attack",
       "PERSONAGENS/PERSONAGENS PRICIPAIS/ARIA_KADE 3/ARIA_ARCO_ATAQUE_ROSA.png",
       {
@@ -256,7 +228,7 @@ class Preloader extends Phaser.Scene {
       }
     );
 
-    this.load.spritesheet(
+    load.spritesheet(
       "aria-arrow",
       "PERSONAGENS/PERSONAGENS PRICIPAIS/ARIA_KADE 3/Arrow_ROSA.png",
       {
@@ -269,7 +241,7 @@ class Preloader extends Phaser.Scene {
     // PERSONAGEM 4 - NYX
     // =====================================================
 
-    this.load.spritesheet(
+    load.spritesheet(
       "personagem4-walk",
       "PERSONAGENS/PERSONAGENS PRICIPAIS/NYX_4/nyx_walk.png",
       {
@@ -278,7 +250,7 @@ class Preloader extends Phaser.Scene {
       }
     );
 
-    this.load.spritesheet(
+    load.spritesheet(
       "personagem4-attack",
       "PERSONAGENS/PERSONAGENS PRICIPAIS/NYX_4/nyx_ataque.png",
       {
@@ -291,7 +263,7 @@ class Preloader extends Phaser.Scene {
     // ROBÔ DE GUERRA
     // =====================================================
 
-    this.load.spritesheet(
+    load.spritesheet(
       "robo-teste",
       "PERSONAGENS/INIMIGOS PRINCIPAIS/ROBO_DE_GUERRA/robo_teste_2.png",
       {
@@ -300,7 +272,7 @@ class Preloader extends Phaser.Scene {
       }
     );
 
-    this.load.spritesheet(
+    load.spritesheet(
       "robo-teste-normal",
       "PERSONAGENS/INIMIGOS PRINCIPAIS/ROBO_DE_GUERRA/robo_teste_3.png",
       {
@@ -309,7 +281,7 @@ class Preloader extends Phaser.Scene {
       }
     );
 
-    this.load.spritesheet(
+    load.spritesheet(
       "robo-morte",
       "PERSONAGENS/INIMIGOS PRINCIPAIS/ROBO_DE_GUERRA/robo_morte.png",
       {
@@ -322,7 +294,7 @@ class Preloader extends Phaser.Scene {
     // ROBÔ DE SERRA
     // =====================================================
 
-    this.load.spritesheet(
+    load.spritesheet(
       "robo-serra",
       "PERSONAGENS/INIMIGOS PRINCIPAIS/ROBO_DE_SERRA/robo_novo.png",
       {
@@ -331,7 +303,7 @@ class Preloader extends Phaser.Scene {
       }
     );
 
-    this.load.spritesheet(
+    load.spritesheet(
       "robo-serra-morte",
       "PERSONAGENS/INIMIGOS PRINCIPAIS/ROBO_DE_SERRA/robo_serra_morte.png",
       { frameWidth: 278, frameHeight: 270 },
@@ -341,7 +313,7 @@ class Preloader extends Phaser.Scene {
     // ROBÔ PET
     // =====================================================
 
-    this.load.spritesheet(
+    load.spritesheet(
       "robo-pet",
       "PERSONAGENS/PERSONAGENS PRICIPAIS/ROBO_PET/robo_pet.png",
       {
@@ -354,25 +326,25 @@ class Preloader extends Phaser.Scene {
     // ROBO BOLA
     // =====================================================
 
-    this.load.spritesheet(
+    load.spritesheet(
       "robo-olhao",
       "PERSONAGENS/INIMIGOS PRINCIPAIS/ROBO_OLHAO/robo_olhao.png",
       { frameWidth: 280, frameHeight: 280 },
     );
 
-    this.load.spritesheet(
+    load.spritesheet(
       "robo-olhao-morte",
       "PERSONAGENS/INIMIGOS PRINCIPAIS/ROBO_OLHAO/robo_olhao_morte.png",
       { frameWidth: 280, frameHeight: 280 },
     );
 
-    this.load.spritesheet(
+    load.spritesheet(
       "robo-bola",
       "PERSONAGENS/INIMIGOS PRINCIPAIS/ROBO_BOLA/ROBO_BOLA127x127.png",
       { frameWidth: 127, frameHeight: 127 },
     );
 
-    this.load.spritesheet(
+    load.spritesheet(
       "robo-bola-morte",
       "PERSONAGENS/INIMIGOS PRINCIPAIS/ROBO_BOLA/ROBO_MORTE_127x127.png",
       { frameWidth: 127, frameHeight: 127 },
@@ -382,7 +354,7 @@ class Preloader extends Phaser.Scene {
     // JOYSTICK
     // =====================================================
 
-    this.load.plugin(
+    load.plugin(
       "rexvirtualjoystickplugin",
       "../js/libs/rexvirtualjoystickplugin.min.js",
       true
@@ -392,67 +364,67 @@ class Preloader extends Phaser.Scene {
     // TILESETS - CIDADE
     // =====================================================
 
-    this.load.image(
+    load.image(
       "cityShopping",
       "../Tilesets/City/Tileset_SciFi_CityShopping_Rasak.png"
     );
 
-    this.load.image(
+    load.image(
       "street",
       "../Tilesets/City/Tileset_SciFi_Street_Rasak.png"
     );
 
-    this.load.image(
+    load.image(
       "street2",
-      "../Tilesets/City/Tileset_SciFi_Street_Rasak_DUP.png"
+      "../Tilesets/City/Tileset_SciFi_Street_Rasak.png"
     );
 
-    this.load.image(
+    load.image(
       "garbage",
       "../Tilesets/City/Tileset_SciFi_Garbage_Rasak.png"
     );
 
-    this.load.image(
+    load.image(
       "a5Street",
       "../Tilesets/City/A5_Street_Rasak.png"
     );
 
-    this.load.image(
+    load.image(
       "slums",
       "../Tilesets/City/Tileset_SciFi_Slums_Rasak.png"
     );
 
-    this.load.image(
+    load.image(
       "publicTransportation",
       "../Tilesets/City/Tileset_SciFi_PublicTransportation_Slums_Rasak.png.png"
     );
 
-    this.load.image(
+    load.image(
       "a4Outside",
       "../Tilesets/City/A4_SciFi_Outside_Rasak.png"
     );
 
-    this.load.image(
+    load.image(
       "a3Outside",
       "../Tilesets/City/A3_SciFi_Outside_Rasak.png"
     );
 
-    this.load.image(
+    load.image(
       "A5_SciFi_Outside_Rasak",
       "../Tilesets/City/A5_SciFi_Outside_Rasak.png"
     );
 
-    this.load.image(
+    load.image(
       "buildingExtras",
       "../Tilesets/City/Tileset_SciFi_BuildingExtras.png"
     );
 
-    this.load.image(
+    load.image(
       "torre",
       "../Tilesets/City/TorreTileset.png"
     );
 
-    this.load.image(
+    load.image(
       "cabineTelefonica",
       "../Tilesets/extras/Cabine-Tele.png"
     );
@@ -461,22 +433,22 @@ class Preloader extends Phaser.Scene {
     // TILESETS - INTERIOR
     // =====================================================
 
-    this.load.image(
+    load.image(
       "apartment2",
       "../Tilesets/Inside/Tileset_SciFi_Arpartment_2_Rasak.png"
     );
 
-    this.load.image(
+    load.image(
       "insideA1",
       "../Tilesets/Inside/A1_SciFi_Inside_Rasak.png"
     );
 
-    this.load.image(
+    load.image(
       "insideA2",
       "../Tilesets/Inside/A2_SciFi_Inside_Rasak.png"
     );
 
-    this.load.image(
+    load.image(
       "club",
       "../Tilesets/Inside/Tileset_SciFi_Club_Rasak.png"
     );
@@ -485,83 +457,44 @@ class Preloader extends Phaser.Scene {
     // TILESETS - INDUSTRIAL
     // =====================================================
 
-    this.load.image(
+    load.image(
       "ModernIndustrial2",
       "../Tilesets/Industrial/Tileset_Modern_Industrial_2_Rasak.png"
     );
 
-    this.load.image(
+    load.image(
       "ModernInsideFactoryA1",
       "../Tilesets/Industrial/A1_Modern_Inside_Factory_Rasak.png"
     );
 
-    this.load.image(
-      "factoryInsideA1",
-      "../Tilesets/Industrial/A1_Modern_Inside_Factory_Rasak.png"
-    );
-
     // A versão acompanha o PNG original para evitar reutilizar uma arte antiga em cache.
-    this.load.image(
-      "industrialGenerator",
-      "../Tilesets/Industrial/Tileset_Pixel_Art_de_Gerador_Industrial.png?v=4d96171721c8",
-    );
 
-    this.load.image(
-      "industrialElectrical",
-      "../Tilesets/Industrial/Tileset_Pixel_Art_de_Eletrica_industrial.png?v=137e2c850c30",
-    );
-
-    this.load.image(
-      "industrialA2",
-      "../Tilesets/Industrial/A2_Industrial_Rasak.png"
-    );
-
-    this.load.image(
-      "industrialA4",
-      "../Tilesets/Industrial/A4_Modern_Industrial_Rasak.png"
-    );
-
-    this.load.image(
-      "industrialA5",
-      "../Tilesets/Industrial/A5_SciFi_Industrial_Rasak.png"
-    );
-
-    this.load.image(
-      "industrial1",
-      "../Tilesets/Industrial/Tileset_Modern_Industrial_1_Rasak.png"
-    );
-
-    this.load.image(
+    load.image(
       "industrial3",
       "../Tilesets/Industrial/Tileset_Modern_Industrial_3_Rasak.png"
     );
 
-    this.load.image(
-      "entertainingDistrict",
-      "../Tilesets/Entertaining_District/Tileset_ModernSciFi_Entertaining_District_Rasak.png"
-    );
-
-    this.load.image(
+    load.image(
       "insideA4",
       "../Tilesets/Inside/A4_SciFi_Inside_Rasak.png"
     );
 
-    this.load.image(
+    load.image(
       "insideA5",
       "../Tilesets/Inside/A5_SciFi_Inside_Rasak.png"
     );
 
-    this.load.image(
+    load.image(
       "a2Outside",
       "../Tilesets/City/A2_Scifi_Outside_Rasak.png"
     );
 
-    this.load.image(
+    load.image(
       "insideA3",
       "../Tilesets/Inside/A3_SciFi_Inside_Rasak.png"
     );
 
-    this.load.image(
+    load.image(
       "apartment1",
       "../Tilesets/Inside/Tileset_SciFi_Arpartment_1_Rasak.png"
     );
@@ -570,140 +503,40 @@ class Preloader extends Phaser.Scene {
     // PORTAS E ELEMENTOS INDUSTRIAIS
     // =====================================================
 
-    this.load.image(
-      "securityDoor",
-      "../Tilesets/Animations/Doors/!Security Door.png"
-    );
-
-    this.load.image(
-      "industrialGate",
-      "../Tilesets/Animations/Doors/!Industrial Gate.png"
-    );
-
-    this.load.image(
-      "industrialControls",
-      "../Tilesets/Animations/Industrial and Security/!$Controlls.png"
-    );
-
-    this.load.image(
-      "industrialMachines",
-      "../Tilesets/Animations/Industrial and Security/!Industrial mashines.png"
-    );
-
-    this.load.image(
-      "industrialSwitch",
-      "../Tilesets/Animations/Industrial and Security/!Switch_Rasak.png"
-    );
-
-    this.load.image(
-      "electricGenerator",
-      "../Tilesets/Animations/Industrial and Security/$ElectricGenerator.png"
-    );
-
-    this.load.image(
-      "generatorCharacter",
-      "../Tilesets/Animations/Industrial and Security/!$Generator_char.png"
-    );
-
-    this.load.image(
-      "satellite",
-      "../Tilesets/Animations/Industrial and Security/$Satalite.png"
-    );
-
-    this.load.image(
-      "ventilationSystem",
-      "../Tilesets/Animations/Industrial and Security/!Ventilation System.png"
-    );
-
-    this.load.image(
-      "shieldGenerator",
-      "../Tilesets/Animations/Industrial and Security/!$ShieldGenerator.png"
-    );
-
-    this.load.image(
-      "chemTank",
-      "../Tilesets/Animations/Industrial and Security/!Chem-Tank.png"
-    );
-
-    this.load.image(
+    load.image(
       "tanqueCombustivel",
       "../Tilesets/Animations/Industrial and Security/tanque_pixel_art_300x150_transparente.png"
-    );
-
-    this.load.image(
-      "shieldDoorCharacter",
-      "../Tilesets/Animations/Industrial and Security/!$Shield_Door_char.png"
     );
 
     // =====================================================
     // LUZES
     // =====================================================
 
-    this.load.image(
-      "neonTubes1",
-      "../Tilesets/Animations/Lights/!$Neontubes1.png"
-    );
-
-    this.load.image(
-      "neonTubes2",
-      "../Tilesets/Animations/Lights/!$Neontubes2.png"
-    );
-
-    this.load.image(
-      "industrialLights1",
-      "../Tilesets/Animations/Lights/!Industrials_Lights1.png"
-    );
-
-    this.load.image(
-      "modernFloorLights",
-      "../Tilesets/Animations/Lights/!$ModernFloorLights.png"
-    );
-
     // =====================================================
     // EXTRAS
     // =====================================================
-
-    this.load.image(
-      "roboPB",
-      "../Tilesets/extras/RoboPB.png"
-    );
-
-    this.load.image(
-      "roboV",
-      "../Tilesets/extras/RoboV.png"
-    );
 
     // =====================================================
     // NOVO BOTÃO DE DASH
     // Ajuste o nome dash.png se o sprite tiver outro nome.
     // =====================================================
 
-    this.load.image(
+    load.image(
       "botao-dash",
       "../Tilesets/extras/botao-dash.png"
     );
  
-    this.load.image(
+    load.image(
       "botoes-ulti",
       "../Tilesets/extras/botoes-ulti.png"
     );
 
-    this.load.image(
-      "supercomputer",
-      "../Tilesets/Animations/Industrial and Security/Supercomputer.png"
-    );
-
-    this.load.image(
-      "wallBorders",
-      "../Tilesets/extras/parede-borda.png"
-    );
-
-    this.load.image(
+    load.image(
       "wallBorder",
       "../Tilesets/extras/parede-borda.png"
     );
 
-    this.load.image(
+    load.image(
       "shopDoor",
       "../Tilesets/Animations/Doors/!ShopDoor.png"
     );
@@ -712,43 +545,48 @@ class Preloader extends Phaser.Scene {
     // TILESETS - VEÍCULOS
     // =====================================================
 
-    this.load.image(
+    load.image(
       "VehiclesSpeederCivil5",
       "../Tilesets/Animations/Vehicles/Flying cars/Speeder_civil5.png"
     );
 
-    this.load.image(
+    load.image(
       "Speeder_civil2",
       "../Tilesets/Animations/Vehicles/Flying cars/Speeder_civil2.png"
     );
 
-    this.load.image(
+    load.image(
       "Transporter_Private",
       "../Tilesets/Animations/Vehicles/Flying cars/Transporter_Private.png"
     );
 
-    this.load.image(
+    load.image(
       "Transporter_Ambulance",
       "../Tilesets/Animations/Vehicles/Flying cars/Transporter_Ambulance.png"
     );
 
-    this.load.image(
+    load.image(
       "Transporter_PoliceSwat",
       "../Tilesets/Animations/Vehicles/Flying cars/Transporter_PoliceSwat.png"
     );
 
     // =====================================================
+    // O cooperativo mantém todos os recursos prontos antes de publicar a entrada na cidade.
+    if (this.multiplayer) enfileirarAssetsFabrica(this);
+
     // DEBUG DE ERROS
     // =====================================================
 
-    this.load.on("loaderror", (file) => {
+    const aoFalhar = (file) => {
       this.falhasCarregamento.push(file.key);
       console.error(
         "ERRO AO CARREGAR:",
         file.key,
         file.src
       );
-    });
+    };
+    this.load.on("loaderror", aoFalhar);
+    this.events.once("shutdown", () => this.load.off("loaderror", aoFalhar));
   }
 
   // =====================================================
