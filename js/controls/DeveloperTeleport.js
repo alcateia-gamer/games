@@ -12,9 +12,13 @@ export function criarTeleporteDevBoss(scene) {
         scene.cenaEntradaBossAtiva) return;
 
     if (scene.sys.settings.key === "Level1Parte2") {
-      if (scene.estadoDash) scene.estadoDash.ativo = false;
-      scene.player.body.reset(DESTINO_BOSS.x, DESTINO_BOSS.y);
-      scene.companionPet?.setPosition(DESTINO_BOSS.x - 45, DESTINO_BOSS.y + 35);
+      const mover = () => {
+        if (scene.estadoDash) scene.estadoDash.ativo = false;
+        scene.player.body.reset(DESTINO_BOSS.x, DESTINO_BOSS.y);
+        scene.companionPet?.setPosition(DESTINO_BOSS.x - 45, DESTINO_BOSS.y + 35);
+      };
+      if (scene.preparacaoBoss) scene.preparacaoBoss.aguardar(mover);
+      else mover();
       return;
     }
 

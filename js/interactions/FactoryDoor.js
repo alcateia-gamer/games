@@ -358,7 +358,12 @@ function criarInteracaoPortaFabrica(scene) {
       portasLeitor.some(controle => controle.porta.estado === "fechada") &&
       portasLeitor.every(controle => !controle.porta.bloqueadaPorBoss && !controle.motivoBloqueio()),
     abrirPortas: () => {
-      for (const controle of portasLeitor) controle.abrir(areaLeitor);
+      const abrir = () => {
+        if (!leitorProximo()) return;
+        for (const controle of portasLeitor) controle.abrir(areaLeitor);
+      };
+      if (scene.preparacaoBoss) scene.preparacaoBoss.aguardar(abrir);
+      else abrir();
     },
   }) : null;
   scene.leitorCartaoFabrica = marcadorLeitor ? { area: areaLeitor, marcador: marcadorLeitor, terminal, fala } : null;

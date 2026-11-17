@@ -1,4 +1,5 @@
 import { enfileirarAssetsFabrica, verificarEntradaFabrica, assetsFabricaProntos } from "../core/FactoryAssetPack.js";
+import { bossNecessarioNaEntrada, criarPreparacaoBoss } from "../core/BossAssetLoading.js";
 import { createUpgradeNPC } from '../interactions/UpgradeNPC.js';
 import { ScrapSystem } from '../systems/ScrapSystem.js';
 import { prepararAudioCoop } from "../multiplayer/CoopAudio.js";
@@ -210,16 +211,17 @@ class Level1Parte2 extends Phaser.Scene {
    */
   preload() {
     // O loader pertence a esta visita: não concorre com a abertura ou outra cena.
-    // Tudo é preparado sob a transição, sem decodificação durante exploração/combate.
+    // No solo, apenas entradas diretas na arena antecipam também o pacote do boss.
     this.load.maxParallelDownloads = 2;
+    this.bossNaEntrada = bossNecessarioNaEntrada(this);
     this.avisoAssetsFabrica = null;
-    if (!assetsFabricaProntos(this)) {
+    if (!assetsFabricaProntos(this, { incluirBoss: this.bossNaEntrada })) {
       const camera = this.cameras.main;
       camera.setBackgroundColor("#000000");
       this.avisoAssetsFabrica = this.add.text(camera.width / 2, camera.height / 2, "PREPARANDO FÁBRICA...",
         { fontFamily: "monospace", fontSize: "18px", color: "#ffffff" }).setOrigin(0.5);
     }
-    enfileirarAssetsFabrica(this);
+    enfileirarAssetsFabrica(this, { incluirBoss: this.bossNaEntrada });
   }
 
   create() {
@@ -298,6 +300,7 @@ class Level1Parte2 extends Phaser.Scene {
     criarStatusPlayer(this);
     criarControles(this);
     criarSistemaInventario(this);
+    criarPreparacaoBoss(this);
     this.removerInteracaoGerador = criarInteracaoGeradorFabrica(this);
     criarInteracaoPortaFabrica(this);
     this.minimap = new MiniMapManager(this, this.map, "fabrica");
@@ -390,6 +393,7 @@ class Level1Parte2 extends Phaser.Scene {
    */
   update(time, delta) {
     if (this.aguardandoAssetsFabrica) return;
+    this.preparacaoBoss?.atualizar();
     atualizarBoss(this, time, delta);
     this.minimap?.update(time);
     if (this.morteEmAndamento) {

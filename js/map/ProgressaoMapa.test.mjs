@@ -51,6 +51,24 @@ test("ligar o gerador libera o mapa da cidade somente uma vez", () => {
   assert.equal(cidade.destruida, true);
 });
 
+test("progressão solo libera só a música exclusiva sem instâncias; coop e consumidores ativos preservam cache", () => {
+  for (const [multiplayer, sons, pausada, dormindo] of [
+    [false, [], false, false], [true, [], false, false],
+    [false, [{ key: "musica-cidade", isPlaying: false }], false, false],
+    [false, [], true, false], [false, [], false, true],
+  ]) {
+    const { scene } = criarCena();
+    const removidos = [];
+    scene.cache.audio = { remove: key => removidos.push(key) };
+    scene.sound = { sounds: sons };
+    scene.multiplayer = multiplayer;
+    scene.scene.isPaused = () => pausada;
+    scene.scene.isSleeping = () => dormindo;
+    descarregarCidade(scene);
+    assert.deepEqual(removidos, !multiplayer && !sons.length && !pausada && !dormindo ? ["musica-cidade"] : []);
+  }
+});
+
 test("o início da cutscene descarrega a fábrica e preserva arena, sala final e colisões", () => {
   const { scene, removidos, paredes } = criarCena();
   descarregarFabricaParaBoss(scene);

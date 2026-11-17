@@ -14,6 +14,14 @@ export function descarregarCidade(scene) {
       cidade[key] = [];
     }
   }
+  // Só retira o buffer exclusivo quando nenhuma instância de som pode retomá-lo.
+  // Tiles e animações da cidade são compartilhados pela fábrica e permanecem no cache.
+  if (!scene.multiplayer && Array.isArray(scene.sound?.sounds) &&
+      scene.scene.isActive?.("Level1") === false &&
+      !scene.scene.isPaused?.("Level1") && !scene.scene.isSleeping?.("Level1") &&
+      !scene.sound.sounds.some(som => som.key === "musica-cidade")) {
+    scene.cache.audio?.remove("musica-cidade");
+  }
 }
 
 /** O início da cutscene é o ponto definitivo de descarregamento, também no cooperativo. */

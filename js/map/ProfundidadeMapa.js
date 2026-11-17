@@ -7,6 +7,11 @@ import { atorRelevante } from "../core/ActorActivity.js";
 import { obterConfiguracaoHitboxWalk, obterConfiguracaoHitboxAtaque } from "../player/colisoes/index.mjs";
 import { atorNaRegiaoTroca } from "./TrocaCamada.js";
 
+// O Phaser agenda uma ordenação da DisplayList mesmo ao reaplicar o mesmo valor.
+function aplicarDepth(visual, depth) {
+  if (visual.depth !== depth) visual.setDepth(depth);
+}
+
 // Depth ordena o desenho; não muda posição nem colisões. Valores maiores ficam à frente.
 const DEPTHS = {
   worldBase: 12.5,
@@ -85,7 +90,7 @@ function atualizarDepthAtores(scene) {
   const atores = new Set([scene.player, scene.companionPet, ...(scene.inimigos ?? []),
     ...(scene.remotePlayers?.values?.() ?? [])]);
   for (const ator of atores) {
-    if (ator?.active && atorRelevante(scene, ator)) ator.setDepth(calcularDepthAtor(scene, obterFootYAtor(ator), ator));
+    if (ator?.active && atorRelevante(scene, ator)) aplicarDepth(ator, calcularDepthAtor(scene, obterFootYAtor(ator), ator));
   }
 }
 
@@ -114,7 +119,7 @@ function atualizarDepthCercaFabrica2(scene) {
   const margem = scene.personagemAtrasCercaFabrica2
     ? MARGEM_DEPTH_CERCA_FABRICA2
     : -MARGEM_DEPTH_CERCA_FABRICA2;
-  camadaCercaFabrica2.setDepth(depthPersonagem + margem);
+  aplicarDepth(camadaCercaFabrica2, depthPersonagem + margem);
 }
 
 // Em empate, quem está pisando na base aparece à frente do cenário.
@@ -161,7 +166,7 @@ function atualizarDepthObjetosProducaoEArmazem(scene) {
       return;
     }
 
-    visual.setDepth(
+    aplicarDepth(visual,
       calcularDepthObjeto(
         visual.getData("depthBase"),
         visual.getData("worldY"),
@@ -188,7 +193,7 @@ function atualizarDepthObjetosPelaBase(scene, nomeCamada) {
     }
 
     const baseY = visual.getData("worldY") ?? visual.getBounds?.().bottom ?? visual.y;
-    if (Number.isFinite(baseY)) visual.setDepth(depthCenario(scene, baseY));
+    if (Number.isFinite(baseY)) aplicarDepth(visual, depthCenario(scene, baseY));
   });
 }
 
@@ -211,7 +216,7 @@ function atualizarDepthObjetosSuperPC(scene) {
     const referenciaY = SUPER_PC_REFERENCIA_SUPERIOR.has(visual.getData("tiledObjectId"))
       ? visual.getBounds?.().top
       : visual.getData("worldY") ?? visual.getBounds?.().bottom ?? visual.y;
-    if (Number.isFinite(referenciaY)) visual.setDepth(depthCenario(scene, referenciaY));
+    if (Number.isFinite(referenciaY)) aplicarDepth(visual, depthCenario(scene, referenciaY));
   }
 }
 
@@ -237,9 +242,9 @@ function atualizarDepthParedePortaBoss(scene) {
   const depth = depthCenario(scene, baseY);
   for (const visual of objetos) {
     if (visual?.active && visual.getData("objectLayerName") === "ParedePortaBoss") {
-      visual.setDepth(depth);
+      aplicarDepth(visual, depth);
     } else if (visual?.active && visual.getData("objectLayerName") === "Leitordecartão") {
-      visual.setDepth(depth + 1e-10);
+      aplicarDepth(visual, depth + 1e-10);
     }
   }
 }

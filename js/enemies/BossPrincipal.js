@@ -42,10 +42,11 @@ function atualizarProfundidade(scene, encontro) {
   const profundidade = Number.isFinite(scene.profundidadePersonagemParte2)
     ? calcularDepthAtor(scene, (encontro.colisaoCadaver?.body ?? sprite.body).bottom, sprite)
     : encontro.config.visual.profundidade;
-  sprite.setDepth(profundidade);
+  if (sprite.depth !== profundidade) sprite.setDepth(profundidade);
 }
 
 function tentarPosicionar(scene, encontro) {
+  if (scene.preparacaoBoss && !scene.preparacaoBoss.pronto) return;
   if (encontro.encerrado || encontro.sprite || scene.multiplayer ||
       scene.morteEmAndamento || (Number.isFinite(scene.vida) && scene.vida <= 0) ||
       !jogadorNaArenaNovoBoss(scene.player, encontro.config.arena)) return;
@@ -185,6 +186,13 @@ export function atualizarBoss(scene, _time, _delta) {
   const encontro = scene?.novoBoss;
   if (!encontro || encontro.encerrado) return;
   encontro.jogadorNaArena = jogadorNaArenaNovoBoss(scene.player, encontro.config.arena);
+  if (scene.preparacaoBoss && !scene.preparacaoBoss.pronto) {
+    // Cobertura de teleporte/save em zonas customizadas, mesmo sem cartão.
+    if (encontro.jogadorNaArena && !scene.morteEmAndamento && (scene.vida ?? 1) > 0)
+      scene.preparacaoBoss.aguardar(() => {});
+    encontro.supercomputador?.atualizar(_delta);
+    return;
+  }
   if (!encontro.jogadorNaArena || scene.multiplayer || scene.morteEmAndamento ||
       (scene.vida ?? 1) <= 0 || encontro.morto) {
     encontro.prologo?.suspender();

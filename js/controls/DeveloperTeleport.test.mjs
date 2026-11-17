@@ -51,6 +51,20 @@ test("O na fábrica move jogador e companheiro, parando o dash e a velocidade", 
   assert.equal(scene.scene.destination, undefined);
 });
 
+test("O solo na fábrica aguarda o pacote do boss antes do teleporte local", () => {
+  const { scene, press } = fixture();
+  scene.multiplayer = false;
+  let continuar;
+  scene.preparacaoBoss = { aguardar(callback) { continuar = callback; } };
+  press();
+  assert.equal(scene.player.x, undefined);
+  assert.equal(scene.estadoDash.ativo, true);
+  continuar();
+  assert.equal(scene.player.x, -1085);
+  assert.equal(scene.player.y, -5169);
+  assert.equal(scene.estadoDash.ativo, false);
+});
+
 test("O na cidade entra no segundo mapa nas coordenadas pedidas, preservando DEV e personagem", () => {
   const { scene, press } = fixture("Level1");
   press();

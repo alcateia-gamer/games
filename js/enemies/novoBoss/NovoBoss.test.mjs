@@ -179,6 +179,25 @@ test("arquivos PNG reais comportam os frames carregados sem cortar células", ()
   }
 });
 
+test("preparação lógica na arena espera assets completos antes de criar sprites, animações ou introdução", () => {
+  const { scene, sprites, animacoes } = criarCena({ dentro: true });
+  let esperas = 0;
+  scene.preparacaoBoss = { pronto: false, aguardar() { esperas++; } };
+  const encontro = prepararBoss(scene);
+  assert.ok(encontro);
+  assert.equal(sprites.length, 0);
+  assert.equal(animacoes.size, 0);
+  atualizarBoss(scene, 0, 16);
+  assert.equal(esperas, 1, "entrada inesperada também força preparação sem cartão");
+  assert.equal(sprites.length, 0);
+  assert.equal(encontro.estado, "aguardando");
+  scene.preparacaoBoss.pronto = true;
+  atualizarBoss(scene, 100, 16);
+  assert.equal(sprites.length, 1);
+  assert.ok(animacoes.size > 0);
+  destruirBoss(scene);
+});
+
 test("entra na arena uma vez e preserva robôs, boss antigo e estado do jogador", () => {
   const { scene, sprites, animacoes } = criarCena();
   const inimigos = scene.inimigos;

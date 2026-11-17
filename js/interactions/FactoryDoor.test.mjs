@@ -953,6 +953,26 @@ test("o acesso pelo leitor mantém as duas portas abertas ao voltar ao mapa", ()
   returned.scene.events.emit("shutdown");
 });
 
+test("leitor espera os assets sem abrir ou remover colisões e retoma a animação original uma única vez", () => {
+  const { scene } = createScene();
+  let continuar;
+  scene.preparacaoBoss = { aguardar(callback) { continuar = callback; } };
+  liberarAcesso(scene); aproximarLeitor(scene); abrirComE(scene);
+  animarCartao(scene); scene.finishActivation();
+  const portas = scene.portasFabrica.filter(porta => ["porta02", "porta03"].includes(porta.nome));
+  const colisoes = portas.map(porta => porta.colisao);
+  assert.ok(portas.every(porta => porta.estado === "fechada" && porta.colisao));
+  assert.equal(scene.cardReaderMenuOpen, false);
+  assert.equal(scene.generatorMenuOpen, false);
+  continuar();
+  assert.ok(portas.every((porta, i) => porta.estado === "abrindo" && porta.colisao === colisoes[i]));
+  const totalAnimacoes = scene.animations.length;
+  continuar();
+  assert.equal(scene.animations.length, totalAnimacoes, "estado abrindo impede reiniciar a persiana");
+  assert.equal(scene.inventory.getQuantity("card"), 1);
+  scene.events.emit("shutdown");
+});
+
 test("o cartão passa sozinho ao abrir o terminal e libera as portas após a confirmação", () => {
   const { scene } = createScene();
   liberarAcesso(scene); aproximarLeitor(scene); abrirComE(scene);

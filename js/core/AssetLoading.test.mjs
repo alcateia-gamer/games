@@ -160,6 +160,27 @@ test("criação e update da fábrica aguardam os recursos inclusive em entrada d
   assert.ok(assetsFabricaProntos(s));
 });
 
+test("preload real da fábrica adia o boss só na entrada comum solo, preservando DEV e multiplayer", async () => {
+  await preloader();
+  const Level = (await import("../scenes/Level1Parte2.js")).default;
+  for (const [multiplayer, developerMode, spawnX, spawnY, incluirBoss] of [
+    [false, false, 98, -1040, false], [true, false, 98, -1040, true],
+    [false, true, -1085, -5169, true], [false, false, -1093, -5905, true],
+  ]) {
+    const s = fixture(multiplayer);
+    Object.assign(s, { developerMode, respawnX: spawnX, respawnY: spawnY });
+    s.cameras = { main: { width: 800, height: 450, setBackgroundColor() {} } };
+    s.add = { text() { const texto = { setOrigin: () => texto }; return texto; } };
+    Level.prototype.preload.call(s);
+    assert.equal(s.bossNaEntrada, incluirBoss);
+    assert.equal(s.calls.some(a => a.chave === "novo-boss-tentaculo"), incluirBoss);
+    assert.equal(s.calls.some(a => a.chave === "musica-novo-boss"), incluirBoss);
+    assert.ok(s.calls.some(a => a.chave === "musica-fabrica"));
+    s.concluir();
+    assert.ok(assetsFabricaProntos(s, { incluirBoss }));
+  }
+});
+
 test("áudio desativado pelo Phaser não prende a fábrica em retentativa; mute/lock continuam carregando", () => {
   const s = fixture();
   s.game = { config: { audio: { noAudio: true } }, device: { audio: { webAudio: true } } };

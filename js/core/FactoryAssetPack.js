@@ -1,4 +1,4 @@
-/** Pacote exclusivo da fábrica, completo antes de criar a fase, inclusive boss e áudio. */
+/** Pacotes da fábrica e do boss, com metadados originais e cache compartilhado do Phaser. */
 import { criarCarregadorCacheavel, recursoDisponivel } from "./AssetLoading.js";
 import { carregarSomImpactoChuvaBoss } from "../sounds/impactoChuvaBoss.js";
 import { carregarSomTeleporteBoss } from "../sounds/teleporteBoss.js";
@@ -48,51 +48,65 @@ const imagens = [
 ];
 
 // Catálogo declarativo construído com os próprios módulos originais, sem duplicar seus caminhos.
-function catalogar() {
+function catalogar(boss) {
   const arquivos = [];
   const load = Object.fromEntries(["image", "spritesheet", "atlas", "audio", "tilemapTiledJSON"].map(tipo =>
     [tipo, (chave, ...args) => arquivos.push({ tipo, chave, args })]));
-  for (const [chave, caminho] of imagens) load.image(chave, caminho);
-  load.tilemapTiledJSON("mapaParte2", "map/parte2-fase1.json");
-  carregarAssetsNovoBoss({ load, textures: { exists: () => false } });
-  carregarMusicaNovoBoss(load);
-  carregarMusicaFabrica(load);
-  carregarSomImpactoChuvaBoss(load);
-  carregarSomTeleporteBoss(load);
-  carregarSomExplosaoPulsoBoss(load);
-  carregarSomDisparoBoss(load);
-  carregarSomGerador(load);
-  carregarSomLuzFabrica(load);
-  carregarSonsLeitorCartao(load);
-  carregarSomPortaFabrica(load);
-  carregarSomEscudoBoss(load);
-  carregarSomEscotilhaBoss(load);
-  carregarSomImpactoEscotilhaBoss(load);
-  carregarSomExplosaoEscotilhaBoss(load);
-  carregarSomRaioEscotilhaBoss(load);
+  if (!boss) {
+    for (const [chave, caminho] of imagens) load.image(chave, caminho);
+    load.tilemapTiledJSON("mapaParte2", "map/parte2-fase1.json");
+    carregarMusicaFabrica(load);
+    carregarSomGerador(load);
+    carregarSomLuzFabrica(load);
+    carregarSonsLeitorCartao(load);
+    carregarSomPortaFabrica(load);
+  } else {
+    carregarAssetsNovoBoss({ load, textures: { exists: () => false } });
+    carregarMusicaNovoBoss(load);
+    carregarSomImpactoChuvaBoss(load);
+    carregarSomTeleporteBoss(load);
+    carregarSomExplosaoPulsoBoss(load);
+    carregarSomDisparoBoss(load);
+    carregarSomEscudoBoss(load);
+    carregarSomEscotilhaBoss(load);
+    carregarSomImpactoEscotilhaBoss(load);
+    carregarSomExplosaoEscotilhaBoss(load);
+    carregarSomRaioEscotilhaBoss(load);
+  }
   return Object.freeze(arquivos.map(({ tipo, chave, args }) => Object.freeze({ tipo, chave,
     args: Object.freeze(args.map(arg => arg && typeof arg === "object" ? Object.freeze({ ...arg }) : arg)),
   })));
 }
 
-export const ASSETS_FABRICA = catalogar();
+export const ASSETS_FABRICA_BASE = catalogar(false);
+export const ASSETS_BOSS = catalogar(true);
+export const ASSETS_FABRICA = Object.freeze([...ASSETS_FABRICA_BASE, ...ASSETS_BOSS]);
 
-export function enfileirarAssetsFabrica(scene) {
+function enfileirar(scene, arquivos) {
   const load = criarCarregadorCacheavel(scene);
   load.setPath("./assets/");
-  for (const { tipo, chave, args } of ASSETS_FABRICA) {
+  for (const { tipo, chave, args } of arquivos) {
     // O Loader recebe sua própria configuração, sem metadados mutáveis entre partidas.
     load[tipo](chave, ...args.map(arg => arg && typeof arg === "object" ? { ...arg } : arg));
   }
 }
 
-export function assetsFabricaProntos(scene) {
-  return ASSETS_FABRICA.every(arquivo => recursoDisponivel(scene, arquivo.tipo, arquivo.chave));
+export function enfileirarAssetsFabrica(scene, { incluirBoss = true } = {}) {
+  enfileirar(scene, incluirBoss ? ASSETS_FABRICA : ASSETS_FABRICA_BASE);
+}
+
+export function enfileirarAssetsBoss(scene) { enfileirar(scene, ASSETS_BOSS); }
+export function assetsBossProntos(scene) {
+  return ASSETS_BOSS.every(arquivo => recursoDisponivel(scene, arquivo.tipo, arquivo.chave));
+}
+export function assetsFabricaProntos(scene, { incluirBoss = true } = {}) {
+  return (incluirBoss ? ASSETS_FABRICA : ASSETS_FABRICA_BASE)
+    .every(arquivo => recursoDisponivel(scene, arquivo.tipo, arquivo.chave));
 }
 
 /** A fábrica só cria mapa, sons, sprites e runtime depois desta barreira. */
 export function verificarEntradaFabrica(scene) {
-  scene.aguardandoAssetsFabrica = !assetsFabricaProntos(scene);
+  scene.aguardandoAssetsFabrica = !assetsFabricaProntos(scene, { incluirBoss: scene.bossNaEntrada !== false });
   if (!scene.aguardandoAssetsFabrica) return true;
   scene.cameras.main.setBackgroundColor("#000000");
   scene.cameras.main.fadeEffect?.reset();

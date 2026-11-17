@@ -34,6 +34,30 @@ function criarVisual(layerName, centerY) {
   };
 }
 
+test("reaplicar profundidades idênticas não agenda escrita; movimento após física continua atualizando", () => {
+  const player = { active: true, x: 0, y: 0, body: { bottom: 100 }, depth: 0,
+    writes: 0, setDepth(depth) { this.depth = depth; this.writes++; } };
+  const visual = criarVisual("DepthPerso", 120);
+  visual.writes = 0;
+  visual.setDepth = function(depth) { this.depth = depth; this.writes++; };
+  const scene = { player, objetosMapaParte2: [visual], profundidadePersonagemParte2: 16.5 };
+  const atualizar = () => { atualizarDepthPlayer(scene); atualizarDepthAtores(scene); atualizarDepthObjetosDepthPerso(scene); };
+  atualizar();
+  const inicial = { player: player.depth, visual: visual.depth };
+  for (let i = 0; i < 60; i++) atualizar();
+  assert.equal(player.writes, 1);
+  assert.equal(visual.writes, 1);
+  player.body.bottom = 150;
+  atualizar();
+  assert.equal(player.writes, 1, "player mantém a base enquanto os objetos acompanham seus pés");
+  assert.equal(visual.writes, 2);
+  assert.notEqual(visual.depth, inicial.visual);
+  scene.profundidadePersonagemParte2 = 17;
+  atualizar();
+  assert.equal(player.writes, 2);
+  assert.equal(player.depth, 17);
+});
+
 test("réplica de robô mantém a ordem pelos pés sem ocupar o campo do corpo físico", () => {
   const player = { ...criarVisual("", 0), body: { bottom: -5800 } };
   const replica = { ...criarVisual("", -5600), coopBody: { bottom: -5810 } };

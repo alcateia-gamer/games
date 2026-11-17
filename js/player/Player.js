@@ -136,7 +136,7 @@ function atualizarDepthPlayer(scene) {
   const footY = calcularFootYPlayer(scene);
   const depth = calcularDepthAtor(scene, footY, scene.player);
 
-  scene.player.setDepth(depth);
+  if (scene.player.depth !== depth) scene.player.setDepth(depth);
 
   if (scene.DEBUG_DEPTH_SORTING) {
     console.log({ playerY: scene.player.y, footY, depth });
