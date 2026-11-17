@@ -17,7 +17,7 @@ export function criarTeleporteDevBoss(scene) {
         scene.player.body.reset(DESTINO_BOSS.x, DESTINO_BOSS.y);
         scene.companionPet?.setPosition(DESTINO_BOSS.x - 45, DESTINO_BOSS.y + 35);
       };
-      if (scene.preparacaoBoss) scene.preparacaoBoss.aguardar(mover);
+      if (scene.preparacaoBoss && !scene.multiplayer) scene.preparacaoBoss.aguardar(mover);
       else mover();
       return;
     }

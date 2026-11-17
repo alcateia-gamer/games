@@ -1,5 +1,4 @@
 import { criarCarregadorCacheavel } from "../core/AssetLoading.js";
-import { enfileirarAssetsFabrica } from "../core/FactoryAssetPack.js";
 import { carregarQuedasCoop } from "../multiplayer/CoopRevival.js";
 import { CutsceneLoading } from "../ui/CutsceneLoading.js";
 /**
@@ -572,7 +571,6 @@ class Preloader extends Phaser.Scene {
 
     // =====================================================
     // O cooperativo mantém todos os recursos prontos antes de publicar a entrada na cidade.
-    if (this.multiplayer) enfileirarAssetsFabrica(this);
 
     // DEBUG DE ERROS
     // =====================================================

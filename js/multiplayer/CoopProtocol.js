@@ -4,6 +4,27 @@ export const COOP = Object.freeze({ version: 2, inputHz: 20, worldHz: 12,
   maps: Object.freeze(["Level1", "Level1Parte2"]) });
 
 export const round = (n, precision = 10) => Number.isFinite(n) ? Math.round(n * precision) / precision : 0;
+
+/** Uma preparação pertence a uma única sala/transição; revisões antigas nunca a desfazem. */
+export function mergeBossPreparation(room, previous, next) {
+  if (!room || !next || next.roomCode !== room.roomCode || next.mapId !== (room.coopMap?.id ?? 0) ||
+      typeof next.id !== "string" || !next.id || next.id.length > 160 ||
+      !Number.isSafeInteger(next.revision) || next.revision < 1 ||
+      !["loading", "assembling", "intro", "complete"].includes(next.phase) ||
+      !Array.isArray(next.participants) || next.participants.length > 4 ||
+      new Set(next.participants).size !== next.participants.length ||
+      next.participants.some(id => typeof id !== "string" || id.length > 100) ||
+      !next.clients || typeof next.clients !== "object" || Object.keys(next.clients).length > 4) return previous;
+  if (previous?.roomCode === next.roomCode && previous.mapId === next.mapId &&
+      (previous.id !== next.id || previous.revision >= next.revision)) return previous;
+  if (next.entrada && (next.entrada.id !== next.id || !next.entrada.jogadores ||
+      Object.keys(next.entrada.jogadores).length > 4 || Object.values(next.entrada.jogadores)
+        .some(p => ![p?.x, p?.y].every(n => Number.isFinite(n) && Math.abs(n) < 100000)))) return previous;
+  if (next.phase === "intro" && (!next.entrada || !Number.isFinite(next.startAt) ||
+      next.systemsPrepared !== true || typeof next.systemsEpoch !== "string" || next.systemsEpoch.length > 160 ||
+      ![next.camera?.x, next.camera?.y, next.camera?.zoom].every(Number.isFinite))) return previous;
+  return next;
+}
 /** Progresso é monotônico; um frame em trânsito não desfaz uma ação confiável. */
 export function mergeCoopProgress(previous = {}, next = {}) {
   const flags = { ...previous?.flags };

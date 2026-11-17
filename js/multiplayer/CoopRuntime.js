@@ -11,8 +11,9 @@ import { VisualSender, VisualReceiver } from "./CoopVisuals.js";
 import { soloContext } from "./CoopContext.js";
 import { CoopPlayers, playerVisualObjects } from "./CoopPlayers.js";
 import { BossReplica, describeBoss, describeCombatTarget } from "./CoopBossReplica.js";
-import { prepararBoss, atualizarBoss, destruirBoss } from "../enemies/BossPrincipal.js";
-import { novoBossConfig, jogadorNaArenaNovoBoss } from "../enemies/novoBoss/NovoBossConfig.js";
+import { prepararBoss, atualizarBoss, destruirBoss, prepararVisuaisBossCoop } from "../enemies/BossPrincipal.js";
+import { assetsBossProntos } from "../core/FactoryAssetPack.js";
+import { novoBossConfig, jogadorNaArenaNovoBoss, configurarZonasNovoBoss } from "../enemies/novoBoss/NovoBossConfig.js";
 import { assetsNovoBoss, criarAnimacoesNovoBoss } from "../enemies/novoBoss/NovoBossAssets.js";
 import { pontosTorresNovoBoss } from "../enemies/novoBoss/NovoBossTorres.js";
 import { prepararPisoTorre } from "../enemies/novoBoss/NovoBossTorrePiso.js";
@@ -27,6 +28,7 @@ import { registrarApertoLibertacaoNovoBoss, atualizarRestricaoNovoBoss } from ".
 import { iniciarAnimacaoMarreta } from "../combat/SpecialAbilityEffects.js";
 import { respawnPlayer } from "../player/Player.js";
 import { CoopWorld } from "./CoopWorld.js";
+import { isBossControl } from "./CoopBossLoading.js";
 import { prepararTexturaMunicaoRobo } from "../enemies/WarRobotProjectile.js";
 import { obterFilhosGrupoSeguro } from "../enemies/EnemyPathfinding.js";
 import { executarSpawnDev } from "../controls/DeveloperSpawns.js";
@@ -45,6 +47,7 @@ export class CoopRuntime {
   constructor(scene) {
     this.scene = scene; this.manager = scene.multiplayerManager;
     this.mapKey = scene.sys.settings.key;
+    this.bossArena = configurarZonasNovoBoss(scene.map, scene.novoBossConfig ?? novoBossConfig).arena;
     this.host = this.manager.room.hostId === this.manager.playerId;
     this.manager.coopTransitionUntil = Date.now() + COOP.transitionGraceMs;
     this.streamId = `${this.manager.playerId}:${Date.now()}:${++this.manager.coopStreamSequence}`;
@@ -69,12 +72,6 @@ export class CoopRuntime {
     for (const actor of scene.remotePlayers.values()) actor.destroy();
     scene.remotePlayers.clear();
     destruirBoss(scene);
-    if (this.mapKey === "Level1Parte2") {
-      criarAnimacoesNovoBoss(scene);
-      const poses = { summon: assetsNovoBoss.torreSummon, idle: assetsNovoBoss.torreIdle,
-        attacked: assetsNovoBoss.torreAttacked, death: assetsNovoBoss.torreDeath };
-      for (const p of pontosTorresNovoBoss(scene) || []) prepararPisoTorre(scene, p, poses);
-    }
     const saved = this.manager.localVitals;
     if (saved && saved.health > 0) {
       scene.vida = Math.min(scene.vidaMaxima, saved.health);
@@ -119,7 +116,7 @@ export class CoopRuntime {
     });
   }
   playerContexts() { return [this.localContext, ...this.players.contexts()]; }
-  inArena(player) { return jogadorNaArenaNovoBoss(player, this.scene.novoBoss?.config.arena || novoBossConfig.arena); }
+  inArena(player) { return jogadorNaArenaNovoBoss(player, this.scene.novoBoss?.config.arena || this.bossArena || novoBossConfig.arena); }
   bossTarget() {
     const boss = this.scene.novoBoss;
     return this.playerContexts().filter(c => c.player?.active && c.vida > 0 && !c.morteEmAndamento && this.inArena(c.player))
@@ -127,7 +124,32 @@ export class CoopRuntime {
         Math.hypot(b.player.x - (boss?.x || -1080), b.player.y - (boss?.y || -5810)))[0];
   }
   updateBoss(time, delta) {
+    if (this.mapKey === "Level1Parte2" && !this.world.bossLoading.canStart()) return;
     if (this.host) atualizarBoss(this.bossContext, time, delta);
+  }
+  prepareBossAssets() {
+    if (this.bossAssetsPrepared) return true;
+    const scene = this.scene;
+    if (!assetsBossProntos(scene)) return false;
+    try {
+      if (!criarAnimacoesNovoBoss(scene) || ![assetsNovoBoss.idle, assetsNovoBoss.ataque].every(a => scene.anims.exists(a.animacao))) return false;
+      const poses = { summon: assetsNovoBoss.torreSummon, idle: assetsNovoBoss.torreIdle,
+        attacked: assetsNovoBoss.torreAttacked, death: assetsNovoBoss.torreDeath };
+      for (const p of pontosTorresNovoBoss(scene) || []) prepararPisoTorre(scene, p, poses);
+      this.bossAssetsPrepared = true;
+      if (!this.host) { this.awaitingKeyframe = true; this.manager.sendCoopAction("keyframe", {}); }
+      return true;
+    } catch { return false; }
+  }
+  prepareBossEncounter() {
+    try { return prepararVisuaisBossCoop(this.bossContext); }
+    catch { return false; }
+  }
+  bossVisualsReady() {
+    const boss = this.host ? this.scene.novoBoss : this.replica.encounter;
+    if (!boss?.sprite?.active || boss.pendencia || !boss.hud) return false;
+    if (!this.host && this.receivedStream !== this.world.bossLoading.state?.systemsEpoch) return false;
+    return (boss.geradores ?? []).every(t => (t.visual ?? t.sprite)?.active);
   }
   specialSnapshot(context) {
     const e = context.estadoEspecial;
@@ -183,15 +205,22 @@ export class CoopRuntime {
   }
   receiveRoom(room) {
     if (this.disposed || this.teamDefeated || !room) return;
+    const authorityChanged = this.authorityId && this.authorityId !== room.hostId;
     const host = room.hostId === this.manager.playerId;
     if (host !== this.host) this.changeAuthority(host);
+    if (authorityChanged) {
+      this.music.hostOffset = undefined; this.music.bestRtt = Infinity; this.music.lastPing = -Infinity;
+    }
+    this.authorityId = room.hostId;
     this.scene.isMultiplayerHost = host;
     this.players.receive(room.players || []);
     if (this.host) this.scene.aliados = this.players.objects();
     this.world.receiveMap(room.coopMap);
+    this.world.bossLoading.apply(room.coopBossPreparation);
   }
   receiveAction(action) {
     if (this.disposed) return;
+    if (isBossControl(action)) { this.world.bossLoading.receive(action); return; }
     if (this.scene.scrapSystem?.receive(action)) return;
     if (action.authority && action.kind === "teamDefeated") { this.finishTeamGame(); return; }
     if (this.teamDefeated) return;
@@ -365,6 +394,7 @@ export class CoopRuntime {
     this.music.update();
     this.audio?.update();
     this.revival.update(delta);
+    this.world.bossLoading.update();
     if (this.host) {
       atualizarRestricaoNovoBoss(this.localContext, delta);
       if (s.morteEmAndamento) { atualizarInimigoTeste(s, time); atualizarRoboBola(s, time, delta); }
@@ -471,6 +501,8 @@ export class CoopRuntime {
     return true;
   }
   changeAuthority(host) {
+    const previousNow = this.world.bossLoading.now();
+    this.world.restoreIntro();
     this.host = host;
     this.music.changeAuthority(host);
     if (!host) return;
@@ -481,6 +513,9 @@ export class CoopRuntime {
     this.scene.inimigos = []; this.scene.novoBoss = null;
     for (const entry of this.players.remotes.values()) if (!entry.context) this.players.prepareContext(entry);
     this.prepareAuthority();
+    if (this.world.bossLoading.state?.phase === "intro" && this.scene.preparacaoBoss?.pronto)
+      this.prepareBossEncounter();
+    this.world.bossLoading.retimeAfterMigration(previousNow);
     this.world.restore();
   }
   destroy() {

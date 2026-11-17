@@ -33,6 +33,7 @@ function fixture() {
     { player: origem, vida: 100, coopRemotePlayerId: "origem" },
     { player: outro, vida: 100, coopRemotePlayerId: "outro" },
   ];
+  scene.estadoDash = participantes[0].estadoDash;
   const manager = { playerId: "host", room: {}, sendCoopAction(...args) { enviados.push(args); } };
   const runtime = { host: true, mapKey: "Level1Parte2", scene, manager,
     playerContexts: () => participantes,
@@ -43,23 +44,25 @@ function fixture() {
   return { scene, encontro, origem, host, outro, runtime, world, ordem, enviados, participantes };
 }
 
-test("aliado inicia a cutscene e reúne o host e os demais antes de limpar", () => {
+test("reunião forma uma fileira segura e não autoriza câmera ou limpeza antes das confirmações", () => {
   const { scene, encontro, origem, host, outro, world, ordem, enviados, participantes } = fixture();
-  assert.equal(world.iniciarIntroducaoBoss(encontro, origem), true);
-  assert.deepEqual(ordem, ["teleportar", "limpar"]);
-  assert.deepEqual([origem.x, origem.y], [-1080, -5500], "quem entrou mantém sua posição");
-  for (const p of [host, outro]) {
+  const plano = planejarEntradaBoss(scene, encontro, origem, participantes.map(c => ({
+    id: c.coopRemotePlayerId ?? "host", player: c.player,
+  })));
+  assert.ok(plano);
+  assert.equal(new Set(Object.values(plano).map(p => p.y)).size, 1);
+  world.aplicarEntradaBoss({ id: "attempt", jogadores: plano });
+  assert.deepEqual(ordem, ["teleportar"]);
+  for (const p of [host, origem, outro]) {
     assert.equal(jogadorNaArenaNovoBoss(p, encontro.config.arena), true);
     assert.ok(retanguloLivreDoMapa(scene, { x: p.x - 18, y: p.y + 10, width: 36, height: 20 }));
-    assert.ok(Math.hypot(p.x - origem.x, p.y - origem.y) >= 56);
   }
   assert.ok(Math.hypot(host.x - outro.x, host.y - outro.y) >= 56);
   assert.equal(participantes[0].estadoDash.ativo, false);
-  assert.equal(enviados[0][0], "bossIntro");
-  assert.equal(enviados[0][2].authority, true);
-  assert.deepEqual(world.snapshot().bossAssembly, enviados[0][1].entrada);
-  world.iniciarIntroducaoBoss(encontro, origem);
-  assert.equal(enviados.length, 1, "não repete o puxão");
+  assert.equal(world.iniciarIntroducaoBoss(encontro, origem), false);
+  assert.equal(enviados.length, 0);
+  world.aplicarEntradaBoss({ id: "attempt", jogadores: plano });
+  assert.deepEqual(ordem, ["teleportar"], "não repete a reunião em pacotes duplicados");
   world.destroy();
 });
 
@@ -116,6 +119,7 @@ test("pacotes antigos não devolvem aliados à fábrica durante a cutscene", asy
 
 test("cutscene espera o resgate de aliados caídos antes de descarregar a fábrica", () => {
   const { runtime, world, encontro, origem, ordem, enviados } = fixture();
+  world.bossLoading.canStart = () => true; // Recursos confirmados: isola a regra de resgate.
   runtime.revival = { participants: () => [{ dead: true }] };
   assert.equal(world.iniciarIntroducaoBoss(encontro, origem), false);
   assert.deepEqual(ordem, []);

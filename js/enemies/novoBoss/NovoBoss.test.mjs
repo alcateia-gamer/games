@@ -6,6 +6,7 @@ import {
   prepararBoss,
   atualizarBoss,
   destruirBoss,
+  prepararVisuaisBossCoop,
 } from "../BossPrincipal.js";
 import {
   novoBossConfig,
@@ -199,6 +200,24 @@ test("preparação lógica na arena espera assets completos antes de criar sprit
   atualizarBoss(scene, 100, 16);
   assert.equal(sprites.length, 1);
   assert.ok(animacoes.size > 0);
+  destruirBoss(scene);
+});
+
+test("host prepara visuais durante a barreira sem avançar combate ou duplicar sprites", () => {
+  const { scene, sprites } = criarCena();
+  scene.preparacaoBoss = { pronto: true, aguardando: true };
+  scene.coopRuntime = { host: true };
+  const encontro = prepararBoss(scene);
+  assert.equal(sprites.length, 0);
+  assert.equal(encontro.jogadorNaArena, false);
+  scene.player.y = -5500;
+  assert.equal(prepararVisuaisBossCoop(scene), true);
+  assert.equal(encontro.jogadorNaArena, true, "a preparação das torres reconhece a entrada antes do primeiro tick de combate");
+  assert.equal(sprites.length, 1);
+  assert.equal(encontro.relogioCombate, 0);
+  assert.equal(encontro.ataqueAtual, null);
+  assert.equal(prepararVisuaisBossCoop(scene), true);
+  assert.equal(sprites.length, 1);
   destruirBoss(scene);
 });
 

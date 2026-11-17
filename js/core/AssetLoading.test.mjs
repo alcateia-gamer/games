@@ -36,7 +36,7 @@ async function preloader() {
   return (await import("../scenes/preloader.js")).default;
 }
 
-test("cidade solo preserva personagens/habilidades e adia somente o pacote exclusivo; coop mantém tudo antecipado", async () => {
+test("cidade solo e coop preservam recursos compartilhados e adiam fábrica e boss", async () => {
   const Preloader = await preloader();
   const solo = fixture();
   Preloader.prototype.carregarAssets.call(solo);
@@ -51,9 +51,9 @@ test("cidade solo preserva personagens/habilidades e adia somente o pacote exclu
   const coop = fixture(true);
   Preloader.prototype.carregarAssets.call(coop);
   const prontos = new Set(coop.calls.map(c => c.chave));
-  for (const arquivo of ASSETS_FABRICA) assert.ok(prontos.has(arquivo.chave), arquivo.chave);
+  for (const arquivo of ASSETS_FABRICA) assert.ok(!prontos.has(arquivo.chave), arquivo.chave);
   solo.concluir(); coop.concluir();
-  assert.ok(assetsFabricaProntos(coop), "cliente lento só chega à cidade com boss/sons preparados pelo preloader original");
+  assert.ok(!assetsFabricaProntos(coop), "a abertura cooperativa também carrega somente cidade e recursos compartilhados");
   assert.ok(!assetsFabricaProntos(solo));
   // A nova partida utiliza as mesmas chaves, sem novos downloads de recursos já presentes.
   Preloader.prototype.carregarAssets.call(coop);
@@ -160,11 +160,11 @@ test("criação e update da fábrica aguardam os recursos inclusive em entrada d
   assert.ok(assetsFabricaProntos(s));
 });
 
-test("preload real da fábrica adia o boss só na entrada comum solo, preservando DEV e multiplayer", async () => {
+test("preload real da fábrica prepara a base no coop e preserva as entradas diretas solo", async () => {
   await preloader();
   const Level = (await import("../scenes/Level1Parte2.js")).default;
   for (const [multiplayer, developerMode, spawnX, spawnY, incluirBoss] of [
-    [false, false, 98, -1040, false], [true, false, 98, -1040, true],
+    [false, false, 98, -1040, false], [true, false, 98, -1040, false],
     [false, true, -1085, -5169, true], [false, false, -1093, -5905, true],
   ]) {
     const s = fixture(multiplayer);
@@ -173,7 +173,7 @@ test("preload real da fábrica adia o boss só na entrada comum solo, preservand
     const avisos = [];
     s.add = { text(x, y, mensagem) { avisos.push(mensagem); const texto = { setOrigin: () => texto }; return texto; } };
     Level.prototype.preload.call(s);
-    assert.deepEqual(avisos, ["Carregando..."]);
+    assert.deepEqual(avisos, ["CARREGANDO..."]);
     assert.equal(s.bossNaEntrada, incluirBoss);
     assert.equal(s.calls.some(a => a.chave === "novo-boss-tentaculo"), incluirBoss);
     assert.equal(s.calls.some(a => a.chave === "musica-novo-boss"), incluirBoss);

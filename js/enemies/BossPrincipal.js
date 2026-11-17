@@ -45,8 +45,8 @@ function atualizarProfundidade(scene, encontro) {
   if (sprite.depth !== profundidade) sprite.setDepth(profundidade);
 }
 
-function tentarPosicionar(scene, encontro) {
-  if (scene.preparacaoBoss && (!scene.preparacaoBoss.pronto || scene.preparacaoBoss.aguardando)) return;
+function tentarPosicionar(scene, encontro, preparandoCoop = false) {
+  if (scene.preparacaoBoss && (!scene.preparacaoBoss.pronto || scene.preparacaoBoss.aguardando && !preparandoCoop)) return;
   if (encontro.encerrado || encontro.sprite || scene.multiplayer ||
       scene.morteEmAndamento || (Number.isFinite(scene.vida) && scene.vida <= 0) ||
       !jogadorNaArenaNovoBoss(scene.player, encontro.config.arena)) return;
@@ -178,6 +178,19 @@ export function prepararBoss(scene, config = scene?.novoBossConfig ?? novoBossCo
   scene.events.once("destroy", encontro.limpar);
   tentarPosicionar(scene, encontro);
   return encontro;
+}
+
+/** Prepara os visuais antes da autorização coletiva, sem avançar o encontro. */
+export function prepararVisuaisBossCoop(scene) {
+  const encontro = scene.novoBoss;
+  if (!scene.coopRuntime?.host || !encontro || !scene.preparacaoBoss?.pronto) return false;
+  encontro.jogadorNaArena = jogadorNaArenaNovoBoss(scene.player, encontro.config.arena);
+  tentarPosicionar(scene, encontro, true);
+  if (encontro.sprite && !encontro.sistemaGeradores && encontro.config.geradores?.ativo) {
+    prepararGeradoresNovoBoss(scene, encontro);
+    prepararPrologoNovoBoss(scene, encontro);
+  }
+  return Boolean(encontro.sprite?.active && !encontro.pendencia);
 }
 
 /** Não prepara encontros: chamadas tardias após shutdown não recriam o boss. */

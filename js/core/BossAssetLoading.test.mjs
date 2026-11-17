@@ -50,7 +50,7 @@ function fixture() {
   return scene;
 }
 
-test("fábrica solo básica prepara 35 recursos; 18 texturas e 10 sons aguardam proximidade; coop mantém os 63", () => {
+test("fábrica básica prepara 35 recursos e catálogo completo conserva as 18 texturas e 10 sons do boss", () => {
   assert.equal(ASSETS_FABRICA_BASE.length, 35);
   assert.equal(ASSETS_BOSS.filter(a => a.tipo !== "audio").length, 18);
   assert.equal(ASSETS_BOSS.filter(a => a.tipo === "audio").length, 10);
@@ -63,8 +63,9 @@ test("fábrica solo básica prepara 35 recursos; 18 texturas e 10 sons aguardam 
   assert.ok(assetsFabricaProntos(s, { incluirBoss: false }));
   assert.ok(!assetsFabricaProntos(s));
   const mp = fixture(); mp.multiplayer = true;
-  assert.equal(criarPreparacaoBoss(mp), null);
-  assert.equal(mp.preparacaoBoss, undefined);
+  const controle = criarPreparacaoBoss(mp);
+  mp.cartao = 1; controle.atualizar();
+  assert.equal(mp.calls.length, 0, "coop nunca inicia por proximidade com cartão");
   enfileirarAssetsFabrica(mp);
   assert.equal(mp.calls.length, ASSETS_FABRICA.length);
   mp.concluir();
@@ -102,8 +103,8 @@ test("entrada espera texturas E sons; falha permite retry parcial e continuaçã
   assert.ok(s.movimentoBloqueado && s.generatorMenuOpen);
   assert.deepEqual(s.player.velocity, { x: 0, y: 0 });
   s.load.emit("progress", 0.5);
-  assert.equal(s.texts[0].text, "Carregando...");
-  assert.deepEqual(s.texts.filter(t => t.visible).map(t => t.text), ["Carregando..."]);
+  assert.equal(s.texts[0].text, "CARREGANDO...");
+  assert.deepEqual(s.texts.filter(t => t.visible).map(t => t.text), ["CARREGANDO..."]);
   s.concluir(["novo-boss-tentaculo", "musica-novo-boss"]);
   assert.equal(c.estado, "falhou");
   assert.equal(abriu, 0);
@@ -182,7 +183,7 @@ test("entrada normal adia boss; DEV, save dentro da arena e portas já abertas a
   s.game.registry.set("factoryDoorOpen:porta03", true);
   assert.equal(bossNecessarioNaEntrada(s), true);
   s.game.registry.clear(); s.multiplayer = true;
-  assert.equal(bossNecessarioNaEntrada(s), true);
+  assert.equal(bossNecessarioNaEntrada(s), false);
 });
 
 test("falha de uma visita não compartilha flags ou callbacks com outra", () => {

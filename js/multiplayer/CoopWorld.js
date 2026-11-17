@@ -1,4 +1,4 @@
-import { planejarEntradaBoss } from "./CoopBossEntrance.js";
+import { CoopBossLoading } from "./CoopBossLoading.js";
 import { desvanecerMusicaAmbiente, DURACAO_SAIDA_MUSICA_MS } from "../sounds/musicaAmbiente.js";
 import { tocarSomColocando } from "../sounds/colocando.js";
 import { COOP, mergeCoopProgress } from "./CoopProtocol.js";
@@ -9,6 +9,7 @@ import { criarDropsInventario } from "../inventory/InventoryDrops.js";
 import { getInventoryItem } from "../inventory/InventoryItems.js";
 import { GENERATOR_LOOP_START_SECONDS } from "../sounds/gerador.js";
 import { ocultarHUDDuranteCena } from "../ui/HudCinematic.js";
+import { retanguloLivreDoMapa } from "../enemies/EnemyPathfinding.js";
 
 const sharedKey = key => key === "factoryGeneratorPowered" || /^factoryDoorOpen(?::porta\d+)?$/.test(key);
 export class CoopWorld {
@@ -16,6 +17,7 @@ export class CoopWorld {
     this.r = runtime; this.scene = runtime.scene; this.pending = new Set();
     this.applying = false; this.transitioning = false;
     this.manager = runtime.manager;
+    this.bossLoading = new CoopBossLoading(this);
     this.manager.room.coopProgress ||= { flags: {}, collected: {} };
     this.onRegistry = (_parent, key, value) => {
       if (!this.applying && sharedKey(key) && value === true) {
@@ -68,6 +70,7 @@ export class CoopWorld {
     return this.manager.sendCoopAction("pickup", { uid: pickup.uniqueId });
   }
   receive(action) {
+    if (this.bossLoading.receive(action)) return;
     const p = action.payload || {}, r = this.r, s = this.scene;
     if (action.authority) {
       if (action.kind === "collected") this.applyCollected(p);
@@ -79,12 +82,6 @@ export class CoopWorld {
         if (p.flags) this.applyFlags(p.flags);
       }
       else if (action.kind === "map") this.applyMap(p);
-      else if (action.kind === "bossIntro") {
-        if (!p.entrada || (this.bossAssembly && p.entrada.id <= this.bossAssembly.id)) return;
-        this.introCamera = p.camera;
-        this.aplicarEntradaBoss(p.entrada);
-        if (!this.r.host) this.update(0);
-      }
       else if (action.kind === "devLightingState") {
         this.manager.room.coopDevLighting = p.on;
         this.applyDevLighting(p.on);
@@ -122,6 +119,7 @@ export class CoopWorld {
     } else if (action.kind === "progress" && sharedKey(p.key) && p.value === true) {
       // O evento só é publicado após a interação solo consumir/validar os requisitos.
       if (r.mapKey !== "Level1Parte2") return;
+      if (["factoryDoorOpen:porta02", "factoryDoorOpen:porta03"].includes(p.key) && !this.bossLoading.current()) return;
       progress.flags[p.key] = true;
       if (p.key === "factoryGeneratorPowered" && p.reactivate) this.manager.room.coopDevLighting = null;
       if (p.key === "factoryGeneratorPowered" && !progress.generatorStartedAt) {
@@ -140,7 +138,7 @@ export class CoopWorld {
       const boss = !!(p.boss && developer && p.key === "Level1Parte2");
       const target = { ...(boss ? { key: p.key, x: -1085, y: -5169 } : p.key === "Level1Parte2" ? { key: p.key, x: 98, y: -1040 } :
         { key: p.key, x: 72, y: -2160 }), from: r.mapKey,
-        id: (this.manager.room.coopMap?.id || 0) + 1 };
+        id: (this.manager.room.coopMap?.id || 0) + 1, ...(boss ? { boss: true } : {}) };
       const nearDoor = r.mapKey === "Level1" ? Math.hypot(player.x - 72, player.y + 2184) < 160 :
         Math.hypot(player.x - 95, player.y + 916) < 180;
       if (!nearDoor && !developer) return;
@@ -186,6 +184,7 @@ export class CoopWorld {
     s.definirIluminacaoFabrica?.(on);
   }
   restore() {
+    this.bossLoading.apply(this.manager.room.coopBossPreparation);
     const progress = this.manager.room.coopProgress;
     this.applyFlags(progress?.flags);
     for (const grant of Object.values(progress?.collected || {})) this.applyCollected(grant);
@@ -232,52 +231,59 @@ export class CoopWorld {
     desvanecerMusicaAmbiente(s);
     s.cameras.main.fadeOut(DURACAO_SAIDA_MUSICA_MS, 0, 0, 0);
   }
-  iniciarIntroducaoBoss(encontro, origem) {
-    if (!this.r.host) return false;
-    if (this.r.revival?.participants().some(p => p.dead)) return false;
-    if (this.bossAssembly) return true;
-    const participantes = this.r.playerContexts().filter(c => c.player?.active && c.vida > 0 && !c.morteEmAndamento)
-      .map(c => ({ id: c.coopRemotePlayerId ?? this.manager.playerId, player: c.player, context: c }));
-    const destinos = planejarEntradaBoss(this.scene, encontro, origem, participantes);
-    if (!destinos) return false;
-    const entrada = { id: 1, jogadores: destinos };
-    this.aplicarEntradaBoss(entrada);
-    for (const { context, player } of participantes) {
-      if (context.estadoDash) context.estadoDash.ativo = false;
-      context.companionPet?.setPosition(player.x - 45, player.y + 35);
-    }
-    const camera = this.scene.cameras.main;
-    camera.centerOn(this.scene.player.x, this.scene.player.y);
-    this.manager.sendCoopAction("bossIntro", { entrada,
-      camera: { x: camera.midPoint?.x ?? origem.x, y: camera.midPoint?.y ?? origem.y, zoom: camera.zoom } },
-      { authority: true });
-    return true;
+  confirmarCartao() { return this.bossLoading.confirmCard(); }
+  iniciarIntroducaoBoss() {
+    return this.r.host && this.bossLoading.canStart() &&
+      !this.r.revival?.participants().some(p => p.dead);
   }
   aplicarEntradaBoss(entrada) {
     if (!entrada || this.r.mapKey !== "Level1Parte2") return;
-    if (!this.bossAssembly || entrada.id > this.bossAssembly.id) {
+    if (this.scene.preparacaoBoss && entrada.id !== this.bossLoading.state?.entrada?.id) return;
+    if (!this.bossAssembly || entrada.id !== this.bossAssembly.id) {
       this.bossAssembly = entrada;
-      const local = entrada.jogadores[this.manager.playerId];
+      this.scene.coopBossWaiting = true;
+      const retomada = this.bossLoading.state?.phase === "complete";
+      let local = entrada.jogadores[this.manager.playerId];
+      if (retomada && local) {
+        const saved = this.manager.room.players.find(p => p.id === this.manager.playerId);
+        const player = this.scene.player, body = player.body;
+        const dx = body?.x - player.x, dy = body?.y - player.y;
+        for (const ponto of [saved, player]) {
+          if (!this.r.inArena({ active: true, x: ponto?.x, y: ponto?.y })) continue;
+          const area = { x: ponto.x + (Number.isFinite(dx) ? dx : -18), y: ponto.y + (Number.isFinite(dy) ? dy : 10),
+            width: body?.width || 36, height: body?.height || 20 };
+          if (retanguloLivreDoMapa(this.scene, area)) local = { x: ponto.x, y: ponto.y };
+        }
+      }
       if (local) {
         this.r.teleport(local.x, local.y);
         if (this.scene.estadoDash) this.scene.estadoDash.ativo = false;
         this.scene.cameras.main.centerOn(local.x, local.y);
+        this.scene.companionPet?.setPosition(local.x - 45, local.y + 35);
       }
       for (const [id, ponto] of Object.entries(entrada.jogadores)) {
+        if (retomada) continue; // Retomar um cliente não reposiciona os aliados que já estão combatendo.
         const entry = this.r.players.remotes.get(id);
         if (!entry) continue;
         entry.actor.body.reset(ponto.x, ponto.y);
         entry.actor.body.updateFromGameObject();
         entry.actor.setVelocity(0, 0);
         entry.actor.coopTargetX = ponto.x; entry.actor.coopTargetY = ponto.y;
+        if (entry.context?.estadoDash) entry.context.estadoDash.ativo = false;
+        entry.context?.companionPet?.setPosition(ponto.x - 45, ponto.y + 35);
       }
+      for (const porta of this.scene.portasFabrica ?? [])
+        if (["porta02", "porta03"].includes(porta.nome)) {
+          if (retomada) porta.aplicarEstadoRede?.({ estado: "fechada", progresso: 0, bloqueadaPorBoss: true });
+          else porta.fecharParaBoss?.();
+        }
     }
-    this.scene.descarregarFabricaParaBoss?.();
+    if (this.bossLoading.canStart()) this.scene.descarregarFabricaParaBoss?.();
   }
   snapshot() {
     const s = this.scene;
     return { progress: this.manager.room.coopProgress, map: this.manager.room.coopMap,
-      bossAssembly: this.bossAssembly,
+      bossAssembly: this.bossAssembly, bossPreparation: this.bossLoading.state,
       devLighting: this.manager.room.coopDevLighting ?? null,
       lighting: s.iluminacaoFabrica?.snapshotRede(s.time.now),
       lightingZones: s.zonasLuzApagada?.snapshotRede(s.time.now),
@@ -288,6 +294,7 @@ export class CoopWorld {
         y: s.cameras.main.midPoint.y, zoom: s.cameras.main.zoom } : null };
   }
   receiveFrame(packet) {
+    this.bossLoading.apply(packet.bossPreparation);
     if (typeof packet.devLighting === "boolean" || packet.devLighting === null)
       this.manager.room.coopDevLighting = packet.devLighting;
     if (packet.progress) this.manager.room.coopProgress = mergeCoopProgress(this.manager.room.coopProgress, packet.progress);
@@ -300,12 +307,14 @@ export class CoopWorld {
       this.scene.portasFabrica || [], this.scene.luzFabricaAcesa);
     if (Array.isArray(packet.screens) && packet.screens.length === this.screens.length)
       this.screens.forEach((tile, i) => { tile.index = packet.screens[i]; });
-    this.introCamera = packet.introCamera;
+    if (packet.introCamera || !this.bossLoading.state) this.introCamera = packet.introCamera;
+    if (this.bossLoading.state?.phase === "complete") this.introCamera = null;
     this.update(0);
   }
   update(delta = 0) {
     const s = this.scene, camera = s.cameras.main, target = this.introCamera;
-    if (!this.transitioning && target && this.r.inArena(s.player) && !s.morteEmAndamento) {
+    if (!this.r.host && !s.preparacaoBoss?.aguardando && (!s.preparacaoBoss || this.bossLoading.canStart()) &&
+        !this.transitioning && target && this.r.inArena(s.player) && !s.morteEmAndamento) {
       if (!this.introLock) {
         this.savedIntro = { lock: !!s.movimentoBloqueado, zoomX: camera.zoomX ?? camera.zoom,
           zoomY: camera.zoomY ?? camera.zoom, paused: s.player.anims?.isPaused,
@@ -339,6 +348,7 @@ export class CoopWorld {
     if (s.input.keyboard) { s.input.keyboard.resetKeys(); s.input.keyboard.enabled = previous.keyboard; }
   }
   destroy() {
+    this.bossLoading.destroy();
     this.restoreIntro();
     this.scene.game.registry.events.off("changedata", this.onRegistry);
     this.scene.game.registry.events.off("setdata", this.onRegistry);

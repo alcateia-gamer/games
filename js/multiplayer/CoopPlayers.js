@@ -38,6 +38,7 @@ export class CoopPlayers {
       stamina: round(s.estamina), maxStamina: s.estaminaMaxima,
       dead: !!s.morteEmAndamento || health <= 0,
       coop: { visual, downId: s.coopDownId ?? null, compression: supportsCompression(),
+        sceneSession: r.streamId, accessCard: s.inventory?.getQuantity("card") > 0,
         inventoryDrop: s.coopInventoryDrop ?? null,
         developer: !!s.developerMode,
         flashlight: { angle: round(this.flashlightPose.angulo, 10000) },
@@ -56,7 +57,8 @@ export class CoopPlayers {
       ids.add(data.id);
       let entry = this.remotes.get(data.id);
       // Durante a cutscene, pacotes enviados antes do teleporte não devolvem o aliado à fábrica.
-      const entrada = (s.cenaEntradaBossAtiva || (!r.host && r.world?.introCamera)) && r.world?.bossAssembly?.jogadores[data.id];
+      const esperaEquipe = s.coopBossWaiting && r.world?.bossLoading?.state?.phase !== "complete";
+      const entrada = (esperaEquipe || s.cenaEntradaBossAtiva || (!r.host && r.world?.introCamera)) && r.world?.bossAssembly?.jogadores[data.id];
       if (entrada) data = { ...data, x: entrada.x, y: entrada.y };
       const desc = data.coop?.visual;
       if (!entry) {

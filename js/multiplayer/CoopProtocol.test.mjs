@@ -142,3 +142,41 @@ test("quadros atrasados não apagam os itens derrubados já confirmados", () => 
   assert.deepEqual(mergeCoopProgress(progress, stale).inventoryDrops, progress.inventoryDrops);
   assert.equal(Object.keys(mergeCoopProgress(progress, { inventoryDrops: { "ally:1": { id: "ally:1" } } }).inventoryDrops).length, 2);
 });
+
+test("preparação do boss sobrevive ao preload sem runtime e snapshots atrasados não desfazem a barreira", () => {
+  const { host, client } = pair();
+  host.room.coopMap = { id: 1, key: "Level1Parte2" }; host.publishState();
+  const first = { roomCode: "TEST", mapId: 1, id: "TEST:1:tentativa", revision: 1,
+    phase: "loading", participants: ["host", "client"], clients: {} };
+  host.sendCoopAction("bossPreparation", { preparation: first }, { authority: true });
+  assert.equal(client.room.coopBossPreparation.id, first.id, "sem cena consumidora o Manager guarda a autorização");
+  const next = { ...first, revision: 2, phase: "assembling", entrada: { id: first.id,
+    jogadores: { host: { x: -1100, y: -5408 }, client: { x: -1036, y: -5408 } } } };
+  host.publishCoopFrame({ mapKey: "Level1Parte2", bossPreparation: next });
+  assert.equal(client.room.coopBossPreparation.revision, 2);
+  client.receiveState({ ...host.room, revision: host.room.revision + 1, coopBossPreparation: first });
+  assert.equal(client.room.coopBossPreparation.phase, "assembling");
+  host.sendCoopAction("bossPreparation", { preparation: { ...next, roomCode: "OTHER", revision: 99 } }, { authority: true });
+  assert.equal(client.room.coopBossPreparation.revision, 2);
+  client.sendCoopAction("bossPreparation", { preparation: { ...next, revision: 100 } });
+  assert.equal(host.room.coopBossPreparation.revision, 1, "cliente não escreve a revisão autoritativa");
+});
+
+test("host desconectado sai da barreira e o sucessor preserva a preparação sem nova tentativa", t => {
+  const { host, client } = pair(); let tick;
+  const preparation = { roomCode: "TEST", mapId: 1, id: "TEST:1:mesma", revision: 3,
+    phase: "loading", participants: ["host", "client"], clients: { client: { session: "client-session", status: "ready" } } };
+  host.room.coopMap = { id: 1, key: "Level1Parte2" };
+  host.room.coopBossPreparation = preparation; host.publishState();
+  // Host some do transporte; só o heartbeat do sucessor é executado.
+  host.mqtt.removeAllListeners("message");
+  t.mock.method(globalThis, "setInterval", callback => { tick = callback; return 1; });
+  client.startHeartbeat();
+  client.coopTransitionUntil = 0;
+  client.room.players.find(p => p.id === "host").lastSeen = Date.now() - 20000;
+  tick(); client.stopHeartbeat();
+  assert.equal(client.room.hostId, "client");
+  assert.ok(!client.room.players.some(p => p.id === "host"));
+  assert.equal(client.room.coopBossPreparation.id, preparation.id);
+  assert.equal(client.room.coopBossPreparation.clients.client.status, "ready");
+});

@@ -7,7 +7,7 @@ import { maximumHealth, modifiers } from '../systems/UpgradeSystem.js';
 
 import { obterBalanceamento } from "../combat/CharacterBalance.js";
 
-import { COOP, RecentActions, validPlayerState, mergeCoopProgress } from "./CoopProtocol.js";
+import { COOP, RecentActions, validPlayerState, mergeCoopProgress, mergeBossPreparation } from "./CoopProtocol.js";
 
 const ROOM_CODE = /^[A-Z0-9]{4,6}$/;
 const CHARACTER_IDS = ["kai-mercer", "magnus-force", "aria-kade", "nyx"];
@@ -203,6 +203,7 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
         ...data,
         upgradeEconomy,
         coopProgress: mergeCoopProgress(this.room?.coopProgress, data.coopProgress),
+        coopBossPreparation: mergeBossPreparation(data, this.room?.coopBossPreparation, data.coopBossPreparation),
         players: data.players.map(p => {
           const player = this.normalizePlayer(p, upgradeEconomy);
           player.lastSeen = p.id === data.hostId ? Date.now() :
@@ -232,6 +233,8 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
       if (action.targetId && action.targetId !== this.playerId) return;
       if (action.authority && action.playerId !== this.room.hostId) return;
       if (!action.authority && this.room.hostId !== this.playerId) return;
+      if (action.authority && ["bossPreparation", "bossIntro"].includes(action.kind))
+        this.room.coopBossPreparation = mergeBossPreparation(this.room, this.room.coopBossPreparation, action.payload?.preparation);
       this.emit("coopAction", action);
       return;
     }
@@ -540,15 +543,9 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
             this.removePlayer(host.id);
             return;
           }
-          const nextHost = [...this.room.players].sort((left, right) =>
-            left.id.localeCompare(right.id),
-          )[0];
-          this.room.hostId = nextHost.id;
-          this.room.players.forEach((player) => {
-            player.isHost = player.id === nextHost.id;
-          });
-          if (nextHost.id === this.playerId) this.publishState();
-          this.emit("roomUpdated", this.room);
+          // Remove também o host expirado da lista exigida pelas barreiras cooperativas.
+          this.removePlayer(host.id);
+          if (this.room && this.room.hostId !== this.playerId) this.emit("roomUpdated", this.room);
         }
       }
     }, HEARTBEAT_MS);
@@ -722,6 +719,8 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
     this.room.enemies = packet.enemies || [];
     this.room.serverTime = packet.serverTime;
     if (packet.map) this.room.coopMap = packet.map;
+    if (packet.bossPreparation)
+      this.room.coopBossPreparation = mergeBossPreparation(this.room, this.room.coopBossPreparation, packet.bossPreparation);
     this.emit("coopFrame", packet);
     this.emit("roomUpdated", this.room);
   }

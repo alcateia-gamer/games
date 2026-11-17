@@ -970,6 +970,35 @@ test("leitor abre normalmente com boss ainda carregando e libera a passagem sem 
   scene.events.emit("shutdown");
 });
 
+test("leitor cooperativo pede autorização depois da confirmação sem abrir a porta por conta própria", () => {
+  const { scene } = createScene();
+  let pedidos = 0;
+  scene.coopRuntime = { world: { confirmarCartao() { pedidos++; return true; } } };
+  liberarAcesso(scene); aproximarLeitor(scene); abrirComE(scene);
+  animarCartao(scene);
+  assert.equal(pedidos, 0, "aguarda o som e a confirmação original do leitor");
+  scene.finishActivation();
+  assert.equal(pedidos, 1);
+  assert.ok(scene.portasFabrica.every(p => p.estado === "fechada"));
+  assert.equal(scene.abrirPortasArenaAposCartao(scene), true);
+  assert.ok(scene.portasFabrica.filter(p => ["porta02", "porta03"].includes(p.nome)).every(p => p.estado === "abrindo"));
+  scene.events.emit("shutdown");
+});
+
+test("host pode abrir as portas para o contexto autorizado do aliado mesmo sem cartão local e longe do leitor", () => {
+  const { scene } = createScene();
+  liberarAcesso(scene);
+  scene.inventory.removeItem("card", 1);
+  scene.player.x = 98; scene.player.y = -1040;
+  const leitor = scene.leitorCartaoFabrica.area;
+  const aliado = { player: { active: true, x: leitor.x, y: leitor.y },
+    inventory: { getQuantity: key => key === "card" ? 1 : 0 } };
+  assert.equal(scene.abrirPortasArenaAposCartao(aliado), true);
+  assert.equal(scene.inventory.getQuantity("card"), 0);
+  assert.ok(scene.portasFabrica.filter(p => ["porta02", "porta03"].includes(p.nome)).every(p => p.estado === "abrindo"));
+  scene.events.emit("shutdown");
+});
+
 test("o cartão passa sozinho ao abrir o terminal e libera as portas após a confirmação", () => {
   const { scene } = createScene();
   liberarAcesso(scene); aproximarLeitor(scene); abrirComE(scene);

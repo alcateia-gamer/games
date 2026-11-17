@@ -173,22 +173,22 @@ function criarPorta(scene, layer, area, fala) {
    * Verifica alcance, estado da porta e bloqueios de morte ou menu antes de permitir a
    * interação.
    */
-  const podeInteragir = (alvo = area) =>
+  const podeInteragir = (alvo = area, contexto = scene) =>
     !encerrada && !porta.bloqueadaPorBoss && !scene.cenaEntradaBossAtiva &&
-    porta.estado === "fechada" && scene.player?.active &&
-    !scene.morteEmAndamento && !scene.generatorMenuOpen && !scene.devItemMenuOpen &&
-    distanceToInteractionArea(scene.player.x, scene.player.y, alvo) <=
+    porta.estado === "fechada" && contexto.player?.active &&
+    !contexto.morteEmAndamento && !contexto.generatorMenuOpen && !contexto.devItemMenuOpen &&
+    distanceToInteractionArea(contexto.player.x, contexto.player.y, alvo) <=
       INTERACTION_RANGE;
 
   /** As duas portas iniciais usam energia; o leitor da arena também exige o crachá. */
-  const motivoBloqueio = () => {
+  const motivoBloqueio = (contexto = scene) => {
     if (porta.bloqueadaPorBoss) return "COMBATE EM ANDAMENTO";
     if (area.name === "porta05" && scene.novoBoss?.morto !== true) return "DERROTE O BOSS PARA ABRIR";
     const exigeCartao = PORTAS_COM_ACESSO.has(area.name);
     if (!exigeCartao && !PORTAS_COM_ENERGIA.has(area.name)) return null;
     const requisitos = [];
     if (scene.luzFabricaAcesa !== true) requisitos.push("SEM ENERGIA");
-    if (exigeCartao && !(scene.inventory?.getQuantity("card") > 0)) requisitos.push("REQUER CARTÃO DE ACESSO");
+    if (exigeCartao && !(contexto.inventory?.getQuantity("card") > 0)) requisitos.push("REQUER CARTÃO DE ACESSO");
     return requisitos.length ? requisitos.join(" | ") : null;
   };
 
@@ -215,9 +215,9 @@ function criarPorta(scene, layer, area, fala) {
   };
 
   /** Abre diretamente ou conclui a persiana antes de remover a colisão. */
-  const abrir = (alvo = area) => {
-    if (!podeInteragir(alvo)) return false;
-    const bloqueio = motivoBloqueio();
+  const abrir = (alvo = area, contexto = scene) => {
+    if (!podeInteragir(alvo, contexto)) return false;
+    const bloqueio = motivoBloqueio(contexto);
     if (bloqueio) {
       if (PORTAS_COM_ENERGIA.has(area.name) && scene.luzFabricaAcesa !== true) {
         fala.mostrar(FALAS_SEM_ENERGIA);
@@ -359,10 +359,16 @@ function criarInteracaoPortaFabrica(scene) {
       portasLeitor.every(controle => !controle.porta.bloqueadaPorBoss && !controle.motivoBloqueio()),
     abrirPortas: () => {
       if (!leitorProximo()) return;
+      if (scene.coopRuntime) return scene.coopRuntime.world.confirmarCartao();
       for (const controle of portasLeitor) controle.abrir(areaLeitor);
     },
   }) : null;
   scene.leitorCartaoFabrica = marcadorLeitor ? { area: areaLeitor, marcador: marcadorLeitor, terminal, fala } : null;
+  scene.abrirPortasArenaAposCartao = contexto => {
+    if (!portasLeitor.length || portasLeitor.some(c => !c.podeInteragir(areaLeitor, contexto) || c.motivoBloqueio(contexto))) return false;
+    for (const controle of portasLeitor) controle.abrir(areaLeitor, contexto);
+    return true;
+  };
   const passarCartao = () => {
     if (!leitorProximo() || !portasLeitor.some(controle =>
       controle.porta.estado === "fechada" && !controle.porta.bloqueadaPorBoss)) return false;
@@ -422,6 +428,7 @@ function criarInteracaoPortaFabrica(scene) {
     if (marcadorLeitor) scene.tweens.killTweensOf(marcadorLeitor);
     marcadorLeitor?.destroy();
     scene.leitorCartaoFabrica = null;
+    scene.abrirPortasArenaAposCartao = null;
     scene.portasFabrica = [];
     scene.portaFabrica = null;
     scene.interacaoMundoProxima = null;

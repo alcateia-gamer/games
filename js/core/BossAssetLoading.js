@@ -1,4 +1,4 @@
-/** Preparação solo, por visita à fábrica. A fila e os caches continuam sendo do Phaser. */
+/** Preparação local, por visita à fábrica. A fila e os caches continuam sendo do Phaser. */
 import { assetsBossProntos, enfileirarAssetsBoss } from "./FactoryAssetPack.js";
 import { novoBossConfig, configurarZonasNovoBoss, jogadorNaArenaNovoBoss } from "../enemies/novoBoss/NovoBossConfig.js";
 import { distanceToInteractionArea } from "../interactions/FactoryGenerator.js";
@@ -8,7 +8,7 @@ const portasArena = porta => porta.nome === "porta02" || porta.nome === "porta03
 
 /** Saves, retorno e DEV podem iniciar sem passar pelo leitor de cartão. */
 export function bossNecessarioNaEntrada(scene) {
-  if (scene.multiplayer) return true;
+  if (scene.multiplayer) return false; // O host autoriza a preparação pela leitura do cartão.
   const registry = scene.game?.registry;
   if (["porta02", "porta03"].some(nome => registry?.get(`factoryDoorOpen:${nome}`) === true)) return true;
   const mapa = scene.cache?.tilemap?.get("mapaParte2")?.data;
@@ -28,9 +28,8 @@ export function bossNecessarioNaEntrada(scene) {
 }
 
 export function criarPreparacaoBoss(scene) {
-  if (scene.multiplayer) return null;
   let estado = assetsBossProntos(scene) ? "pronto" : "ocioso";
-  let encerrado = false, espera = null, textos = null;
+  let encerrado = false, espera = null, textos = null, falhaRemota = false;
   let paraleloAnterior = null;
   const loader = scene.load;
 
@@ -52,7 +51,8 @@ export function criarPreparacaoBoss(scene) {
     textos.forEach((texto, i) => texto.setPosition(cx + (camera.width / 2 - cx) / zoomX,
       cy + (camera.height / 2 + i * 55 - cy) / zoomY).setScale(1 / zoomX, 1 / zoomY)
       .setVisible(i === 0 || estado === "falhou" && (i === 1 || espera.cancelavel !== false)));
-    textos[0].setText(estado === "falhou" ? "Falha ao carregar.\nVerifique a conexão." : "Carregando...");
+    textos[0].setText(estado === "falhou" ? "Falha ao carregar.\nVerifique a conexão."
+      : falhaRemota ? "Falha ao carregar.\nAguardando jogador." : "CARREGANDO...");
   }
 
   function concluirEspera(continuar) {
@@ -120,6 +120,11 @@ export function criarPreparacaoBoss(scene) {
     get aguardando() { return espera !== null; },
     get estado() { return estado; },
     iniciar,
+    falhar() { estado = "falhou"; atualizarAviso(); },
+    informarFalhaRemota(valor) {
+      if (falhaRemota === (valor === true)) return;
+      falhaRemota = valor === true; atualizarAviso();
+    },
     aguardar(continuar, { podeContinuar = null, cancelar = null, cancelavel = true } = {}) {
       if (encerrado) return;
       if (controle.pronto && (!podeContinuar || podeContinuar())) { continuar(); return; }
@@ -135,7 +140,7 @@ export function criarPreparacaoBoss(scene) {
     atualizar() {
       if (scene.morteEmAndamento || (scene.vida ?? 1) <= 0) { concluirEspera(false); return; }
       if (espera) { tentarContinuar(); atualizarAviso(); }
-      if (estado !== "ocioso" || !scene.player?.active || !(scene.inventory?.getQuantity("card") > 0)) return;
+      if (scene.multiplayer || estado !== "ocioso" || !scene.player?.active || !(scene.inventory?.getQuantity("card") > 0)) return;
       const perto = area => distanceToInteractionArea(scene.player.x, scene.player.y, area) <= DISTANCIA_PREPARACAO;
       if ((scene.portasFabrica ?? []).some(porta => portasArena(porta) && perto(porta.area)) ||
           scene.leitorCartaoFabrica?.area && perto(scene.leitorCartaoFabrica.area)) iniciar();

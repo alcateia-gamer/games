@@ -91,7 +91,7 @@ test("entrada atravessa a porta inteira, fecha atrás e espera assets e fechamen
     assert.equal(portas[0].estado, "fechando");
     assert.equal(portas[1].estado, "fechando");
     assert.equal(portas[2].estado, "aberta");
-    assert.deepEqual(textos.filter(t => t.visible).map(t => t.text), ["Carregando..."]);
+    assert.deepEqual(textos.filter(t => t.visible).map(t => t.text), ["CARREGANDO..."]);
     for (let i = 0; i < 5; i++) { sistema.aguardarCarregamento(); sistema.atualizar(1000); }
     assert.equal(scene.load.inicios, 1);
     assert.deepEqual(chamadas, ["fechar:porta02", "fechar:porta03"]);
@@ -139,7 +139,7 @@ test("falha na arena mantém a câmera esperando, retry continua a cena e morte 
       assert.equal(c._follow, scene.player);
     } else {
       textos[1].emit("pointerdown");
-      assert.equal(textos[0].text, "Carregando...");
+      assert.equal(textos[0].text, "CARREGANDO...");
       concluir(); controle.atualizar(); sistema.atualizar(0);
       assert.equal(sistema.snapshot().etapa, "indo");
       assert.equal(scene.load.inicios, 2);

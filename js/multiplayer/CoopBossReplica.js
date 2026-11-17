@@ -65,6 +65,7 @@ export class BossReplica {
   }
   receive(data) {
     if (!data) return;
+    if (this.scene.preparacaoBoss && (!this.scene.preparacaoBoss.pronto || !this.runtime.bossAssetsPrepared)) return;
     const s = this.scene;
     const target = this.target(data);
     if (!this.encounter) {
@@ -120,6 +121,7 @@ export class BossReplica {
     if (!e) return;
     e.x = e.sprite?.x; e.y = e.sprite?.y;
     e.jogadorNaArena = jogadorNaArenaNovoBoss(this.scene.player, e.config.arena);
+    if (this.scene.coopBossWaiting) return;
     if (!this.scene.cenaEntradaBossAtiva && !this.runtime.world.introCamera) this.camera?.atualizar(delta);
     atualizarHudNovoBoss(this.runtime.localContext, e);
   }
