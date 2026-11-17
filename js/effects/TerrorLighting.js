@@ -589,7 +589,7 @@ function criarIluminacaoTerror(scene, { ambienteBasico = false } = {}) {
     transformarMascara(context);
     context.globalAlpha = 1;
     context.globalCompositeOperation = "source-over";
-    context.clearRect(0, 0, width, height);
+    // O preenchimento opaco cobre todos os pixels; não é preciso limpá-los antes.
     context.fillStyle = "#000000";
     context.fillRect(0, 0, width, height);
     context.save();

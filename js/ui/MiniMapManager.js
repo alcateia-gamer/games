@@ -416,6 +416,72 @@ export default class MiniMapManager {
     this.texture.refresh();
   }
 
+  /** Um único carimbo local dos indicadores que não mudaram; inimigos/aliados continuam por quadro. */
+  drawNativeItemMarkers() {
+    // Durante o deslocamento, os ícones mudam de posição: desenha direto, sem carimbo extra.
+    if (this.nativeItemTransform !== this.transform) {
+      this.nativeItemTransform = this.transform;
+      this.nativeItemState = null;
+      this.updateItemMarkers();
+      this.updateGeneratorMarker();
+      this.updateShutterDoorMarkers();
+      this.updateCardReaderMarker();
+      this.updateWeaponShopMarker();
+      this.updateFuelMarkers();
+      return;
+    }
+    const view = this.nativeView;
+    const estado = this.nativeItemState ?? (this.nativeItemState = []);
+    let indice = 0, mudou = !this.nativeItemCanvas;
+    const comparar = valor => {
+      if (!Object.is(estado[indice], valor)) mudou = true;
+      estado[indice++] = valor;
+    };
+    comparar(this.transform); comparar(view.canvas.width); comparar(view.canvas.height);
+    comparar(this.scene.luzFabricaAcesa);
+    comparar(this.generatorPosition?.x); comparar(this.generatorPosition?.y);
+    for (const item of this.scene.itensColetaveis ?? []) {
+      comparar(item.image?.active); comparar(item.x); comparar(item.y);
+    }
+    comparar("portas");
+    for (const porta of this.scene.portasFabrica ?? []) {
+      comparar(!!porta.marcador);
+      comparar(porta.area?.x); comparar(porta.area?.y);
+      comparar(porta.area?.width); comparar(porta.area?.height);
+    }
+    const area = this.scene.leitorCartaoFabrica?.area;
+    comparar("leitor"); comparar(area?.x); comparar(area?.y); comparar(area?.width); comparar(area?.height);
+    const loja = this.scene.entradaLojaArmas;
+    comparar(loja?.active); comparar(loja?.x); comparar(loja?.y);
+    comparar("combustivel");
+    for (const fuel of this.fuelPositions ?? []) { comparar(fuel.x); comparar(fuel.y); }
+    if (estado.length !== indice) mudou = true;
+    estado.length = indice;
+    if (mudou) {
+      // A HUD nativa oculta a imagem Phaser; reaproveita seu canvas em vez de manter outra cópia.
+      const canvas = this.nativeItemCanvas ?? (this.nativeItemCanvas = this.texture?.canvas ?? document.createElement("canvas"));
+      if (canvas.width !== view.canvas.width || canvas.height !== view.canvas.height) {
+        if (canvas === this.texture?.canvas) this.texture.setSize(view.canvas.width, view.canvas.height);
+        else { canvas.width = view.canvas.width; canvas.height = view.canvas.height; }
+      }
+      const ctx = canvas.getContext("2d");
+      ctx.setTransform(canvas.width / view.width, 0, 0, canvas.height / view.height, 0, 0);
+      ctx.clearRect(0, 0, view.width, view.height);
+      const anterior = this.itemMarkers;
+      this.itemMarkers = this.nativeItemGraphics ?? (this.nativeItemGraphics = new GraficosCanvasHUD(ctx));
+      try {
+        this.updateItemMarkers();
+        this.updateGeneratorMarker();
+        this.updateShutterDoorMarkers();
+        this.updateCardReaderMarker();
+        this.updateWeaponShopMarker();
+        this.updateFuelMarkers();
+      } finally { this.itemMarkers = anterior; }
+    }
+    // Mantém a ordem original: indicadores sobre inimigos/aliados e sob a seta do jogador.
+    view.context.drawImage(this.nativeItemCanvas, 0, 0, view.width, view.height);
+  }
+
   /** Contornos, rótulo e marcadores desenhados diretamente nos pixels físicos da HUD. */
   drawNativeView(x, y) {
     const view = this.nativeView;
@@ -424,10 +490,13 @@ export default class MiniMapManager {
     if (resized || this.nativeBackgroundDirty) {
       this.nativeBackgroundDirty = false;
       const backdrop = this.nativeBackground;
-      backdrop.width = view.canvas.width;
-      backdrop.height = view.canvas.height;
+      if (backdrop.width !== view.canvas.width || backdrop.height !== view.canvas.height) {
+        backdrop.width = view.canvas.width;
+        backdrop.height = view.canvas.height;
+      }
       const ctx = backdrop.getContext("2d");
-      ctx.scale(backdrop.width / view.width, backdrop.height / view.height);
+      ctx.setTransform(backdrop.width / view.width, 0, 0, backdrop.height / view.height, 0, 0);
+      ctx.clearRect(0, 0, view.width, view.height);
       ctx.fillStyle = this.colors.background;
       ctx.fillRect(0, 0, WIDTH, HEIGHT);
       ctx.save();
@@ -461,12 +530,7 @@ export default class MiniMapManager {
     try {
       this.updateEnemyMarkers();
       this.updateAllyMarkers();
-      this.updateItemMarkers();
-      this.updateGeneratorMarker();
-      this.updateShutterDoorMarkers();
-      this.updateCardReaderMarker();
-      this.updateWeaponShopMarker();
-      this.updateFuelMarkers();
+      this.drawNativeItemMarkers();
       this.updateSearchMarker();
     } finally {
       this.enemyMarkers = enemyMarkers;
@@ -499,6 +563,8 @@ export default class MiniMapManager {
       this.nativeBackground.width = 0;
       this.nativeBackground.height = 0;
     }
+    if (this.nativeItemCanvas) this.nativeItemCanvas.width = this.nativeItemCanvas.height = 0;
+    this.nativeItemCanvas = null; this.nativeItemGraphics = null; this.nativeItemState = null; this.nativeItemTransform = null;
     if (this.textureKey) this.scene.textures.remove(this.textureKey);
     this.texture = null; this.atlas = null;
     this.geometry = null; this.root = null; this.marker = null; this.image = null;

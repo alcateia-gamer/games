@@ -21,7 +21,7 @@ export default class FixedLightCache {
   }
 
   adicionar(luz, perfis) {
-    this.fontes.push({ luz, perfis, intensidade: -1, angulo: null });
+    this.fontes.push({ luz, perfis, intensidade: -1, angulo: null, revisaoRecorte: 0 });
     this.areaSuja = this.sujo = true;
     this.refazerTudo = true;
   }
@@ -41,6 +41,7 @@ export default class FixedLightCache {
   liberarCarimbos(fonte) {
     for (const canvas of fonte.carimbos ?? []) if (canvas) canvas.width = canvas.height = 0;
     fonte.carimbos = null;
+    fonte.versoesCarimbos = null;
   }
 
   /** Guarda os três recortes pequenos de cada neon; intensidade só participa da composição. */
@@ -52,13 +53,22 @@ export default class FixedLightCache {
     }
     fonte.carimbos ??= [];
     let canvas = fonte.carimbos[indice];
-    if (!canvas) {
-      canvas = fonte.carimbos[indice] = document.createElement("canvas");
-      canvas.width = canvas.height = Math.ceil(raio * 2);
+    if (!canvas) canvas = fonte.carimbos[indice] = document.createElement("canvas");
+    const tamanho = Math.ceil(raio * 2);
+    const versoes = fonte.versoesCarimbos ?? (fonte.versoesCarimbos = []);
+    if (canvas.width !== tamanho || canvas.height !== tamanho) {
+      canvas.width = canvas.height = tamanho;
+      versoes[indice] = null;
+    }
+    if (versoes[indice] !== fonte.revisaoRecorte) {
       const c = canvas.getContext("2d");
+      c.setTransform(1, 0, 0, 1, 0, 0);
+      c.clearRect(0, 0, tamanho, tamanho);
       c.setTransform(1, 0, 0, 1, raio - fonte.luz.x, raio - fonte.luz.y);
+      c.globalCompositeOperation = "source-over";
       c.globalAlpha = 1;
       this.pintar(c, fonte.perfis[indice], fonte);
+      versoes[indice] = fonte.revisaoRecorte;
     }
     context.drawImage(canvas, fonte.luz.x - raio, fonte.luz.y - raio);
   }
@@ -77,7 +87,10 @@ export default class FixedLightCache {
       const intensidade = luz.ligada ? luz.intensidade * (luz.cor?.alpha ?? 1) * zonas.fatorLuz(luz, agora) : 0;
       const angulo = luz.neon ? luz.fase : luz.angulo;
       if (recortesAlterados || fonte.x !== luz.x || fonte.y !== luz.y ||
-          fonte.raio !== luz.raio || fonte.angulo !== angulo) this.liberarCarimbos(fonte);
+          fonte.raio !== luz.raio || fonte.angulo !== angulo) {
+        // Invalida os pixels, preservando os três canvases da fonte até descarte/shutdown.
+        fonte.revisaoRecorte = (fonte.revisaoRecorte ?? 0) + 1;
+      }
       if (fonte.x !== luz.x || fonte.y !== luz.y || fonte.raio !== luz.raio) {
         fonte.x = luz.x; fonte.y = luz.y; fonte.raio = luz.raio;
         this.areaSuja = mudou = this.refazerTudo = true;

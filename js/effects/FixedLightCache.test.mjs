@@ -69,3 +69,51 @@ test("descarregar a fábrica retira luzes distantes e permite voltar ao atlas co
   assert.ok(cache.canvasCor.width * cache.canvasCor.height < 4096);
   cache.destroy();
 });
+
+test("invalidar sombras reutiliza carimbos, apaga pixels antigos e libera buffers no descarte", t => {
+  const anterior = globalThis.document;
+  t.after(() => { globalThis.document = anterior; });
+  let criados = 0, pinturas = 0;
+  const canvases = [];
+  globalThis.document = { createElement() {
+    criados++;
+    const context = { conteudo: [], setTransform() {}, clearRect() { this.conteudo = []; } };
+    const canvas = { width: 300, height: 150, getContext: () => context };
+    canvases.push(canvas);
+    return canvas;
+  } };
+  const paredes = { revisao: 0 }, estatuas = { revisao: 0 }, oclusao = { revisao: 0 };
+  const zonas = { fatorLuz: () => 1 };
+  const cache = new FixedLightCache((ctx, perfil) => {
+    pinturas++;
+    ctx.conteudo.push(`${perfil}:${paredes.revisao}:${estatuas.revisao}`);
+  });
+  t.after(() => cache.destroy());
+  const luz = { neon: true, x: 10, y: 20, raio: 18, fase: 0, ligada: true, intensidade: 1 };
+  cache.adicionar(luz, ["mascara", "halo", "emissor"]);
+  cache.atualizar(0, zonas, paredes, estatuas, oclusao);
+  const fonte = cache.fontes[0], destino = { drawImage() {} };
+  for (let i = 0; i < 3; i++) cache.desenharPerfil(destino, fonte, i);
+  const carimbos = fonte.carimbos.slice(), inicial = criados;
+  for (let i = 0; i < 3; i++) cache.desenharPerfil(destino, fonte, i);
+  assert.equal(pinturas, 3, "recortes válidos não são repintados");
+  paredes.revisao++;
+  cache.atualizar(1, zonas, paredes, estatuas, oclusao);
+  for (let i = 0; i < 3; i++) cache.desenharPerfil(destino, fonte, i);
+  assert.equal(criados, inicial, "mudança de porta não aloca outros canvases");
+  for (let i = 0; i < 3; i++) {
+    assert.equal(fonte.carimbos[i], carimbos[i]);
+    assert.deepEqual(carimbos[i].getContext().conteudo, [`${fonte.perfis[i]}:1:0`], "não retém o recorte antigo");
+  }
+  luz.x += 8; luz.raio = 22;
+  estatuas.revisao++;
+  cache.atualizar(2, zonas, paredes, estatuas, oclusao);
+  for (let i = 0; i < 3; i++) cache.desenharPerfil(destino, fonte, i);
+  assert.equal(criados, inicial);
+  assert.ok(carimbos.every(c => c.width === 66 && c.height === 66));
+  cache.descartarAbaixo(-100);
+  assert.equal(cache.fontes.length, 0);
+  assert.ok(carimbos.every(c => c.width === 0 && c.height === 0));
+  cache.destroy();
+  assert.ok(canvases.every(c => c.width === 0 && c.height === 0));
+});

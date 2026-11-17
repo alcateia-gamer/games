@@ -323,10 +323,12 @@ export class CoopRuntime {
         vida: data.vida, vidaMaxima: data.vidaMaxima, morto: data.morto, origemSpawn: data.origemSpawn,
         direcaoAtual: data.direcaoAtual,
         portalBossOrigem: data.portalBossOrigem,
-        hitboxDano: data.hitbox && new Phaser.Geom.Rectangle(...Object.values(data.hitbox)),
+        hitboxDano: data.hitbox && (actor.hitboxDano instanceof Phaser.Geom.Rectangle ? actor.hitboxDano : new Phaser.Geom.Rectangle()).setTo(
+          data.hitbox.x, data.hitbox.y, data.hitbox.width, data.hitbox.height),
         // A réplica não simula física. GameObject.body é reservado a corpos
         // do Phaser, que precisam implementar destroy() ao trocar de cena.
-        coopBody: data.body && new Phaser.Geom.Rectangle(...Object.values(data.body)) });
+        coopBody: data.body && (actor.coopBody instanceof Phaser.Geom.Rectangle ? actor.coopBody : new Phaser.Geom.Rectangle()).setTo(
+          data.body.x, data.body.y, data.body.width, data.body.height) });
       configurarSomPropulsaoRoboBola(s, actor);
       return actor;
     }).filter(Boolean);

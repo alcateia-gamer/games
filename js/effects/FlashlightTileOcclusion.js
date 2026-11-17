@@ -38,18 +38,32 @@ export function ocultarLanternaAtrasCamada(context, layer, camera, regiao = null
   context.transform(cos * sx, sin * sx, -sin * sy, cos * sy, layer.x ?? 0, layer.y ?? 0);
   context.globalCompositeOperation = "destination-out";
   context.imageSmoothingEnabled = false;
+  // A câmera pode enxergar milhares de tiles; só os que cruzam o carimbo afetam a lanterna.
+  // Usa a transformação exata já aplicada, sem reduzir resolução ou quantizar a posição.
+  const matriz = context.getTransform?.();
+  const canvas = context.canvas;
   for (const tile of tiles ?? layer.cull(camera)) {
     const tileset = layer.gidMap[tile.index];
     if (!tileset || tile.visible === false || tile.alpha === 0) continue;
     if (regiao && !tileNaRegiao(layer, tile, tileset, regiao)) continue;
-    const indice = tileset.getAnimatedTileId(tile.index, layer.timeElapsed);
-    const origem = indice == null ? null : tileset.getTileTextureCoordinates(indice);
-    if (!origem) continue;
     const w = tileset.tileWidth, h = tileset.tileHeight;
     if (!(w > 0 && h > 0)) continue;
     const angulo = tile.rotation ?? 0;
     const ct = Math.cos(angulo), st = Math.sin(angulo);
     const fx = tile.flipX ? -1 : 1, fy = tile.flipY ? -1 : 1;
+    if (matriz && canvas) {
+      const cx = tile.pixelX + w / 2 - tileset.tileOffset.x;
+      const cy = tile.pixelY + h / 2 - tileset.tileOffset.y;
+      const x = matriz.a * cx + matriz.c * cy + matriz.e;
+      const y = matriz.b * cx + matriz.d * cy + matriz.f;
+      const rx = (Math.abs(matriz.a * ct + matriz.c * st) * w + Math.abs(-matriz.a * st + matriz.c * ct) * h) / 2;
+      const ry = (Math.abs(matriz.b * ct + matriz.d * st) * w + Math.abs(-matriz.b * st + matriz.d * ct) * h) / 2;
+      // Um pixel de margem preserva a rasterização nas bordas, inclusive com rotação.
+      if (x + rx < -1 || y + ry < -1 || x - rx > canvas.width + 1 || y - ry > canvas.height + 1) continue;
+    }
+    const indice = tileset.getAnimatedTileId(tile.index, layer.timeElapsed);
+    const origem = indice == null ? null : tileset.getTileTextureCoordinates(indice);
+    if (!origem) continue;
     context.save();
     context.transform(ct * fx, st * fx, -st * fy, ct * fy,
       tile.pixelX + w / 2 - tileset.tileOffset.x,

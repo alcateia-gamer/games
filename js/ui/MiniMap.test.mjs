@@ -886,3 +886,54 @@ test("setas de aliados usam os mesmos comandos no canvas nítido do celular", ()
   assert.equal(lines.length, 2);
   assert.equal(lines[0].color, "rgba(56,189,248,1)");
 });
+
+test("canvas nativo reaproveita indicadores parados e reage imediatamente às mudanças", t => {
+  const anterior = globalThis.document;
+  t.after(() => { globalThis.document = anterior; });
+  let canvases = 0, limpezas = 0, copias = 0;
+  globalThis.document = { createElement() {
+    canvases++;
+    return { width: 0, height: 0, getContext: () => ({ setTransform() {}, clearRect() { limpezas++; } }) };
+  } };
+  const radar = Object.assign(Object.create(MiniMapManager.prototype), {
+    transform: {}, scene: { luzFabricaAcesa: false, itensColetaveis: [{ image: { active: true }, x: 1, y: 2 }],
+      portasFabrica: [{ marcador: {}, area: { x: 5, y: 6, width: 7, height: 8 } }] },
+    nativeView: { canvas: { width: 200, height: 220 }, width: 100, height: 110,
+      context: { drawImage() { copias++; } } },
+  });
+  const methods = ["updateItemMarkers", "updateGeneratorMarker", "updateShutterDoorMarkers",
+    "updateCardReaderMarker", "updateWeaponShopMarker", "updateFuelMarkers"];
+  let desenhos = 0;
+  for (const name of methods) radar[name] = () => { desenhos++; };
+  const existente = document.createElement("canvas");
+  radar.texture = { canvas: existente, setSize(w, h) { existente.width = w; existente.height = h; } };
+  radar.drawNativeItemMarkers(); // Primeiro movimento: usa o desenho direto.
+  radar.drawNativeItemMarkers(); // Parou: prepara o único carimbo.
+  const antes = desenhos;
+  for (let i = 0; i < 100; i++) radar.drawNativeItemMarkers();
+  assert.equal(desenhos, antes, "nenhum redesenho vetorial em 100 quadros sem alterações");
+  assert.equal(limpezas, 1);
+  assert.equal(canvases, 1);
+  assert.equal(copias, 101);
+  t.diagnostic("100 quadros estáveis: 0 redesenhos dos seis grupos de indicadores");
+  for (const mudar of [
+    () => { radar.scene.itensColetaveis[0].image.active = false; },
+    () => { radar.scene.luzFabricaAcesa = true; },
+    () => { radar.scene.portasFabrica[0].marcador = null; },
+    () => { radar.scene.leitorCartaoFabrica = { area: { x: 1, y: 2, width: 3, height: 4 } }; },
+    () => { radar.scene.entradaLojaArmas = { active: true, x: 1, y: 2 }; },
+    () => { radar.fuelPositions = [{ x: 9, y: 8 }]; },
+    () => { radar.nativeView.canvas.width = 300; },
+  ]) {
+    const n = desenhos;
+    mudar(); radar.drawNativeItemMarkers();
+    assert.equal(desenhos, n + 6, "alteração aparece no mesmo quadro");
+  }
+  const n = desenhos, c = copias;
+  radar.transform = {};
+  radar.drawNativeItemMarkers();
+  assert.equal(desenhos, n + 6);
+  assert.equal(copias, c, "movimento usa o desenho direto, sem cópia extra");
+  assert.equal(canvases, 1, "reaproveita o único canvas Phaser que já existia");
+  assert.equal(radar.nativeItemCanvas, existente);
+});

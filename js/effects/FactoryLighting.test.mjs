@@ -93,6 +93,7 @@ class CanvasAmostrado {
   constructor() {
     this.width = this.height = 0;
     this.context = new ContextoAmostrado();
+    this.context.canvas = this;
   }
   getContext() { return this.context; }
   alphaEm(x, y) { return this.context.alphaEm(x, y); }
@@ -141,6 +142,10 @@ class ContextoAmostrado {
   set fillStyle(value) { this.estado.fillStyle = value; }
   save() { this.pilha.push({ ...this.estado, matriz: [...this.estado.matriz] }); }
   restore() { this.estado = this.pilha.pop(); }
+  getTransform() {
+    const [a, b, c, d, e, f] = this.estado.matriz;
+    return { a, b, c, d, e, f };
+  }
   setTransform(...matriz) { this.estado.matriz = matriz; }
   transform(...matriz) { this.estado.matriz = multiplicar(this.estado.matriz, matriz); }
   translate(x, y) { this.transform(1, 0, 0, 1, x, y); }
@@ -804,7 +809,9 @@ test("a sala do boss tem claridade ambiente local, sem acumular sobreposições 
   render();
   assert.equal(alpha(225, 170), alpha(150, 150), "abrir a porta também revela a iluminação ambiente");
   cleanup();
-  assert.ok(canvases.slice(1).every(canvas => canvas.width === 0 && canvas.height === 0));
+  // O canvas da textura é liberado pelo TextureManager real; o mock apenas remove a chave.
+  assert.ok(canvases.filter(canvas => canvas !== texture.canvas)
+    .every(canvas => canvas.width === 0 && canvas.height === 0));
 });
 
 test("luzes fixas reutilizam os recortes durante o movimento do boss e invalidam ao mover estátuas", t => {

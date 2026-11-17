@@ -458,3 +458,55 @@ test("drop local do host é publicado e cliente solicita o drop sem autoridade p
   assert.equal(scene.itensColetaveis.length, 1);
   world.destroy();
 });
+
+test("réplicas reutilizam retângulos por inimigo, sem compartilhar entre salas ou reter hitboxes ausentes", t => {
+  const anterior = globalThis.Phaser;
+  t.after(() => { globalThis.Phaser = anterior; });
+  let criados = 0;
+  class Rectangle {
+    constructor() { criados++; }
+    setTo(x, y, width, height) { Object.assign(this, { x, y, width, height }); return this; }
+  }
+  globalThis.Phaser = { ...anterior, Geom: { Rectangle } };
+  const criar = () => {
+    const actor = {};
+    const r = Object.assign(Object.create(CoopRuntime.prototype), {
+      mapKey: "Level1", scene: {}, host: false, manager: { playerId: "client" },
+      receiver: { receive() {}, get: () => actor, destroy() {} },
+      replica: { receive() {}, destroy() {} }, revival: { receive() {} }, world: { receiveFrame() {} },
+    });
+    return { r, actor };
+  };
+  const packet = (sequence, hitbox = { height: 40, y: -20, width: 30, x: sequence }) => ({
+    sequence, streamId: "visit", mapKey: "Level1", visuals: { full: true }, players: [],
+    targets: [{ visual: "enemy", id: "e1", tipoRobo: "serra", vida: 20, hitbox,
+      body: hitbox && { x: sequence + 10, y: 5, width: 6, height: 7 } }],
+  });
+  const { r, actor } = criar();
+  r.receiveFrame(packet(1));
+  const hitbox = actor.hitboxDano, corpo = actor.coopBody;
+  for (let i = 2; i <= 100; i++) r.receiveFrame(packet(i));
+  assert.equal(actor.hitboxDano, hitbox);
+  assert.equal(actor.coopBody, corpo);
+  assert.deepEqual({ ...hitbox }, { x: 100, y: -20, width: 30, height: 40 }, "campos independem da ordem do JSON");
+  assert.deepEqual({ ...corpo }, { x: 110, y: 5, width: 6, height: 7 });
+  assert.equal(criados, 2);
+  t.diagnostic(`100 quadros do mesmo inimigo: ${criados} construções de Rectangle`);
+  const outra = criar();
+  outra.r.receiveFrame(packet(1));
+  assert.notEqual(outra.actor.hitboxDano, hitbox);
+  assert.notEqual(outra.actor.coopBody, corpo);
+  actor.hitboxDano = { x: 0, y: 0, width: 1, height: 1 };
+  actor.coopBody = {};
+  r.receiveFrame(packet(101));
+  assert.ok(actor.hitboxDano instanceof Rectangle, "substitui geometria incompatível sem erro de setTo");
+  assert.ok(actor.coopBody instanceof Rectangle);
+  assert.equal(actor.hitboxDano.x, 101);
+  r.receiveFrame(packet(101, null));
+  assert.equal(actor.hitboxDano, null);
+  assert.equal(actor.coopBody, null);
+  assert.equal(outra.actor.hitboxDano.x, 1);
+  r.receiveFrame(packet(102));
+  assert.equal(actor.hitboxDano.x, 102);
+  assert.notEqual(actor.hitboxDano, outra.actor.hitboxDano);
+});
