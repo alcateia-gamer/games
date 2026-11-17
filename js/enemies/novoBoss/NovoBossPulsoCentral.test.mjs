@@ -327,7 +327,7 @@ test("tentáculos reais e ilusórios continuam sincronizados durante e após out
     assert.equal(s.execucao.tipo, "chuvaRaios");
     assert.equal(s.persistentes.length, 1);
     assert.equal(s.persistentes[0].decorrido, c.encontro.tentaculosAtivos.snapshot().decorrido);
-    assert.equal(s.persistentes[0].armadilhas.length, 5);
+    assert.ok(s.persistentes[0].armadilhas.length <= 2);
     assert.ok(s.persistentes[0].armadilhas.every(a => !a.capturou && !a.segurando));
   }
   c.atualizar(c.encontro.ataqueAtual.duracao - c.encontro.tempoAtaque);

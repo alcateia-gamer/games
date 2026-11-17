@@ -66,6 +66,10 @@ export function criarAtaquesIlusoriosNovoBoss(scene, encontro, alvo) {
       const def = definicaoAtaqueNovoBoss(nome);
       if (destruido || !alvo.active || !def || !original) return false;
       encerrarExecucao();
+      if (nome === 'tentaculos') {
+        for (const item of persistentes) item.execucao.destruir();
+        persistentes.clear();
+      }
       fonte = original;
       tipo = nome;
       tempo = 0;
@@ -73,6 +77,7 @@ export function criarAtaquesIlusoriosNovoBoss(scene, encontro, alvo) {
       let indiceSorteio = 0;
       const inofensivo = () => false;
       const servicos = {
+        espacoTentaculos: geometria.espacoTentaculos,
         // Reutiliza o sorteio do ataque real sem consumir RNG extra da luta.
         rng: () => sorteios[indiceSorteio++] ?? 0.5,
         obterAlvoChuva: typeof original.obterAlvoChuva === "function"
@@ -103,9 +108,11 @@ export function criarAtaquesIlusoriosNovoBoss(scene, encontro, alvo) {
           if (efeito) explosoes.add({ efeito, inicio: inicio + tempo - idade });
         },
       };
-      // A dimensão e o padrão são os mesmos. Zerar dano é uma segunda proteção,
+      // A dimensão e o padrão são os mesmos, com menos tentáculos por cópia.
+      // Zerar dano é uma segunda proteção,
       // além da ausência de serviços ofensivos e de corpos físicos.
       const ajustes = { ...encontro.config.ataques[def[1]], ...original.configuracaoVisual, dano: 0, empurrao: 0 };
+      if (nome === 'tentaculos') ajustes.quantidade = Math.min(2, ajustes.quantidade ?? 2);
       execucao = def[0](cenaVisual, alvo, ajustes, servicos);
       return true;
     },

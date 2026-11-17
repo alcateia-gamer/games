@@ -251,7 +251,7 @@ test('ricochete soa no contato da ponta com a borda visível, uma única vez',()
   assert.equal(sons.length,1);
 });
 
-test('Kai mantém parry por 5,8s e respeita o raio reduzido em mais 20%',()=>{
+test('Kai mantém parry por 4s, recarga de 12s e preserva o raio',()=>{
   const scene=cena('kai-mercer',100,0),laser=objeto(49.6,0);
   const sons=[];
   scene.cache.audio.exists=key=>key==='kai-especial';
@@ -259,20 +259,20 @@ test('Kai mantém parry por 5,8s e respeita o raio reduzido em mais 20%',()=>{
   criarSistemaEspeciais(scene);scene.events.emit('player:especial');
   assert.deepEqual(sons,[{key:'kai-especial',volume:0.2,loop:false,instante:0}],
     'som começa junto à abertura da barreira');
-  assert.equal(scene.estadoEspecial.parryAte,5800);
-  assert.equal(scene.estadoEspecial.proximoUso,8000);
+  assert.equal(scene.estadoEspecial.parryAte,4000);
+  assert.equal(scene.estadoEspecial.proximoUso,12000);
   assert.equal(scene.tentarInterceptarLaserEspecial(Object.assign(objeto(55,0),{width:0,height:0})),false);
   assert.equal(scene.tentarInterceptarLaserEspecial(laser),true);
-  scene.time.now=5799;assert.equal(scene.tentarBloquearDanoEspecial(null),true);
-  scene.time.now=5800;assert.equal(scene.tentarBloquearDanoEspecial(null),false);
+  scene.time.now=3999;assert.equal(scene.tentarBloquearDanoEspecial(null),true);
+  scene.time.now=4000;assert.equal(scene.tentarBloquearDanoEspecial(null),false);
   atualizarSistemaEspeciais(scene);assert.equal(scene.estadoEspecial.parryGrafico,null);
-  scene.time.now=7999;scene.events.emit('player:especial');
-  assert.equal(scene.estadoEspecial.parryAte,5800);
+  scene.time.now=11999;scene.events.emit('player:especial');
+  assert.equal(scene.estadoEspecial.parryAte,4000);
   assert.equal(sons.length,1,'pedido durante a recarga não repete som');
-  scene.time.now=8000;scene.events.emit('player:especial');
-  assert.equal(scene.estadoEspecial.parryAte,13800);
+  scene.time.now=12000;scene.events.emit('player:especial');
+  assert.equal(scene.estadoEspecial.parryAte,16000);
   assert.equal(sons.length,2);
-  assert.equal(sons[1].instante,8000);
+  assert.equal(sons[1].instante,12000);
 });
 
 test("Kai absorve projéteis do boss sem refletir, causar dano de volta ou mudar seu alcance", () => {
@@ -494,6 +494,30 @@ test("nova folha Magnus: 33 quadros, mesma âncora e explosão sincronizada ao i
   atualizarSistemaEspeciais(scene);
   assert.equal(efeito.sprite.active, false);
   assert.equal(scene.estadoEspecial.impactoMagnus, null, "termina sem reiniciar a animação");
+});
+
+test('Magnus remoto continua atingindo novas ondas de robôs depois de eliminar a primeira', async () => {
+  const { CoopPlayers } = await import('../multiplayer/CoopPlayers.js');
+  const scene = cena('kai-mercer', 500, 0);
+  scene.multiplayer = true; scene.isMultiplayerHost = true;
+  const runtime = scene.coopRuntime = { scene, host: true, manager: { sendCoopAction() {} }, broadcastHit() {} };
+  runtime.players = new CoopPlayers(runtime);
+  const entry = { actor: objeto(), data: { id: 'client', character: 'magnus-force', direction: 'right', health: 100 },
+    health: 100, hitbox: new Rectangle(-15, 0, 30, 15), speeches: new Map() };
+  runtime.players.remotes.set('client', entry);
+  runtime.players.prepareContext(entry);
+  const contexto = entry.context;
+  for (const inicio of [0, 8000]) {
+    const robo = Object.assign(objeto(50, 0), { vida: 80, vidaMaxima: 80, tipoRobo: 'bola',
+      hitboxDano: new Rectangle(40, -10, 20, 20) });
+    scene.inimigos.push(robo);
+    scene.time.now = inicio; contexto.atacando = false;
+    assert.equal(contexto.executarHabilidadeEspecial(), true);
+    scene.time.now += 390; runtime.players.update(scene.time.now, 16);
+    assert.equal(robo.morto, true, 'cada onda usa os inimigos atuais da cena autoritativa');
+    assert.equal(scene.inimigos.includes(robo), false, 'morte sai da lista compartilhada');
+    assert.equal(contexto.inimigos, scene.inimigos, 'contexto remoto não guarda uma lista antiga');
+  }
 });
 
 test("clone Aria é imune a ataques, expira normalmente e especial recarrega em 9,6s", () => {

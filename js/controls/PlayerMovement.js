@@ -19,6 +19,7 @@ import { atualizarDash } from "./PlayerDashControls.js";
 import { obterDirecaoMovimento } from "./PlayerMovementInput.js";
 import { ariaCargaBloqueiaMovimento } from "./AriaAttackConfig.js";
 import { jogadorPresoNovoBoss } from "../player/PlayerControlEffects.js";
+import { magnusEspecialBloqueiaMovimento } from '../combat/SpecialAbilityEffects.js';
 
 /**
  * Prepara o som de caminhada ou corrida usado pelo sistema de movimento.
@@ -47,7 +48,7 @@ function atualizarColisaoMapaPlayer(scene) {
 function atualizarMovimento(scene) {
   atualizarColisaoMapaPlayer(scene);
 
-  if (scene.movimentoBloqueado || jogadorPresoNovoBoss(scene)) {
+  if (scene.movimentoBloqueado || jogadorPresoNovoBoss(scene) || magnusEspecialBloqueiaMovimento(scene)) {
     scene.player.setVelocity(0, 0);
     atualizarSomCorrida(scene, false);
     return;

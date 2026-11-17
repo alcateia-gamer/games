@@ -34,6 +34,7 @@ export function criarServicosAtaques(scene, encontro) {
     return Boolean(aceito);
   };
   const servicos = {
+    espacoTentaculos: encontro.espacoTentaculos ??= new Set(),
     rng: () => (encontro.rng ?? Math.random)(),
     criarAviso: (x, y, raio) => criarAvisoNovoBoss(scene, x, y, raio),
     jogadorAtingeCirculo(x, y, raio) {

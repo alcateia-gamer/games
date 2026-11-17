@@ -195,7 +195,7 @@ try {
       assert.ok(resultado.maxEfeitos > 0);
       if (tipo === "chuva") assert.ok(resultado.marcas.every(a => a.chuva === config.ataques.chuvaRaios.quantidade));
       if (tipo === "tentaculos") {
-        assert.ok(resultado.marcas.every(a => a.tentaculos === 5));
+        assert.ok(resultado.marcas.every(a => a.tentaculos <= 2));
         assert.ok(resultado.dissipou);
       }
       if (tipo === "lasers") {

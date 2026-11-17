@@ -43,7 +43,7 @@ Regras centrais em `UpgradeSystem.js`, definições em `UpgradeDefinitions.js` e
 - Vida máxima: `vida original × (1 + bônus de vida)`. Na instalação, `vida atual nova = proporção anterior × novo máximo`. Reaplicar o mesmo nível não cura.
 - Caminhada: `velocidade base × (1 + bônus motor)`. O valor base de 200 px/s não é sobrescrito; teto normal de 218 px/s. Dash e turbo conservam suas regras originais.
 - Dano recebido: `dano do acerto × (1 − blindagem)`, aplicado uma vez em `tomarDano`.
-- Recarga: `recarga original × (1 − processador − recuperação específica)`, com piso de 6800 ms para Kai e 3000 ms para os demais. Kai mantém ao menos 1 segundo sem o domo de 5800 ms; Reflexo ainda aumenta o dano refletido quando a recarga já está no piso.
+- Recarga: `recarga original × (1 − processador − recuperação específica)`, com piso de 6800 ms para Kai e 3000 ms para os demais. Kai tem recarga base de 12000 ms e domo de 4000 ms; Reflexo ainda aumenta o dano refletido quando a recarga já está no piso.
 - Magnus: multiplica o dano por distância da onda por até 1,15, com o arredondamento inteiro existente. Não amplia raio, duração ou empurrão.
 - Aria: um holograma dura até 5175 ms, em vez de 4500 ms. Mantém uma cópia e o teleporte existente.
 - Nyx: cada pulso cura até 5,9% da vida máxima do beneficiário, por dez pulsos. Nunca revive mortos ou supera a vida máxima. Recarga mínima resultante dos módulos atuais: 15,2 segundos.

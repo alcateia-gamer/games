@@ -83,6 +83,6 @@ export function basicDamage(scene, base, ranged = false) {
 }
 export function specialCooldown(scene, base) {
   const m = modifiersFor(scene);
-  // Kai: domo de 5,8s precisa de pelo menos 1s sem proteção.
+  // Preserva o piso de recarga dos aprimoramentos; o domo agora dura 4s.
   return cooldownWithModifiers(scene.personagemSelecionada, base, m);
 }

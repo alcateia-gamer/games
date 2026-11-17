@@ -145,10 +145,10 @@ test("espiral combina os mesmos 156 projéteis por dez segundos sem corpos, parr
   semConsequencias();
 });
 
-test("tentáculos reproduzem a quantidade local de armadilhas e nunca capturam nem liberam o jogador", () => {
+test("cada cópia cria até dois tentáculos sem capturar nem liberar o jogador", () => {
   const { sistema, avancar, semConsequencias } = preparar();
   sistema.iniciar("tentaculos", {}, [0.2, 0.3, 0.7, 0.6]);
-  assert.equal(sistema.snapshot().execucao.armadilhas.length, 5);
+  assert.equal(sistema.snapshot().execucao.armadilhas.length, 2);
   avancar(1000);
   assert.ok(sistema.snapshot().execucao.armadilhas.every(a => a.ativa && !a.capturou && !a.segurando));
   avancar(17999);
@@ -224,6 +224,47 @@ test("tentáculos das cópias têm ciclo próprio e encerram junto da janela rea
   assert.equal(sistema.snapshot().persistentes.length, 0);
   assert.equal(sistema.snapshot().ativo, false);
   assert.equal(sistema.snapshot().objetos, 0);
+});
+
+test('tentáculos reais e de nove clones compartilham espaçamento e liberam as reservas ao terminar', () => {
+  const { scene, encontro, alvo, sistema } = preparar();
+  const copias = [sistema];
+  for (let i = 1; i < 9; i++) {
+    const x = -240 + i % 3 * 240, y = -160 + Math.floor(i / 3) * 160;
+    const copia = { ...alvo, id: `clone-${i}`, x, y, sprite: { x, y } };
+    copia.ataquesIlusorios = criarAtaquesIlusoriosNovoBoss(scene, encontro, copia);
+    encontro.alvosIlusorios.push(copia); copias.push(copia.ataquesIlusorios);
+  }
+  encontro.rng = () => 0.3;
+  prepararAtaquesNovoBoss(scene, encontro);
+  assert.equal(encontro.executarAtaque('tentaculos'), true);
+  const reais = encontro.tentaculosAtivos.snapshot().armadilhas;
+  assert.equal(reais.length, 5);
+  const falsos = copias.flatMap(copia => {
+    const armadilhas = copia.snapshot().persistentes.flatMap(p => p.armadilhas);
+    assert.ok(armadilhas.length <= 2, 'limite por clone, inclusive os que se sobrepõem');
+    return armadilhas;
+  });
+  assert.ok(falsos.length >= 12, 'há espaço para distribuir os falsos pela arena');
+  const todos = [...reais, ...falsos];
+  for (let i = 0; i < todos.length; i++) for (let j = 0; j < i; j++) {
+    assert.ok(Math.hypot(todos[i].x-todos[j].x, todos[i].y-todos[j].y) >= 96 - 0.001,
+      'sem sobreposição entre donos diferentes, incluindo a boss real');
+  }
+  assert.equal(encontro.espacoTentaculos.size, todos.length);
+  // Reinvocar uma mesma cópia substitui seus tentáculos em vez de acumular quatro.
+  sistema.iniciar('tentaculos', encontro.tentaculosAtivos);
+  sistema.destacar();
+  assert.ok(sistema.snapshot().persistentes.flatMap(p => p.armadilhas).length <= 2);
+  encontro.avancarTentaculos(19000);
+  assert.equal(encontro.espacoTentaculos.size, 0);
+  for (const copia of copias) assert.equal(copia.snapshot().objetos, 0);
+  assert.equal(scene.vida, 100);
+  assert.equal(scene.restricaoControleNovoBoss, undefined);
+  encontro.executarAtaque('tentaculos');
+  assert.ok(encontro.espacoTentaculos.size > 0);
+  encontro.cancelarAtaque();
+  assert.equal(encontro.espacoTentaculos.size, 0, 'cancelamento e morte não deixam posições reservadas');
 });
 
 test("chuva das cópias usa o alvo anunciado pela verdadeira mesmo se o jogador mudar entre atualizações", () => {

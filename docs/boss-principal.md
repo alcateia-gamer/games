@@ -62,3 +62,18 @@ A troca para a arena no teste cooperativo revelou uma réplica de robô colocand
 um retângulo geométrico em `GameObject.body`. Essa geometria agora fica em
 `coopBody`, preservando a ordenação pelos pés e permitindo que o Phaser destrua
 as réplicas corretamente ao mudar de mapa.
+
+## Ajustes de combate: clones e tentáculos
+
+- [x] Formação em grupos desativada: clones e original voltam a seguir rumos
+  individuais pela arena, preservando paredes e pausas dos ataques.
+- [x] Cada cópia mantém no máximo dois tentáculos falsos; o original continua
+  invocando cinco tentáculos reais.
+- [x] Distância mínima de 96 px entre todas as bases, inclusive entre donos
+  diferentes. Sem espaço livre, omite a invocação em vez de sobrepor tentáculos.
+- [x] Reservas de posição liberadas ao expirar ou cancelar a invocação.
+
+Regressões: `NovoBossClones.test.mjs`, `NovoBossAtaquesIlusorios.test.mjs`,
+`NovoBossPulsoCentral.test.mjs` e `ataques/Tentaculos.test.mjs`. Cobrem dispersão
+individual, limites da arena, nove cópias, espaçamento compartilhado, persistência,
+sincronização e limpeza.

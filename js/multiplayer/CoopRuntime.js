@@ -155,6 +155,7 @@ export class CoopRuntime {
     const e = context.estadoEspecial;
     return { cooldown: Math.max(0, (e?.proximoUso || 0) - this.scene.time.now),
       parry: Math.max(0, (e?.parryAte || 0) - this.scene.time.now),
+      immobile: Math.max(0, (context.magnusEspecialAte || 0) - this.scene.time.now),
       hologram: !!e?.holograma?.active };
   }
   requestSpecial() {
@@ -244,7 +245,10 @@ export class CoopRuntime {
       else if (action.kind === "revive") this.revivePlayer(p.downId);
       else if (action.kind === "teleport") this.teleport(p.x, p.y);
       else if (action.kind === "specialPose") {
-        if (s.personagemSelecionada === "magnus-force") iniciarAnimacaoMarreta(s);
+        if (s.personagemSelecionada === "magnus-force") {
+          if (Number.isFinite(p.x) && Number.isFinite(p.y)) this.teleport(p.x, p.y);
+          iniciarAnimacaoMarreta(s);
+        }
       } else if (action.kind === "control") {
         s.restricaoControleNovoBoss = p.state;
         if (p.state) this.teleport(p.state.x, p.state.y);
@@ -261,7 +265,7 @@ export class CoopRuntime {
       const before = { x: context.player.x, y: context.player.y };
       if (context.executarHabilidadeEspecial?.() !== true) return;
       if (context.coopRemotePlayerId && context.atacando && context.personagemSelecionada === "magnus-force") {
-        this.manager.sendCoopAction("specialPose", {}, { authority: true, targetId: action.playerId });
+        this.manager.sendCoopAction("specialPose", before, { authority: true, targetId: action.playerId });
       }
       if (before.x !== context.player.x || before.y !== context.player.y) {
         this.manager.sendCoopAction("teleport", { x: context.player.x, y: context.player.y },
@@ -369,6 +373,7 @@ export class CoopRuntime {
       s.estadoEspecial.proximoUso = s.time.now + state.cooldown;
       s.coopParryUntil = s.time.now + state.parry;
       s.coopHologram = state.hologram;
+      s.magnusEspecialAte = s.time.now + (state.immobile || 0);
     }
     this.world.receiveFrame(packet);
   }

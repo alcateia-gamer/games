@@ -27,7 +27,7 @@ test('sorteia cinco tentáculos entre 120 e 300px do boss, separados e fixos',()
     assert.equal(a.length,5);
     for(let j=0;j<a.length;j++){
       assert.ok(Math.hypot(a[j].x,a[j].y)>=119.999&&Math.hypot(a[j].x,a[j].y)<=300.001);
-      for(let k=0;k<j;k++)assert.ok(Math.hypot(a[j].x-a[k].x,a[j].y-a[k].y)>=48);
+      for(let k=0;k<j;k++)assert.ok(Math.hypot(a[j].x-a[k].x,a[j].y-a[k].y)>=96);
     }
     const pontos=a.map(({x,y})=>({x,y}));
     c.scene.player.x=-450;c.ataque.atualizar(500);

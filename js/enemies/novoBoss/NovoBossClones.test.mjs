@@ -236,23 +236,31 @@ test("na fase 2 todos se dispersam a 220 px/s e param nas mesmas aberturas e ata
     assert.ok(Math.abs(Math.hypot(a.x-antes[i][0],a.y-antes[i][1])-4.4)<0.1);
 });
 
-test('grupos atravessam a arena e a verdadeira permanece junto de várias cópias', () => {
+test('clones e verdadeira percorrem a arena individualmente, sem líderes ou destino de grupo', () => {
   const { scene, encontro, sistema } = preparar(novoBossConfig.clones);
   Object.assign(encontro, { fase: 2, estado: 'preparando', tempoEstado: 0,
     relogioCombate: 0, inicioFase2Em: 0, inicioOndaClonesEm: 0, ultimoTeleporteEm: 0 });
   sistema.iniciar();
-  for (let i = 0; i < 150; i++) {
+  const origem = { x: encontro.x, y: encontro.y };
+  for (let i = 0; i < 100; i++) {
     encontro.relogioCombate += 20; encontro.tempoEstado += 20;
     sistema.atualizar(20); sistema.moverVerdadeira(20);
   }
   const corpos = [encontro, ...sistema.alvos];
-  assert.ok(sistema.alvos.filter(a => Math.hypot(a.x-encontro.x, a.y-encontro.y) < 130).length >= 2);
+  assert.ok(corpos.every(a => Math.hypot(a.x-origem.x, a.y-origem.y) > 300),
+    'todos se afastam da origem, inclusive o original');
+  const angulos = corpos.map(a => Math.atan2(a.y-origem.y, a.x-origem.x));
+  assert.equal(new Set(angulos.map(a => a.toFixed(2))).size, corpos.length,
+    'cada entidade segue seu próprio rumo');
   assert.ok(Math.max(...corpos.map(a=>a.x))-Math.min(...corpos.map(a=>a.x)) > 600);
+  assert.ok(Math.max(...corpos.map(a=>a.y))-Math.min(...corpos.map(a=>a.y)) > 500);
   assert.ok(corpos.every(a=>destinoIlusorioValido(scene,encontro,a)));
-  assert.ok(sistema.destinoCamuflagem());
-  const disfarce = sistema.destinoCamuflagem(50);
-  assert.ok(Math.hypot(disfarce.x-encontro.x,disfarce.y-encontro.y)>=50);
-  assert.ok(sistema.alvos.filter(a=>Math.hypot(a.x-disfarce.x,a.y-disfarce.y)<130).length>=2);
-  sistema.alvos.forEach(a=>a.receberDano(1));
   assert.equal(sistema.destinoCamuflagem(), null);
+  assert.equal(sistema.destinoCamuflagem(50), null);
+  // Continua atravessando a arena após encontrar bordas e geradores.
+  for (let i = 0; i < 300; i++) {
+    encontro.relogioCombate += 20; encontro.tempoEstado += 20;
+    sistema.atualizar(20); sistema.moverVerdadeira(20);
+  }
+  assert.ok(corpos.every(a=>destinoIlusorioValido(scene,encontro,a)));
 });

@@ -108,8 +108,17 @@ export function desenharDomoKai(g, efeito, x, y, raio, decorrido, depth) {
   }
 }
 
+// Preparação (200ms) e propagação da onda (260ms), incluindo toda a marreta.
+export const MAGNUS_IMOVEL_MS = 460;
+export function magnusEspecialBloqueiaMovimento(scene) {
+  return !!scene && !scene.morteEmAndamento && !scene.player?.morto &&
+    scene.magnusEspecialAte > scene.time.now;
+}
+
 /** Folha original: caminhada 64px no alto; marreta 9×4 de 128px a partir de y=258. */
 export function iniciarAnimacaoMarreta(scene) {
+  scene.magnusEspecialAte = scene.time.now + MAGNUS_IMOVEL_MS;
+  scene.player?.setVelocity(0, 0);
   const chave = 'magnus-especial-marreta';
   if (!scene.textures?.exists?.(chave) || !scene.anims || !scene.player?.anims) return;
   const textura = scene.textures.get(chave);

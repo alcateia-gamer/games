@@ -30,7 +30,7 @@ import {
 
 const ESPECIAIS = Object.freeze({
   "kai-mercer": {
-    cooldown: 8000,
+    cooldown: 12000,
     cor: 0x38bdf8,
   },
 
@@ -51,7 +51,7 @@ const ESPECIAIS = Object.freeze({
 });
 
 const CONFIG = Object.freeze({
-  kaiDuracao: 5800,
+  kaiDuracao: 4000,
   kaiRaio: 49.6,
 
   ariaDuracao: 4500,
@@ -106,8 +106,13 @@ function danoEspecial(scene, alvo, quantidade, area = null, ataque = null) {
     return causarDanoAlvoAdicional(scene, alvo, quantidade, area, ataque);
   }
 
-  causarDanoInimigo(scene, alvo, quantidade, {
+  // O contexto remoto isola o estado da habilidade. Mortes e novas ondas de
+  // inimigos pertencem à cena do host, sem criar uma lista privada e desatualizada.
+  const mundo = scene.coopRuntime?.host ? scene.coopRuntime.scene : scene;
+  causarDanoInimigo(mundo, alvo, quantidade, {
     playSound: true,
+    attacker: scene.player,
+    localFeedback: !scene.coopRemotePlayerId,
   });
 
   return true;
@@ -981,6 +986,7 @@ function criarSistemaEspeciais(scene) {
   };
 
   scene.estadoEspecial = estado;
+  scene.magnusEspecialAte = 0;
   prepararAuraNyx(scene,estado);
   // A física atualiza a posição do sprite no pós-update. Desenha a área depois
   // disso para que ela e o domo acompanhem a caminhada no mesmo quadro.
@@ -1124,6 +1130,7 @@ function criarSistemaEspeciais(scene) {
     scene.acertarHologramaEspecial = null;
 
     scene.estadoEspecial = null;
+    scene.magnusEspecialAte = 0;
 
     if (scene.limparSistemaEspeciais === limpar) {
       scene.limparSistemaEspeciais = null;

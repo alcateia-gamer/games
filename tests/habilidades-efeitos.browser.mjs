@@ -79,7 +79,7 @@ try {
     assert.equal(resultado.textura,`especial-${nome}`);
     assert.ok(new Set(resultado.fases.map(f=>f.frame)).size>1,'O GIF deve avançar quadros.');
     assert.ok(resultado.depth<resultado.playerDepth,'Efeito no chão fica sob o personagem.');
-    if(nome==='kai') {assert.equal(resultado.parry,true);assert.equal(resultado.cooldown,8000);
+    if(nome==='kai') {assert.equal(resultado.parry,true);assert.equal(resultado.cooldown,12000);
       assert.ok(resultado.fases[0].escala<resultado.fases[2].escala);}
     if(nome==='magnus') {
       assert.deepEqual(resultado.impacto,{dano:90,velocidade:200,stun:1200,empurrao:180,
