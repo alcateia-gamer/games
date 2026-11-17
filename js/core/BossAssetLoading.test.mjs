@@ -102,7 +102,8 @@ test("entrada espera texturas E sons; falha permite retry parcial e continuaçã
   assert.ok(s.movimentoBloqueado && s.generatorMenuOpen);
   assert.deepEqual(s.player.velocity, { x: 0, y: 0 });
   s.load.emit("progress", 0.5);
-  assert.equal(s.texts[0].text, "PREPARANDO BOSS 50%");
+  assert.equal(s.texts[0].text, "Carregando...");
+  assert.deepEqual(s.texts.filter(t => t.visible).map(t => t.text), ["Carregando..."]);
   s.concluir(["novo-boss-tentaculo", "musica-novo-boss"]);
   assert.equal(c.estado, "falhou");
   assert.equal(abriu, 0);

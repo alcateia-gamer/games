@@ -953,22 +953,19 @@ test("o acesso pelo leitor mantém as duas portas abertas ao voltar ao mapa", ()
   returned.scene.events.emit("shutdown");
 });
 
-test("leitor espera os assets sem abrir ou remover colisões e retoma a animação original uma única vez", () => {
+test("leitor abre normalmente com boss ainda carregando e libera a passagem sem reposicionar o jogador", () => {
   const { scene } = createScene();
-  let continuar;
-  scene.preparacaoBoss = { aguardar(callback) { continuar = callback; } };
+  scene.preparacaoBoss = { pronto: false, aguardar() { assert.fail("a espera acontece dentro da arena"); } };
   liberarAcesso(scene); aproximarLeitor(scene); abrirComE(scene);
+  const posicao = { x: scene.player.x, y: scene.player.y };
   animarCartao(scene); scene.finishActivation();
   const portas = scene.portasFabrica.filter(porta => ["porta02", "porta03"].includes(porta.nome));
-  const colisoes = portas.map(porta => porta.colisao);
-  assert.ok(portas.every(porta => porta.estado === "fechada" && porta.colisao));
+  assert.ok(portas.every(porta => porta.estado === "abrindo" && porta.colisao));
   assert.equal(scene.cardReaderMenuOpen, false);
   assert.equal(scene.generatorMenuOpen, false);
-  continuar();
-  assert.ok(portas.every((porta, i) => porta.estado === "abrindo" && porta.colisao === colisoes[i]));
-  const totalAnimacoes = scene.animations.length;
-  continuar();
-  assert.equal(scene.animations.length, totalAnimacoes, "estado abrindo impede reiniciar a persiana");
+  for (const porta of portas) scene.animations.find(a => a.targets === porta).onComplete();
+  assert.ok(portas.every(porta => porta.estado === "aberta" && porta.colisao === null));
+  assert.deepEqual({ x: scene.player.x, y: scene.player.y }, posicao);
   assert.equal(scene.inventory.getQuantity("card"), 1);
   scene.events.emit("shutdown");
 });

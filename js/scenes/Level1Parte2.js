@@ -218,7 +218,7 @@ class Level1Parte2 extends Phaser.Scene {
     if (!assetsFabricaProntos(this, { incluirBoss: this.bossNaEntrada })) {
       const camera = this.cameras.main;
       camera.setBackgroundColor("#000000");
-      this.avisoAssetsFabrica = this.add.text(camera.width / 2, camera.height / 2, "PREPARANDO FÁBRICA...",
+      this.avisoAssetsFabrica = this.add.text(camera.width / 2, camera.height / 2, "Carregando...",
         { fontFamily: "monospace", fontSize: "18px", color: "#ffffff" }).setOrigin(0.5);
     }
     enfileirarAssetsFabrica(this, { incluirBoss: this.bossNaEntrada });

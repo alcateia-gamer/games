@@ -370,6 +370,43 @@ test("Aria usa o botão de ataque padrão: pressionar carrega e soltar dispara u
   assert.equal(scene.pointerAtaque, null);
 });
 
+test("botão padrão ignora toques fora do ataque, inclusive quando Phaser sinaliza botão esquerdo", t => {
+  for (const toque of [{ wasTouch: true }, { isTouch: true }, { pointerType: "touch" }, { event: { pointerType: "touch" } }]) {
+    const scene = cena(t, true), estamina = scene.estamina;
+    const pointer = { id: 3, x: 400, y: 200, isDown: true, leftButtonDown: () => true, ...toque };
+    scene.input.emit("pointerdown", pointer, []);
+    assert.ok(!scene.atacando);
+    assert.ok(!scene.ariaAtaqueCarregando);
+    assert.equal(scene.estamina, estamina);
+    soltar(scene, pointer);
+    assert.equal(flechas(scene).length, 0);
+  }
+});
+
+test("botão padrão mantém dois dedos independentes para analógico e ataque", t => {
+  const scene = cena(t, true);
+  const movimento = dedo(1, scene.joystick.base.x + 30, scene.joystick.base.y);
+  scene.joystick.base.emit("pointerdown", movimento);
+  const ataque = pressionar(scene, { ...dedo(2), leftButtonDown: () => true });
+  scene.input.emit("pointerdown", ataque, []);
+  assert.equal(scene.joystick.pointer, movimento);
+  assert.equal(scene.pointerAtaque, 2);
+  assert.ok(scene.ariaAtaqueCarregando);
+  soltar(scene, movimento);
+  assert.equal(scene.pointerAtaque, 2, "soltar o analógico não solta o ataque");
+  assert.equal(flechas(scene).length, 0);
+  soltar(scene, ataque, 1200);
+  assert.equal(flechas(scene).length, 1);
+});
+
+test("botão padrão preserva ataque pelo mouse no computador", t => {
+  const scene = cena(t, true), mouse = { id: 0, isDown: true, leftButtonDown: () => true };
+  scene.input.emit("pointerdown", mouse, []);
+  assert.ok(scene.ariaAtaqueCarregando);
+  soltar(scene, mouse, 1200);
+  assert.equal(flechas(scene).length, 1);
+});
+
 for (const entrada of ["teclado", "joystick"]) {
   test(`Aria muda a direção parada durante a carga pelo ${entrada}`, t => {
     const scene = cena(t, true), antes = geometria(scene);

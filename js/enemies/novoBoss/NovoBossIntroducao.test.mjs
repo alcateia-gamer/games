@@ -7,6 +7,8 @@ import { prepararIntroducaoNovoBoss } from "./NovoBossIntroducao.js";
 import { novoBossConfig } from "./NovoBossConfig.js";
 import { prepararGeradoresNovoBoss } from "./NovoBossGeradores.js";
 import { causarDanoAlvoAdicional } from "../../combat/CombatTargets.js";
+import { criarPreparacaoBoss } from "../../core/BossAssetLoading.js";
+import { ASSETS_BOSS } from "../../core/FactoryAssetPack.js";
 
 // A câmera é a implementação real do Phaser usada pelo jogo.
 const bundle = readFileSync(new URL("../../libs/phaser.min.js", import.meta.url), "utf8");
@@ -37,6 +39,114 @@ function fixture({ velocidade = 1, velocidadeTorres = velocidade } = {}) {
 }
 const perto = (a, b) => assert.ok(Math.abs(a - b) < 1e-8, `${a} ≠ ${b}`);
 const centro = c => ({ x: c.scrollX + c.width / 2, y: c.scrollY + c.height / 2 });
+
+function prepararCarregamento(scene) {
+  const imagens = new Set(), sons = new Set();
+  scene.textures = { exists: key => imagens.has(key) };
+  scene.cache = { audio: { exists: key => sons.has(key) } };
+  const load = scene.load = new EventEmitter();
+  load.maxParallelDownloads = 2;
+  load.isLoading = () => false;
+  load.setPath = () => load;
+  for (const tipo of ["spritesheet", "atlas", "audio"]) load[tipo] = () => load;
+  load.start = () => { load.inicios = (load.inicios ?? 0) + 1; };
+  const textos = [];
+  scene.add = { text(x, y, mensagem) {
+    const texto = new EventEmitter();
+    for (const metodo of ["setOrigin", "setScrollFactor", "setDepth", "setInteractive", "setPosition", "setScale"])
+      texto[metodo] = () => texto;
+    texto.setText = valor => { texto.text = valor; return texto; };
+    texto.setVisible = valor => { texto.visible = valor; return texto; };
+    texto.destroy = () => texto.removeAllListeners();
+    texto.text = mensagem; textos.push(texto); return texto;
+  } };
+  const controle = criarPreparacaoBoss(scene);
+  const concluir = (faltantes = []) => {
+    for (const asset of ASSETS_BOSS) if (!faltantes.includes(asset.chave))
+      (asset.tipo === "audio" ? sons : imagens).add(asset.chave);
+    load.emit("complete");
+  };
+  return { controle, concluir, textos };
+}
+
+test("entrada atravessa a porta inteira, fecha atrás e espera assets e fechamento antes de mover a câmera", () => {
+  for (const assetsPrimeiro of [true, false]) {
+    const { scene, sistema, c, portas, chamadas } = fixture();
+    const { controle, concluir, textos } = prepararCarregamento(scene);
+    Object.assign(scene.player.body, { x: -1200, y: -5350 });
+    sistema.aguardarCarregamento();
+    assert.equal(controle.aguardando, false, "não prende o jogador enquanto o corpo cruza a porta");
+    assert.equal(scene.movimentoBloqueado, false);
+    assert.deepEqual(chamadas, []);
+    scene.player.body.y = -5500;
+    portas[0].estado = "abrindo";
+    sistema.aguardarCarregamento();
+    assert.equal(controle.aguardando, false, "espera a persiana terminar de abrir");
+    portas[0].estado = "aberta";
+    const posicao = { x: scene.player.x, y: scene.player.y, corpo: { ...scene.player.body } };
+    const cameraAntes = centro(c);
+    sistema.aguardarCarregamento();
+    assert.ok(controle.aguardando);
+    assert.ok(scene.movimentoBloqueado);
+    assert.equal(portas[0].estado, "fechando");
+    assert.equal(portas[1].estado, "fechando");
+    assert.equal(portas[2].estado, "aberta");
+    assert.deepEqual(textos.filter(t => t.visible).map(t => t.text), ["Carregando..."]);
+    for (let i = 0; i < 5; i++) { sistema.aguardarCarregamento(); sistema.atualizar(1000); }
+    assert.equal(scene.load.inicios, 1);
+    assert.deepEqual(chamadas, ["fechar:porta02", "fechar:porta03"]);
+    if (assetsPrimeiro) concluir();
+    else portas[0].estado = portas[1].estado = "fechada";
+    controle.atualizar(); sistema.atualizar(1000);
+    assert.ok(controle.aguardando);
+    assert.equal(sistema.snapshot().etapa, "aguardando");
+    assert.equal(c._follow, scene.player);
+    assert.deepEqual(centro(c), cameraAntes);
+    if (assetsPrimeiro) portas[0].estado = portas[1].estado = "fechada";
+    else concluir();
+    controle.atualizar();
+    assert.equal(controle.aguardando, false);
+    assert.ok(textos.every(t => !t.visible));
+    sistema.atualizar(0);
+    assert.equal(sistema.snapshot().etapa, "indo");
+    assert.equal(c._follow, null);
+    sistema.atualizar(100);
+    assert.notDeepEqual(centro(c), cameraAntes);
+    assert.deepEqual({ x: scene.player.x, y: scene.player.y, corpo: { ...scene.player.body } }, posicao,
+      "a espera e a introdução preservam a posição e a hitbox do jogador");
+    sistema.destruir(); scene.events.emit("shutdown");
+  }
+});
+
+test("falha na arena mantém a câmera esperando, retry continua a cena e morte libera as portas temporárias", () => {
+  for (const morrer of [false, true]) {
+    const { scene, sistema, c, portas } = fixture();
+    const { controle, concluir, textos } = prepararCarregamento(scene);
+    sistema.aguardarCarregamento();
+    portas[0].estado = portas[1].estado = "fechada";
+    concluir(["musica-novo-boss"]);
+    controle.atualizar(); sistema.atualizar(1000);
+    assert.equal(sistema.snapshot().etapa, "aguardando");
+    assert.equal(c._follow, scene.player);
+    assert.ok(textos[1].visible);
+    assert.equal(textos[2].visible, false, "não abandona a espera depois que a arena fechou");
+    if (morrer) {
+      scene.morteEmAndamento = true;
+      controle.atualizar();
+      assert.equal(controle.aguardando, false);
+      assert.ok(portas.slice(0, 2).every(p => p.estado === "aberta"));
+      concluir();
+      assert.equal(c._follow, scene.player);
+    } else {
+      textos[1].emit("pointerdown");
+      assert.equal(textos[0].text, "Carregando...");
+      concluir(); controle.atualizar(); sistema.atualizar(0);
+      assert.equal(sistema.snapshot().etapa, "indo");
+      assert.equal(scene.load.inicios, 2);
+    }
+    sistema.destruir(); scene.events.emit("shutdown");
+  }
+});
 
 test("câmera real vai ao boss, retorna ao jogador e só então fecha as duas persianas", () => {
   const { scene, encontro, c, portas, chamadas, sistema } = fixture();

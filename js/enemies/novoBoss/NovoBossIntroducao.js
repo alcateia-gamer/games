@@ -196,8 +196,28 @@ export function prepararIntroducaoNovoBoss(scene, encontro) {
     encontro.sistemaGeradores?.atualizar(0);
   }
 
+  function passagemLivre() {
+    portas = (scene.portasFabrica ?? []).filter(porta => PORTAS_ENTRADA.has(porta.nome));
+    const controle = scene.coopRuntime?.bossTarget() ?? scene;
+    return !controle.movimentoBloqueado && !controle.generatorMenuOpen && !controle.devItemMenuOpen && !controle.atacando &&
+      !portas.some(porta => porta.estado === "abrindo" || jogadorNaPorta(scene.player, porta));
+  }
+
   const sistema = {
     iluminacao,
+    aguardarCarregamento() {
+      const preparacao = scene.preparacaoBoss;
+      if (!preparacao || destruida || concluida || etapa !== "aguardando") return;
+      if (preparacao.aguardando || !passagemLivre()) return;
+      // O corpo já atravessou por completo: fecha atrás dele sem reposicioná-lo.
+      portasLiberadas = false;
+      preparacao.aguardar(() => {}, {
+        podeContinuar: () => portas.every(porta => porta.estado === "fechada"),
+        cancelar: liberarPortas,
+        cancelavel: false,
+      });
+      for (const porta of portas) porta.fecharParaBoss?.();
+    },
     get bloqueiaCombate() { return !destruida && !concluida && encontro.jogadorNaArena && !encontro.morto; },
     atualizar(delta = 0) {
       if (destruida) return false;
@@ -213,11 +233,8 @@ export function prepararIntroducaoNovoBoss(scene, encontro) {
       if (etapa === "aguardando") {
         // Aguarda todos os recursos do encontro, inclusive os quatro sprites das torres.
         if (encontro.pendencia) return true;
-        portas = (scene.portasFabrica ?? []).filter(porta => PORTAS_ENTRADA.has(porta.nome));
         // O corpo inteiro precisa terminar a passagem antes de congelar o personagem.
-        const controle = scene.coopRuntime?.bossTarget() ?? scene;
-        if (controle.movimentoBloqueado || controle.generatorMenuOpen || controle.devItemMenuOpen || controle.atacando ||
-            portas.some(porta => porta.estado === "abrindo" || jogadorNaPorta(scene.player, porta))) return true;
+        if (!passagemLivre()) return true;
         iniciar();
         return true;
       }

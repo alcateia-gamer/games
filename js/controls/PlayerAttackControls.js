@@ -271,7 +271,8 @@ function criarControlesAtaque(scene) {
   // =====================================================
 
   const aoPressionarMouse = (pointer, objetosClicados) => {
-    if (!pointer.leftButtonDown()) {
+    // Toques atacam só pelo botão; o Phaser também pode sinalizá-los como clique esquerdo.
+    if (ponteiroEhToque(pointer) || !pointer.leftButtonDown()) {
       return;
     }
 

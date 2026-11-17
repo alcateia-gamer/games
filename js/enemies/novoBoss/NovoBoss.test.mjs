@@ -192,6 +192,10 @@ test("preparação lógica na arena espera assets completos antes de criar sprit
   assert.equal(sprites.length, 0);
   assert.equal(encontro.estado, "aguardando");
   scene.preparacaoBoss.pronto = true;
+  scene.preparacaoBoss.aguardando = true;
+  atualizarBoss(scene, 50, 16);
+  assert.equal(sprites.length, 0, "assets prontos ainda aguardam o fechamento das portas");
+  scene.preparacaoBoss.aguardando = false;
   atualizarBoss(scene, 100, 16);
   assert.equal(sprites.length, 1);
   assert.ok(animacoes.size > 0);

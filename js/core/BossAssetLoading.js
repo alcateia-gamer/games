@@ -30,7 +30,7 @@ export function bossNecessarioNaEntrada(scene) {
 export function criarPreparacaoBoss(scene) {
   if (scene.multiplayer) return null;
   let estado = assetsBossProntos(scene) ? "pronto" : "ocioso";
-  let encerrado = false, progresso = 0, espera = null, textos = null;
+  let encerrado = false, espera = null, textos = null;
   let paraleloAnterior = null;
   const loader = scene.load;
 
@@ -42,16 +42,17 @@ export function criarPreparacaoBoss(scene) {
       textos = ["", "TENTAR NOVAMENTE", "VOLTAR"].map(texto => scene.add.text(0, 0, texto, estilo)
         .setOrigin(0.5).setScrollFactor(0).setDepth(100000));
       textos[1].setInteractive({ useHandCursor: true }).on("pointerdown", () => iniciar(true));
-      textos[2].setInteractive({ useHandCursor: true }).on("pointerdown", () => concluirEspera(false));
+      textos[2].setInteractive({ useHandCursor: true }).on("pointerdown", () => {
+        if (espera?.cancelavel !== false) concluirEspera(false);
+      });
     }
     const camera = scene.cameras.main;
     const zoomX = camera.zoomX || camera.zoom || 1, zoomY = camera.zoomY || camera.zoom || 1;
     const cx = camera.width * camera.originX, cy = camera.height * camera.originY;
     textos.forEach((texto, i) => texto.setPosition(cx + (camera.width / 2 - cx) / zoomX,
-      cy + (camera.height / 2 - 35 + i * 55 - cy) / zoomY).setScale(1 / zoomX, 1 / zoomY)
-      .setVisible(i !== 1 || estado === "falhou"));
-    textos[0].setText(estado === "falhou" ? "Falha ao preparar o boss.\nVerifique a conexão."
-      : `PREPARANDO BOSS ${Math.floor(progresso * 100)}%`);
+      cy + (camera.height / 2 + i * 55 - cy) / zoomY).setScale(1 / zoomX, 1 / zoomY)
+      .setVisible(i === 0 || estado === "falhou" && (i === 1 || espera.cancelavel !== false)));
+    textos[0].setText(estado === "falhou" ? "Falha ao carregar.\nVerifique a conexão." : "Carregando...");
   }
 
   function concluirEspera(continuar) {
@@ -65,12 +66,16 @@ export function criarPreparacaoBoss(scene) {
     if (continuar && !encerrado && scene.player?.active && !scene.player.morto &&
         !scene.morteEmAndamento && (scene.vida ?? 1) > 0)
       pendente.continuar();
+    else pendente.cancelar?.();
+  }
+
+  function tentarContinuar() {
+    if (espera && controle.pronto && (!espera.podeContinuar || espera.podeContinuar())) concluirEspera(true);
   }
 
   function removerListeners() {
     loader.off("complete", carregar);
     loader.off("complete", terminar);
-    loader.off("progress", receberProgresso);
     if (paraleloAnterior !== null) {
       loader.maxParallelDownloads = paraleloAnterior;
       paraleloAnterior = null;
@@ -81,12 +86,7 @@ export function criarPreparacaoBoss(scene) {
     removerListeners();
     if (encerrado) return;
     estado = assetsBossProntos(scene) ? "pronto" : "falhou";
-    if (estado === "pronto") concluirEspera(true);
-    else atualizarAviso();
-  }
-
-  function receberProgresso(valor) {
-    progresso = valor;
+    tentarContinuar();
     atualizarAviso();
   }
 
@@ -97,7 +97,6 @@ export function criarPreparacaoBoss(scene) {
     try {
       enfileirarAssetsBoss(scene);
       if (assetsBossProntos(scene)) { terminar(); return; }
-      loader.on("progress", receberProgresso);
       loader.once("complete", terminar);
       loader.start();
     } catch {
@@ -110,7 +109,6 @@ export function criarPreparacaoBoss(scene) {
   function iniciar(tentarNovamente = false) {
     if (encerrado || estado === "pronto" || estado === "carregando" || estado === "falhou" && !tentarNovamente) return;
     estado = "carregando";
-    progresso = 0;
     atualizarAviso();
     if (loader.isLoading()) {
       loader.once("complete", carregar);
@@ -119,13 +117,15 @@ export function criarPreparacaoBoss(scene) {
 
   const controle = {
     get pronto() { return estado === "pronto"; },
+    get aguardando() { return espera !== null; },
     get estado() { return estado; },
     iniciar,
-    aguardar(continuar) {
+    aguardar(continuar, { podeContinuar = null, cancelar = null, cancelavel = true } = {}) {
       if (encerrado) return;
-      if (controle.pronto) { continuar(); return; }
+      if (controle.pronto && (!podeContinuar || podeContinuar())) { continuar(); return; }
       if (espera) return;
-      espera = { continuar, movimento: scene.movimentoBloqueado, menu: scene.generatorMenuOpen };
+      espera = { continuar, podeContinuar, cancelar, cancelavel,
+        movimento: scene.movimentoBloqueado, menu: scene.generatorMenuOpen };
       scene.movimentoBloqueado = true;
       scene.generatorMenuOpen = true;
       scene.player?.setVelocity(0, 0);
@@ -134,7 +134,7 @@ export function criarPreparacaoBoss(scene) {
     },
     atualizar() {
       if (scene.morteEmAndamento || (scene.vida ?? 1) <= 0) { concluirEspera(false); return; }
-      if (espera) atualizarAviso();
+      if (espera) { tentarContinuar(); atualizarAviso(); }
       if (estado !== "ocioso" || !scene.player?.active || !(scene.inventory?.getQuantity("card") > 0)) return;
       const perto = area => distanceToInteractionArea(scene.player.x, scene.player.y, area) <= DISTANCIA_PREPARACAO;
       if ((scene.portasFabrica ?? []).some(porta => portasArena(porta) && perto(porta.area)) ||

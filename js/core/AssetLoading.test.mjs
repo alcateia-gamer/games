@@ -170,8 +170,10 @@ test("preload real da fábrica adia o boss só na entrada comum solo, preservand
     const s = fixture(multiplayer);
     Object.assign(s, { developerMode, respawnX: spawnX, respawnY: spawnY });
     s.cameras = { main: { width: 800, height: 450, setBackgroundColor() {} } };
-    s.add = { text() { const texto = { setOrigin: () => texto }; return texto; } };
+    const avisos = [];
+    s.add = { text(x, y, mensagem) { avisos.push(mensagem); const texto = { setOrigin: () => texto }; return texto; } };
     Level.prototype.preload.call(s);
+    assert.deepEqual(avisos, ["Carregando..."]);
     assert.equal(s.bossNaEntrada, incluirBoss);
     assert.equal(s.calls.some(a => a.chave === "novo-boss-tentaculo"), incluirBoss);
     assert.equal(s.calls.some(a => a.chave === "musica-novo-boss"), incluirBoss);
