@@ -11,6 +11,7 @@ import {
   listInventoryItems,
 } from "./InventoryItems.js";
 import { obterInventarioDoJogador } from "./Inventory.js";
+import { calcularDepthAtor, depthSobreMesasRefeitorio } from "../map/ProfundidadeMapa.js";
 import { createCollectibleMarker } from "../ui/CollectibleMarker.js";
 import { criarSistemaCombustivel, FALAS_GALAO } from "../interactions/FuelRefill.js";
 
@@ -60,9 +61,11 @@ export function criarItemColetavel(scene, dados) {
   const displaySize = dados.itemId === "gasolina" ? 36.4 : 28;
   const texture = preparePickupTexture(scene, item, displaySize);
   const image = scene.add.image(dados.x, dados.y, texture.key, texture.frame)
-    .setDisplaySize(displaySize, displaySize)
-    .setDepth(dados.itemId === "card" ? (scene.player?.depth ?? 30) - 0.01
-      : scene.calcularDepthMundo?.(dados.y) ?? 30);
+    .setDisplaySize(displaySize, displaySize);
+  const depth = dados.itemId === "card"
+    ? depthSobreMesasRefeitorio(scene, image, dados.y, calcularDepthAtor(scene, dados.y, image) - 1e-9)
+    : scene.calcularDepthMundo?.(dados.y) ?? 30;
+  image.setDepth(depth);
   const marker = createCollectibleMarker(scene, image);
   // Cada cliente desenha os drops a partir do progresso compartilhado.
   if (dados.dropped) { image.coopLocalVisual = true; marker.coopLocalVisual = true; }
@@ -223,6 +226,7 @@ function criarSistemaInventario(scene) {
     }
 
     scene.inventory.markCollected(pickup.uniqueId);
+    scene.events.emit("inventario:coleta-confirmada", { itemId: pickup.itemId, uid: pickup.uniqueId });
     tocarSomColocando(scene);
     if (pickup.itemId === "gasolina") {
       scene.falaCombustivel?.mostrar(FALAS_GALAO.vazio);

@@ -1,3 +1,4 @@
+import { MISSION_FACTS_KEY, MISSION_POWER_KEY, MISSION_DOOR_KEYS } from "../systems/MissionManager.js";
 import { LEGACY_NETWORK_KEY } from '../puzzles/HackingProgress.js';
 import { ITEM_SPAWN_SEED_KEY } from '../inventory/RunItemSpawns.js';
 import { ECONOMY_KEY } from '../systems/UpgradeSystem.js';
@@ -14,6 +15,7 @@ export default class BootPartida extends Phaser.Scene {
 
   create(data = {}) {
     this.registry.remove(INTELLIGENCE_KEY);
+    for (const key of [MISSION_FACTS_KEY, MISSION_POWER_KEY, "factoryDoorOpen", ...MISSION_DOOR_KEYS, "factoryDoorOpen:porta04", "factoryDoorOpen:porta05"]) this.registry.remove(key);
     this.registry.remove(LEGACY_NETWORK_KEY);
     for (const key of Object.values(HACKING_KEYS)) this.registry.remove(key);
     if (data.multiplayer !== true) reiniciarResgatesSolo(this.registry);

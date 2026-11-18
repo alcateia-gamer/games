@@ -12,7 +12,7 @@ import {
   atualizarDepthObjetosDepthPerso,
   atualizarDepthParedePortaBoss,
   atualizarDepthGarras, atualizarDepthAtores, atualizarDepthCercaFabrica2,
-  obterFootYAtor, calcularDepthAtor,
+  obterFootYAtor, calcularDepthAtor, depthSobreMesasRefeitorio,
 } from "./ProfundidadeMapa.js";
 import { atualizarDepthCompanionPet } from "../player/CompanionPet.js";
 import { atualizarDepthPlayer } from "../player/Player.js";
@@ -49,13 +49,14 @@ test("reaplicar profundidades idênticas não agenda escrita; movimento após f�
   assert.equal(visual.writes, 1);
   player.body.bottom = 150;
   atualizar();
-  assert.equal(player.writes, 1, "player mantém a base enquanto os objetos acompanham seus pés");
-  assert.equal(visual.writes, 2);
-  assert.notEqual(visual.depth, inicial.visual);
+  assert.equal(player.writes, 2);
+  assert.equal(visual.writes, 1);
+  assert.equal(visual.depth, inicial.visual);
+  assert.ok(player.depth > visual.depth);
   scene.profundidadePersonagemParte2 = 17;
   atualizar();
-  assert.equal(player.writes, 2);
-  assert.equal(player.depth, 17);
+  assert.equal(player.writes, 3);
+  assert.ok(Math.abs(player.depth - 17) < 0.0005);
 });
 
 test("réplica de robô mantém a ordem pelos pés sem ocupar o campo do corpo físico", () => {
@@ -332,7 +333,7 @@ test("factory robots sort on the player's floor without crossing its overlay lay
   atualizarDepthPlayer(scene);
   atualizarInimigoTeste(scene, 0);
   atualizarDepthAtores(scene);
-  assert.equal(scene.player.depth, 16.5);
+  assert.ok(Math.abs(scene.player.depth - 16.5) < 0.0005);
   assert.ok(scene.inimigos[0].depth < scene.player.depth);
   assert.equal(scene.inimigos[1].depth, scene.player.depth);
   assert.ok(scene.inimigos[2].depth > scene.player.depth);
@@ -342,7 +343,7 @@ test("factory robots sort on the player's floor without crossing its overlay lay
   }
 });
 
-test("factory ordering follows movement and changes to the player's configured depth", t => {
+test("robô parado conserva seu depth enquanto o jogador muda de posição", t => {
   simularRetangulos(t);
   const scene = {
     profundidadePersonagemParte2: 16.5,
@@ -353,16 +354,18 @@ test("factory ordering follows movement and changes to the player's configured d
   atualizarInimigoTeste(scene, 0);
   atualizarDepthAtores(scene);
   assert.ok(scene.inimigos[0].depth > scene.player.depth);
+  const robo = scene.inimigos[0];
+  const depthInicial = robo.depth;
+  robo.setDepth = () => assert.fail("robô parado já tem a profundidade correta");
   scene.player.body.bottom = -5880;
-  scene.profundidadePersonagemParte2 = 25.5;
-  atualizarDepthPlayer(scene);
+  atualizarDepthAtores(scene);
+  assert.equal(robo.depth, depthInicial);
+  assert.ok(robo.depth < scene.player.depth);
   // Os robôs continuam ordenados mesmo durante a animação de morte do jogador.
   scene.player.active = false;
   atualizarInimigoTeste(scene, 16);
   atualizarDepthAtores(scene);
-  assert.equal(scene.player.depth, 25.5);
-  assert.ok(scene.inimigos[0].depth < scene.player.depth);
-  assert.ok(scene.inimigos[0].depth > 25.499);
+  assert.equal(robo.depth, depthInicial);
 });
 
 
@@ -390,9 +393,28 @@ test('robô do boss fica sobre o portal próximo, inclusive na réplica, sem mud
   const scene={profundidadePersonagemParte2:16.5,player:{body:{bottom:-5800}}};
   const robo={x:-1577,y:-5806,tipoRobo:'bola',remoteOnly:true,
     portalBossOrigem:{x:-1577,y:-5806,depth:51.1,raio:72}};
-  assert.equal(calcularDepthAtor(scene,-5780,robo),51.1);
+  const depthPortal = calcularDepthAtor(scene,-5780,robo);
+  assert.ok(depthPortal > 51.1);
+  assert.ok(calcularDepthAtor(scene,-5770,robo) > depthPortal);
   robo.x=-1400;
   assert.ok(calcularDepthAtor(scene,-5780,robo)<18);
   const comum={x:-1577,y:-5806,tipoRobo:'bola'};
   assert.ok(calcularDepthAtor(scene,-5780,comum)<18);
+});
+
+test("robô bola e cartão ficam visíveis sobre a mesa do refeitório", () => {
+  const mesa = criarVisual("DepthPerso", -2400);
+  const scene = {
+    profundidadePersonagemParte2: 16.5,
+    objetosMapaParte2: [mesa],
+    mesasRefeitorio: [{ visual: mesa, left: 816, right: 864, top: -2448, bottom: -2400 }],
+  };
+  atualizarDepthObjetosDepthPerso(scene);
+  const bola = { tipoRobo: "bola", x: 840, y: -2420, displayWidth: 70, displayHeight: 70 };
+  const cartao = { x: 854.67, y: -2416.67, displayWidth: 28, displayHeight: 28 };
+  assert.ok(calcularDepthAtor(scene, -2410, bola) > mesa.depth);
+  assert.ok(depthSobreMesasRefeitorio(scene, cartao, cartao.y, calcularDepthAtor(scene, cartao.y)) > mesa.depth);
+  assert.ok(calcularDepthAtor(scene, -2410, { ...bola, tipoRobo: "serra" }) < mesa.depth);
+  bola.x = 760;
+  assert.equal(calcularDepthAtor(scene, -2410, bola), calcularDepthAtor(scene, -2410));
 });

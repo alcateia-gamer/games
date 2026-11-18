@@ -5,6 +5,7 @@ import { readFileSync } from "node:fs";
 import vm from "node:vm";
 import { criarRoboOlhao, registrarAnimacoesRoboOlhao, atualizarFrameRoboOlhao,
   obterOlhoRoboOlhao, criarLaserRoboOlhao, QUADROS_OLHAO, FEIXE_OLHAO } from "./RoboOlhao.js";
+import { atualizarDepthAtores } from "../map/ProfundidadeMapa.js";
 import { laserAtingeRetangulo } from "./EnemyLaser.js";
 import { atualizarSpawnsDev } from "../controls/DeveloperSpawns.js";
 import { criarRoboBola, atualizarRoboBola, registrarAnimacoesRoboBola, ROBO_BOLA_CONFIG } from "./RoboBola.js";
@@ -451,8 +452,10 @@ test("proteção de spawn impede movimentação e disparo instantâneos sem alte
   const { scene, robo, tiros } = preparar();
   const depths = [];
   robo.setDepth = depth => depths.push(depth);
+  scene.player.setDepth = () => {};
   robo.prologoProtegidoAte = 2000;
   atualizarRoboBola(scene, 1999, 16);
+  atualizarDepthAtores(scene);
   assert.deepEqual(robo.body.velocity, { x: 0, y: 0 });
   assert.equal(tiros.length, 0);
   assert.equal(depths.length, 1, "continua visível na profundidade correta durante a proteção");

@@ -1,7 +1,6 @@
 import { atorRelevante } from "../core/ActorActivity.js";
 /**
- * @file Regras de sobreposição visual da cidade e fábrica. Ajusta depth pelo Y ou pela posição
- * relativa ao personagem.
+ * @file Regras de sobreposição visual da cidade e fábrica pelo Y no mapa.
  */
 
 import { obterConfiguracaoHitboxWalk, obterConfiguracaoHitboxAtaque } from "../player/colisoes/index.mjs";
@@ -24,6 +23,8 @@ const Y_LIMITE_CERCA_FABRICA2 = -2204;
 const Y_LIMITE_PERSONAGEM_FRENTE_CERCA_FABRICA2 = -2177;
 const MARGEM_DEPTH_CERCA_FABRICA2 = 0.01;
 const SUPER_PC_REFERENCIA_SUPERIOR = new Set([1297, 1300]);
+const MARGEM_MAXIMA_OBSTACULO = 6e-8;
+const offsetsAtores = new WeakMap();
 
 /**
  * Converte a coordenada Y do mundo em uma profundidade crescente para ordenar objetos da
@@ -37,34 +38,71 @@ function depthFromWorldY(y) {
  * Usa a mesma ordenação pelos pés para personagens e robôs, respeitando a faixa da fábrica.
  */
 function calcularDepthAtor(scene, footY, ator = null) {
-  const depth = calcularDepthPelosPes(scene, footY, ator);
+  let depth = calcularDepthPelosPes(scene, footY, ator);
+  if (ator?.tipoRobo === "bola") depth = depthSobreMesasRefeitorio(scene, ator, footY, depth);
   const portal = ator?.portalBossOrigem;
   if (portal && !ator.morto && Number.isFinite(portal.depth) &&
       (ator.emergenciaPortal || Math.hypot(ator.x - portal.x, ator.y - portal.y) < portal.raio)) {
-    return Math.max(depth, portal.depth);
+    return Math.max(depth, portal.depth + margemDepthAtor(footY, ator));
   }
   if (ator?.tipoRobo !== "bola") return depth;
   // Os robôs flutuam à frente das torres, inclusive nas réplicas do multiplayer.
-  let frente = depth;
+  let frente = -Infinity;
   for (const torre of scene.novoBoss?.geradores ?? []) {
     const visual = torre.torre && torre.visual;
     if (visual?.active && visual.visible !== false && Number.isFinite(visual.depth)) {
-      frente = Math.max(frente, visual.depth + 1e-8);
+      frente = Math.max(frente, visual.depth);
     }
   }
-  return frente;
+  return frente + MARGEM_MAXIMA_OBSTACULO >= depth
+    ? Math.max(depth, frente + margemDepthAtor(footY, ator))
+    : depth;
+}
+
+function depthSobreMesasRefeitorio(scene, visual, footY, depth) {
+  const mesas = scene.mesasRefeitorio;
+  if (!mesas?.length) return depth;
+  const { x, y, displayWidth = 0, displayHeight = 0, originX = 0.5, originY = 0.5 } = visual;
+  const left = x - displayWidth * originX;
+  const top = y - displayHeight * originY;
+  for (const mesa of mesas) {
+    if (!mesa.visual.active || left >= mesa.right || top >= mesa.bottom ||
+        left + displayWidth <= mesa.left || top + displayHeight <= mesa.top) continue;
+    const baseMesa = depthCenario(scene, mesa.bottom);
+    if (depth <= baseMesa + MARGEM_MAXIMA_OBSTACULO) {
+      depth = Math.max(depth, baseMesa + margemDepthAtor(footY, visual));
+    }
+  }
+  return depth;
+}
+
+function margemDepthAtor(footY, ator) {
+  // Mantém a ordem pelos pés mesmo quando vários robôs precisam desenhar sobre a mesma base.
+  const proporcao = offsetPelosPes(footY, ator) / 0.001 + 0.5;
+  return 1e-8 + proporcao * (MARGEM_MAXIMA_OBSTACULO - 1e-8);
+}
+
+function offsetPelosPes(footY, ator) {
+  if (!ator) return Math.atan(footY / 1000) / Math.PI * 0.001;
+  let anterior = offsetsAtores.get(ator);
+  if (!anterior) {
+    anterior = {};
+    offsetsAtores.set(ator, anterior);
+  }
+  if (anterior.footY !== footY) {
+    anterior.footY = footY;
+    anterior.offset = Math.atan(footY / 1000) / Math.PI * 0.001;
+  }
+  return anterior.offset;
 }
 
 function calcularDepthPelosPes(scene, footY, ator) {
   if (Number.isFinite(scene.profundidadePersonagemParte2)) {
-    const player = scene.player;
-    const playerFootY = player?.body?.bottom ?? player?.getBounds?.().bottom ?? footY;
     // As camadas da fábrica podem ficar a apenas 0,001 do personagem.
     // Limita a variação a ±0,0005, mantendo a ordem dos pés sem atravessar essas camadas.
-    const offset = Math.atan((footY - playerFootY) / 100) / Math.PI * 0.001;
     const base = Number.isFinite(scene.profundidadeRegiaoTroca) && atorNaRegiaoTroca(scene, ator)
       ? scene.profundidadeRegiaoTroca : scene.profundidadePersonagemParte2;
-    return base + offset;
+    return base + offsetPelosPes(footY, ator);
   }
 
   return scene.calcularDepthMundo
@@ -254,6 +292,7 @@ export {
   depthFromWorldY,
   calcularDepthAtor,
   obterFootYAtor,
+  depthSobreMesasRefeitorio,
   atualizarDepthAtores,
   atualizarDepthCercaFabrica2,
   calcularDepthObjeto,

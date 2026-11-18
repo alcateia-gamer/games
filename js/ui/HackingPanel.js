@@ -19,7 +19,7 @@ export function criarPainelHacking(enviar, som) {
   root.innerHTML = `<div class="hacking-panel"><div class="hacking-head"><h2>N.O.V.A. / INVASÃO AXIOM</h2><button class="hacking-close" aria-label="Cancelar hacking">×</button></div>
     <p>Comece na primeira linha. Alterne coluna e linha. Cada célula só pode ser usada uma vez.</p>
     <div class="hacking-columns"><div><p class="hacking-rule"></p><div class="hacking-grid"></div><p>BUFFER <span class="hacking-count"></span></p><div class="hacking-buffer"></div></div>
-    <div><p>PORTAS: obrigatório · demais objetivos: opcionais</p><div class="hacking-targets"></div><p class="hacking-clock"></p><p class="hacking-message" aria-live="polite"></p>
+    <div><p class="hacking-objectives"></p><div class="hacking-targets"></div><p class="hacking-clock"></p><p class="hacking-message" aria-live="polite"></p>
     <div class="hacking-actions"><button class="hacking-confirm" disabled>Confirmar acesso</button><button class="hacking-retry" hidden>Nova tentativa</button></div></div></div></div>`;
   root.append(style); document.body.append(root);
   const responsive = createResponsivePanel(root, root.querySelector('.hacking-panel'), 840);
@@ -44,14 +44,23 @@ export function criarPainelHacking(enviar, som) {
         cell.textContent = s.grade[i]; cell.classList.toggle('selected', s.selecoes.includes(i));
         cell.disabled = s.estado !== 'ativo' || s.selecoes.includes(i) || (s.eixo === 'linha' ? Math.floor(i / 5) !== s.faixa : i % 5 !== s.faixa);
       }
-      const key = JSON.stringify([s.alvos, s.concluidos]);
+      const recuperados = s.recuperados ?? [];
+      const portasAbertas = recuperados.includes('portas');
+      const podeConfirmar = s.podeConfirmar ?? (s.estado === 'ativo' && s.concluidos.includes('portas'));
+      q('.hacking-objectives').textContent = portasAbertas
+        ? 'Portas liberadas. Selecione a sequência de um objetivo pendente.'
+        : 'Portas obrigatórias. Demais objetivos opcionais.';
+      const key = JSON.stringify([s.alvos, s.concluidos, recuperados]);
       if (key !== targetsKey) {
         targetsKey = key; q('.hacking-targets').replaceChildren();
         for (const target of s.alvos) {
           const node = document.createElement('div'); node.className = 'hacking-target';
-          node.classList.toggle('done', s.concluidos.includes(target.id));
+          const salvo = recuperados.includes(target.id);
+          const concluido = salvo || s.concluidos.includes(target.id);
+          node.classList.toggle('done', concluido);
           const label = document.createElement('strong'), code = document.createElement('code');
-          label.textContent = `${s.concluidos.includes(target.id) ? '✓ ' : ''}${target.nome}`; code.textContent = target.codigo.join(' ');
+          label.textContent = `${concluido ? '✓ ' : ''}${target.nome}`;
+          code.textContent = salvo ? 'Já concluído' : target.codigo.join(' ');
           node.append(label, code); q('.hacking-targets').append(node);
         }
       }
@@ -60,12 +69,12 @@ export function criarPainelHacking(enviar, som) {
       q('.hacking-clock').textContent = s.selecoes.length ? `Rastreamento: ${Math.ceil(s.restante / 1000)} s` : '90 s após a primeira seleção.';
       q('.hacking-clock').dataset.buffer = `${s.selecoes.length}/${s.buffer} · ${s.selecoes.map(i => s.grade[i]).join(' ') || 'BUFFER VAZIO'}`;
       q('.hacking-retry').hidden = s.estado !== 'falha';
-      q('.hacking-confirm').disabled = s.estado !== 'ativo' || !s.concluidos.includes('portas');
-      q('.hacking-confirm').classList.toggle('ready', s.concluidos.includes('portas'));
+      q('.hacking-confirm').disabled = !podeConfirmar;
+      q('.hacking-confirm').classList.toggle('ready', podeConfirmar);
       q('.hacking-message').classList.toggle('hacking-error', s.estado === 'falha');
-      q('.hacking-message').textContent = s.estado === 'falha' ? 'Canal encerrado. As portas permanecem bloqueadas. Tente outra sequência.'
+      q('.hacking-message').textContent = s.estado === 'falha' ? 'Canal encerrado. Tente outra sequência.'
         : s.estado === 'sucesso' ? 'ACESSO LIBERADO. Sistemas selecionados comprometidos.'
-          : s.concluidos.includes('portas') ? 'Acesso obtido. Confirme agora ou complete os objetivos opcionais.' : 'Encontre a sequência de acesso no buffer. Planeje antes de selecionar.';
+          : podeConfirmar ? 'Objetivo concluído. Confirme agora ou continue a tentativa.' : 'Encontre a sequência de acesso no buffer. Planeje antes de selecionar.';
     },
     destruir() { tutorial.destruir(); responsive.destroy(); document.removeEventListener('keydown', escape); root.remove(); },
   };

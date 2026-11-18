@@ -848,6 +848,30 @@ test("o leitor da arena tem um cartão fixo no radar, independente de energia e 
   assert.equal(itemCommands.length, 0);
 });
 
+test("a porta da fábrica tem uma exclamação amarela dentro do radar", () => {
+  const { radar, itemCommands } = enemyRadarFixture([]);
+  radar.scene.entradaFabrica = { active: true, x: 100, y: 0 };
+  radar.update();
+  assert.equal(itemCommands.length, 4);
+  assert.deepEqual(itemCommands.slice(2).map(([color]) => color), [COLLECTIBLE_MARKER_COLOR, COLLECTIBLE_MARKER_COLOR]);
+  radar.scene.entradaFabrica.x = 350;
+  radar.update();
+  assert.equal(itemCommands.length, 0);
+});
+
+test("ícones de computador seguem as coordenadas dos terminais da fábrica", () => {
+  const { radar, itemCommands } = enemyRadarFixture([]);
+  radar.hackingComputers = [{ x: 100, y: 0 }, { x: 350, y: 0 }];
+  radar.update();
+  assert.deepEqual(itemCommands.slice(0, 2), [
+    [0x092724, 49, 38, 16, 14], [COLLECTIBLE_MARKER_COLOR, 51, 40, 12, 8],
+  ]);
+  assert.equal(itemCommands.length, 5);
+  radar.scene.fabricaDescarregada = true;
+  radar.update();
+  assert.equal(itemCommands.length, 0);
+});
+
 test("aliados aparecem como setas nas próprias cores e atualizam sem redesenhar o mapa", () => {
   const { radar } = enemyRadarFixture([]);
   const commands = [];

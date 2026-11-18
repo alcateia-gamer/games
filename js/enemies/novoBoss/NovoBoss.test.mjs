@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { calcularDepthAtor } from "../../map/ProfundidadeMapa.js";
 import {
   prepararBoss,
   atualizarBoss,
@@ -369,22 +370,23 @@ test("controlador já caminha na fase inicial e sincroniza a hitbox a cada quadr
   assert.deepEqual({ ...encontro.hitboxDano }, areaCorpoNovoBoss(encontro.config, sprite));
 });
 
-test("ordena pelos pés do jogador sem atravessar camadas próximas da fábrica", () => {
+test("ordena pelos próprios pés sem atravessar camadas próximas da fábrica", () => {
   const { scene } = criarCena({ dentro: true });
   scene.profundidadePersonagemParte2 = 16.5;
   const encontro = prepararBoss(scene);
   const sprite = encontro.sprite;
   assert.equal(sprite.body.bottom, encontro.hitbox.y + encontro.hitbox.height);
-  // O jogador começa abaixo da boss; seu corpo deve desenhar à frente dela.
-  assert.ok(sprite.profundidade < 16.5);
-  assert.ok(sprite.profundidade > 16.4995);
+  const depthInicial = sprite.profundidade;
+  const depthPlayer = () => calcularDepthAtor(scene, scene.player.body.bottom, scene.player);
+  assert.ok(depthInicial < depthPlayer());
+  assert.ok(Math.abs(depthInicial - 16.5) < 0.0005);
   scene.player.body.bottom = sprite.body.bottom - 200;
   atualizarBoss(scene, 100, 16);
-  assert.ok(sprite.profundidade > 16.5);
-  assert.ok(sprite.profundidade < 16.5005);
+  assert.equal(sprite.profundidade, depthInicial);
+  assert.ok(sprite.profundidade > depthPlayer());
   scene.player.body.bottom = sprite.body.bottom;
   atualizarBoss(scene, 200, 16);
-  assert.equal(sprite.profundidade, 16.5);
+  assert.equal(sprite.profundidade, depthPlayer());
   delete scene.profundidadePersonagemParte2;
   atualizarBoss(scene, 300, 16);
   assert.equal(sprite.profundidade, novoBossConfig.visual.profundidade);

@@ -33,6 +33,7 @@ export function feedbackAcesso(registry) {
 }
 export function documentosMissao(config, progress) {
   const docs = [], fabrica = progress?.fabrica === true, bruteforce = progress?.bruteforce === true;
+  const registro = fabrica && progress?.registro === true;
   const auth = autenticacaoNumerica(config), ip = n => n.join('.');
   if (!fabrica) for (const categoria of ['REGISTROS', 'TOPOLOGIA', 'PROTOCOLOS', 'AUTENTICAÇÃO']) {
     docs.push([categoria, 'ACESSO BLOQUEADO · TERMINAL 01',
@@ -42,13 +43,16 @@ export function documentosMissao(config, progress) {
     docs.push([categoria, 'ACESSO BLOQUEADO · TERMINAL 02',
       'CRIPTOGRAFADO · conclua o BruteForce para recuperar estes dados.']);
   }
-  if (fabrica) docs.push(
+  if (fabrica && !registro) docs.push(['REGISTROS', 'ACESSO BLOQUEADO · REGISTRO DA AXIOM',
+    'CRIPTOGRAFADO · complete o objetivo REGISTRO DA AXIOM no terminal da fábrica.']);
+  if (registro) docs.push(
     ['REGISTROS', 'EV041_EDEN_NETWORK_ARCHIVE.LOG // LEVEL 5 // RESTRICTED',
-      'Elias Voss · EV-041 · Engenheiro de Integridade de Sistemas\nStatus: DESAPARECIDO / FUNCIONÁRIO DESVINCULADO — INVESTIGAÇÃO ENCERRADA.\n01 · 2189.08.17 · 02:14:08\nLIFE e BIO sustentam a atividade biológica dos indivíduos no EDEN. Desligá-los seria irreversível. Solicitei uma auditoria. A AXIOM recusou e apagou o relatório quatro minutos depois.\n02 · 2189.08.19 · 23:41:12\nDefesas e sistemas vitais usam rotas independentes. Podemos neutralizar a segurança sem interromper o EDEN. Dividi a arquitetura entre dois terminais. Procurem a estação industrial em (-378, -2996).\n03 · ARQUIVO CORROMPIDO\nA AXIOM afirma impedir novas guerras. Por que precisa censurar a palavra [LIBERDADE]? [DADOS REMOVIDOS] [ACESSO INTERROMPIDO]'],
+      'Elias Voss · EV-041 · Engenheiro de Integridade de Sistemas\nStatus: DESAPARECIDO / FUNCIONÁRIO DESVINCULADO — INVESTIGAÇÃO ENCERRADA.\n01 · 2189.08.17 · 02:14:08\nLIFE e BIO sustentam a atividade biológica dos indivíduos no EDEN. Desligá-los seria irreversível. Solicitei uma auditoria. A AXIOM recusou e apagou o relatório quatro minutos depois.\n02 · 2189.08.19 · 23:41:12\nDefesas e sistemas vitais usam rotas independentes. Podemos neutralizar a segurança sem interromper o EDEN. Dividi a arquitetura entre dois terminais. Procurem a estação industrial em (-378, -2996).\n03 · ARQUIVO CORROMPIDO\nA AXIOM afirma impedir novas guerras. Por que precisa censurar a palavra [LIBERDADE]? [DADOS REMOVIDOS] [ACESSO INTERROMPIDO]']);
+  if (fabrica) docs.push(
     ['TOPOLOGIA', 'Inventário de servidores', config.nodes.filter(n => ['CORE', 'SEC', 'LIFE', 'BIO'].includes(n.tipo)).map(n => `${n.id}: ${n.tipo}`).join('\n')],
     ['PROTOCOLOS', 'Identificação e integridade', 'CORE = PROCESSAMENTO CENTRAL. SEC = SEGURANÇA. LIFE = SUPORTE VITAL. BIO = CONTROLE BIOLÓGICO.\nIsole apenas os dois módulos SEC. LIFE e BIO devem continuar ativos. Elias confirmou que separar as defesas não exige desligar a infraestrutura vital.'],
     ['AUTENTICAÇÃO', 'Selo da arquitetura // último fragmento', `O selo ${config.cauda} é o TERCEIRO e último fragmento da autorização. Os dois anteriores estão no arquivo LEVEL 7, preservados no terminal EV-041.`]);
-  if (fabrica && progress?.registro === true) docs.push(['PROTOCOLOS', 'Bônus do Breach // auditoria de Elias',
+  if (registro) docs.push(['PROTOCOLOS', 'Bônus do Breach // auditoria de Elias',
     `PROCESSAMENTO CENTRAL: ${config.core}\nSEGURANÇA: ${config.seguranca.join(' / ')}\nLIFE e BIO: preservar integralmente. Não é necessário alterar conexões ou desligar servidores vitais.`]);
   if (bruteforce) docs.push(
     ['REGISTROS', 'EV041_ESCAPE_PROTOCOL.DAT // LEVEL 7 // CRITICAL',

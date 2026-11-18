@@ -11,10 +11,12 @@ import { obterTemaPersonagem } from "./CharacterTheme.js";
 import { drawCollectibleMarker, COLLECTIBLE_MARKER_COLOR } from "./CollectibleMarker.js";
 import { findGeneratorInteraction } from "../interactions/FactoryGenerator.js";
 import { criarCanvasHUDNitido, GraficosCanvasHUD } from "./HudCanvas.js";
+import { TERMINAIS_HACKING } from "../puzzles/HackingConfig.js";
 import { lerAreasGasolina, centroAreaGasolina } from "../interactions/FuelRefill.js";
 
 const WIDTH = MINI_MAP_SIZE, HEIGHT = MINI_MAP_SIZE;
 const VIEW_X = 2, VIEW_Y = 2, VIEW_WIDTH = WIDTH - 4, VIEW_HEIGHT = HEIGHT - 4;
+const COMPUTADORES_HACKING = [TERMINAIS_HACKING.fabrica, TERMINAIS_HACKING.bruteforce];
 const ENEMY_MARKER_MARGIN = 7;
 const SEARCH_POINT_RANGE = 32;
 const LOOK_DIRECTIONS = {
@@ -51,6 +53,7 @@ export default class MiniMapManager {
     this.scene = scene;
     this.colors = obterTemaPersonagem(scene.personagemSelecionada);
     this.profile = MINI_MAP_PROFILES[profileName];
+    this.hackingComputers = profileName === "fabrica" ? COMPUTADORES_HACKING : [];
     this.searchPointVisited = false;
     this.destroyed = false;
     const entry = getCachedMap(scene, map, this.profile, this.colors);
@@ -121,6 +124,17 @@ export default class MiniMapManager {
     const result = miniMapLayout(camera, this.scene.botaoDesenvolvedor,
       this.scene.botaoAtaque, this.scene.botaoColetarItem, databaseReservation);
     this.devScreenY = result.devScreenY;
+    const zoomX = camera.zoomX || camera.zoom || 1;
+    const zoomY = camera.zoomY || camera.zoom || 1;
+    const originX = camera.width * camera.originX;
+    const originY = camera.height * camera.originY;
+    const x = (camera.x ?? 0) + originX + (result.x - originX) * zoomX;
+    const y = (camera.y ?? 0) + originY + (result.y - originY) * zoomY;
+    if (Math.abs((this.hudPosition?.x ?? Infinity) - x) > 0.1 ||
+        Math.abs((this.hudPosition?.y ?? Infinity) - y) > 0.1) {
+      this.hudPosition = { x, y };
+      this.scene.events?.emit("minimap:layout");
+    }
     const visible = result.visible && !this.scene.generatorMenuOpen && !this.scene.devItemMenuOpen;
     this.root.setPosition(result.x, result.y).setScale(result.scaleX, result.scaleY)
       .setVisible(visible && !this.nativeView);
@@ -174,7 +188,9 @@ export default class MiniMapManager {
     this.updateGeneratorMarker();
     this.updateShutterDoorMarkers();
     this.updateCardReaderMarker();
+    this.updateHackingComputerMarkers();
     this.updateWeaponShopMarker();
+    this.updateFactoryEntranceMarker();
     this.updateFuelMarkers();
     this.updateSearchMarker();
     const position = worldToMiniMap(this.transform, x, y);
@@ -320,6 +336,20 @@ export default class MiniMapManager {
       .fillRect(px - 4, py, 3, 3).fillRect(px + 1, py + 1, 4, 1);
   }
 
+  updateHackingComputerMarkers() {
+    if (this.scene.fabricaDescarregada) return;
+    for (const { x, y } of this.hackingComputers ?? []) {
+      const position = worldToMiniMap(this.transform, x, y);
+      if (position.x < 9 || position.y < 9 ||
+          position.x > VIEW_WIDTH - 9 || position.y > VIEW_HEIGHT - 9) continue;
+      const px = VIEW_X + position.x, py = VIEW_Y + position.y;
+      this.itemMarkers.fillStyle(0x092724, 1).fillRect(px - 8, py - 7, 16, 14)
+        .fillStyle(COLLECTIBLE_MARKER_COLOR, 1).fillRect(px - 6, py - 5, 12, 8)
+        .fillRect(px - 1, py + 3, 2, 2).fillRect(px - 3, py + 5, 6, 1)
+        .fillStyle(0x092724, 1).fillRect(px - 4, py - 3, 8, 4);
+    }
+  }
+
   /**
    * Marca a entrada da loja com uma katana, usando a posição do próprio teleporte.
    */
@@ -346,6 +376,15 @@ export default class MiniMapManager {
     graphics.lineStyle(1.5, COLLECTIBLE_MARKER_COLOR, 1)
       .lineBetween(x - 4, y - 2, x, y + 2)
       .lineBetween(x - 3, y + 2, x - 6, y + 5);
+  }
+
+  updateFactoryEntranceMarker() {
+    const entrance = this.scene.entradaFabrica;
+    if (!entrance?.active) return;
+    const position = worldToMiniMap(this.transform, entrance.x, entrance.y);
+    if (position.x < 8 || position.y < 8 ||
+        position.x > VIEW_WIDTH - 8 || position.y > VIEW_HEIGHT - 8) return;
+    drawCollectibleMarker(this.itemMarkers, VIEW_X + position.x, VIEW_Y + position.y, 14);
   }
 
   /** Bomba de combustível fixa no ponto onde o galão pode ser abastecido. */
@@ -432,7 +471,9 @@ export default class MiniMapManager {
       this.updateGeneratorMarker();
       this.updateShutterDoorMarkers();
       this.updateCardReaderMarker();
+      this.updateHackingComputerMarkers();
       this.updateWeaponShopMarker();
+      this.updateFactoryEntranceMarker();
       this.updateFuelMarkers();
       return;
     }
@@ -445,6 +486,7 @@ export default class MiniMapManager {
     };
     comparar(this.transform); comparar(view.canvas.width); comparar(view.canvas.height);
     comparar(this.scene.luzFabricaAcesa);
+    comparar(this.scene.fabricaDescarregada);
     comparar(this.generatorPosition?.x); comparar(this.generatorPosition?.y);
     for (const item of this.scene.itensColetaveis ?? []) {
       comparar(item.image?.active); comparar(item.x); comparar(item.y);
@@ -459,6 +501,8 @@ export default class MiniMapManager {
     comparar("leitor"); comparar(area?.x); comparar(area?.y); comparar(area?.width); comparar(area?.height);
     const loja = this.scene.entradaLojaArmas;
     comparar(loja?.active); comparar(loja?.x); comparar(loja?.y);
+    const entrance = this.scene.entradaFabrica;
+    comparar(entrance?.active); comparar(entrance?.x); comparar(entrance?.y);
     comparar("combustivel");
     for (const fuel of this.fuelPositions ?? []) { comparar(fuel.x); comparar(fuel.y); }
     if (estado.length !== indice) mudou = true;
@@ -480,7 +524,9 @@ export default class MiniMapManager {
         this.updateGeneratorMarker();
         this.updateShutterDoorMarkers();
         this.updateCardReaderMarker();
+        this.updateHackingComputerMarkers();
         this.updateWeaponShopMarker();
+        this.updateFactoryEntranceMarker();
         this.updateFuelMarkers();
       } finally { this.itemMarkers = anterior; }
     }

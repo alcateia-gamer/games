@@ -24,7 +24,8 @@ export function gerarBreach(seed = 1) {
   ] };
 }
 export class BreachPuzzle {
-  constructor(seed = 1) {
+  constructor(seed = 1, recuperados = []) {
+    this.recuperados = [...recuperados];
     Object.assign(this, gerarBreach(seed)); this.selecoes = []; this.tempo = 0;
     this.estado = 'ativo'; this.eixo = 'linha'; this.faixa = 0; this.concluidos = [];
   }
@@ -36,14 +37,18 @@ export class BreachPuzzle {
     if (!this.podeSelecionar(index)) return false;
     this.selecoes.push(index);
     const buffer = this.selecoes.map(i => this.grade[i]);
-    this.concluidos = this.alvos.filter(a => buffer.some((_, i) =>
+    this.concluidos = this.alvos.filter(a => !this.recuperados.includes(a.id) && buffer.some((_, i) =>
       a.codigo.every((c, j) => buffer[i + j] === c))).map(a => a.id);
     this.faixa = this.eixo === 'linha' ? index % 5 : Math.floor(index / 5);
     this.eixo = this.eixo === 'linha' ? 'coluna' : 'linha';
     if (this.selecoes.length >= BREACH.buffer || !this.grade.some((_, i) => this.podeSelecionar(i))) this.finalizar();
     return true;
   }
-  finalizar() { this.estado = this.concluidos.includes('portas') ? 'sucesso' : 'falha'; }
+  podeConfirmar() {
+    return this.estado === 'ativo' && (this.recuperados.includes('portas')
+      ? this.concluidos.length > 0 : this.concluidos.includes('portas'));
+  }
+  finalizar() { this.estado = this.podeConfirmar() ? 'sucesso' : 'falha'; }
   atualizar(delta) {
     if (this.estado !== 'ativo' || !this.selecoes.length || !Number.isFinite(delta)) return;
     this.tempo += Math.max(0, Math.min(delta, 100));
@@ -51,7 +56,8 @@ export class BreachPuzzle {
   }
   snapshot() {
     return { tipo: 'fabrica', grade: this.grade, alvos: this.alvos, selecoes: [...this.selecoes],
-      eixo: this.eixo, faixa: this.faixa, concluidos: [...this.concluidos], estado: this.estado,
+      eixo: this.eixo, faixa: this.faixa, concluidos: [...this.concluidos], recuperados: [...this.recuperados],
+      podeConfirmar: this.podeConfirmar(), estado: this.estado,
       restante: Math.max(0, BREACH.tempoMs - this.tempo), buffer: BREACH.buffer };
   }
 }

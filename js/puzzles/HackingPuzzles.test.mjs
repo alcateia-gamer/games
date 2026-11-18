@@ -55,6 +55,23 @@ test('sessão só aceita seu operador, ID e ordem; conclusão não duplica recom
   for (let i = 0; i < 20; i++) s.atualizar(100);
   assert.equal(s.snapshot(), null);
 });
+test('Breach reaberto mantém objetivos salvos e só concede objetivos novos', () => {
+  const recompensas = [];
+  const session = new HackingSession((_tipo, resultado) => recompensas.push(resultado.concluidos),
+    undefined, undefined, () => ['portas', 'robos']);
+  session.abrir('fabrica', 'operador');
+  const { id, model } = session.atual;
+  let seq = 0;
+  const comando = (op, valor) => session.comando('operador', { id, seq: ++seq, op, valor });
+  assert.deepEqual(session.snapshot().model.recuperados, ['portas', 'robos']);
+  comando('tutorial', false);
+  assert.equal(comando('confirmar'), false);
+  const caminho = solucao(model);
+  for (const cell of caminho) comando('selecionar', cell);
+  session.atualizar(0);
+  assert.deepEqual(recompensas, [['registro']]);
+});
+
 function andar(m, destino) {
   const target = N[destino];
   for (let i = 0; i < 400; i++) {

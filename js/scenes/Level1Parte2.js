@@ -1,3 +1,4 @@
+import { criarRastreadorMissoes } from "../ui/MissionTracker.js";
 import { enfileirarAssetsFabrica, verificarEntradaFabrica, assetsFabricaProntos } from "../core/FactoryAssetPack.js";
 import { bossNecessarioNaEntrada, criarPreparacaoBoss } from "../core/BossAssetLoading.js";
 import { createUpgradeNPC } from '../interactions/UpgradeNPC.js';
@@ -288,7 +289,7 @@ class Level1Parte2 extends Phaser.Scene {
 
     const atualizarPosFisica = () => {
       atualizarHitboxDanoPlayer(this);
-      atualizarDepthAtores(this);
+      this.atualizarTrocaCamada();
       atualizarDepthGarras(this);
       atualizarDepthComputadoresPcAdm(this);
       atualizarDepthObjetosSuperPC(this);
@@ -345,6 +346,7 @@ class Level1Parte2 extends Phaser.Scene {
     createUpgradeNPC(this);
     this.scrapSystem = new ScrapSystem(this);
     criarRuntimeCoop(this);
+    criarRastreadorMissoes(this);
     iniciarMusicaFabrica(this);
     if (this.luzFabricaAcesa) descarregarCidade(this);
   }
@@ -423,7 +425,6 @@ class Level1Parte2 extends Phaser.Scene {
     atualizarStatusPlayer(this, delta);
 
     this.definirProfundidadePersonagem(this.profundidadePersonagemParte2);
-    this.atualizarTrocaCamada();
 
     atualizarDepthObjetosProducaoEArmazem(this);
     atualizarDepthGarras(this);

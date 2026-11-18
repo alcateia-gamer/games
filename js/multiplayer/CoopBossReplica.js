@@ -76,6 +76,7 @@ export class BossReplica {
       this.lighting = new BossIntroLighting(data.config.arena);
     }
     const e = this.encounter;
+    const jaDerrotado = e.morto && this.derrotaRecebida;
     for (const [key, value] of Object.entries(target)) {
       if (key !== "x" && key !== "y") e[key] = value;
     }
@@ -96,7 +97,13 @@ export class BossReplica {
     e.sistemaGeradores = { cargaEscudo: data.shieldCharge,
       corpoBarreira: { enable: data.shield?.enabled } };
     e.x = e.sprite?.x; e.y = e.sprite?.y;
-    if (e.morto) criarColisaoCorpoDerrotado(s, e);
+    if (e.morto) {
+      criarColisaoCorpoDerrotado(s, e);
+      if (!jaDerrotado) {
+        this.derrotaRecebida = true;
+        s.events.emit("novo-boss:derrotada", { encontro: e });
+      }
+    }
     let changed = false;
     const collisions = new Map(s.collisionGroup?.getChildren().map(o => [o.tiledCollisionId, o.body]));
     for (const g of data.geradores) for (const state of g.colisoes || []) {

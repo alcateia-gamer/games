@@ -170,6 +170,7 @@ function criarInteracaoGeradorFabrica(scene) {
     scene.movimentoBloqueado = true;
     scene.player?.setVelocity(0, 0);
     painel.open();
+    scene.events.emit("gerador:aberto");
   };
 
   /**

@@ -36,7 +36,7 @@ export async function criarFixtureRegistro(mode = 'solo') {
       } });
   });
   return {
-    concluir() { game.registry.set(K.fabrica, true); },
+    concluir() { game.registry.set(K.fabrica, true); game.registry.set(K.registro, true); },
     morrer() { scene.vida = 0; scene.morteEmAndamento = true; },
     recuperar() { scene.vida = 100; scene.morteEmAndamento = false; },
     desconectar() { scene.coopRuntime.manager.room = null; scene.coopRuntime.manager.mqtt.connected = false; },

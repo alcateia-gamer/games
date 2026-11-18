@@ -870,3 +870,53 @@ html:has(.solo-selection, .coop-lobby), body:has(.solo-selection, .coop-lobby) {
 
   .coop-lobby .operator-selection-crop { transform: translateX(calc(-1 * var(--face))); }
 }
+
+.mission-tracker {
+  position: absolute;
+  z-index: 110;
+  left: max(calc(var(--mission-x, 0px) + 12px), env(safe-area-inset-left));
+  top: max(calc(var(--mission-y, 0px) + clamp(108px, 24dvh, 148px)), var(--mission-hud-bottom, 0px), env(safe-area-inset-top));
+  width: min(288px, 34vw);
+  box-sizing: border-box;
+  padding: 9px 12px;
+  border-left: 2px solid #fcee0a;
+  background: linear-gradient(90deg, #080a09df, #080a0990 83%, transparent);
+  color: #fff8ce;
+  font: 14px/1.35 ui-monospace, monospace;
+  text-shadow: 0 1px 2px #000;
+  pointer-events: none;
+  user-select: none;
+}
+.mission-tracker[hidden] { display: none; }
+.mission-tracker .mission-sector { margin: 0 0 3px; color: #e9db81; font-size: 0.83em; }
+.mission-tracker h2 { margin: 0 0 5px; color: #fcee0a; font-size: 1.25em; }
+.mission-tracker ul { list-style: none; margin: 0; padding: 0; }
+.mission-tracker li + li { margin-top: 3px; }
+.mission-tracker li[data-status="active"] { color: #fcee0a; }
+.mission-tracker li[data-status="completed"] { color: #d9cb77; }
+.mission-tracker li.mission-confirmed { animation: mission-confirm 380ms ease-out; color: #fcee0a; }
+@keyframes mission-confirm { from { opacity: .45; } to { opacity: 1; } }
+
+@media (max-height: 500px), (max-width: 580px) {
+  .mission-tracker {
+    top: max(calc(var(--mission-y, 0px) + clamp(72px, 21dvh, 108px)), var(--mission-hud-bottom, 0px), env(safe-area-inset-top));
+    width: min(224px, 44vw);
+    padding: 6px 8px;
+    font-size: clamp(11px, 3vw, 12px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mission-tracker li.mission-confirmed { animation: none; }
+}
+
+.mission-tracker.mission-next-to-map {
+  left: max(var(--mission-map-left), env(safe-area-inset-left));
+  top: max(var(--mission-map-top), env(safe-area-inset-top));
+  max-width: max(0px, calc(var(--mission-map-left) - max(var(--mission-x) + 8px, env(safe-area-inset-left))));
+  transform: translateX(-100%);
+}
+@media (max-width: 920px) {
+  .mission-tracker.mission-next-to-map {
+    top: max(var(--mission-map-top), var(--mission-hud-bottom, 0px), env(safe-area-inset-top));
+  }
+}

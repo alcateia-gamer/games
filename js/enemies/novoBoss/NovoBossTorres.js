@@ -160,7 +160,7 @@ export function criarTorreNovoBoss(scene, encontro, ponto, aoDestruir) {
       if (combate && !apresentando && !controlada) iniciada = true;
       // A base já aparece no chão; o relógio só avança quando a câmera invoca a torre.
       visual.setVisible(visivel && (iniciada || estado === "summon"));
-      // Compara com body.bottom do jogador. -6010 está acima de -6000; não inverte o sinal.
+      // Usa o mesmo Y de referência dos pés dos atores.
       // Em empate, o personagem fica à frente, como nos demais objetos do cenário.
       visual.setDepth(calcularDepthAtor(scene, referenciaDepthY, visual) - 1e-9);
       if (controlada && estadoGerador === "subterraneo") {

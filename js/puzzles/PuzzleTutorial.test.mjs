@@ -58,3 +58,23 @@ test('cancelar durante o guia libera a sessão sem recompensa nem comando atrasa
   s.abrir('bruteforce', 'b'); assert.equal(s.comando('a', { id: old, seq: 2, op: 'tutorial', valor: false }), false);
   assert.equal(s.snapshot().model.tutorial, true);
 });
+
+test('guia automático só aparece na primeira abertura por operador e tipo', () => {
+  const s = new HackingSession();
+  s.abrir('fabrica', 'a');
+  assert.equal(s.snapshot().model.tutorial, true);
+  const { id } = s.snapshot();
+  s.comando('a', { id, seq: 1, op: 'tutorial', valor: false });
+  s.atual.model.estado = 'falha';
+  assert.ok(s.comando('a', { id, seq: 2, op: 'reiniciar' }));
+  assert.equal(s.snapshot().model.tutorial, false);
+  s.cancelar('a');
+  s.abrir('fabrica', 'a');
+  assert.equal(s.snapshot().model.tutorial, false);
+  s.cancelar('a');
+  s.abrir('bruteforce', 'a');
+  assert.equal(s.snapshot().model.tutorial, true);
+  s.cancelar('a');
+  s.abrir('fabrica', 'b');
+  assert.equal(s.snapshot().model.tutorial, true);
+});

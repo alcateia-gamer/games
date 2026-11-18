@@ -5,7 +5,6 @@ import { atorRelevante, atualizarDecisaoAtor, atualizarBarrasDistantes } from ".
  * onda vertical e dispara pelo olho na direção atual do alvo.
  */
 
-import { calcularDepthAtor } from "../map/ProfundidadeMapa.js";
 import { configurarSomPropulsaoRoboBola } from "../sounds/propulsaoRoboBola.js";
 import { tocarSomTiroLaser } from "../sounds/inimigos.js";
 import { caminhoDiretoBloqueado, caminhoMovimentoBloqueado } from "./EnemyPathfinding.js";
@@ -409,7 +408,6 @@ function atualizarRoboBola(scene, time, delta) {
     robo.barraVida?.setPosition(robo.x - 27, yBarra);
     robo.bordaVida?.setPosition(robo.x, yBarra);
     if (robo.barraVida) robo.barraVida.width = robo.larguraBarra * robo.vida / robo.vidaMaxima;
-    robo.setDepth(calcularDepthAtor(scene, robo.y + 38, robo));
   }
 }
 

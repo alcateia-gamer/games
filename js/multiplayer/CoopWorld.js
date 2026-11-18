@@ -184,6 +184,7 @@ export class CoopWorld {
     if (s.inventory.hasCollected(grant.uid)) return;
     if (grant.playerId === this.manager.playerId && !s.inventory.addItem(grant.itemId, grant.quantity, { fuel: grant.fuel ?? 0 })) return;
     s.inventory.markCollected(grant.uid);
+    s.events.emit("inventario:coleta-confirmada", grant);
     // Restauração de progresso e coletas de outros jogadores não são novas coletas locais.
     if (coletaLocalPendente && grant.playerId === this.manager.playerId) tocarSomColocando(s);
     for (const item of s.itensColetaveis) if (item.uniqueId === grant.uid) {
@@ -206,6 +207,12 @@ export class CoopWorld {
             (door.nome !== "porta05" || s.novoBoss?.morto === true)) door.aplicarEstadoRede?.({ estado: "aberta", progresso: 1 });
       }
     } finally { this.applying = false; }
+    const slots = this.manager.room.coopProgress?.generator?.slots;
+    const missionSlots = Number(!!slots?.bateria) | (Number(!!slots?.gasolina) << 1);
+    if (missionSlots !== this.missionGeneratorSlots) {
+      this.missionGeneratorSlots = missionSlots;
+      s.events.emit("missao:progresso-coop");
+    }
   }
   applyDevLighting(on) {
     const s = this.scene;

@@ -175,6 +175,16 @@ export function criarPainelGerador(scene, { onActivate, onClose }) {
   const ghost = add(scene.add.image(0, 0, visuals[0].iconKey))
     .setDisplaySize(48, 48).setVisible(false).setName("generator-drag");
 
+  let encaixesAnteriores = "";
+  const notificarEncaixes = () => {
+    if (shared()) return;
+    const atuais = opened ? [...installed].sort().join(",") : "";
+    if (atuais === encaixesAnteriores) return;
+    encaixesAnteriores = atuais;
+    scene.events.emit("gerador:encaixes", Object.fromEntries(
+      (opened ? [...installed] : []).map(id => [id, true]),
+    ));
+  };
   const ready = () => shared() ? shared().ready() : installed.size === 2 && ROWS.every(row => availableQuantity(row.id) >= 1);
   const refresh = (force = false) => {
     if (shared()) {
@@ -194,6 +204,7 @@ export function criarPainelGerador(scene, { onActivate, onClose }) {
     if (!activating && !shared()) {
       for (const row of ROWS) if (availableQuantity(row.id) < 1) installed.delete(row.id);
     }
+    notificarEncaixes();
     const next = `${activating}:${[...installed]}:${ROWS.map(row => availableQuantity(row.id))}:${fuelLevel()}:${inventory.getQuantity("gasolina")}:${drag?.id}:${drag?.hover}`;
     if (!force && next === signature) return;
     signature = next;
@@ -338,7 +349,7 @@ export function criarPainelGerador(scene, { onActivate, onClose }) {
       root.setVisible(true);
       tocarSomColocando(scene, "acesso");
     },
-    close() { opened = false; cancelDrag(); installed.clear(); root.setVisible(false); display?.hide(); restoreDOM(); },
+    close() { opened = false; cancelDrag(); installed.clear(); notificarEncaixes(); root.setVisible(false); display?.hide(); restoreDOM(); },
     message(label) { feedback.setText(label).setColor("#d4a17c"); display?.invalidate(); },
     start() {
       activating = true; drag = null; pressed = null; ghost.setVisible(false); refresh(true);

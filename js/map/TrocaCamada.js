@@ -27,7 +27,7 @@ export function configurarTrocaCamada(scene) {
 export function atorNaRegiaoTroca(scene, actor) {
   const region = scene.regiaoTrocaCamada;
   if (!region || !actor) return false;
-  const body = actor.body;
+  const body = actor.body ?? actor.coopBody;
   const x = body?.width ? body.x : actor.x;
   const y = body?.height ? body.y : actor.y;
   return x + (body?.width ?? 0) > region.left && x < region.right &&

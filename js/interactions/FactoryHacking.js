@@ -12,10 +12,14 @@ import { drawCollectibleMarker } from '../ui/CollectibleMarker.js';
 import { prepararPetNoTerminal } from './HackingPetDock.js';
 import { atualizarAnimacaoParado } from '../controls/PlayerAnimations.js';
 
+const tutoriaisPorJogo = new WeakMap();
+
 /** Usa o botão de interação existente; simulação solo/host e apresentação local separadas. */
 export function criarHackingFabrica(scene) {
   if (scene.hackingTerminals && !scene.hackingTerminals.destruido) return scene.hackingTerminals;
   const registry = scene.game.registry;
+  const tutoriaisMostrados = tutoriaisPorJogo.get(scene.game) ?? new Map();
+  tutoriaisPorJogo.set(scene.game, tutoriaisMostrados);
   const som = criarSonsLeitorCartao(scene), fala = criarFalaFlutuante(scene, 'hacking-speech', { falante: 'nova' });
   let destruido = false, view = null, hostDock = null, clientDock = null, painel = null;
   let localId = null, anteriorTeclado = true, anteriorInput = true, sequence = 0, jamAte = 0;
@@ -66,7 +70,10 @@ export function criarHackingFabrica(scene) {
       registry.set(K.fabrica, true);
       for (const bonus of ['robos', 'registro']) if (resultado.concluidos.includes(bonus)) registry.set(K[bonus], true);
       if (resultado.concluidos.includes('robos')) jamAte = scene.time.now + 12000;
-      dizer(`N.O.V.A.: arquivo EV041_EDEN_NETWORK_ARCHIVE.LOG recuperado. Consulte NULLNET. Portas liberadas.${resultado.concluidos.includes('robos') ? ' Robôs isolados por 12 segundos.' : ''}${resultado.concluidos.includes('registro') ? ' Registros de Elias Voss preservados.' : ''}`);
+      const arquivo = resultado.concluidos.includes('registro')
+        ? 'Arquivo EV041_EDEN_NETWORK_ARCHIVE.LOG recuperado. Consulte NULLNET.'
+        : 'O arquivo segue criptografado. Complete REGISTRO DA AXIOM no terminal.';
+      dizer(`N.O.V.A.: Portas liberadas. ${arquivo}${resultado.concluidos.includes('robos') ? ' Robôs isolados por 12 segundos.' : ''}`);
       som.tocar('acesso', 500); scene.events.emit('hacking:fabrica-concluida', { resultado });
     } else if (tipo === 'bruteforce') {
       registry.set(K.bruteforce, true); som.tocar('acesso', 500);
@@ -76,7 +83,11 @@ export function criarHackingFabrica(scene) {
       registry.set(K.final, true); scene.events.emit('hacking:matrix-concluida', { suporteVidaPreservado: true });
     }
     publicar();
-  }, () => missao(), salvarCheckpoint);
+  }, () => missao(), salvarCheckpoint, () => {
+    const p = progresso();
+    return [['portas', p.fabrica], ['robos', p.robos], ['registro', p.registro]]
+      .filter(([, concluido]) => concluido).map(([id]) => id);
+  }, tutoriaisMostrados);
   const marcadores = Object.fromEntries(Object.entries(T).map(([tipo, t]) => {
     const marker = scene.add.graphics().setPosition(t.x, t.y - 48).setDepth(90);
     drawCollectibleMarker(marker, 0, 0, 18); marker.coopLocalVisual = true;
@@ -128,6 +139,7 @@ export function criarHackingFabrica(scene) {
     scene.joystick?.reset?.(); scene.ariaAttackJoystick?.cancelar?.(); atualizarAnimacaoParado(scene);
     if (registro.pausou) scene.physics.pause();
     registro.painel = criarRegistroHacking(fecharRegistro, missao().config, progresso);
+    if (p.registro) scene.events.emit("hacking:registro-aberto");
     return true;
   }
   function fecharLocal() {
@@ -165,6 +177,7 @@ export function criarHackingFabrica(scene) {
     if (!autoridade()) for (const [key, value] of Object.entries(state.progress ?? {})) if (K[key] && value === true) registry.set(K[key], true);
     ultimaReplica = state;
     const session = state.session;
+    if (session && session.id !== view?.id) scene.events.emit("hacking:terminal-aberto", session.tipo);
     view = session;
     if (state.progress?.final) { vitoria(); return; }
     if (!session || session.owner !== meuId()) { if (localId != null) fecharLocal(); return; }
@@ -195,7 +208,7 @@ export function criarHackingFabrica(scene) {
     if (!ctx?.player?.active || ctx.vida <= 0 || ctx.morteEmAndamento) return false;
     if (payload.op === 'abrir') {
       const t = T[payload.tipo], p = progresso();
-      if (!t || engine.atual || p.final || (payload.tipo === 'fabrica' && (p.fabrica || !scene.luzFabricaAcesa)) ||
+      if (!t || engine.atual || p.final || (payload.tipo === 'fabrica' && (p.registro || !scene.luzFabricaAcesa)) ||
           (payload.tipo === 'bruteforce' && (p.bruteforce || !p.fabrica || !scene.luzFabricaAcesa)) ||
           (payload.tipo === 'matrix' && (!p.fabrica || !p.bruteforce || !p.cartao || !scene.novoBoss?.morto)) || scene.cenaEntradaBossAtiva ||
           ctx.generatorMenuOpen || ctx.devItemMenuOpen || ctx.upgradeMenuOpen || ctx.upgradeDialogueOpen || ctx.atacando || ctx.ariaAtaqueCarregando ||
@@ -308,14 +321,15 @@ export function criarHackingFabrica(scene) {
       let proxima = null;
       for (const [tipo, t] of Object.entries(T)) {
         const m = marcadores[tipo], concluido = tipo === 'fabrica' ? p.fabrica : p.final;
+        const podeLer = (tipo === 'fabrica' && p.fabrica && p.registro) || (tipo === 'bruteforce' && p.bruteforce);
         const disponivel = !p.final && (tipo === 'matrix' ? !concluido && !!scene.novoBoss?.morto : !scene.fabricaDescarregada);
         m.marker.setVisible(disponivel); m.label.setVisible(disponivel);
         m.label.setText(view?.tipo === tipo ? `N.O.V.A. INVADINDO · ${tipo === 'matrix' ? view.model.etapaTipo === 'memory' ? `ARQUIVOS ${view.model.recuperados}/3` : `RASTRO ${Math.floor(view.model.rastro ?? 0)}%` : tipo === 'fabrica' ? `${view.model.selecoes.length}/10` : `${view.model.confirmadas.filter(Boolean).length}/8`}`
-          : (tipo === 'fabrica' && p.fabrica) || (tipo === 'bruteforce' && p.bruteforce) ? 'ELIAS VOSS · NULLNET · LER' : t.nome);
+          : podeLer ? 'ELIAS VOSS · NULLNET · LER' : tipo === 'fabrica' && p.fabrica ? 'REGISTRO DA AXIOM · RECUPERAR' : t.nome);
         const distance = Math.hypot(scene.player.x - t.x, scene.player.y - t.y);
         if (disponivel && !registro && !api.temSessao() && !scene.generatorMenuOpen && !scene.morteEmAndamento && distance <= t.alcance &&
             (!proxima || distance < proxima.distance)) proxima = { distance, interact: () => {
-              if ((tipo === 'fabrica' && p.fabrica) || (tipo === 'bruteforce' && p.bruteforce)) return abrirRegistro(true);
+              if (podeLer) return abrirRegistro(true);
               if (!scene.luzFabricaAcesa && tipo !== 'matrix') { dizer('N.O.V.A.: ligue o gerador para energizar o terminal.'); return true; }
               return api.enviar({ op: 'abrir', tipo });
             } };

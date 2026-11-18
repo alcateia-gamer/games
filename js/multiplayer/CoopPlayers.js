@@ -40,6 +40,7 @@ export class CoopPlayers {
       dead: !!s.morteEmAndamento || health <= 0,
       coop: { visual, downId: s.coopDownId ?? null, compression: supportsCompression(),
         sceneSession: r.streamId, accessCard: s.inventory?.getQuantity("card") > 0,
+        fuelReady: s.inventory?.getQuantity("gasolina", { minFuel: 1 }) > 0,
         inventoryDrop: s.coopInventoryDrop ?? null,
         developer: !!s.developerMode,
         flashlight: { angle: round(this.flashlightPose.angulo, 10000) },
