@@ -9,6 +9,7 @@ import { criarBotaoHUDNitido } from "../ui/HudCanvas.js";
 import { criarTeleporteDevBoss } from "./DeveloperTeleport.js";
 import { criarBotoesTeleporteDev } from "./DeveloperTeleportButtons.js";
 import { criarMenuColetaveisDev } from "./DeveloperItemMenu.js";
+import { criarAtalhoDevFabrica } from "./DeveloperFactory.js";
 import { criarAtalhoDevFase2Boss } from "./DeveloperBoss.js";
 
 // =====================================================
@@ -135,6 +136,7 @@ function criarControlesInput(scene) {
   scene.developerMode = !!scene.developerMode;
   criarTeleporteDevBoss(scene);
   criarAtalhoDevFase2Boss(scene);
+  criarAtalhoDevFabrica(scene);
   criarMenuColetaveisDev(scene);
 
   // BOTÃO DEV

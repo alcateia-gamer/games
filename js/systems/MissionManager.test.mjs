@@ -33,6 +33,12 @@ test("dois recursos paralelos persistem, ignoram duplicatas e são limpos na nov
     city.collect(order[0]);
     assert.equal(city.view().id, "recursos");
     assert.equal(city.view().completed[order[0]], true);
+    if (order[0] === "gasolina") {
+      assert.equal(city.view().tasks.find(task => task.id === "galaoCheio")?.status, "active");
+      assert.equal(city.view().tasks.find(task => task.id === "bateria")?.status, "available");
+    } else {
+      assert.ok(!city.view().tasks.some(task => task.id === "galaoCheio"));
+    }
     const updates = city.views.length;
     city.collect(order[0]); city.collect("sucata");
     assert.equal(city.views.length, updates);

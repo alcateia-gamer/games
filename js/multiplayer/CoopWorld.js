@@ -13,6 +13,7 @@ import { ocultarHUDDuranteCena } from "../ui/HudCinematic.js";
 import { retanguloLivreDoMapa } from "../enemies/EnemyPathfinding.js";
 import { distanceToInteractionArea } from "../interactions/FactoryGenerator.js";
 import { HACKING_KEYS } from '../puzzles/HackingConfig.js';
+import { validarFabricaDev } from "../controls/DeveloperFactory.js";
 import { prepararBossDevFase2 } from '../controls/DeveloperBoss.js';
 import { atualizarRelogioCoop } from "../core/RelogioPartida.js";
 
@@ -112,7 +113,10 @@ export class CoopWorld {
     const progress = this.manager.room.coopProgress;
     const developer = action.playerId === this.manager.playerId ? s.developerMode :
       r.players.remotes.get(action.playerId)?.data.coop?.developer;
-    if (action.kind === 'devBossPhase2' && developer && r.mapKey === 'Level1Parte2') {
+    if (action.kind === "devFactoryAccess" && developer && r.mapKey === "Level1Parte2") {
+      const context = action.playerId === this.manager.playerId ? s : r.players.remotes.get(action.playerId)?.context;
+      if (context) validarFabricaDev(s, context);
+    } else if (action.kind === 'devBossPhase2' && developer && r.mapKey === 'Level1Parte2') {
       const context = action.playerId === this.manager.playerId ? s : r.players.remotes.get(action.playerId)?.context;
       if (context) prepararBossDevFase2(s, context);
     } else if (action.kind === "pickup") {

@@ -12,6 +12,7 @@ const missions = [
   { id: "recursos", title: "Recupere os recursos", phase: 1, tasks: [
     task("bateria", "Encontre e colete a bateria"),
     task("gasolina", "Encontre e colete o galão"),
+    task("galaoCheio", "Encha o galão", ["gasolina"]),
   ] },
   { id: "travessia", title: "Vá ao setor industrial", phase: 1, tasks: [
     task("galaoCheio", "Encha o galão", ["gasolina"]),
@@ -73,7 +74,8 @@ export function objetivosDaPartida(facts, flags = {}, slots = {}, mapa) {
     const optional = completed.registro ? lerRegistro : registro;
     tasks.push({ ...optional, phase: 2, status: completed[optional.id] ? "completed" : "available" });
   }
-  const primeiro = tasks.find(item => item.status === "available" && !item.optional);
+  const primeiro = tasks.find(item => item.id === "galaoCheio" && item.status === "available") ??
+    tasks.find(item => item.status === "available" && !item.optional);
   if (primeiro) primeiro.status = "active";
   return { id, title: mission?.title ?? "MISSÃO CONCLUÍDA", sector: fase2 ? "FÁBRICA" : "NIGHT CITY",
     tasks: tasks.filter(item => item.status !== "locked").sort((a, b) => Number(a.optional) - Number(b.optional)).slice(0, 4),
