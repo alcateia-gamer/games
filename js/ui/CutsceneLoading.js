@@ -74,6 +74,7 @@ export class CutsceneLoading {
       if (!this.gate.videoFinished) this.video.hidden = false;
     };
     this.onWaiting = () => {
+      if (this.awaitingPlaybackGesture) return;
       window.clearTimeout(this.stallTimer);
       this.stallTimer = window.setTimeout(() => this.showMediaError(), 15000);
     };
@@ -154,21 +155,16 @@ export class CutsceneLoading {
   }
 
   async play() {
-    if (this.destroyed || this.gate.videoFinished || this.mediaFailed) return;
+    if (this.destroyed || this.gate.videoFinished || this.mediaFailed || this.awaitingPlaybackGesture) return;
     try {
       await this.video.play();
     } catch (error) {
       if (this.destroyed || this.gate.videoFinished || error.name === "AbortError") return;
       if (error.name !== "NotAllowedError") { this.showMediaError(); return; }
       // Safari pode exigir um novo gesto para áudio, mesmo após o menu.
-      this.video.muted = true;
-      try { await this.video.play(); }
-      catch {
-        if (this.destroyed || this.gate.videoFinished) return;
-        this.setAction("Toque para assistir", () => {
-          this.clearMessage(); this.video.muted = false; void this.play();
-        });
-      }
+      this.awaitingPlaybackGesture = true;
+      window.clearTimeout(this.stallTimer);
+      if (!this.loadFailed) this.clearMessage();
     }
   }
 
@@ -245,6 +241,13 @@ export class CutsceneLoading {
       this.message.textContent = "Não foi possível reproduzir a transmissão.";
       this.message.hidden = false;
       this.setAction("Continuar", () => this.finishVideo());
+    } else if (this.awaitingPlaybackGesture && !this.gate.videoFinished) {
+      this.setAction("Toque para assistir", () => {
+        this.awaitingPlaybackGesture = false;
+        this.clearMessage();
+        this.onWaiting();
+        void this.play();
+      });
     }
   }
 
