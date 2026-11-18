@@ -28,7 +28,7 @@ try {
     if (!start.menuLayer) start.showMainMenu();
     start.selectMenuOption("SOLO");
   });
-  const portraits = page.locator(".solo-selection-portrait");
+  const portraits = page.locator(".operator-selection-portrait");
   await portraits.first().waitFor();
   assert.deepEqual(await portraits.evaluateAll(nodes => nodes.map(node => node.parentElement.dataset.operator)),
     ["kai-mercer", "magnus-force", "aria-kade", "nyx"]);

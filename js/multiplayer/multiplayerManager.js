@@ -472,8 +472,8 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
    * Solicita o início da partida somente quando o jogador local é host e todos estão prontos.
    */
   startGame() {
-    if (this.room?.hostId === this.playerId && this.canStart())
-      this.publishAction({ type: "start_game", playerId: this.playerId });
+    if (this.room?.status !== "WAITING" || this.room.hostId !== this.playerId || !this.canStart()) return false;
+    return this.publishAction({ type: "start_game", playerId: this.playerId });
   }
 
   /**

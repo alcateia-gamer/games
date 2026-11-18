@@ -57,7 +57,7 @@ try {
       await page.evaluate(() => window.__game.scene.getScene("Start").selectMenuOption("SOLO"));
       await page.locator(".solo-selection").waitFor();
       assert.equal(requests.some(p => p.includes("arma-test") || /\/golpes\//.test(p)), false);
-      assert.equal(await page.locator(".solo-selection-portrait").count(), 4);
+      assert.equal(await page.locator(".operator-selection-portrait").count(), 4);
       await page.getByRole("button", { name: "Kai Mercer — 404", exact: true }).click();
       await page.getByRole("button", { name: "INICIAR SOLO" }).click();
       await page.locator(".cutscene-skip").click();

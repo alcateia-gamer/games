@@ -1,120 +1,104 @@
-/**
- * @file Lobby de até quatro jogadores. Exibe participantes, escolha de personagem e prontidão
- * antes da partida.
- */
-
-import { criarTextoMenu } from "../ui/MenuText.js";
-
-const CHARACTER_NAMES = {
-  "kai-mercer": "KAI MERCER",
-  "magnus-force": "MAGNUS FORCE",
-  "aria-kade": "ARIA KADE",
-  "nyx": "NYX",
-};
+import { createCoopLobby } from "../ui/CoopLobby.js";
 
 class MultiplayerLobby extends Phaser.Scene {
-  /**
-   * Registra a cena de lobby no gerenciador de cenas do Phaser.
-   */
   constructor() { super("MultiplayerLobby"); }
 
-  /**
-   * Monta a lista de jogadores e os botões e conecta eventos de sala, início de jogo e
-   * conexão.
-   */
   create() {
     this.started = false;
+    this.startRequested = false;
+    this.feedback = "";
     this.manager = this.registry.get("multiplayer");
     this.cameras.main.setBackgroundColor("#020805");
-    criarTextoMenu(this, 400, 38, "LOBBY // SALA", { color: "#c9ffda", fontFamily: "monospace", fontSize: "22px", fontStyle: "bold" }).setOrigin(0.5);
-    this.roomText = criarTextoMenu(this, 400, 70, "SALA: ----", { color: "#54d879", fontFamily: "monospace", fontSize: "13px" }).setOrigin(0.5);
-    this.rows = [];
-    for (let index = 0; index < 4; index += 1) {
-      const row = criarTextoMenu(this, 110, 115 + index * 42, "", { color: "#9dffb9", fontFamily: "monospace", fontSize: "14px" });
-      this.rows.push(row);
-    }
-    this.characterButtons = ["kai-mercer", "magnus-force", "aria-kade", "nyx"].map((id, index) => {
-      const button = this.createButton(180 + index * 145, 295, CHARACTER_NAMES[id], 132, 34);
-      button.on("buttondown", () => this.manager.selectCharacter(id));
-      return button;
+
+    const view = this.view = createCoopLobby({
+      onSelect: id => {
+        if (this.started || !this.localPlayer()) return;
+        this.feedback = "";
+        this.manager.selectCharacter(id);
+      },
+      onReady: () => {
+        const local = this.localPlayer();
+        if (this.started || !local?.character) return;
+        this.feedback = "";
+        this.manager.setReady(!local.ready);
+      },
+      onStart: () => this.requestStart(),
+      onLeave: () => {
+        if (this.started) return;
+        this.manager.leaveRoom();
+        this.scene.start("Start", { abrirMenu: true });
+      },
     });
-    this.readyButton = this.createButton(400, 350, "PRONTO", 150, 34);
-    this.readyButton.on("buttondown", () => {
-      const local = this.manager.room?.players.find((player) => player.id === this.manager.playerId);
-      this.manager.setReady(!local?.ready);
+    document.body.append(view.root);
+    view.root.focus();
+    void view.showArt().catch(() => {
+      if (this.view === view) this.showFeedback("FALHA AO CARREGAR OPERADORES.");
     });
-    this.startButton = this.createButton(635, 350, "INICIAR PARTIDA", 190, 34);
-    this.startButton.on("buttondown", () => this.manager.startGame());
-    this.leaveButton = this.createButton(80, 350, "SAIR", 90, 34);
-    this.leaveButton.on("buttondown", () => {
-      this.manager.leaveRoom();
-      this.scene.start("Start", { abrirMenu: true });
-    });
-    this.status = criarTextoMenu(this, 400, 390, "AGUARDANDO OPERADORES...", { color: "#75ff9a", fontFamily: "monospace", fontSize: "11px" }).setOrigin(0.5);
+
     this.manager.on("roomUpdated", this.renderRoom, this);
     this.manager.on("gameStarted", this.startGame, this);
-    /**
-     * Mostra se a conexão foi restaurada ou está sendo restabelecida.
-     */
-    this.onConnectionChanged = (connected) => this.status.setText(connected ? "CONEXÃO RESTAURADA" : "RECONECTANDO...");
-    /**
-     * Apresenta a mensagem de erro recebida do gerenciador multiplayer.
-     */
-    this.onManagerError = (error) => this.status.setText(error.message || "ERRO");
-    this.manager.on("connectionChanged", this.onConnectionChanged, this);
-    this.manager.on("error", this.onManagerError, this);
+    this.manager.on("connectionChanged", this.connectionChanged, this);
+    this.manager.on("error", this.managerError, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.shutdown, this);
+
     this.renderRoom(this.manager.room);
+    if (this.manager.room?.status === "PLAYING") this.startGame(this.manager.room);
   }
 
-  /**
-   * Atualiza vagas, personagens e prontidão e mostra o botão de início apenas ao host.
-   */
+  localPlayer(room = this.manager.room) {
+    return room?.players.find(player => player.id === this.manager.playerId);
+  }
+
+  showFeedback(message) {
+    this.feedback = message;
+    this.view?.setStatus(message);
+  }
+
+  connectionChanged(connected) {
+    this.feedback = connected ? "" : "RECONECTANDO...";
+    this.view?.setStatus(connected ? "CONEXÃO RESTAURADA" : this.feedback);
+  }
+
+  managerError(error) {
+    this.showFeedback(error.message || "ERRO");
+  }
+
   renderRoom(room) {
     if (!room) return;
-    this.roomText.setText(`SALA: ${room.roomCode}`);
-    const players = room.players || [];
-    this.rows.forEach((row, index) => {
-      const player = players[index];
-      row.setText(player ? `JOGADOR ${index + 1}  ${player.isHost ? "[HOST]" : "      "}  ${CHARACTER_NAMES[player.character] || "-"}  ${player.ready ? "[PRONTO]" : ""}` : `JOGADOR ${index + 1}  -- VAGO --`);
+    this.view.renderRoom(room, {
+      playerId: this.manager.playerId,
+      canStart: !this.startRequested && this.manager.canStart(),
+      feedback: this.feedback,
     });
-    const local = players.find((player) => player.id === this.manager.playerId);
-    this.readyButton.list[1].setText(local?.ready ? "CANCELAR PRONTO" : "PRONTO");
-    this.startButton.setVisible(room.hostId === this.manager.playerId);
-    this.status.setText(room.players.every((player) => player.character && player.ready) ? "TODOS PRONTOS" : "ESCOLHA UM OPERADOR E FIQUE PRONTO");
   }
 
-  /**
-   * Inicia o preloader uma única vez com o personagem local e o modo multiplayer.
-   */
+  requestStart() {
+    if (this.started || this.startRequested) return;
+    this.feedback = "";
+    if (!this.manager.startGame()) return;
+    this.startRequested = true;
+    this.renderRoom(this.manager.room);
+    // A sala continua validando o pedido. Se ele não for confirmado, o host pode tentar novamente.
+    this.time.delayedCall(1000, () => {
+      this.startRequested = false;
+      this.renderRoom(this.manager.room);
+    });
+  }
+
   startGame(room) {
-    if (this.started) return;
+    const local = this.localPlayer(room);
+    if (this.started || !local?.character) return;
     this.started = true;
-    const local = room.players.find((player) => player.id === this.manager.playerId);
-    this.scene.start("BootPartida", { personagem: local?.character || "kai-mercer", multiplayer: true });
+    this.scene.start("BootPartida", { personagem: local.character, multiplayer: true });
   }
 
-  /**
-   * Monta um botão do lobby com texto e retorno visual ao passar o ponteiro.
-   */
-  createButton(x, y, label, width, height) {
-    const background = this.add.rectangle(0, 0, width, height, 0x062b16, 0.95).setStrokeStyle(2, 0x42ff84).setInteractive({ useHandCursor: true });
-    const text = criarTextoMenu(this, 0, 0, label, { color: "#9dffb9", fontFamily: "monospace", fontSize: "11px", fontStyle: "bold" }).setOrigin(0.5);
-    const button = this.add.container(x, y, [background, text]);
-    background.on("pointerover", () => background.setFillStyle(0x0b5429));
-    background.on("pointerout", () => background.setFillStyle(0x062b16));
-    background.on("pointerdown", () => button.emit("buttondown"));
-    return button;
-  }
-
-  /**
-   * Remove os listeners do gerenciador ao encerrar a cena de lobby.
-   */
   shutdown() {
-    this.manager?.off("roomUpdated", this.renderRoom, this);
-    this.manager?.off("gameStarted", this.startGame, this);
-    this.manager?.off("connectionChanged", this.onConnectionChanged, this);
-    this.manager?.off("error", this.onManagerError, this);
+    this.manager.off("roomUpdated", this.renderRoom, this);
+    this.manager.off("gameStarted", this.startGame, this);
+    this.manager.off("connectionChanged", this.connectionChanged, this);
+    this.manager.off("error", this.managerError, this);
+    this.view.root.remove();
+    this.view = null;
   }
 }
 

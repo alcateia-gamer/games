@@ -81,6 +81,7 @@ class MultiplayerMenu extends Phaser.Scene {
     this.onRoomUpdated = (room) => {
       if (
         room.roomCode === this.code &&
+        room.players.some(player => player.id === this.manager.playerId) &&
         !this.scene.isActive("MultiplayerLobby")
       )
         this.openLobby(room);

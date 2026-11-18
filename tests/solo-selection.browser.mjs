@@ -50,12 +50,12 @@ async function menuClick(page, label, touch = false) {
 }
 
 function portrait(page, id) {
-  return page.locator(`[data-operator="${id}"] .solo-selection-portrait`);
+  return page.locator(`[data-operator="${id}"] .operator-selection-portrait`);
 }
 
 async function assertSelection(page, selected = null) {
   await page.locator(".solo-selection").waitFor();
-  const states = await page.locator(".solo-selection-portrait").evaluateAll(buttons =>
+  const states = await page.locator(".operator-selection-portrait").evaluateAll(buttons =>
     buttons.map(button => [button.getAttribute("aria-pressed"), getComputedStyle(button.querySelector("img")).filter]));
   assert.deepEqual(states, ids.map(id =>
     [String(id === selected), selected && id !== selected ? "grayscale(1) brightness(1.23)" : "none"]));
@@ -120,7 +120,7 @@ try {
   assert.equal(await info.count(), 4);
   for (let i = 0; i < ids.length; i++) await info.nth(i).click();
   assert.equal(await prompt.isVisible(), false);
-  assert.equal(await page.locator(".solo-selection-details:visible").count(), 4);
+  assert.equal(await page.locator(".operator-selection-details:visible").count(), 4);
   await assertSelection(page);
   await capture(page, "2-quatro-fichas");
   for (let i = 0; i < ids.length; i++) await info.nth(i).click();
@@ -144,7 +144,7 @@ try {
   assert.equal(await page.locator(".solo-selection").count(), 0);
   await menuClick(page, "SOLO");
   await assertSelection(page);
-  assert.equal(await page.locator(".solo-selection-details:visible").count(), 0);
+  assert.equal(await page.locator(".operator-selection-details:visible").count(), 0);
   assert.equal(await prompt.isVisible(), true);
   await page.getByRole("button", { name: "VOLTAR" }).click();
   await menuClick(page, "MULTIJOGADOR");
