@@ -1,7 +1,9 @@
+import { LEGACY_NETWORK_KEY } from '../puzzles/HackingProgress.js';
 import { ITEM_SPAWN_SEED_KEY } from '../inventory/RunItemSpawns.js';
 import { ECONOMY_KEY } from '../systems/UpgradeSystem.js';
 import { CutsceneLoading } from "../ui/CutsceneLoading.js";
 import { reiniciarResgatesSolo } from "../player/SoloRunState.js";
+import { INTELLIGENCE_KEY } from '../puzzles/MissionIntelligence.js';
 import { HACKING_KEYS } from '../puzzles/HackingConfig.js';
 
 /** A introdução começa junto com a importação e permanece durante a fila de assets. */
@@ -11,6 +13,8 @@ export default class BootPartida extends Phaser.Scene {
   }
 
   create(data = {}) {
+    this.registry.remove(INTELLIGENCE_KEY);
+    this.registry.remove(LEGACY_NETWORK_KEY);
     for (const key of Object.values(HACKING_KEYS)) this.registry.remove(key);
     if (data.multiplayer !== true) reiniciarResgatesSolo(this.registry);
     this.registry.remove(ECONOMY_KEY);

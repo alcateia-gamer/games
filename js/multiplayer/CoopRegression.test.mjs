@@ -148,7 +148,8 @@ test('cliente não publica conclusão de hacking nem contorna portas bloqueadas'
   world.r.host = true; world.r.mapKey = 'Level1Parte2';
   world.r.players = { remotes: new Map([['ally', { actor: { active: true, x: 0, y: 0 }, data: {} }]]) };
   scene.hackingTerminals = { receberAcao: () => false, permitePortas: () => false };
-  for (const key of ['factoryHackingComplete', 'matrixZeroComplete']) {
+  for (const key of ['factoryHackingComplete', 'factoryBruteforceComplete', 'bossAccessCardAuthenticated',
+    'memoryDecryptionComplete', 'hostConnectionComplete', 'matrixZeroComplete']) {
     world.receive({ kind: 'progress', playerId: 'ally', payload: { key, value: true } });
     assert.equal(manager.room.coopProgress.flags[key], undefined);
   }

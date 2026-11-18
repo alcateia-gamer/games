@@ -28,21 +28,24 @@ function livre(s) { assert.ok(s.input && s.teclado && !s.menu && !s.movimento &&
 try {
   const solo = await iniciar('solo'), antes = (await estado(solo)).snapshot.progress;
   await abrir(solo);
-  const texto = await solo.locator('.axiom-record-body').innerText();
-  for (const parte of ['comboios de remédios', 'Reset', 'EDEN', 'The Hollow', '04 segundos', 'VISUAL', 'REDE', 'suporte à vida', 'NENHUMA OCORRÊNCIA REGISTRADA']) assert.ok(texto.includes(parte));
+  const texto = await solo.locator('.axiom-record-overlay').innerText();
+  for (const parte of ['Elias Voss', '2189.08.17', 'EDEN', 'AXIOM', 'EV041_EDEN_NETWORK_ARCHIVE.LOG', 'ACESSO INTERROMPIDO']) assert.ok(texto.includes(parte));
   const lendo = await estado(solo); assert.ok(lendo.pausado && !lendo.input && !lendo.teclado && !lendo.moves && lendo.menu);
   await solo.waitForTimeout(200); assert.equal((await estado(solo)).ticks, lendo.ticks);
   for (const [width, height] of [[1100, 700], [568, 320], [390, 844]]) {
     await solo.setViewportSize({ width, height });
-    await solo.locator('.axiom-record-body').evaluate(el => { el.scrollTop = 0; });
-    const close = await solo.locator('.axiom-record-close').boundingBox(), back = await solo.locator('.axiom-record-return').boundingBox();
-    assert.ok(close.height >= 44 && close.y >= 0 && back.y + back.height <= height);
+    const close = solo.getByRole('button', { name: 'Fechar terminal', exact: true });
+    await close.scrollIntoViewIfNeeded();
+    assert.ok((await close.boundingBox()).height >= 44);
+    const dims = await solo.locator('.nullnet-panel').evaluate(el => ({ w: el.getBoundingClientRect().width, viewport: innerWidth }));
+    assert.ok(dims.w <= dims.viewport);
     await solo.screenshot({ path: `${pasta}/inicio-${width}x${height}.png` });
-    await solo.locator('.axiom-record-clue').scrollIntoViewIfNeeded();
+    await solo.getByRole('button', { name: 'AUTENTICAÇÃO', exact: true }).click();
+    assert.ok((await solo.locator('.axiom-record-overlay').innerText()).includes('Selo da arquitetura'));
     await solo.screenshot({ path: `${pasta}/pista-${width}x${height}.png` });
   }
   await solo.keyboard.press('Escape'); await solo.locator('.axiom-record-overlay').waitFor({ state: 'detached' }); livre(await estado(solo));
-  await abrir(solo); await solo.locator('.axiom-record-return').click(); livre(await estado(solo));
+  await abrir(solo); await solo.getByRole('button', { name: 'Voltar', exact: true }).click(); livre(await estado(solo));
   assert.deepEqual((await estado(solo)).snapshot.progress, antes); assert.equal((await estado(solo)).snapshot.session, null);
   await abrir(solo); await solo.evaluate(() => { window.__registro.morrer(); });
   await solo.locator('.axiom-record-overlay').waitFor({ state: 'detached' }); livre(await estado(solo));
@@ -57,7 +60,7 @@ try {
   const tick = (await estado(client)).ticks; await client.waitForTimeout(200);
   assert.ok((await estado(client)).ticks > tick && !(await estado(client)).pausado);
   await abrir(host); assert.equal(await client.locator('.axiom-record-overlay').count(), 1);
-  await client.locator('.axiom-record-close').click(); livre(await estado(client));
+  await client.getByRole('button', { name: 'Fechar terminal', exact: true }).click(); livre(await estado(client));
   assert.equal(await host.locator('.axiom-record-overlay').count(), 1);
   await host.keyboard.press('Escape'); await host.locator('.axiom-record-overlay').waitFor({ state: 'detached' }); livre(await estado(host));
   await abrir(client); await client.evaluate(() => { window.__registro.desconectar(); });

@@ -93,7 +93,11 @@ Enquanto o grupo se aproxima do núcleo, a N.O.V.A esclarece o papel da instala�
 
 Não é necessário mostrar cidadãos adormecidos, cápsulas ou salas adicionais: a fábrica existente continua sendo o cenário da missão.
 
-A reativação do gerador alerta a AXIOM. Unidades de segurança são enviadas para impedir a invasão. O grupo enfrenta os robôs e utiliza o sistema de autenticação por cartão para abrir a porta do núcleo.
+A reativação do gerador alerta a AXIOM. Unidades de segurança são enviadas para impedir a invasão. No primeiro computador, o **Breach Protocol** libera os sistemas industriais e recupera os primeiros registros de **Elias Voss (EV-041)**, engenheiro desaparecido. Eles revelam a topologia do EDEN e os sistemas que precisam permanecer vivos.
+
+A estação de manutenção em **(-378, -2996)** guarda a segunda metade do arquivo. O **BruteForce** apresenta oito colunas de letras descendo continuamente. Os agentes congelam a letra correta na faixa central, da esquerda para a direita, até formar uma palavra de oito letras. A autenticação recupera a autorização digital, o host legítimo e parte de sua assinatura. O banco **NULLNET // INTELLIGENCE DATABASE** conserva os arquivos e as pistas da partida para consulta.
+
+A entrada do SENTINEL exige **duas autenticações independentes**: cartão aprovado no leitor **e** autorização digital recuperada no segundo computador. Nenhuma delas substitui a outra. As credenciais são compartilhadas com a equipe.
 
 ### Chefe final — SENTINEL
 
@@ -113,7 +117,9 @@ O SENTINEL é ativado. Começa a batalha final.
 
 ### Final — O despertar
 
-Depois de derrotar o SENTINEL, os agentes alcançam o terminal central. Aria conecta o dispositivo com o **Vírus Zero** e inicia o protocolo.
+Depois de derrotar o SENTINEL, os agentes alcançam o terminal central. **AXIOM // MEMORY DECRYPTION** recupera três arquivos: identificar o servidor CORE, isolar os dois sistemas SEC preservando LIFE/BIO e organizar três fragmentos de autorização. Os registros de Elias nos dois terminais da fábrica explicam as funções e a ordem dos fragmentos. A consulta não apaga escolhas, e cada arquivo recuperado fica salvo na campanha compartilhada.
+
+Em **HOST CONNECTION / HackConnect**, quatro linhas de oito números avançam uma casa a cada meio segundo. No fim de uma linha, os números sobem para a linha de cima; depois do topo, voltam pela base. Os agentes localizam os quatro números consecutivos do endereço registrado e confirmam o grupo. Uma seleção correta estabelece a conexão e inicia a transmissão do **Vírus Zero**. A ajuda ilustrada do terminal final explica apenas a etapa atual e abre pelo botão “Como jogar”.
 
 ```text
 AXIOM // CORE SYSTEM
@@ -182,7 +188,7 @@ A história termina sem responder se os agentes libertaram a humanidade ou apena
 | Oficina Fantasma | Troca sucatas por implantes e melhorias de armas |
 | Gerador | Restaura o acesso às instalações do núcleo |
 | Fábrica escura | Instalação industrial que abriga o acesso ao núcleo da AXIOM |
-| Autenticação por cartão | Proteção da sala do núcleo |
+| Cartão autenticado + autorização digital | Proteção dupla da sala do SENTINEL |
 | SENTINEL | Última defesa da AXIOM |
 | Vírus Zero | Rompe o controle da IA e inicia o despertar |
 
@@ -266,7 +272,7 @@ O combate combina ataques corpo a corpo, combate à distância e habilidades esp
 2. Os robôs defendem a infraestrutura da AXIOM; suas sucatas alimentam a loja.
 3. A bateria e o combustível são requisitos para restaurar o gerador.
 4. O gerador restaura a energia da fábrica e alerta as defesas da AXIOM.
-5. A porta do núcleo depende do sistema de cartão.
+5. A porta do núcleo depende do cartão autenticado e da autorização digital recuperada no bruteforce.
 6. O confronto com **SENTINEL** precede o upload do **Vírus Zero**.
 7. O final principal é o despertar gradual da humanidade; os **três finais alternativos do documento antigo** ficam guardados como ideias de expansão ou modo alternativo, não como finais confirmados do Protocolo Zero.
 
@@ -375,3 +381,5 @@ Esta documentação combina design e propostas narrativas; a existência de uma 
 **NULLBORNS — PROTOCOLO ZERO**
 
 *Se a liberdade é uma falha, que o sistema permaneça quebrado.*
+
+A implementação e a validação dos terminais e da invasão final estão documentadas em [Puzzles e NULLNET](docs/puzzles-hacking.md).

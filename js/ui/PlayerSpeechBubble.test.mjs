@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { criarFalaFlutuante } from "./PlayerSpeechBubble.js";
 
-function fixture() {
+function fixture(options = {}) {
   const timers = [];
   const visual = () => ({ visible: false, width: 0, height: 0,
     setText(value) { this.text = value; this.width = value.length * 7 + 12;
@@ -12,7 +12,7 @@ function fixture() {
       this.height = height || (this.text ?? "").split("\n").length * 16 + 8;
       return this;
     },
-    setOrigin() { return this; }, setDepth() { return this; }, setName() { return this; },
+    setColor(color) { this.color = color; return this; }, setOrigin() { return this; }, setDepth() { return this; }, setName() { return this; },
     setVisible(value) { this.visible = value; return this; },
     setPosition(x, y) { Object.assign(this, { x, y }); return this; },
     fillStyle() { return this; }, fillTriangle() { return this; },
@@ -27,7 +27,7 @@ function fixture() {
         remove() { this.removed = true; } };
       timers.push(timer); return timer;
     } } };
-  const fala = criarFalaFlutuante(scene);
+  const fala = criarFalaFlutuante(scene, "player-speech-bubble", options);
   const avancar = ms => {
     scene.time.now += ms;
     fala.atualizar();
@@ -127,4 +127,27 @@ test("estado remoto conserva digitação, acompanha o falante e não reinicia a 
   origem.fala.destroy();
   assert.equal(origem.scene.coopSpeechBubbles.size, 0);
   replica.destroy();
+});
+
+
+test("fala da N.O.V.A. usa azul e acompanha o robô em vez da cabeça do jogador", () => {
+  const { scene, fala, avancar } = fixture({ falante: 'nova' });
+  scene.personagemSelecionada = 'aria-kade';
+  scene.companionPet = { active: true, visible: true, x: 220, y: 160, getTopCenter() { return { y: this.y - 24 }; } };
+  fala.mostrar('N.O.V.A.: acesso liberado.');
+  assert.equal(fala.texto.color, '#eff8ff'); assert.equal(fala.texto.x, 228); assert.equal(fala.texto.y, 144);
+  scene.player.x += 100; scene.companionPet.x += 30; scene.companionPet.y -= 10; avancar(600);
+  assert.equal(fala.texto.x, 258); assert.equal(fala.texto.y, 134);
+  assert.equal(fala.snapshot().falante, 'nova');
+  const remote = fixture(), replica = criarFalaFlutuante(remote.scene, 'nova-remota', { replica: true, falante: 'nova' });
+  replica.aplicarEstadoRede(fala.snapshot());
+  assert.equal(replica.texto.x - remote.scene.player.x, fala.texto.x - scene.player.x);
+  assert.equal(replica.texto.y - remote.scene.player.y, fala.texto.y - scene.player.y);
+  scene.companionPet.visible = false; avancar(30); assert.equal(fala.texto.visible, false);
+  replica.destroy(); fala.destroy(); remote.fala.destroy();
+});
+
+test("N.O.V.A. sem robô visível não transfere o balão para o jogador", () => {
+  const { fala } = fixture({ falante: 'nova' }); fala.mostrar('N.O.V.A.: teste');
+  assert.equal(fala.texto.visible, false); assert.equal(fala.snapshot(), null); fala.destroy();
 });

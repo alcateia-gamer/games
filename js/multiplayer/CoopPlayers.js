@@ -119,7 +119,7 @@ export class CoopPlayers {
           const ctx = { add: s.add, time: s.time, player: actor, personagemSelecionada: data.character,
             get morteEmAndamento() { return !!entry.data.dead; },
             get hitboxDanoPlayer() { return { y: actor.y + (entry.data.coop?.hitbox?.dy ?? -20) }; } };
-          entry.speeches.set(name, criarFalaFlutuante(ctx, `coop-${data.id}-${name}`, { replica: true }));
+          entry.speeches.set(name, criarFalaFlutuante(ctx, `coop-${data.id}-${name}`, { replica: true, falante: state.falante === "nova" ? "nova" : "player" }));
         }
         entry.speeches.get(name).aplicarEstadoRede(state);
       }

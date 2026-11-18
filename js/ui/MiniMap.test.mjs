@@ -274,6 +274,16 @@ test("the weapon shop floor and entrance mat are visible at the interior telepor
   assert.ok(player.y > corner.y && player.y < corner.y + floor[6] * transform.scale);
 });
 
+test("the NULLNET HUD reservation keeps the minimap above DEV and its database button", () => {
+  const camera = { width: 390, height: 220, zoom: 1, originX: 0, originY: 0 };
+  const dev = { height: 30 };
+  const original = miniMapLayout(camera, dev);
+  const reserved = miniMapLayout(camera, dev, null, null, 54);
+  assert.ok(reserved.devScreenY < original.devScreenY);
+  assert.ok(reserved.devScreenY + 15 + 10 + 22 + 12 <= camera.height);
+  assert.equal(miniMapLayout(camera, dev, null, null, -54).devScreenY, original.devScreenY);
+});
+
 test("sidewalk connects in asphalt gray only through open passages, including around obstacles", () => {
   const width = 5, height = 3;
   const surface = new Uint8ClampedArray(width * height * 4);

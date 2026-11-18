@@ -1,0 +1,150 @@
+/** Duas instâncias completas e MQTT/WebSocket local: sessão única e operador cliente. */
+import assert from 'node:assert/strict';
+import { createRequire } from 'node:module';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { iniciarJogoHacking, entrarFabricaHacking, resolverBreach, tocarInteracaoHacking } from './hacking-browser-helpers.mjs';
+import { sceneState, dispensarTutorial, resolverBruteforce, resolverMemoria, capturarHost } from './nullnet-browser-helpers.mjs';
+const tools = process.env.HACKING_TEST_TOOLS ?? '/tmp/hacking-browser-tools', require = createRequire(import.meta.url);
+const brokerPort = Number(process.env.NULLNET_BROKER_PORT ?? 18884);
+const broker = require(`${tools}/node_modules/aedes`)();
+const { WebSocketServer, createWebSocketStream } = require(`${tools}/node_modules/ws`);
+const ws = new WebSocketServer({ host: '127.0.0.1', port: brokerPort });
+ws.on('connection', socket => broker.handle(createWebSocketStream(socket)));
+const { chromium } = await import(process.env.PLAYWRIGHT_MODULE ?? `${tools}/node_modules/playwright-core/index.mjs`);
+const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH, headless: true,
+  args: ['--no-sandbox', '--disable-dev-shm-usage', '--enable-unsafe-swiftshader', '--disable-gpu-watchdog',
+    '--disable-background-timer-throttling', '--disable-backgrounding-occluded-windows', '--disable-renderer-backgrounding'] });
+const context = await browser.newContext({ viewport: { width: 960, height: 600 } });
+const pages = [], errors = [], report = {}, pasta = process.env.ARTIFACT_DIR ?? '/tmp/hacking-coop'; mkdirSync(pasta, { recursive: true });
+async function boot() {
+  const page = await context.newPage(); pages.push(page); page.setDefaultTimeout(25000);
+  page.on('pageerror', e => { errors.push(e.stack); console.error(e.stack); });
+  await iniciarJogoHacking(page); await page.addScriptTag({ path: `${tools}/node_modules/mqtt/dist/mqtt.min.js` });
+  await page.evaluate(async port => {
+    const { default: Client } = await import('/js/mqttClient.js');
+    const { default: Manager } = await import('/js/multiplayer/multiplayerManager.js');
+    const mqtt = new Client({ brokerUrl: `ws://127.0.0.1:${port}`, topicPrefix: 'hacking-test' });
+    window.__manager = new Manager(mqtt); window.__game.registry.set('multiplayer', window.__manager);
+  }, brokerPort);
+  await page.waitForFunction(() => window.__manager.mqtt.connected); console.log(`BOOT: instância ${pages.length} pronta.`); return page;
+}
+async function posicionar(page, x, y) {
+  await page.evaluate(({ x, y }) => {
+    const s = window.__game.scene.getScene('Level1Parte2'); s.player.body.reset(x, y); s.player.body.updateFromGameObject();
+    s.player.invulneravel = true; s.player.setVelocity(0, 0);
+  }, { x, y }); await page.waitForTimeout(250);
+}
+try {
+  const host = await boot(), client = await boot();
+  const code = await host.evaluate(() => window.__manager.createRoom());
+  await client.evaluate(code => window.__manager.joinRoom(code), code);
+  await host.waitForFunction(() => window.__manager.room.players.length === 2);
+  await host.evaluate(() => window.__manager.selectCharacter('kai-mercer'));
+  await client.evaluate(() => window.__manager.selectCharacter('nyx'));
+  for (const p of pages) { await p.waitForFunction(() => window.__manager.room.players.every(p => p.character)); await p.evaluate(() => window.__manager.setReady(true)); }
+  await host.waitForFunction(() => window.__manager.canStart()); await host.evaluate(() => window.__manager.startGame());
+  await client.waitForFunction(() => window.__manager.room.status === 'PLAYING');
+  await Promise.all(pages.map(p => entrarFabricaHacking(p, true)));
+  await host.waitForFunction(() => window.__game.scene.getScene('Level1Parte2').coopRuntime.players.remotes.size === 1);
+  await host.evaluate(async () => {
+    const s = window.__game.scene.getScene('Level1Parte2');
+    const { findGeneratorInteraction } = await import('/js/interactions/FactoryGenerator.js');
+    const a = findGeneratorInteraction(s.map).object;
+    s.player.invulneravel = true; s.player.body.reset(a.x + a.width / 2, a.y + a.height / 2 - 15);
+    s.player.body.updateFromGameObject(); s.inventory.addItem('bateria', 1); s.inventory.addItem('gasolina', 1, { fuel: 1 });
+    s.coopRuntime.world.generator.requestInstall('bateria');
+  });
+  await host.waitForFunction(() => !!window.__manager.room.coopProgress.generator?.slots.bateria);
+  await host.evaluate(() => window.__game.scene.getScene('Level1Parte2').coopRuntime.world.generator.requestInstall('gasolina'));
+  await host.waitForFunction(() => !!window.__manager.room.coopProgress.generator?.slots.gasolina);
+  await host.evaluate(() => window.__game.scene.getScene('Level1Parte2').coopRuntime.world.generator.requestStart());
+  await client.waitForFunction(() => window.__game.scene.getScene('Level1Parte2').luzFabricaAcesa);
+  for (const p of pages) await posicionar(p, 1000, -1896);
+  await tocarInteracaoHacking(client); await client.locator('.hacking-overlay').waitFor(); await dispensarTutorial(client);
+  assert.equal(await host.evaluate(() => window.__game.scene.getScene('Level1Parte2').hackingTerminals.enviar({ op: 'abrir', tipo: 'fabrica' })), false);
+  const oldState = await host.evaluate(() => window.__game.scene.getScene('Level1Parte2').hackingTerminals.snapshot());
+  await client.keyboard.press('Escape'); await host.waitForFunction(() => !window.__game.scene.getScene('Level1Parte2').hackingTerminals.temSessao());
+  await client.locator('.hacking-overlay').waitFor({ state: 'detached' });
+  await client.evaluate(state => window.__game.scene.getScene('Level1Parte2').hackingTerminals.receberSnapshot(state), oldState);
+  assert.equal(await client.locator('.hacking-overlay').count(), 0);
+  await posicionar(client, 1000, -1896); await tocarInteracaoHacking(client); await client.locator('.hacking-overlay').waitFor(); await dispensarTutorial(client);
+  const path = resolverBreach((await sceneState(client)).model);
+  for (const cell of path) {
+    await client.locator(`[data-cell="${cell}"]`).click();
+    await client.waitForFunction(cell => window.__game.scene.getScene('Level1Parte2').hackingTerminals.estadoLocal()?.model.selecoes.includes(cell), cell);
+  }
+  for (const p of pages) await p.waitForFunction(() => window.__game.registry.get('factoryHackingComplete') === true);
+  await client.locator('.hacking-overlay').waitFor({ state: 'detached' });
+  const config = await host.evaluate(() => window.__game.registry.get('nullnetMission').config);
+  await client.waitForFunction(seed => window.__game.registry.get('nullnetMission')?.config.seed === seed, config.seed);
+  console.log('PASS: Breach pelo cliente, operador único, cancelamento, réplica antiga e semente compartilhada.');
+  {
+    await posicionar(client, -378, -2938); await tocarInteracaoHacking(client);
+    await client.getByRole('dialog', { name: 'AXIOM // BRUTEFORCE', exact: true }).waitFor();
+    await host.getByRole('button', { name: 'NULLNET · ARQUIVOS', exact: true }).click();
+    await host.getByRole('dialog', { name: 'NULLNET // INTELLIGENCE DATABASE', exact: true }).waitFor();
+    const firstFiles = await host.locator('.axiom-record-overlay').innerText();
+    assert.ok(firstFiles.includes('EV041_EDEN_NETWORK_ARCHIVE.LOG'));
+    assert.ok(firstFiles.includes('ACESSO BLOQUEADO · TERMINAL 02'));
+    assert.ok(!firstFiles.includes('EV041_ESCAPE_PROTOCOL.DAT'));
+    assert.equal(await host.evaluate(() => window.__game.scene.getScene('Level1Parte2').physics.world.isPaused), false);
+    await host.keyboard.press('Escape'); await resolverBruteforce(client);
+    for (const p of pages) {
+      await p.waitForFunction(() => window.__game.registry.get('factoryBruteforceComplete') === true);
+      assert.equal(await p.evaluate(() => window.__game.registry.get('bossAccessCardAuthenticated') === true), false);
+      assert.ok(await p.evaluate(() => window.__game.scene.getScene('Level1Parte2').portasFabrica.filter(p => ['porta02', 'porta03'].includes(p.nome)).every(p => p.estado === 'fechada' && p.colisao)));
+    }
+    for (const p of pages) {
+      await p.getByRole('button', { name: 'NULLNET · ARQUIVOS', exact: true }).click();
+      await p.getByRole('button', { name: 'REGISTROS', exact: true }).click();
+      const files = await p.locator('.axiom-record-overlay').innerText();
+      assert.ok(files.includes('EV041_EDEN_NETWORK_ARCHIVE.LOG') && files.includes('EV041_ESCAPE_PROTOCOL.DAT'));
+      await p.keyboard.press('Escape');
+    }
+    await host.evaluate(() => {
+      const s = window.__game.scene.getScene('Level1Parte2'), a = s.leitorCartaoFabrica.area;
+      s.inventory.addItem('card', 1); s.player.body.reset(a.x + a.width / 2, a.y + a.height + 25); s.player.body.updateFromGameObject();
+    }); await host.waitForTimeout(350); await tocarInteracaoHacking(host);
+    for (const p of pages) await p.waitForFunction(() => window.__game.registry.get('bossAccessCardAuthenticated') === true, null, { timeout: 30000 });
+    for (const p of pages) await p.waitForFunction(() => window.__game.scene.getScene('Level1Parte2').portasFabrica.filter(p => ['porta02', 'porta03'].includes(p.nome)).every(p => p.estado === 'aberta' && !p.colisao));
+    console.log('PASS: autorização compartilhada e duas portas sincronizadas com colisões removidas.');
+    await posicionar(host, -1093, -5520);
+    await host.waitForFunction(() => {
+      const s = window.__game.scene.getScene('Level1Parte2');
+      return s.preparacaoBoss?.pronto && s.novoBoss?.sprite?.active && s.coopRuntime.world.bossLoading.canStart();
+    }, null, { timeout: 90000 });
+    await host.evaluate(() => window.__game.scene.getScene('Level1Parte2').novoBoss.receberDano(100000));
+    for (const p of pages) await p.waitForFunction(() => window.__game.scene.getScene('Level1Parte2').novoBoss?.morto === true);
+    await posicionar(client, -300, -5835); await tocarInteracaoHacking(client); await client.locator('.memory-decryption').waitFor();
+    await resolverMemoria(client, config, 2);
+    await host.waitForFunction(() => window.__game.registry.get('nullnetMission').checkpoint.memoryModules === 2);
+    await client.keyboard.press('Escape'); await host.waitForFunction(() => !window.__game.scene.getScene('Level1Parte2').hackingTerminals.temSessao());
+    await posicionar(host, -300, -5835); await tocarInteracaoHacking(host); await host.locator('.memory-decryption').waitFor();
+    assert.equal((await sceneState(host)).model.recuperados, 2);
+    let operador = host, participantes = pages;
+    if (process.env.NULLNET_COOP_DISCONNECT === '1') {
+      await host.evaluate(() => window.__manager.leaveRoom());
+      await client.waitForFunction(() => window.__game.scene.getScene('Level1Parte2').coopRuntime.host && !window.__game.scene.getScene('Level1Parte2').hackingTerminals.temSessao());
+      await posicionar(client, -300, -5835); await tocarInteracaoHacking(client); await client.locator('.memory-decryption').waitFor();
+      assert.equal((await sceneState(client)).model.recuperados, 2);
+      assert.equal(await client.evaluate(() => window.__game.registry.get('nullnetMission').config.seed), config.seed);
+      operador = client; participantes = [client]; report.migration = true;
+      console.log('PASS: host operador desconectou; novo host recuperou dois arquivos e liberou o terminal.');
+    }
+    await resolverMemoria(operador, config);
+    await capturarHost(operador, config);
+    for (const p of participantes) await p.locator('.hacking-victory').waitFor({ timeout: 20000 });
+    for (const p of participantes) assert.equal(await p.evaluate(() => window.__game.registry.get('matrixZeroComplete')), true);
+    report.sharedEnding = true;
+    console.log(report.migration ? 'PASS: migração, checkpoint, HOST e encerramento no novo host.' : 'PASS: memória e HOST autoritativos, transferência de operador com checkpoint e encerramento em ambas as telas.');
+  }
+  assert.deepEqual(errors, []); writeFileSync(`${pasta}/nullnet-report.json`, JSON.stringify({ ...report, errors }, null, 2));
+} catch (error) {
+  for (const p of pages) console.error('DIAGNÓSTICO', await p.evaluate(() => {
+    const s = window.__game.scene.getScene('Level1Parte2');
+    return { snapshot: s.hackingTerminals.snapshot(), view: s.hackingTerminals.estadoLocal(),
+      vida: s.vida, input: s.input.enabled, menu: s.generatorMenuOpen, fps: window.__game.loop.actualFps,
+      host: s.coopRuntime?.host, room: window.__manager.room?.hostId };
+  }).catch(() => null));
+  throw error;
+} finally { await browser.close(); await new Promise(resolve => ws.close(resolve)); await new Promise(resolve => broker.close(resolve)); }

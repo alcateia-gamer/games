@@ -112,8 +112,14 @@ export default class MiniMapManager {
    */
   layout(camera) {
     if (!this.root || this.destroyed) return;
+    const databaseButton = this.scene.hackingTerminals?.databaseButton;
+    const canvas = this.scene.game.canvas;
+    const canvasHeight = canvas?.getBoundingClientRect().height;
+    const scaleY = canvasHeight > 0 ? canvasHeight / camera.height : 1;
+    const buttonHeight = databaseButton?.getBoundingClientRect().height || 44;
+    const databaseReservation = databaseButton && !databaseButton.hidden ? (10 + buttonHeight) / scaleY : 0;
     const result = miniMapLayout(camera, this.scene.botaoDesenvolvedor,
-      this.scene.botaoAtaque, this.scene.botaoColetarItem);
+      this.scene.botaoAtaque, this.scene.botaoColetarItem, databaseReservation);
     this.devScreenY = result.devScreenY;
     const visible = result.visible && !this.scene.generatorMenuOpen && !this.scene.devItemMenuOpen;
     this.root.setPosition(result.x, result.y).setScale(result.scaleX, result.scaleY)

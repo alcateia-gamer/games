@@ -5,9 +5,11 @@ const INTERVALO_LETRA_MS = 30;
 const TEMPO_LEITURA_MS = 3200;
 const OPACIDADE_FUNDO = 0.78;
 const RAIO_CAIXA = 9;
+const TEMA_NOVA = { accent: 0x248bea, accentCss: "#248bea", label: "#eff8ff" };
 
-export function criarFalaFlutuante(scene, nome = "player-speech-bubble", { replica = false } = {}) {
-  const tema = obterTemaPersonagem(scene.personagemSelecionada);
+export function criarFalaFlutuante(scene, nome = "player-speech-bubble", { replica = false, falante = "player" } = {}) {
+  let nova = falante === "nova", ancoraRemota = null;
+  let tema = nova ? TEMA_NOVA : obterTemaPersonagem(scene.personagemSelecionada);
   const texto = scene.add.text(0, 0, "", {
     fontFamily: "monospace", fontSize: "12px", fontStyle: "bold", color: tema.label, resolution: 3,
     align: "left", padding: { x: 9, y: 6 },
@@ -57,17 +59,39 @@ export function criarFalaFlutuante(scene, nome = "player-speech-bubble", { repli
     // O tempo para ler começa depois que a última letra aparece.
     if (reveladas === letras.length) timer = scene.time.delayedCall(TEMPO_LEITURA_MS, ocultar);
   };
+  const ancora = () => {
+    const player = scene.player;
+    if (nova) {
+      const pet = scene.companionPet;
+      if (pet?.active && pet.visible !== false) {
+        const topo = pet.getTopCenter?.();
+        return { x: pet.x + 8, y: (topo?.y ?? pet.y - (pet.displayHeight ?? 48) * (pet.originY ?? .5)) + 8 };
+      }
+      if (replica && ancoraRemota && player) return { x: player.x + ancoraRemota.dx, y: player.y + ancoraRemota.dy };
+      return null;
+    }
+    const topo = player?.getTopCenter?.();
+    return player && { x: player.x + 16, y: (scene.hitboxDanoPlayer?.y ?? topo?.y ??
+      player.y - (player.displayHeight ?? 48) * (player.originY ?? .5)) + 10 };
+  };
+  const aplicarTema = () => {
+    tema = nova ? TEMA_NOVA : obterTemaPersonagem(scene.personagemSelecionada);
+    texto.setColor?.(tema.label);
+    if (nativo) {
+      const fundo = `${tema.accentCss}${Math.round(OPACIDADE_FUNDO * 255).toString(16).padStart(2, "0")}`;
+      nativo.node.style.background = fundo; nativo.node.style.color = tema.label;
+      nativo.node.lastChild.style.background = fundo;
+    }
+  };
   const atualizar = () => {
     if (!visivel || destruido) return;
     const player = scene.player;
     if (!player?.active || player.visible === false || scene.morteEmAndamento ||
         scene.generatorMenuOpen || scene.devItemMenuOpen) { ocultar(); return; }
     revelar();
-    const topo = player.getTopCenter?.();
-    const x = player.x + 16;
-    // A área de dano acompanha o corpo; o frame pode ter grandes margens transparentes.
-    const y = (scene.hitboxDanoPlayer?.y ?? topo?.y ??
-      player.y - (player.displayHeight ?? 48) * (player.originY ?? 0.5)) + 10;
+    const pos = ancora();
+    if (!pos) { ocultar(); return; }
+    const { x, y } = pos;
     texto.setPosition(x, y).setVisible(true);
     ponta.setPosition(x, y).setVisible(true);
     nativo?.setPosition(x, y).setVisible(true);
@@ -85,6 +109,8 @@ export function criarFalaFlutuante(scene, nome = "player-speech-bubble", { repli
       ultimaFrase = opcoes[(opcoes.indexOf(anterior) + 1) % opcoes.length];
       ultimasPorGrupo.set(opcoes, ultimaFrase);
       ocultar();
+      nova = falante === "nova" || /^N\.?O\.?V\.?A\.?(?:\s|:|\/)/i.test(ultimaFrase);
+      aplicarTema();
       ultimaEm = instante;
       versao++;
       letras = segmentador ? [...segmentador.segment(ultimaFrase)].map(p => p.segment) : Array.from(ultimaFrase);
@@ -99,10 +125,13 @@ export function criarFalaFlutuante(scene, nome = "player-speech-bubble", { repli
     atualizar,
     ocultar,
     snapshot() {
-      return visivel ? { nome, frase: ultimaFrase, versao, decorrido: Math.max(0, agora() - ultimaEm) } : null;
+      const pos = ancora(), player = scene.player;
+      return visivel ? { nome, frase: ultimaFrase, versao, decorrido: Math.max(0, agora() - ultimaEm),
+        ...(nova ? { falante: 'nova', ancora: pos && player ? { dx: pos.x - player.x, dy: pos.y - player.y } : null } : {}) } : null;
     },
     aplicarEstadoRede(estado) {
       if (!estado) { ocultar(); return; }
+      if (estado.falante === 'nova' && Number.isFinite(estado.ancora?.dx) && Number.isFinite(estado.ancora?.dy)) ancoraRemota = estado.ancora;
       if (estado.versao === versao && estado.frase === ultimaFrase) return;
       fala.mostrar(estado.frase);
       versao = estado.versao;

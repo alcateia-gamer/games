@@ -506,6 +506,7 @@ export class CoopRuntime {
     return true;
   }
   changeAuthority(host) {
+    const bossDerrotado = this.replica.encounter?.morto === true;
     const previousNow = this.world.bossLoading.now();
     this.world.restoreIntro();
     this.host = host;
@@ -518,7 +519,14 @@ export class CoopRuntime {
     this.scene.inimigos = []; this.scene.novoBoss = null;
     for (const entry of this.players.remotes.values()) if (!entry.context) this.players.prepareContext(entry);
     this.prepareAuthority();
-    if (this.world.bossLoading.state?.phase === "intro" && this.scene.preparacaoBoss?.pronto)
+    // A réplica já confirmou a vitória. Migrar a autoridade não inicia outra batalha.
+    if (bossDerrotado && this.scene.novoBoss) {
+      const encontro = this.scene.novoBoss;
+      encontro.limpar?.();
+      Object.assign(encontro, { morto: true, encerrado: true, vida: 0, estado: 'derrotada' });
+      this.scene.novoBoss = encontro;
+    }
+    if (!bossDerrotado && this.world.bossLoading.state?.phase === "intro" && this.scene.preparacaoBoss?.pronto)
       this.prepareBossEncounter();
     this.world.bossLoading.retimeAfterMigration(previousNow);
     this.world.restore();

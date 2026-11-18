@@ -197,7 +197,7 @@ export function worldToMiniMap(transform, x, y) {
 /**
  * Calcula posição, escala e visibilidade do minimapa sem sobrepor os botões de ação.
  */
-export function miniMapLayout(camera, dev, attack, pickup) {
+export function miniMapLayout(camera, dev, attack, pickup, reservedBelowDev = 0) {
   const zoomX = camera.zoomX || camera.zoom || 1, zoomY = camera.zoomY || camera.zoom || 1;
   const ox = camera.width * camera.originX, oy = camera.height * camera.originY;
   const top = 12;
@@ -209,7 +209,7 @@ export function miniMapLayout(camera, dev, attack, pickup) {
       oy + (button.y - oy) * zoomY - button.displayHeight * zoomY / 2 - 12);
   }
   const size = Math.max(0, Math.min(1, (camera.width - 24) / MINI_MAP_SIZE,
-    (bottom - top - 12 - devHeight) / contentHeight));
+    (bottom - top - 12 - devHeight - Math.max(0, reservedBelowDev)) / contentHeight));
   return { x: ox + (camera.width - 12 - MINI_MAP_SIZE * size - ox) / zoomX,
     y: oy + (top - oy) / zoomY, scaleX: size / zoomX, scaleY: size / zoomY,
     devScreenY: size >= 0.35 ? top + contentHeight * size + 12 + devHeight / 2 : 24,

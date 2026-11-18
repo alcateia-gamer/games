@@ -1,13 +1,24 @@
 import { BreachPuzzle } from './BreachPuzzle.js';
-import { MatrixPuzzle } from './MatrixPuzzle.js';
+import { CoreInvasion } from './CoreInvasion.js';
+import { BruteforcePuzzle } from './BruteforcePuzzle.js';
+import { gerarMissao } from './MissionIntelligence.js';
 /** Uma sessão autoritativa, um operador, comandos ordenados e conclusão idempotente. */
 export class HackingSession {
-  constructor(onComplete = () => {}) { this.atual = null; this.serial = 0; this.onComplete = onComplete; }
-  abrir(tipo, owner, registro = false) {
-    if (this.atual || !['fabrica', 'matrix'].includes(tipo) || !owner) return false;
+  constructor(onComplete = () => {}, missao = () => ({ config: gerarMissao(1) }), salvar = () => {}) {
+    this.atual = null; this.serial = 0; this.onComplete = onComplete; this.missao = missao; this.salvar = salvar;
+  }
+  criarModel(tipo, seed) {
+    const m = this.missao();
+    return tipo === 'fabrica' ? new BreachPuzzle(seed) : tipo === 'bruteforce' ? new BruteforcePuzzle(seed)
+      : new CoreInvasion(m.config, m.checkpoint, this.salvar, seed);
+  }
+  tipoTutorial(s) { const view = s.model.snapshot(); return s.tipo !== 'matrix' ? s.tipo : view.etapaTipo === 'memory' ? `memory-${view.modulo}` : 'host'; }
+  abrir(tipo, owner) {
+    if (this.atual || !['fabrica', 'bruteforce', 'matrix'].includes(tipo) || !owner) return false;
     const seed = (Date.now() + ++this.serial * 997) >>> 0;
     this.atual = { id: `${owner}:${seed}:${this.serial}`, tipo, owner, seed, seq: 0, terminou: false,
-      concluidoMs: 0, model: tipo === 'fabrica' ? new BreachPuzzle(seed) : new MatrixPuzzle(registro) };
+      concluidoMs: 0, model: this.criarModel(tipo, seed) };
+    this.atual.tutorial = tipo !== 'matrix'; this.atual.tutorialTipo = this.tipoTutorial(this.atual);
     return true;
   }
   comando(owner, payload) {
@@ -16,27 +27,34 @@ export class HackingSession {
     s.seq = payload.seq;
     if (payload.op === 'cancelar') { this.atual = null; return true; }
     if (s.terminou) return false;
+    if (payload.op === 'tutorial' && typeof payload.valor === 'boolean' && s.model.snapshot().estado === 'ativo') {
+      s.tutorial = payload.valor; return true;
+    }
+    if (s.tutorial) return false;
     if (payload.op === 'reiniciar' && s.model.estado === 'falha') {
-      s.model = s.tipo === 'fabrica' ? new BreachPuzzle(++s.seed) : new MatrixPuzzle(s.model.registro); return true;
+      s.model = this.criarModel(s.tipo, ++s.seed); s.tutorial = true; s.tutorialTipo = this.tipoTutorial(s); return true;
     }
     if (s.tipo === 'fabrica') {
       if (payload.op === 'selecionar') return s.model.selecionar(payload.valor);
       if (payload.op === 'confirmar' && s.model.concluidos.includes('portas')) { s.model.finalizar(); return true; }
     } else {
-      if (payload.op === 'mover') return s.model.mover(payload.x, payload.y);
-      return s.model.acao(payload.op, payload.valor);
+      const accepted = s.model.acao(payload.op, payload.valor);
+      if (accepted) s.tutorialTipo = this.tipoTutorial(s);
+      return accepted;
     }
     return false;
   }
   atualizar(delta) {
     const s = this.atual;
     if (!s || !Number.isFinite(delta)) return;
-    s.model.atualizar(delta);
+    if (!s.tutorial) s.model.atualizar(delta);
+    const tipo = this.tipoTutorial(s);
+    if (tipo !== s.tutorialTipo) { s.tutorialTipo = tipo; s.tutorial = s.tipo !== 'matrix'; }
     if (s.model.estado === 'sucesso' && !s.terminou) {
       s.terminou = true;
       this.onComplete(s.tipo, s.model.snapshot());
     }
-    if (s.terminou && s.tipo === 'fabrica') {
+    if (s.terminou && s.tipo !== 'matrix') {
       s.concluidoMs += Math.max(0, Math.min(delta, 100));
       if (s.concluidoMs >= 1800) this.atual = null;
     }
@@ -44,6 +62,6 @@ export class HackingSession {
   cancelar(owner) { if (this.atual?.owner === owner) this.atual = null; }
   snapshot() {
     const s = this.atual;
-    return s ? { id: s.id, tipo: s.tipo, owner: s.owner, seq: s.seq, terminou: s.terminou, model: s.model.snapshot() } : null;
+    return s ? { id: s.id, tipo: s.tipo, owner: s.owner, seq: s.seq, terminou: s.terminou, model: { ...s.model.snapshot(), tutorial: s.tutorial } } : null;
   }
 }

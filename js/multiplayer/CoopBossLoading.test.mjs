@@ -63,6 +63,8 @@ function room(count = 2, roomCode = "TEST") {
       fecharParaBoss() { if (this.bloqueadaPorBoss) return; this.bloqueadaPorBoss = true; this.estado = "fechando"; this.fechamentos++; },
       aplicarEstadoRede(value) { Object.assign(this, value); },
     }));
+    // A fixture do carregamento recebe a autorização já validada; o gate real é testado em FactoryDoor.
+    scene.liberarPortasArenaAutorizadas = () => true;
     scene.abrirPortasArenaAposCartao = () => {
       if (scene.portasFabrica.some(p => p.estado !== "fechada" || p.bloqueadaPorBoss)) return false;
       scene.portasFabrica.forEach(p => { p.estado = "abrindo"; }); return true;
@@ -422,4 +424,18 @@ test("cartão confirmado enquanto host termina a fábrica é reenviado sem exigi
   assert.ok(host.world.bossLoading.state);
   assert.ok(h.nodes.every(n => n.scene.load.starts === 1));
   assert.equal(h.sent.filter(a => a.kind === "bossAccess").length, 2);
+});
+
+
+test('migração após vitória preserva SENTINEL derrotado sem repetir combate ou evento', () => {
+  const events = new EventEmitter(); let limpezas = 0, preparacoes = 0, restores = 0;
+  const scene = { events, novoBoss: { morto: true } };
+  const r = { scene, manager: {}, players: { remotes: new Map() }, music: { changeAuthority() {} },
+    replica: { encounter: scene.novoBoss, destroy() { scene.novoBoss = null; } }, receiver: { destroy() {} },
+    world: { restoreIntro() {}, restore() { restores++; }, bossLoading: { now: () => 1, state: { phase: 'complete' }, retimeAfterMigration() {} } },
+    prepareAuthority() { scene.novoBoss = { config: {}, limpar() { limpezas++; scene.novoBoss = null; } }; },
+    prepareBossEncounter() { preparacoes++; } };
+  CoopRuntime.prototype.changeAuthority.call(r, true);
+  assert.equal(scene.novoBoss.morto, true); assert.equal(scene.novoBoss.encerrado, true); assert.equal(scene.novoBoss.vida, 0);
+  assert.equal(limpezas, 1); assert.equal(preparacoes, 0); assert.equal(restores, 1);
 });

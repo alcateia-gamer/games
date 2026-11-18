@@ -100,7 +100,7 @@ body {
 .upgrade-terminal button { font:inherit; color:#d2ffe7; background:#061a13; border:1px solid #216e51; cursor:pointer; padding:10px; transition:background .15s,border-color .15s; }
 .upgrade-terminal button:hover, .upgrade-terminal button:focus-visible { background:#103a29; border-color:#55ffad; outline:1px solid #55ffad; }
 .upgrade-terminal button:disabled { opacity:.5; cursor:default; }
-.upgrade-shell { width:min(1380px,100%); max-height:100%; display:flex; flex-direction:column; border:1px solid #55ffad; background:repeating-linear-gradient(0deg,#55ffad03 0 1px,transparent 1px 5px),#020b08; box-shadow:0 0 40px #55ffad12; }
+.upgrade-shell { display:flex; flex-direction:column; border:1px solid #55ffad; background:repeating-linear-gradient(0deg,#55ffad03 0 1px,transparent 1px 5px),#020b08; box-shadow:0 0 40px #55ffad12; }
 .upgrade-shell header { display:flex; align-items:center; gap:18px; padding:14px 22px; border-bottom:1px solid #216e51; }
 .upgrade-shell header strong { letter-spacing:4px; font-size:20px; }
 .upgrade-shell small { display:block; color:#86bba2; font-size:12px; }
@@ -137,14 +137,18 @@ body {
 .upgrade-shell footer { padding:12px 22px; font-size:10px; color:#86bba2; border-top:1px solid #216e51; }
 .upgrade-shell footer span { float:right; }
 @keyframes upgrade-confirm { from { background:#55ffad55; } to { background:transparent; } }
-@media(max-width:1000px) { .upgrade-terminal { font-size:12px; } .upgrade-grid>aside,.upgrade-grid>section { padding:14px; } .upgrade-grid h2 { font-size:16px; } .upgrade-details dl { font-size:10px; } }
-@media(max-width:650px) { .upgrade-grid { grid-template-columns:1fr; } .upgrade-grid>aside,.upgrade-grid>section { overflow:visible; border-left:0; border-top:1px solid #216e51; } .upgrade-scan { min-height:180px; } .upgrade-scan img { height:180px; } .upgrade-shell header { padding:8px; gap:8px; } .upgrade-shell header strong { font-size:14px; } .upgrade-shell header small { font-size:9px; } .upgrade-shell nav { padding:8px; gap:4px; } .upgrade-shell nav button { font-size:10px; } .upgrade-shell footer span { float:none; display:block; } }
 @media(prefers-reduced-motion:reduce) { .upgrade-terminal * { animation:none!important; transition:none!important; } }
 
 .upgrade-terminal { touch-action:pan-y; }
 .upgrade-regions button::before { content:""; display:inline-block; width:10px; border-top:1px solid #55ffad; margin-right:4px; vertical-align:middle; }
 /* Mesmo componente do meio da última linha usado no contador do mapa. */
 .upgrade-balance::before { content:""; display:inline-block; width:32px; height:28px; margin-right:8px; vertical-align:middle; background:url("assets/COLETAVEIS/sucatas.png") -192px -358.51px / 416.54px 425.22px no-repeat; image-rendering:auto; }
+.upgrade-terminal { padding:max(4px,env(safe-area-inset-top)) max(4px,env(safe-area-inset-right)) max(4px,env(safe-area-inset-bottom)) max(4px,env(safe-area-inset-left)); }
+.upgrade-shell { min-height:0; }
+.upgrade-shell header,.upgrade-shell nav,.upgrade-shell footer { flex-shrink:0; }
+.upgrade-grid { flex:1; min-height:0; overflow:hidden; }
+.upgrade-grid>aside,.upgrade-grid>section { min-height:0; overscroll-behavior:contain; }
+.upgrade-shell { width:1380px; height:1048px; max-width:none; max-height:none; }
 
 /* A arte industrial mantém sua proporção; vídeo e diálogo seguem o vidro CRT. */
 .cutscene-loading {

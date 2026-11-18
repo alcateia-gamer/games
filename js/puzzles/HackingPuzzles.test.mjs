@@ -46,9 +46,10 @@ test('sessão só aceita seu operador, ID e ordem; conclusão não duplica recom
   const rewards = [], s = new HackingSession((...r) => rewards.push(r));
   assert.ok(s.abrir('fabrica', 'a')); assert.equal(s.abrir('matrix', 'b'), false);
   const id = s.atual.id, path = solucao(s.atual.model);
+  assert.ok(s.comando('a', { id, seq: 1, op: 'tutorial', valor: false }));
   assert.equal(s.comando('b', { id, seq: 1, op: 'selecionar', valor: path[0] }), false);
   assert.equal(s.comando('a', { id: 'velho', seq: 1, op: 'cancelar' }), false);
-  for (const [i, valor] of path.entries()) assert.ok(s.comando('a', { id, seq: i + 1, op: 'selecionar', valor }));
+  for (const [i, valor] of path.entries()) assert.ok(s.comando('a', { id, seq: i + 2, op: 'selecionar', valor }));
   s.atualizar(50); s.atualizar(50); assert.equal(rewards.length, 1);
   assert.equal(s.comando('a', { id, seq: 1, op: 'cancelar' }), false);
   for (let i = 0; i < 20; i++) s.atualizar(100);
@@ -118,7 +119,8 @@ test('cancelar, desconectar ou reiniciar não conclui puzzles nem aceita comando
   assert.equal(session.snapshot(), null); assert.equal(rewards, 0);
   session.abrir('fabrica', 'b'); const state = session.snapshot();
   assert.equal(session.comando('a', { id: old.id, seq: 100, op: 'confirmar' }), false);
+  assert.ok(session.comando('b', { id: state.id, seq: 1, op: 'tutorial', valor: false }));
   session.atual.model.estado = 'falha';
-  assert.ok(session.comando('b', { id: state.id, seq: 1, op: 'reiniciar' }));
+  assert.ok(session.comando('b', { id: state.id, seq: 2, op: 'reiniciar' }));
   assert.equal(session.snapshot().model.estado, 'ativo'); assert.equal(rewards, 0);
 });

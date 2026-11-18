@@ -1,8 +1,11 @@
+import { MEMORY_PROGRESS_KEY } from './HackingProgress.js';
 export const HACKING_KEYS = Object.freeze({ fabrica: 'factoryHackingComplete',
-  robos: 'factoryHackingRobots', registro: 'factoryHackingIntel', final: 'matrixZeroComplete' });
+  robos: 'factoryHackingRobots', registro: 'factoryHackingIntel', bruteforce: 'factoryBruteforceComplete', cartao: 'bossAccessCardAuthenticated',
+  memory: MEMORY_PROGRESS_KEY, host: 'hostConnectionComplete', final: 'matrixZeroComplete' });
 export const TERMINAIS_HACKING = Object.freeze({
   fabrica: Object.freeze({ x: 1032, y: -1954, alcance: 88, nome: 'SEGURANÇA AXIOM', cor: 0x51e7cb }),
-  matrix: Object.freeze({ x: -242, y: -5882, alcance: 88, nome: 'NÚCLEO · MATRIX', cor: 0xbc95ff }),
+  bruteforce: Object.freeze({ x: -378, y: -2996, alcance: 100, nome: 'EV-041 · RECUPERAR ARQUIVO', cor: 0x51e7cb }),
+  matrix: Object.freeze({ x: -242, y: -5882, alcance: 88, nome: 'NÚCLEO · AXIOM', cor: 0xbc95ff }),
 });
 export const MATRIX_NODES = Object.freeze({
   entrada: { x: 72, y: 350, label: 'I/O · VÍRUS ZERO', tipo: 'entrada' },

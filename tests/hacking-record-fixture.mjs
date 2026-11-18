@@ -1,6 +1,7 @@
 /** Phaser/Arcade reais; isola a leitura dos assets pesados do combate.
  * O progresso inicial e a conexão são fixtures, sem simular transporte de rede. */
 import { criarHackingFabrica } from '../js/interactions/FactoryHacking.js';
+import { INTELLIGENCE_KEY, gerarMissao } from '../js/puzzles/MissionIntelligence.js';
 import { HACKING_KEYS as K } from '../js/puzzles/HackingConfig.js';
 
 export async function criarFixtureRegistro(mode = 'solo') {
@@ -22,6 +23,7 @@ export async function criarFixtureRegistro(mode = 'solo') {
           if (this.multiplayer) this.coopRuntime = { host: mode === 'host',
             manager: { playerId: mode, room: { hostId: 'host' }, mqtt: { connected: true }, sendCoopAction() {} },
             localContext: this, players: { remotes: new Map() } };
+          this.game.registry.set(INTELLIGENCE_KEY, { config: gerarMissao(41), checkpoint: {} });
           this.game.registry.set(K.fabrica, false);
           this.e = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E);
           criarHackingFabrica(this); resolve(g);

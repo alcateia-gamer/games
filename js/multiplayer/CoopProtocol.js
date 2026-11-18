@@ -1,3 +1,4 @@
+import { mesclarCheckpoint, LEGACY_NETWORK_KEY, MEMORY_PROGRESS_KEY } from '../puzzles/HackingProgress.js';
 /** Limites do protocolo cooperativo. Movimento é descartável; ações são deduplicadas. */
 export const COOP = Object.freeze({ version: 2, inputHz: 20, worldHz: 12,
   keyframeMs: 2000, transitionGraceMs: 60000, maxNodes: 900, maxCommands: 8192, maxEffects: 96,
@@ -29,7 +30,12 @@ export function mergeBossPreparation(room, previous, next) {
 export function mergeCoopProgress(previous = {}, next = {}) {
   const flags = { ...previous?.flags };
   for (const [key, value] of Object.entries(next?.flags || {})) if (value === true) flags[key] = true;
-  return { ...previous, ...next, flags,
+  if (flags[LEGACY_NETWORK_KEY]) { flags[MEMORY_PROGRESS_KEY] = true; delete flags[LEGACY_NETWORK_KEY]; }
+  const a = previous?.intelligence, b = next?.intelligence;
+  const base = a ?? b;
+  const intelligence = !a || !b || a.config?.seed !== b.config?.seed ? base && { ...base, checkpoint: mesclarCheckpoint(base.checkpoint) } : {
+    config: a.config, checkpoint: mesclarCheckpoint(a.checkpoint, b.checkpoint) };
+  return { ...previous, ...next, ...(intelligence ? { intelligence } : {}), flags,
     collected: { ...previous?.collected, ...next?.collected },
     ...((previous?.inventoryDrops || next?.inventoryDrops) ? {
       inventoryDrops: { ...previous?.inventoryDrops, ...next?.inventoryDrops },

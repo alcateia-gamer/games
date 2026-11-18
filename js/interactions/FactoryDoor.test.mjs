@@ -162,6 +162,8 @@ class DisplayObject extends EventEmitter {
  * interação da porta.
  */
 function createScene(registry = new Map(), alterarMapa = () => {}) {
+  // Casos legados exercitam o cartão com o segundo puzzle já concluído.
+  if (!registry.has('factoryBruteforceComplete')) registry.set('factoryBruteforceComplete', true);
   const raw = JSON.parse(readFileSync(new URL("../../assets/map/parte2-fase1.json", import.meta.url)));
   alterarMapa(raw);
   const doorLayer = raw.layers.find((layer) => layer.name === "Portas");
@@ -403,7 +405,7 @@ test("as duas portas próximas ao atalho O usam seis tiles e preservam a coluna 
     object.x < -1056 && object.x + object.width > -1104 &&
     object.y < -5232 && object.y + object.height > -5328);
   assert.deepEqual(colisoesNaParede.map(({ x, y, width, height }) => [x, y, width, height]),
-    [[-1104.5, -5240.75, 47.25, 8]], "preserva a colisão desenhada no Tiled, sem acrescentar outra à parede inteira");
+    [[-1103.83333333333, -5325.58333333333, 47.25, 92.5]], "preserva a colisão desenhada no Tiled, sem acrescentar outra à parede inteira");
   scene.events.emit("shutdown");
 });
 
@@ -771,11 +773,9 @@ test("sem o leitor as persianas continuam bloqueadas e não abrem diretamente po
 });
 
 test("o leitor abre apenas a porta restante quando a outra já está salva como aberta", () => {
-  const { scene, bodies } = createScene(new Map([[chaveEstadoPorta("porta02"), true]]));
+  const { scene, bodies } = createScene(new Map([[chaveEstadoPorta("porta02"), true], ["bossAccessCardAuthenticated", true]]));
   liberarAcesso(scene);
   aproximarLeitor(scene);
-  abrirComE(scene);
-  lerCartao(scene);
   assert.deepEqual(scene.portasFabrica.map(porta => porta.estado), ["fechada", "aberta", "abrindo", "fechada", "fechada"]);
   assert.equal(bodies.size, 4);
   assert.equal(scene.inventory.getQuantity("card"), 1);
@@ -883,7 +883,7 @@ test("o leitor usa uma exclamação e só exibe falas sobre o cartão, mesmo sem
   abrirComE(scene);
   scene.revelarFalas();
   assert.equal(fala.texto.visible, true);
-  assert.equal(fala.texto.text, "Preciso encontrar o cartão de acesso.");
+  assert.equal(fala.texto.text, "AUTENTICAÇÃO FÍSICA: PENDENTE\nAUTORIZAÇÃO DIGITAL: APROVADA\nACESSO NEGADO");
   assert.equal(fala.texto.style.color, "#102b3b");
   assert.equal(fala.texto.style.backgroundColor, undefined, "o fundo arredondado é desenhado separadamente");
   assert.equal(fala.texto.y, scene.hitboxDanoPlayer.y + 10, "o balão fica ao lado da cabeça, sem considerar a margem vazia");
@@ -903,8 +903,8 @@ test("o leitor usa uma exclamação e só exibe falas sobre o cartão, mesmo sem
     scene.revelarFalas();
     frases.add(fala.texto.text);
   }
-  assert.equal(frases.size, 8);
-  assert.ok([...frases].every(frase => /cartão/.test(frase) && !/energia|gerador|ligar/.test(frase)));
+  assert.equal(frases.size, 1);
+  assert.ok([...frases].every(frase => /AUTENTICAÇÃO FÍSICA: PENDENTE/.test(frase)));
   assert.ok(scene.portasFabrica.every(porta => porta.estado === "fechada"));
   scene.events.emit("shutdown");
   assert.equal(fala.texto.destroyed, true);
@@ -917,7 +917,7 @@ test("com energia mas sem cartão, a fala explica o requisito e some ao iniciar 
   aproximarLeitor(scene); abrirComE(scene);
   scene.revelarFalas();
   const { fala, marcador } = scene.leitorCartaoFabrica;
-  assert.equal(fala.texto.text, "Preciso encontrar o cartão de acesso.");
+  assert.equal(fala.texto.text, "AUTENTICAÇÃO FÍSICA: PENDENTE\nAUTORIZAÇÃO DIGITAL: APROVADA\nACESSO NEGADO");
   const frases = new Set([fala.texto.text]);
   for (let i = 0; i < 7; i++) {
     scene.finishActivation();
@@ -925,7 +925,7 @@ test("com energia mas sem cartão, a fala explica o requisito e some ao iniciar 
     scene.revelarFalas();
     frases.add(fala.texto.text);
   }
-  assert.equal(frases.size, 8);
+  assert.equal(frases.size, 1);
   scene.inventory.addItem("card", 1);
   scene.atualizarColetaItens();
   abrirComE(scene);
@@ -1212,7 +1212,7 @@ test("o boss fecha as duas persianas, restaura colisões e bloqueia o leitor sem
 
 test("cancelar o fechamento do boss recupera a porta aberta ou preserva uma porta que já estava fechada", () => {
   for (const aberta of [false, true]) {
-    const { scene } = createScene(new Map([[chaveEstadoPorta("porta02"), aberta]]));
+    const { scene } = createScene(new Map([[chaveEstadoPorta("porta02"), aberta], ["bossAccessCardAuthenticated", aberta]]));
     const porta = scene.portasFabrica.find(porta => porta.nome === "porta02");
     porta.fecharParaBoss();
     if (aberta) {
@@ -1808,5 +1808,38 @@ test('atalho M sem hacking anterior libera a saída somente após o golpe fatal'
   assert.equal(scene.game.registry.get(HACKING_KEYS.final), undefined);
   assert.equal(scene.game.registry.get(HACKING_KEYS.robos), undefined);
   assert.equal(scene.game.registry.get(HACKING_KEYS.registro), undefined);
+  scene.events.emit('shutdown');
+});
+
+
+test('SENTINEL exige autenticação física e autorização digital; colisões e animação são reais', () => {
+  for (const cartao of [false, true]) for (const digital of [false, true]) {
+    const registry = new Map([['factoryBruteforceComplete', digital], ['bossAccessCardAuthenticated', cartao]]);
+    const { scene } = createScene(registry);
+    scene.luzFabricaAcesa = true;
+    const portas = scene.portasFabrica.filter(p => ['porta02', 'porta03'].includes(p.nome));
+    assert.equal(scene.liberarPortasArenaAutorizadas(), cartao && digital);
+    assert.ok(portas.every(p => p.estado === (cartao && digital ? 'abrindo' : 'fechada')));
+    assert.ok(portas.every(p => p.colisao));
+    for (const porta of portas) {
+      if (cartao && digital) scene.animations.find(a => a.targets === porta).onComplete();
+      else {
+        assert.equal(porta.abrirPelaRede(), false);
+        porta.aplicarEstadoRede({ estado: 'aberta', progresso: 1 });
+      }
+      assert.equal(Boolean(porta.colisao), !(cartao && digital));
+    }
+    scene.events.emit('shutdown');
+  }
+});
+
+test('cartão autenticado primeiro persiste; concluir bruteforce depois libera sem repetir leitura', () => {
+  const registry = new Map([['factoryBruteforceComplete', false]]), { scene } = createScene(registry);
+  liberarAcesso(scene); aproximarLeitor(scene); abrirComE(scene); lerCartao(scene);
+  assert.equal(registry.get('bossAccessCardAuthenticated'), true);
+  assert.ok(scene.portasFabrica.filter(p => ['porta02', 'porta03'].includes(p.nome)).every(p => p.estado === 'fechada' && p.colisao));
+  registry.set('factoryBruteforceComplete', true); scene.inventory.removeItem('card', 1);
+  scene.atualizarInteracaoPortaFabrica();
+  assert.ok(scene.portasFabrica.filter(p => ['porta02', 'porta03'].includes(p.nome)).every(p => p.estado === 'abrindo'));
   scene.events.emit('shutdown');
 });

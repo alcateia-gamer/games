@@ -2,6 +2,7 @@
  * @file Portas da fábrica abertas por interação, com persianas animadas e portas instantâneas.
  */
 
+import { podeEntrarBoss, feedbackAcesso } from "../puzzles/MissionIntelligence.js";
 import { calcularDepthAtor } from "../map/ProfundidadeMapa.js";
 import { distanceToInteractionArea, findFactoryInteraction } from "./FactoryGenerator.js";
 import { criarInteracaoLeitorCartao } from "./FactoryCardReader.js";
@@ -138,7 +139,7 @@ function criarPorta(scene, layer, area, fala) {
   ).setOrigin(0.5, 1).setDepth(200).setVisible(false);
 
   const stateKey = chaveEstadoPorta(area.name);
-  const alreadyOpen = hackingLiberado(scene) && scene.game.registry.get(stateKey) === true &&
+  const alreadyOpen = (!PORTAS_COM_ACESSO.has(area.name) || podeEntrarBoss(scene.game.registry)) && hackingLiberado(scene) && scene.game.registry.get(stateKey) === true &&
     (area.name !== "porta05" || scene.novoBoss?.morto === true);
   const criarColisao = () => scene.collisionGroup.create(
     area.x + area.width / 2, area.y + area.height / 2,
@@ -190,6 +191,7 @@ function criarPorta(scene, layer, area, fala) {
     if (!exigeCartao && !PORTAS_COM_ENERGIA.has(area.name)) return null;
     const requisitos = [];
     if (scene.luzFabricaAcesa !== true) requisitos.push("SEM ENERGIA");
+    if (exigeCartao && !podeEntrarBoss(scene.game.registry)) requisitos.push(feedbackAcesso(scene.game.registry));
     if (exigeCartao && !(contexto.inventory?.getQuantity("card") > 0)) requisitos.push("REQUER CARTÃO DE ACESSO");
     return requisitos.length ? requisitos.join(" | ") : null;
   };
@@ -206,6 +208,7 @@ function criarPorta(scene, layer, area, fala) {
 
   // O host transmite também o progresso das persianas e seu bloqueio temporário.
   porta.aplicarEstadoRede = estado => {
+    if (PORTAS_COM_ACESSO.has(area.name) && ["abrindo", "aberta"].includes(estado.estado) && !podeEntrarBoss(scene.game.registry)) return;
     if (estado.estado === "abrindo" && porta.estado !== "abrindo" && !scene.coopAudio) som.tocar(estado.progresso);
     else if (estado.estado === "fechada" || estado.estado === "fechando") som.parar();
     porta.estado = estado.estado;
@@ -219,6 +222,7 @@ function criarPorta(scene, layer, area, fala) {
   /** O host executa a mesma abertura para interações locais e pedidos dos clientes. */
   const iniciarAbertura = () => {
     if (encerrada || !hackingLiberado(scene) || porta.bloqueadaPorBoss || scene.cenaEntradaBossAtiva || porta.estado !== "fechada") return false;
+    if (PORTAS_COM_ACESSO.has(area.name) && !podeEntrarBoss(scene.game.registry)) return false;
     porta.estado = "abrindo";
     scene.interacaoMundoProxima = null;
     prompt?.setVisible(false);
@@ -368,31 +372,48 @@ function criarInteracaoPortaFabrica(scene) {
   const terminal = marcadorLeitor ? criarInteracaoLeitorCartao(scene, {
     podeUsar: comPainel => leitorProximo(comPainel) &&
       portasLeitor.some(controle => controle.porta.estado === "fechada") &&
-      portasLeitor.every(controle => !controle.porta.bloqueadaPorBoss && !controle.motivoBloqueio()),
+      portasLeitor.every(controle => !controle.porta.bloqueadaPorBoss) &&
+      scene.luzFabricaAcesa === true && scene.inventory?.getQuantity("card") > 0,
     abrirPortas: () => {
       if (!leitorProximo()) return;
       if (scene.coopRuntime) return scene.coopRuntime.world.confirmarCartao();
-      for (const controle of portasLeitor) controle.abrir(areaLeitor);
+      scene.abrirPortasArenaAposCartao(scene);
     },
   }) : null;
   scene.leitorCartaoFabrica = marcadorLeitor ? { area: areaLeitor, marcador: marcadorLeitor, terminal, fala } : null;
-  scene.abrirPortasArenaAposCartao = contexto => {
-    if (scene.hackingTerminals?.temSessao?.()) return false;
-    if (!portasLeitor.length || portasLeitor.some(c => !c.podeInteragir(areaLeitor, contexto) || c.motivoBloqueio(contexto))) return false;
-    fala.ocultar();
-    for (const controle of portasLeitor) controle.porta.abrirPelaRede();
+  scene.liberarPortasArenaAutorizadas = () => {
+    if (!podeEntrarBoss(scene.game.registry) || !hackingLiberado(scene) || !scene.luzFabricaAcesa ||
+        scene.hackingTerminals?.temSessao?.() || scene.cenaEntradaBossAtiva ||
+        portasLeitor.some(c => c.porta.bloqueadaPorBoss)) return false;
+    for (const controle of portasLeitor) if (controle.porta.estado === 'fechada') controle.porta.abrirPelaRede();
     return true;
+  };
+  scene.abrirPortasArenaAposCartao = contexto => {
+    if (scene.hackingTerminals?.temSessao?.() || !scene.luzFabricaAcesa ||
+        !(contexto.inventory?.getQuantity('card') > 0) || !portasLeitor.length ||
+        portasLeitor.some(c => !c.podeInteragir(areaLeitor, contexto))) return false;
+    scene.game.registry.set('bossAccessCardAuthenticated', true);
+    fala.mostrar(feedbackAcesso(scene.game.registry));
+    return scene.liberarPortasArenaAutorizadas();
   };
   const passarCartao = () => {
     if (!leitorProximo() || !portasLeitor.some(controle =>
       controle.porta.estado === "fechada" && !controle.porta.bloqueadaPorBoss)) return false;
     if (!(scene.inventory?.getQuantity("card") > 0)) {
-      fala.mostrar(FALAS_SEM_CARTAO); return true;
+      fala.mostrar(feedbackAcesso(scene.game.registry)); return true;
+    }
+    if (scene.game.registry.get('bossAccessCardAuthenticated') === true) {
+      fala.mostrar(feedbackAcesso(scene.game.registry)); return true;
     }
     fala.ocultar();
     return terminal.open();
   };
   const atualizar = () => {
+    if ((!scene.coopRuntime || scene.coopRuntime.host) && podeEntrarBoss(scene.game.registry) &&
+        portasLeitor.some(c => c.porta.estado === 'fechada' && !c.porta.bloqueadaPorBoss)) {
+      if (scene.coopRuntime) scene.coopRuntime.world.bossLoading.releaseAccess();
+      else scene.liberarPortasArenaAutorizadas();
+    }
     fala?.atualizar();
     if (terminal?.aberto) {
       for (const controle of portas) { controle.atualizar(); controle.prompt?.setVisible(false); }
@@ -443,6 +464,7 @@ function criarInteracaoPortaFabrica(scene) {
     marcadorLeitor?.destroy();
     scene.leitorCartaoFabrica = null;
     scene.abrirPortasArenaAposCartao = null;
+    scene.liberarPortasArenaAutorizadas = null;
     scene.portasFabrica = [];
     scene.portaFabrica = null;
     scene.interacaoMundoProxima = null;

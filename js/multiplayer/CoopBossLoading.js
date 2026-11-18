@@ -40,6 +40,10 @@ export class CoopBossLoading {
     this.publish(); this.apply(this.state);
     return true;
   }
+  releaseAccess() {
+    if (!this.r.host || this.current() || !this.scene.liberarPortasArenaAutorizadas?.()) return false;
+    return this.begin();
+  }
   confirmCard(playerId = this.manager.playerId) {
     if (!this.r.host) {
       this.accessRequested = true; this.accessRequestedAt = Date.now();
@@ -59,7 +63,7 @@ export class CoopBossLoading {
     const autorizacao = { player: context.player, inventory, morteEmAndamento: false,
       generatorMenuOpen: false, devItemMenuOpen: false };
     if (!this.scene.abrirPortasArenaAposCartao?.(autorizacao)) return false;
-    return this.begin();
+    return this.releaseAccess();
   }
   receive(action) {
     if (!isBossControl(action)) return false;
