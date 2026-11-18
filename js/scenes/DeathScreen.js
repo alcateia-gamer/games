@@ -75,6 +75,7 @@ function mostrarTelaMorte(scene, { equipeDerrotada = false, aposQuedaSolo = fals
   scene.telaMorteMostrada = true;
   droparInventarioAoMorrer(scene);
   scene.morteEmAndamento = true;
+  scene.scrapSystem?.updateHUDVisibility();
   scene.movimentoBloqueado = true;
   scene.sound?.stopAll();
   scene.limparPainelStatusFixo?.();

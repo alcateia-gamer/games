@@ -329,7 +329,7 @@ class Level1Parte2 extends Phaser.Scene {
       },
     });
 
-    this.textoCoordenadas.setScrollFactor(0).setDepth(200).setVisible(!this.multiplayer);
+    this.textoCoordenadas.setScrollFactor(0).setDepth(200).setVisible(false);
 
     // Compensa o zoom sem modificar o visual.
     this.configurarCoordenadasFixas();

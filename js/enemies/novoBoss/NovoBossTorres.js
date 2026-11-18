@@ -1,5 +1,5 @@
 import { assetsNovoBoss } from "./NovoBossAssets.js";
-import { calcularDepthAtor } from "../../map/ProfundidadeMapa.js";
+import { calcularDepthAtor, calcularDepthChao } from "../../map/ProfundidadeMapa.js";
 import { areasSobrepostasNovoBoss } from "./NovoBossTeleporte.js";
 import { quadrosChoqueTorreIdle } from "./NovoBossTorreChoque.js";
 import { prepararPisoTorre } from "./NovoBossTorrePiso.js";
@@ -79,6 +79,7 @@ export function criarTorreNovoBoss(scene, encontro, ponto, aoDestruir) {
     ultimoFrame = 0;
     luzChoqueIdle.intensidade = 0;
     visual.setTexture(poses[pose].chave, 0);
+    if (pose === 'death') visual.setDepth(calcularDepthChao(scene, referenciaDepthY));
   }
 
   const torre = {
@@ -162,7 +163,8 @@ export function criarTorreNovoBoss(scene, encontro, ponto, aoDestruir) {
       visual.setVisible(visivel && (iniciada || estado === "summon"));
       // Usa o mesmo Y de referência dos pés dos atores.
       // Em empate, o personagem fica à frente, como nos demais objetos do cenário.
-      visual.setDepth(calcularDepthAtor(scene, referenciaDepthY, visual) - 1e-9);
+      visual.setDepth(torre.morto ? calcularDepthChao(scene, referenciaDepthY)
+        : calcularDepthAtor(scene, referenciaDepthY, visual) - 1e-9);
       if (controlada && estadoGerador === "subterraneo") {
         // O quadro zero é a tampa fechada original, sem alvo ou corpo sólido.
         visual.setDepth(calcularDepthAtor(scene, referenciaDepthY, visual) - 0.001);

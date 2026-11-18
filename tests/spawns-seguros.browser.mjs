@@ -5,7 +5,7 @@ import { novoBossConfig } from '../js/enemies/novoBoss/NovoBossConfig.js';
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE ?? 'playwright-core');
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH, headless: true,
   args: ['--no-sandbox', '--disable-dev-shm-usage', '--enable-unsafe-swiftshader', '--disable-gpu-watchdog'] });
-const page = await browser.newPage({ viewport: { width: 1100, height: 700 } });
+const page = await browser.newPage({ viewport: { width: 800, height: 450 } });
 const errors = [], pasta = process.env.ARTIFACT_DIR ?? '/tmp/spawns-seguros'; mkdirSync(pasta, { recursive: true });
 page.on('pageerror', e => { errors.push(e.stack); console.error(e.stack); });
 await page.route('**/js/core/game.js*', async route => {
@@ -23,7 +23,7 @@ try {
   console.log('CIDADE: verificando todas as zonas com sprites e corpos reais.');
   report.cidade = await page.evaluate(async () => {
     const s = window.__game.scene.getScene('Level1'), m = s.enemySpawnManager;
-    const { retanguloSpawnLivre } = await import('/js/enemies/EnemySpawnValidation.js');
+    const { retanguloSpawnLivre, ampliarAreaNascimento, separacaoSpawnRobos } = await import('/js/enemies/EnemySpawnValidation.js');
     const { areaContemCorpo } = await import('/js/enemies/EnemySpawnArea.js');
     s.scene.pause();
     const limpar = () => { for (const r of [...s.inimigos]) m.removerInimigoInvalido(r); };
@@ -42,8 +42,12 @@ try {
           throw new Error(`Zona ${region.id} sem par após retentativas: ${JSON.stringify(region.enemies.map(r => ({ tipo:r.tipoRobo,x:r.x,y:r.y })))}`);
         for (const r of region.enemies) {
           const visual = new Phaser.Geom.Rectangle(r.x - r.displayWidth / 2, r.y - r.displayHeight / 2, r.displayWidth, r.displayHeight);
-          if (!areaContemCorpo(region.area, r.body) || !areaContemCorpo(region.area, visual) ||
-              !retanguloSpawnLivre(s, visual) || !retanguloSpawnLivre(s, r.body))
+          const area = ampliarAreaNascimento(region.area), margem = m.config.wallMargin;
+          const buffer = { x: Math.min(visual.x, r.body.x) - margem, y: Math.min(visual.y, r.body.y) - margem,
+            width: Math.max(visual.right, r.body.right) - Math.min(visual.x, r.body.x) + margem * 2,
+            height: Math.max(visual.bottom, r.body.bottom) - Math.min(visual.y, r.body.y) + margem * 2 };
+          if (!areaContemCorpo(area, r.body) || !areaContemCorpo(area, visual) ||
+              !retanguloSpawnLivre(s, buffer) || !separacaoSpawnRobos({ inimigos: s.inimigos.filter(o => o !== r) }, r, visual))
             throw new Error(`Spawn inválido ${region.id}/${r.tipoRobo}: ${r.x},${r.y}`);
         }
         total += qtd;
@@ -70,7 +74,7 @@ try {
   report.fabrica = await page.evaluate(async () => {
     const s = window.__game.scene.getScene('Level1Parte2'); s.scene.pause();
     const { criarRoboBola } = await import('/js/enemies/RoboBola.js');
-    const { retanguloSpawnLivre } = await import('/js/enemies/EnemySpawnValidation.js');
+    const { retanguloSpawnLivre, ampliarAreaNascimento, separacaoSpawnRobos } = await import('/js/enemies/EnemySpawnValidation.js');
     const { areaContemCorpo } = await import('/js/enemies/EnemySpawnArea.js');
     const { criarRoboOlhao } = await import('/js/enemies/RoboOlhao.js');
     const portais = [];
@@ -91,25 +95,34 @@ try {
         for (const r of s.inimigos) {
           if (anteriores.has(r)) continue;
           const a = areas.find(a => a.id === r.spawnAreaRoboBolaId);
-          if (!a || !areaContemCorpo({ ...a, rotation: 0 }, r.body) || !retanguloSpawnLivre(s, r.body))
-            throw new Error(`Spawn fábrica inválido: ${JSON.stringify({ id: r.spawnAreaRoboBolaId, x: r.x, y: r.y })}`);
+          const buffer = new Phaser.Geom.Rectangle(r.body.x - 20, r.body.y - 20, r.body.width + 40, r.body.height + 40);
+          const checks = { area: a && areaContemCorpo(ampliarAreaNascimento(a), buffer),
+            colisao: retanguloSpawnLivre(s, buffer),
+            separado: separacaoSpawnRobos({ inimigos: s.inimigos.filter(o => o !== r) }, r, r.getBounds()) };
+          if (!checks.area || !checks.colisao || !checks.separado)
+            throw new Error(`Spawn fábrica inválido: ${JSON.stringify({ id: r.spawnAreaRoboBolaId, x: r.x, y: r.y, buffer, checks, visual: r.getBounds() })}`);
           origens.push({ id: a.id, x: r.x, y: r.y }); anteriores.add(r);
         }
       }
     }
-    s.cameras.main.stopFollow().setZoom(.65).centerOn(-1020, -2810); s.children.depthSort();
+    s.cameras.main.stopFollow().setZoom(1).centerOn(-1020, -2810); s.children.depthSort();
     return { portais, areas: s.spawnAreasRoboBola.snapshot(), origens };
   });
   assert.equal(report.fabrica.areas.length, 18);
   assert.ok(report.fabrica.areas.every(a => a.invocados > 0 && a.invocados <= a.total && a.total <= 7));
   assert.equal(report.fabrica.areas.filter(a => [1625, 1629, 1630].includes(a.id)).reduce((s, a) => s + a.invocados, 0), 7);
-  // O update normal aplica flutuação/depth. Confere também a primeira movimentação
-  // dos inimigos antes da foto, além da posição inicial testada com a IA pausada.
-  await page.evaluate(() => window.__game.scene.getScene('Level1Parte2').scene.resume());
-  await page.waitForTimeout(250);
+  // Avança a IA e o Arcade reais sem reativar iluminação e interface de toda a
+  // fábrica no headless. Valida também os primeiros passos e a flutuação.
   report.fabrica.aposFisica = await page.evaluate(async () => {
-    const s = window.__game.scene.getScene('Level1Parte2'); s.scene.pause();
+    const s = window.__game.scene.getScene('Level1Parte2');
     const { retanguloSpawnLivre } = await import('/js/enemies/EnemySpawnValidation.js');
+    const { atualizarRoboBola } = await import('/js/enemies/RoboBola.js');
+    for (let i = 0; i < 15; i++) {
+      s.time.now += 1000 / 60;
+      atualizarRoboBola(s, s.time.now, 1000 / 60);
+      s.physics.world.update(s.time.now, 1000 / 60); s.physics.world.postUpdate();
+    }
+    s.children.depthSort();
     return s.inimigos.filter(r => r.active && !r.morto).every(r => retanguloSpawnLivre(s, r.body));
   });
   assert.ok(report.fabrica.aposFisica);

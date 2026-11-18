@@ -534,6 +534,28 @@ test("as quatro escotilhas tocam impacto baixo apenas em acertos válidos, reuti
   assert.ok(sons.every(som => som.destruido && !som.tocando));
 });
 
+test('torre destruída fica no piso sob personagens e robôs durante e depois da animação', () => {
+  const { scene, encontro } = criarArenaTorres();
+  scene.profundidadePersonagemParte2 = 16.5;
+  const sistema = prepararGeradoresNovoBoss(scene, encontro);
+  sistema.atualizar(1600);
+  const torre = encontro.geradores[0];
+  assert.equal(torre.receberDano(torre.vida), true);
+  assert.equal(torre.estado, 'death');
+  const robo = { active: true, x: torre.x, y: torre.y, body: { bottom: torre.y },
+    setDepth(depth) { this.depth = depth; } };
+  scene.player.setDepth = function (depth) { this.depth = depth; };
+  scene.inimigos = [robo];
+  for (const delta of [0, 100, 3000]) for (const lado of [-100, 100]) {
+    scene.player.body = { bottom: torre.y + lado }; robo.body.bottom = torre.y - lado;
+    sistema.atualizar(delta); atualizarDepthAtores(scene);
+    assert.ok(torre.visual.depth < scene.player.depth);
+    assert.ok(torre.visual.depth < robo.depth);
+    assert.equal(torre.visual.visible, true); assert.equal(torre.body.enable, false);
+  }
+  sistema.destruir();
+});
+
 test("cada escotilha toca uma explosão de volume reduzido ao entrar na animação de destruição", () => {
   const { scene, encontro } = criarArenaTorres();
   const sons = [];

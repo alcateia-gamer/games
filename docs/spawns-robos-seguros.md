@@ -12,11 +12,13 @@
 ## Correções
 
 - O piso usado pelos inimigos vem das camadas `Chão` da cidade e `chão`/`ChãoProdução` da fábrica. São conferidos todos os tiles tocados pelo corpo, incluindo recortes, buracos e coordenadas negativas. A área é calculada uma vez por tilemap e compartilhada.
-- O corpo inteiro e a margem precisam caber na área de nascimento. A cidade mantém também a verificação do sprite inteiro. A fábrica mantém 2 px de margem no corpo dos robôs-bola.
+- O corpo inteiro e a margem precisam caber na área de nascimento ou em sua faixa próxima de até 144 px por lado. A cidade tenta primeiro o retângulo original e só usa o entorno quando necessário; a patrulha recebe esse mesmo limite ampliado. Gatilhos, cotas e contagem regional continuam vinculados ao retângulo original.
+- A cidade reserva 20 px ao redor do sprite inteiro e dos pés; a fábrica reserva 20 px além do corpo físico do robô-bola. A busca detalhada só entra quando a grade normal não encontra posição, cobrindo corredores estreitos como o da área 1616 sem dispensar a margem.
+- Os spawns mantêm pelo menos 120 px entre centros e 24 px entre os limites visuais dos robôs, inclusive entre tipos e áreas diferentes. Posições planejadas contam como ocupadas antes da criação. Entre candidatos seguros, o sistema prefere os mais separados dos inimigos atuais.
 - As consultas de espaço livre usam os corpos estáticos atuais e o índice espacial do Phaser. A barreira física ativa do boss também impede criar um robô em seu interior.
 - Os retângulos físicos usam `displaySize` e `refreshBody`, preservando as coordenadas fracionárias do Tiled. Polígonos, elipses e cápsulas são aproximados por faixas internas de até 2 px; essas faixas não ultrapassam o desenho da colisão. Os IDs usados pelas torres permanecem nos corpos.
 - Os construtores dos robôs terrestres, bola e olhão também validam o mapa antes de criar sprites, áudio ou outros recursos. O bola/olhão verifica a distância dos jogadores remotos, além do jogador local.
-- As criações automáticas continuam restritas às áreas do Tiled. Sem ponto válido, aguardam uma nova tentativa. Os atalhos DEV mantêm seu funcionamento, com validação de piso e obstáculos. Os portais verificam também o piso na saída física do robô.
+- As criações automáticas continuam ligadas às áreas do Tiled, permitindo apenas o entorno próximo descrito acima. Sem ponto válido nessa faixa, aguardam uma nova tentativa. Os atalhos DEV mantêm seu funcionamento, com validação de piso e obstáculos. Os portais do boss preservam suas posições e verificam também o piso na saída física do robô.
 - O par obrigatório da cidade permanece obrigatório; robôs adicionais só são criados quando existe espaço seguro. Foram preservados os limites de quantidade, energia/proximidade e o orçamento compartilhado de sete robôs nos retângulos 1625, 1629 e 1630.
 - Os robôs recebem o contorno do piso para a navegação e para a proteção física já existente contra atravessamentos. A criação continua sob autoridade do host no cooperativo.
 
@@ -24,7 +26,7 @@
 
 | Arquivo | Motivo |
 | --- | --- |
-| `js/enemies/EnemySpawnValidation.js` | Validação compartilhada de piso, colisões e barreira; cache por mapa. |
+| `js/enemies/EnemySpawnValidation.js` | Validação compartilhada de piso, colisões e barreira; faixa próxima, separação visual e distribuição; cache por mapa. |
 | `js/enemies/EnemySpawnArea.js` | Tolerância numérica para coordenadas fracionárias/rotações na borda. |
 | `js/enemies/EnemySpawnManager.js` | Piso da ocupação inteira e correção do planejamento dos robôs adicionais. |
 | `js/enemies/EnemyTest.js` | Validação final antes da criação e associação ao contorno navegável. |
@@ -34,7 +36,7 @@
 | `js/enemies/novoBoss/NovoBossPortais.js` | Piso obrigatório no nascimento e na saída do portal. |
 | `js/map/AreaMapa.js` | Seleção das camadas de piso dos dois mapas. |
 | `js/map/ColisoesMapa.js` | Alinhamento dos corpos estáticos e representação das formas do Tiled. |
-| `js/enemies/EnemySpawnValidation.test.mjs` | Seis casos, incluindo todas as áreas reais dos dois mapas. |
+| `js/enemies/EnemySpawnValidation.test.mjs` | Todas as áreas reais dos dois mapas, separação diagonal entre sprites e expansão de áreas rotacionadas. |
 | `js/enemies/RoboBola.test.mjs` | Cobertura de jogador remoto ocupando o ponto solicitado. |
 | `js/effects/FlashlightWalls.test.mjs` | Fixture de corpo estático atualizada para a API de dimensionamento correta; mesmas verificações de luz e solidez. |
 | `tests/spawn-map-fixture.mjs` | Parser e StaticBody da biblioteca do projeto com os dados reais dos mapas. |

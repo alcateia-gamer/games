@@ -4,6 +4,8 @@ import { EventEmitter } from "node:events";
 import { readFileSync } from "node:fs";
 import { candidatosAreaRoboBola, criarSpawnAreasRoboBola, distanciaAteAreaRoboBola,
   lerAreasRoboBola, pontoLivreAreaRoboBola, quantidadeRobosArea } from "./RoboBolaSpawnAreas.js";
+import { ampliarAreaNascimento } from './EnemySpawnValidation.js';
+import { carregarMapaSpawns } from '../../tests/spawn-map-fixture.mjs';
 
 function preparar(area = { id: 1, x: 0, y: 0, width: 500, height: 600 }) {
   const scene = { map: { getObjectLayer: () => ({ objects: Array.isArray(area) ? area : [area] }), layers: [] },
@@ -56,35 +58,51 @@ test("onda é progressiva e reaproximação não repõe robôs mortos", () => {
   assert.equal(scene.inimigos.length, 7);
 });
 
-test("corpo inteiro cabe inclusive nos retângulos estreitos e evita obstáculo interno", () => {
+test("áreas pequenas usam o entorno; corpo e margem ficam fora dos obstáculos", () => {
   const area = { x: 0, y: 0, width: 57, height: 61 };
+  const proxima = ampliarAreaNascimento(area);
   for (const p of candidatosAreaRoboBola(area)) {
-    assert.ok(p.x - 16.8 >= 0 && p.x + 16.8 <= 57);
-    assert.ok(p.y - 16.8 >= 0 && p.y + 16.8 <= 61);
+    assert.ok(p.x - 36.8 >= proxima.x - .0001 && p.x + 36.8 <= proxima.x + proxima.width + .0001);
+    assert.ok(p.y - 36.8 >= proxima.y - .0001 && p.y + 36.8 <= proxima.y + proxima.height + .0001);
   }
   const { scene, sistema } = preparar({ id: 2, x: 0, y: 0, width: 400, height: 400 });
   scene.collisionGroup = { getChildren: () => [{ body: { x: 100, y: 100, width: 200, height: 200 } }] };
   for (let i = 0; i < 10; i++) sistema.atualizar(450);
   assert.equal(scene.inimigos.length, 4);
   for (const p of scene.inimigos) {
-    assert.ok(p.x + 16.8 <= 100 || p.x - 16.8 >= 300 || p.y + 16.8 <= 100 || p.y - 16.8 >= 300);
+    assert.ok(p.x + 36.8 <= 100 || p.x - 36.8 >= 300 || p.y + 36.8 <= 100 || p.y - 36.8 >= 300);
   }
 });
 
-test("área ocupada aguarda e completa a onda depois que o jogador se afasta", () => {
+test("área e entorno ocupados aguardam uma nova posição livre sem forçar spawn", () => {
   const { scene, sistema } = preparar({ id: 3, x: 0, y: 0, width: 57, height: 61 });
   scene.player.x = 28; scene.player.y = 30;
+  scene.collisionGroup = { getChildren: () => [{ body: ampliarAreaNascimento({ x: 0, y: 0, width: 57, height: 61 }) }] };
   sistema.atualizar(1000);
   assert.equal(sistema.snapshot()[0].ativada, true);
   assert.equal(scene.inimigos.length, 0);
+  scene.collisionGroup = { getChildren: () => [] };
   scene.player.x = -100;
   sistema.atualizar(450);
   assert.equal(scene.inimigos.length, 1);
 });
 
+test('retângulo ocupado por máquina usa o entorno e espalha a onda inteira', () => {
+  const area = { id: 10, x: 0, y: 0, width: 400, height: 400 };
+  const { scene, sistema } = preparar(area);
+  scene.collisionGroup = { getChildren: () => [{ body: area }] };
+  for (let i = 0; i < 20; i++) sistema.atualizar(450);
+  assert.equal(scene.inimigos.length, 4);
+  for (const [i, p] of scene.inimigos.entries()) {
+    assert.ok(p.x + 36.8 <= 0 || p.x - 36.8 >= 400 || p.y + 36.8 <= 0 || p.y - 36.8 >= 400,
+      '20px de folga além do corpo físico');
+    for (const outro of scene.inimigos.slice(0, i)) assert.ok(Math.hypot(p.x - outro.x, p.y - outro.y) >= 120);
+  }
+});
+
 test("parede total e piso ausente não geram robôs sobre colisões nem no vazio", () => {
   const { scene, sistema } = preparar();
-  scene.collisionGroup = { getChildren: () => [{ body: { x: 0, y: 0, width: 500, height: 600 } }] };
+  scene.collisionGroup = { getChildren: () => [{ body: ampliarAreaNascimento({ x: 0, y: 0, width: 500, height: 600 }) }] };
   sistema.atualizar(1000);
   assert.equal(scene.inimigos.length, 0);
   assert.equal(pontoLivreAreaRoboBola(scene, { x: 600, y: 600 }, { contem: () => false }), false);
@@ -105,16 +123,12 @@ test("host pode ativar por aliado remoto; cliente, morte e shutdown não criam i
 });
 
 test("mapa real contém 18 áreas; todas têm candidatos livres ao redor das colisões", () => {
-  const dados = JSON.parse(readFileSync(new URL("../../assets/map/parte2-fase1.json", import.meta.url)));
-  const scene = { map: { getObjectLayer: nome => dados.layers.find(l => l.name === nome) },
-    player: { x: 10000, y: 10000, active: true }, inimigos: [],
-    collisionGroup: { getChildren: () => dados.layers.find(l => l.name === "collision").objects
-      .filter(o => o.width && o.height).map(o => ({ body: o })) } };
+  const { scene } = carregarMapaSpawns('parte2-fase1.json');
   const areas = lerAreasRoboBola(scene.map);
   assert.equal(areas.length, 18);
   for (const a of areas) {
     assert.ok(quantidadeRobosArea(a) <= 7);
-    assert.ok(candidatosAreaRoboBola(a).some(p => pontoLivreAreaRoboBola(scene, p)), `área ${a.id}`);
+    assert.ok(candidatosAreaRoboBola(a, undefined, 8).some(p => pontoLivreAreaRoboBola(scene, p)), `área ${a.id}`);
   }
 });
 

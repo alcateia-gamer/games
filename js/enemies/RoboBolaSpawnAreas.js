@@ -1,10 +1,12 @@
 /** Ondas únicas por visita à fábrica, disparadas pela aproximação das áreas do Tiled. */
 import { criarRoboBola } from "./RoboBola.js";
-import { obterPisoSpawnRobos, retanguloSpawnLivre } from "./EnemySpawnValidation.js";
+import { obterPisoSpawnRobos, retanguloSpawnLivre, ampliarAreaNascimento, FOLGA_SPAWN_ROBOS,
+  separacaoSpawnRobos, notaDistribuicaoSpawn } from "./EnemySpawnValidation.js";
 
 export const CONFIG_SPAWN_ROBO_BOLA = Object.freeze({
   proximidade: 180, areaPorRobo: 40000, maximo: 7, intervaloMs: 450,
-  tamanhoCorpo: 33.6, margem: 2,
+  tamanhoCorpo: 33.6, margem: FOLGA_SPAWN_ROBOS.objetos,
+  proximidadeArea: FOLGA_SPAWN_ROBOS.proximidadeArea,
   // Os três retângulos contíguos junto de (-1067, -4478) formam uma só região.
   limitesRegionais: Object.freeze([
     Object.freeze({ areas: Object.freeze([1625, 1629, 1630]), maximo: 7 }),
@@ -30,18 +32,22 @@ export function lerAreasRoboBola(map) {
       y: o.y, width: o.width, height: o.height }));
 }
 
-function coordenadas(min, tamanho) {
+function coordenadas(min, tamanho, passo) {
   const margem = CONFIG_SPAWN_ROBO_BOLA.tamanhoCorpo / 2 + CONFIG_SPAWN_ROBO_BOLA.margem;
   if (tamanho < margem * 2) return [];
   const valores = [(min + tamanho / 2), min + margem, min + tamanho - margem];
-  for (let v = min + margem + 48; v < min + tamanho - margem; v += 48) valores.push(v);
+  for (let v = min + margem + passo; v < min + tamanho - margem; v += passo) valores.push(v);
   return [...new Set(valores)];
 }
 
-/** O corpo inteiro cabe no retângulo; os candidatos contornam os obstáculos internos. */
-export function candidatosAreaRoboBola(area) {
-  return coordenadas(area.x, area.width).flatMap(x =>
-    coordenadas(area.y, area.height).map(y => ({ x, y })));
+/** Área original e uma faixa próxima, sempre sujeitas a piso, colisões e espaçamento. */
+export function candidatosAreaRoboBola(area, margemProxima = CONFIG_SPAWN_ROBO_BOLA.proximidadeArea, passo = 48) {
+  return [area, ampliarAreaNascimento(area, margemProxima)].flatMap(a => {
+    // Orçamento limitado mesmo se um retângulo for ampliado muito no editor.
+    const grade = Math.max(passo, Math.sqrt(a.width * a.height / 4096));
+    return coordenadas(a.x, a.width, grade).flatMap(x =>
+      coordenadas(a.y, a.height, grade).map(y => ({ x, y })));
+  });
 }
 
 export function pontoLivreAreaRoboBola(scene, ponto, piso = null) {
@@ -52,9 +58,9 @@ export function pontoLivreAreaRoboBola(scene, ponto, piso = null) {
   const jogadores = [scene.player, ...((scene.remotePlayers?.values &&
     [...scene.remotePlayers.values()]) || [])];
   if (jogadores.some(p => p?.active && Math.hypot(ponto.x - p.x, ponto.y - p.y) < 70)) return false;
-  if ((scene.inimigos ?? []).some(r => r?.active && !r.morto &&
-    Math.hypot(r.x - ponto.x, r.y - ponto.y) < 50)) return false;
-  return true;
+  const visual = { x: ponto.x - 127 * .56 / 2, y: ponto.y - 127 * .56 / 2,
+    width: 127 * .56, height: 127 * .56 };
+  return separacaoSpawnRobos(scene, ponto, visual);
 }
 
 /** Divide o orçamento da região proporcionalmente, conservando o limite total. */
@@ -78,7 +84,7 @@ function aplicarLimitesRegionais(areas) {
 export function criarSpawnAreasRoboBola(scene, criar = criarRoboBola) {
   const areas = lerAreasRoboBola(scene.map).map(area => ({ ...area,
     total: quantidadeRobosArea(area), invocados: 0, ativada: false,
-    proximoSpawn: 0, candidatos: candidatosAreaRoboBola(area) }));
+    proximoSpawn: 0, candidatos: candidatosAreaRoboBola(area), candidatosDetalhados: null }));
   aplicarLimitesRegionais(areas);
   const piso = obterPisoSpawnRobos(scene);
   let tempo = 0, destruido = false;
@@ -97,9 +103,20 @@ export function criarSpawnAreasRoboBola(scene, criar = criarRoboBola) {
         // livre e continua a onda após ele sair, sem exigir nova entrada no retângulo.
         if (!area.ativada || area.invocados >= area.total || tempo < area.proximoSpawn || distancia > 800) continue;
         area.proximoSpawn = tempo + CONFIG_SPAWN_ROBO_BOLA.intervaloMs;
-        const livres = area.candidatos.filter(p => pontoLivreAreaRoboBola(scene, p, piso));
+        let livres = area.candidatos.filter(p => pontoLivreAreaRoboBola(scene, p, piso));
+        if (!livres.length) {
+          // Faixas estreitas junto às máquinas podem ficar entre os pontos da grade grossa.
+          area.candidatosDetalhados ??= candidatosAreaRoboBola(area, CONFIG_SPAWN_ROBO_BOLA.proximidadeArea, 8);
+          livres = area.candidatosDetalhados.filter(p => pontoLivreAreaRoboBola(scene, p, piso));
+        }
         if (!livres.length) continue;
-        const ponto = livres[Math.floor(Math.random() * livres.length)];
+        // Inicia em índice aleatório, mas escolhe a maior separação da onda atual.
+        let ponto = livres[Math.floor(Math.random() * livres.length)];
+        let nota = notaDistribuicaoSpawn(scene, ponto);
+        for (const candidato of livres) {
+          const atual = notaDistribuicaoSpawn(scene, candidato);
+          if (atual > nota) { nota = atual; ponto = candidato; }
+        }
         const robo = criar(scene, ponto);
         if (!robo) continue;
         robo.spawnAreaRoboBolaId = area.id;
@@ -108,7 +125,7 @@ export function criarSpawnAreasRoboBola(scene, criar = criarRoboBola) {
         area.invocados++;
       }
     },
-    snapshot() { return areas.map(({ candidatos, ...area }) => ({ ...area })); },
+    snapshot() { return areas.map(({ candidatos, candidatosDetalhados, ...area }) => ({ ...area })); },
     destruir() { destruido = true; scene.events.off("shutdown", sistema.destruir); },
   };
   scene.events.once("shutdown", sistema.destruir);

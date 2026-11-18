@@ -8,6 +8,7 @@ import { obterBalanceamento } from "../combat/CharacterBalance.js";
 
 import { gastarEstamina } from "./PlayerStatus.js";
 import { jogadorPresoNovoBoss } from "./PlayerControlEffects.js";
+import { protegerDashNoMapa } from './PlayerMapCollision.js';
 import { dispararProjetil } from "./PlayerProjectiles.js";
 import { ARIA_ATTACK_CONFIG, ARIA_AIM_DIRECTIONS, calcularCargaAria,
   direcaoVisualAria } from "../controls/AriaAttackConfig.js";
@@ -174,6 +175,7 @@ function criarPlayer(scene) {
     texturaWalk(scene, "down"),
     frameParado(scene, "down"),
   );
+  protegerDashNoMapa(scene);
 
   // Usa o mesmo alinhamento dos tiles, sem arredondar posições físicas ou a câmera.
   scene.player.setVertexRoundMode("safe");

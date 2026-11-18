@@ -6,7 +6,8 @@
 import { criarInimigoTeste } from "./EnemyTest.js";
 import { areaContemCorpo } from "./EnemySpawnArea.js";
 import { PERFIS_ROBOS as PERFIS } from "./RobotBody.js";
-import { retanguloSpawnLivre } from "./EnemySpawnValidation.js";
+import { retanguloSpawnLivre, FOLGA_SPAWN_ROBOS, ampliarAreaNascimento,
+  separacaoSpawnRobos, notaDistribuicaoSpawn } from "./EnemySpawnValidation.js";
 import { criarAreaRobosCidade } from "../map/AreaMapa.js";
 
 /** Usa exclusivamente as áreas do Tiled; sem zonas não há spawn automático. */
@@ -49,10 +50,12 @@ const SPAWN_CONFIG = {
 
   maxActiveEnemies: 10,
 
-  minEnemyDistance: 70,
+  minEnemyDistance: FOLGA_SPAWN_ROBOS.distancia,
   minPlayerDistance: 150,
 
-  wallMargin: 14,
+  wallMargin: FOLGA_SPAWN_ROBOS.objetos,
+  enemyGap: FOLGA_SPAWN_ROBOS.entreRobos,
+  nearbyMargin: FOLGA_SPAWN_ROBOS.proximidadeArea,
   maxAttemptsPerEnemy: 65,
 
   checkInterval: 400,
@@ -111,10 +114,10 @@ function areaSpawn(x, y, tipo, margem) {
   const pes = footprint(x, y, tipo, margem);
   const width = perfil.frameWidth * perfil.scale;
   const height = perfil.frameHeight * perfil.scale;
-  const left = Math.min(pes.left, x - width / 2);
-  const top = Math.min(pes.top, y - height / 2);
-  const right = Math.max(pes.right, x + width / 2);
-  const bottom = Math.max(pes.bottom, y + height / 2);
+  const left = Math.min(pes.left, x - width / 2 - margem);
+  const top = Math.min(pes.top, y - height / 2 - margem);
+  const right = Math.max(pes.right, x + width / 2 + margem);
+  const bottom = Math.max(pes.bottom, y + height / 2 + margem);
   return new Phaser.Geom.Rectangle(left, top, right - left, bottom - top);
 }
 
@@ -521,7 +524,7 @@ class EnemySpawnManager {
       if (!enemy) continue;
 
       enemy.upgradeZoneId = region.id;
-      enemy.spawnArea = region.area;
+      enemy.spawnArea = ampliarAreaNascimento(region.area, this.config.nearbyMargin);
       enemy.playableArea = this.playableArea;
       enemy.spawnWallMargin = this.config.wallMargin;
 
@@ -548,40 +551,46 @@ class EnemySpawnManager {
    * Sorteia e valida posições na região até encontrar uma opção ou esgotar o número de
    * tentativas.
    */
-  findPosition(region, tipoRobo, positions) {
+  findPosition(region, tipoRobo, positions = []) {
     const rejeitados = [];
     if (!region.area) return null;
 
-    const area = region.area;
+    const areas = [region.area, ampliarAreaNascimento(region.area, this.config.nearbyMargin)];
     const ocupacao = areaSpawn(0, 0, tipoRobo, this.config.wallMargin);
-    const cos = Math.cos(area.rotation), sin = Math.sin(area.rotation);
-    const cantos = [[ocupacao.left, ocupacao.top], [ocupacao.right, ocupacao.top],
-      [ocupacao.right, ocupacao.bottom], [ocupacao.left, ocupacao.bottom]];
-    const xs = cantos.map(([x, y]) => x * cos + y * sin);
-    const ys = cantos.map(([x, y]) => -x * sin + y * cos);
-    const minX = -Math.min(...xs), maxX = area.width - Math.max(...xs);
-    const minY = -Math.min(...ys), maxY = area.height - Math.max(...ys);
-    if (minX > maxX || minY > maxY) {
-      region.rejected = [];
-      if (this.config.debug) console.warn(`[SpawnManager] Zona ${region.id}: pequena demais para ${tipoRobo}.`);
-      return null;
-    }
-
-    for (let tentativa = 0; tentativa < this.config.maxAttemptsPerEnemy; tentativa++) {
-      const ponto = pontoNaArea(area, minX + Math.random() * (maxX - minX),
-        minY + Math.random() * (maxY - minY));
-
-      const dentroDaZona = areaContemCorpo(area,
-        areaSpawn(ponto.x, ponto.y, tipoRobo, this.config.wallMargin));
-
-      if (dentroDaZona && this.isValidPosition(ponto, tipoRobo, positions)) {
-        region.rejected = rejeitados;
-        return ponto;
+    for (const area of areas) {
+      const cos = Math.cos(area.rotation), sin = Math.sin(area.rotation);
+      const cantos = [[ocupacao.left, ocupacao.top], [ocupacao.right, ocupacao.top],
+        [ocupacao.right, ocupacao.bottom], [ocupacao.left, ocupacao.bottom]];
+      const xs = cantos.map(([x, y]) => x * cos + y * sin);
+      const ys = cantos.map(([x, y]) => -x * sin + y * cos);
+      const minX = -Math.min(...xs), maxX = area.width - Math.max(...xs);
+      const minY = -Math.min(...ys), maxY = area.height - Math.max(...ys);
+      if (minX > maxX || minY > maxY) {
+        continue;
       }
 
-      if (rejeitados.length < this.config.debugRejectedLimit) {
-        rejeitados.push(ponto);
+      let escolhido = null, melhorNota = -Infinity;
+      const avaliar = ponto => {
+        if (!areaContemCorpo(area, areaSpawn(ponto.x, ponto.y, tipoRobo, this.config.wallMargin)) ||
+            !this.isValidPosition(ponto, tipoRobo, positions)) {
+          if (rejeitados.length < this.config.debugRejectedLimit) rejeitados.push(ponto);
+          return;
+        }
+        const nota = notaDistribuicaoSpawn(this.scene, ponto, positions);
+        if (nota > melhorNota) { melhorNota = nota; escolhido = ponto; }
+      };
+      for (let tentativa = 0; tentativa < this.config.maxAttemptsPerEnemy; tentativa++) {
+        avaliar(pontoNaArea(area, minX + Math.random() * (maxX - minX),
+          minY + Math.random() * (maxY - minY)));
+        if (melhorNota === Infinity) break;
       }
+      if (!escolhido) {
+        // Também encontra corredores livres quando o RNG repete pontos bloqueados.
+        const passo = Math.max(48, Math.sqrt((maxX - minX) * (maxY - minY) / 400));
+        for (let x = minX; x <= maxX; x += passo) for (let y = minY; y <= maxY; y += passo)
+          avaliar(pontoNaArea(area, x, y));
+      }
+      if (escolhido) { region.rejected = rejeitados; return escolhido; }
     }
 
     region.rejected = rejeitados;
@@ -608,18 +617,8 @@ class EnemySpawnManager {
     const ocupacao = areaSpawn(candidate.x, candidate.y, tipoRobo, this.config.wallMargin);
     if (this.playableArea && !this.playableArea.contem(ocupacao)) return false;
 
-    const min2 = this.config.minEnemyDistance ** 2;
-
-    // Distancia de outras posicoes planejadas.
-    if (
-      positions.some(
-        (p) => distancia2(candidate.x, candidate.y, p.x, p.y) < min2 ||
-          Phaser.Geom.Intersects.RectangleToRectangle(rect,
-            footprint(p.x, p.y, p.tipoRobo || "serra", 0)),
-      )
-    ) {
-      return false;
-    }
+    if (!separacaoSpawnRobos(this.scene, candidate, areaSpawn(candidate.x, candidate.y, tipoRobo, 0),
+      positions, this.config.minEnemyDistance, this.config.enemyGap)) return false;
 
     // Distancia do jogador.
     const player = this.scene.player;
@@ -635,14 +634,7 @@ class EnemySpawnManager {
     // No nascimento, nem a imagem pode aparecer sobre os objetos do cenário.
     if (!retanguloSpawnLivre(this.scene, ocupacao)) return false;
 
-    // Outros inimigos.
-    return !(this.scene.inimigos || []).some(
-      (r) =>
-        r?.active &&
-        !r.morto &&
-        (distancia2(candidate.x, candidate.y, r.x, r.y) < min2 ||
-          (r.body && r.body.enable !== false && Phaser.Geom.Intersects.RectangleToRectangle(rect, r.body))),
-    );
+    return true;
   }
 
   autorizarCriacao(config) {
@@ -653,7 +645,8 @@ class EnemySpawnManager {
         (region && region.enemies.filter(e => e.active && !e.morto).length >=
           (region.targetCount ?? this.config.maxEnemies))) return false;
     return !!region && [config.x, config.y].every(Number.isFinite) &&
-      areaContemCorpo(region.area, areaSpawn(config.x, config.y, config.tipoRobo, this.config.wallMargin)) &&
+      areaContemCorpo(ampliarAreaNascimento(region.area, this.config.nearbyMargin),
+        areaSpawn(config.x, config.y, config.tipoRobo, this.config.wallMargin)) &&
       this.isValidPosition(config, config.tipoRobo, []);
   }
 

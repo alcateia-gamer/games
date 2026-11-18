@@ -390,6 +390,68 @@ test('contador de sucatas some na luta sem perder saldo ou parar sincronização
   assert.equal(a.scrap,45);sys.destroy();
 });
 
+test('sucatas permanecem no piso sob jogadores e robôs na cidade e nas faixas da fábrica', () => {
+  for (const fabrica of [false, true]) {
+    const s = scene();
+    s.player.body.bottom = s.player.y;
+    s.inimigos = [Object.assign(visual(s.player.x, s.player.y - 40), { tipoRobo: 'padrao' })];
+    const sys = new ScrapSystem(s);
+    economyFor(s).drops.teste = { id: 'teste', mapKey: s.sys.settings.key, x: s.player.x + 100, y: s.player.y + 60, quantity: 4 };
+    economyFor(s).revision++;
+    for (const faixa of [16.5, 13.5, 17]) {
+      if (fabrica) { s.profundidadePersonagemParte2 = faixa; s.profundidadeRegiaoTroca = faixa - .5; }
+      sys.update();
+      const drop = sys.visuals.get('teste');
+      const base = fabrica ? faixa - .5 : 12.5 + s.inimigos[0].y * .0003;
+      assert.ok(drop.depth < base, 'não usa depth 100 nem depende de uma única pose do jogador');
+      assert.equal(sys.visuals.size, 1);
+    }
+    sys.destroy();
+  }
+});
+
+test('morte oculta contador e canvas nativo de sucatas e reanimação restaura a HUD', () => {
+  const s = scene(), sys = new ScrapSystem(s); const a = grant(s, 40);
+  sys.counterIconView = { object: visual(), destroy() {} }; sys.hudHidden = undefined;
+  sys.updateHUDVisibility(); assert.equal(sys.counterIconView.object.visible, true);
+  for (const flags of [{ morteEmAndamento: true }, { telaMorteMostrada: true }, { vida: 0 }]) {
+    Object.assign(s, { morteEmAndamento: false, telaMorteMostrada: false, vida: 100 }, flags);
+    sys.updateHUDVisibility();
+    assert.equal(sys.counter.visible, false); assert.equal(sys.counterIcon.visible, false);
+    assert.equal(sys.counterIconView.object.visible, false);
+    Object.assign(s, { morteEmAndamento: false, telaMorteMostrada: false, vida: 100 });
+    sys.updateHUDVisibility(); assert.equal(sys.counter.visible, true);
+    assert.equal(sys.counterIconView.object.visible, true);
+    assert.equal(a.scrap, 40);
+  }
+  sys.destroy();
+});
+
+test('contador de sucatas acompanha aliados, escala CSS e zoom sem sobrepor as barras de vida', () => {
+  const s = scene(), sys = new ScrapSystem(s);
+  const camera = { width: 800, height: 450, originX: .5, originY: .5, x: 0, y: 0, zoom: 1 };
+  s.cameras = { main: camera }; s.scale = { gameSize: { height: 450 } };
+  let escalaCss = 1, fimAliados = 0;
+  s.game.canvas = { getBoundingClientRect: () => ({ top: 40, height: 450 * escalaCss }) };
+  s.hudAliados = { elemento: { getBoundingClientRect: () => ({ bottom: 40 + fimAliados * escalaCss }) } };
+  s.hudStatus = { elemento: { getBoundingClientRect: () => ({ bottom: 40 + 52 * escalaCss }) } };
+  s.multiplayer = true;
+  for (const escala of [.5, 1, 2]) for (const zoom of [1, 1.7]) for (const aliados of [1, 2, 3]) {
+    escalaCss = escala; camera.zoom = zoom;
+    fimAliados = 60 + aliados * 32.5;
+    s.events.emit('prerender');
+    const topoEsperado = fimAliados + 8;
+    const renderY = objeto => 225 + (objeto.y - 225) * zoom;
+    assert.ok(Math.abs(renderY(sys.counter) - (topoEsperado + 2)) < .0001);
+    assert.ok(Math.abs(renderY(sys.counterIcon) - (topoEsperado + 10.5)) < .0001);
+  }
+  // Ao voltar ao solo, o conjunto se encaixa logo abaixo da vida do próprio personagem.
+  s.multiplayer = false; camera.zoom = 1; s.events.emit('prerender');
+  assert.equal(sys.counter.y, 62); assert.equal(sys.counterIcon.y, 70.5);
+  assert.deepEqual(sys.counterIcon.DisplaySize, [24, 24 * 50 / 59]);
+  sys.destroy(); assert.equal(s.events.listenerCount('prerender'), 0);
+});
+
 test('base e cúpula do Kai ficam acima das torres durante mudanças de profundidade', () => {
   const s=scene(); s.player.depth=16.5;
   s.novoBoss={geradores:[{torre:true,visual:{active:true,visible:true,depth:17}}]};

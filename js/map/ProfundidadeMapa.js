@@ -123,6 +123,21 @@ function obterFootYAtor(ator) {
   return ator?.getBounds?.().bottom ?? ator?.y ?? 0;
 }
 
+/** Resíduos e itens pousados no piso ficam abaixo dos atores, sem usar a faixa da HUD. */
+function calcularDepthChao(scene, y) {
+  if (Number.isFinite(scene.profundidadePersonagemParte2)) {
+    // Os atores variam até ±0,0005 em torno das bases da fábrica.
+    return Math.min(scene.profundidadePersonagemParte2,
+      Number.isFinite(scene.profundidadeRegiaoTroca) ? scene.profundidadeRegiaoTroca : Infinity) - 0.001;
+  }
+  let depth = calcularDepthAtor(scene, y);
+  for (const ator of [scene.player, scene.companionPet, ...(scene.inimigos ?? []),
+    ...(scene.remotePlayers?.values?.() ?? [])]) {
+    if (ator?.active) depth = Math.min(depth, calcularDepthAtor(scene, obterFootYAtor(ator), ator));
+  }
+  return depth - 0.001;
+}
+
 /** Todos os atores móveis passam pela mesma ordenação, após a física e a interpolação. */
 function atualizarDepthAtores(scene) {
   const atores = new Set([scene.player, scene.companionPet, ...(scene.inimigos ?? []),
@@ -291,6 +306,7 @@ export {
   DEPTHS,
   depthFromWorldY,
   calcularDepthAtor,
+  calcularDepthChao,
   obterFootYAtor,
   depthSobreMesasRefeitorio,
   atualizarDepthAtores,

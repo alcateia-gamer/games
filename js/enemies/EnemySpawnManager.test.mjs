@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import vm from "node:vm";
 import { areaContemCorpo } from "./EnemySpawnArea.js";
 import EnemySpawnManager, { SPAWN_CONFIG } from "./EnemySpawnManager.js";
+import { ampliarAreaNascimento } from './EnemySpawnValidation.js';
 
 // Usa o parser das camadas e a geometria da mesma biblioteca carregada pelo jogo.
 const bundle = readFileSync(new URL("../libs/phaser.min.js", import.meta.url), "utf8");
@@ -70,7 +71,7 @@ test("cada zona real acomoda os sprites inteiros de atirador e serra, sem colidi
       for (const tipo of ["padrao", "serra"]) {
         const p = manager.findPosition(region, tipo, escolhidas);
         assert.ok(p, `zona ${region.id}: posição para ${tipo}`);
-        const rect = corpo(p, tipo), area = region.area;
+        const rect = corpo(p, tipo), area = ampliarAreaNascimento(region.area);
         assert.ok(rect.left >= area.x && rect.right <= area.x + area.width);
         assert.ok(rect.top >= area.y && rect.bottom <= area.y + area.height);
         const width = tipo === "serra" ? 278 * 0.36 : 311 * 0.23;
@@ -84,7 +85,7 @@ test("cada zona real acomoda os sprites inteiros de atirador e serra, sem colidi
   }
 });
 
-test("a hitbox inteira precisa caber na zona mesmo quando o ponto sorteado está dentro", t => {
+test("área pequena permite nascer perto sem ultrapassar a faixa local", t => {
   t.mock.method(Math, "random", () => 0.99);
   const manager = new EnemySpawnManager(scene(), map);
   const region = manager.regions[0];
@@ -92,7 +93,10 @@ test("a hitbox inteira precisa caber na zona mesmo quando o ponto sorteado está
   assert.ok(p);
   assert.ok(areaContemCorpo(region.area, corpo(p, "serra")));
   region.area.width = 20;
-  assert.equal(manager.findPosition(region, "serra", []), null);
+  const proximo = manager.findPosition(region, "serra", []);
+  assert.ok(proximo);
+  assert.ok(areaContemCorpo(ampliarAreaNascimento(region.area), corpo(proximo, 'serra')));
+  assert.equal(areaContemCorpo(region.area, corpo(proximo, 'serra')), false);
 });
 
 test("zona 639 rejeita objeto sob a imagem mesmo quando os pés estão livres", () => {
@@ -174,11 +178,11 @@ test("camada vazia ou ausente nunca ativa o spawn antigo", () => {
   }
 });
 
-test("zonas bloqueadas não têm fallback e autoridade impede criação no cliente", t => {
+test("zona e entorno bloqueados não forçam spawn; cliente continua sem autoridade", t => {
   seededRandom(t);
   const sc = scene(), manager = new EnemySpawnManager(sc, map);
   const region = manager.regions[0];
-  sc.collisionGroup = { getChildren: () => [{ body: { ...region.area, enable: true } }] };
+  sc.collisionGroup = { getChildren: () => [{ body: { ...ampliarAreaNascimento(region.area), enable: true } }] };
   assert.equal(manager.findPosition(region, "padrao", []), null);
   assert.equal(manager.findPosition(region, "serra", []), null);
   sc.multiplayer = true; sc.isMultiplayerHost = false;

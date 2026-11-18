@@ -1,11 +1,14 @@
 import { recursosHUDOcultosNoBoss } from '../ui/HudCinematic.js';
 import { criarCanvasHUDNitido } from '../ui/HudCanvas.js';
+import { calcularDepthChao } from '../map/ProfundidadeMapa.js';
+import { posicionarBotaoFixo } from '../controls/FixedActionButton.js';
 import { SCRAP_BALANCE, rollScrap, scrapPartySize, UPGRADE_NPCS } from './UpgradeBalance.js';
 import { economyFor, localPlayerId, scrapAccount, purchase, applyUpgrades, walletFor } from './UpgradeSystem.js';
 
 // Recortes das 12 variações de sucatas.png, sem as margens transparentes.
 const SCRAP_FRAMES = [[112, 74, 32, 48], [367, 71, 34, 54], [623, 75, 34, 45], [110, 267, 36, 54], [368, 271, 32, 45], [621, 268, 37, 52], [106, 471, 43, 38], [371, 471, 25, 38], [619, 471, 41, 38], [104, 664, 48, 43], [354, 661, 59, 50], [627, 669, 26, 34]];
 const COUNTER_FRAME = 10; // Meio da última linha.
+const HUD_TOP = 64, ICON_WIDTH = 24, ICON_HEIGHT = 21;
 function scrapVariant(id) {
   let hash = 0;
   for (const character of String(id)) hash = (hash * 31 + character.charCodeAt(0)) >>> 0;
@@ -38,33 +41,39 @@ export class ScrapSystem {
       if (!texture.has(name)) texture.add(name, 0, ...rect);
     });
     const [, , iconWidth, iconHeight] = SCRAP_FRAMES[COUNTER_FRAME];
-    this.counterIcon = scene.add.image(28, 142, 'scrap-components', `scrap-${COUNTER_FRAME}`)
-      .setDisplaySize(32, 32 * iconHeight / iconWidth).setScrollFactor(0).setDepth(222).setName('scrap-balance-icon');
+    this.counterIcon = scene.add.image(24, HUD_TOP + ICON_HEIGHT / 2, 'scrap-components', `scrap-${COUNTER_FRAME}`)
+      .setDisplaySize(ICON_WIDTH, ICON_WIDTH * iconHeight / iconWidth).setScrollFactor(0).setDepth(222).setName('scrap-balance-icon');
     // Desenha da imagem original na densidade da tela, evitando ampliar o ícone
     // já reduzido no canvas de 800×450 do mundo.
-    this.counterIconView = criarCanvasHUDNitido(scene, 32, 28, 222);
+    this.counterIconView = criarCanvasHUDNitido(scene, ICON_WIDTH, ICON_HEIGHT, 222);
     if (this.counterIconView) {
       this.counterIcon.setVisible(false);
       const view = this.counterIconView, frame = texture.get(`scrap-${COUNTER_FRAME}`);
-      view.object.setPosition(12, 128).setName('scrap-balance-icon-native');
+      view.object.setPosition(12, HUD_TOP).setName('scrap-balance-icon-native');
       this.refreshCounterIcon = () => {
         if (!view.atualizarResolucao()) return;
         view.limpar();
         view.context.imageSmoothingEnabled = true;
         view.context.imageSmoothingQuality = 'high';
         view.context.drawImage(frame.source.image, frame.cutX, frame.cutY, frame.cutWidth, frame.cutHeight,
-          0, (28 - 32 * iconHeight / iconWidth) / 2, 32, 32 * iconHeight / iconWidth);
+          0, (ICON_HEIGHT - ICON_WIDTH * iconHeight / iconWidth) / 2, ICON_WIDTH, ICON_WIDTH * iconHeight / iconWidth);
       };
       this.refreshCounterIcon();
       scene.scale.on('resize', this.refreshCounterIcon);
     }
-    this.counter = scene.add.text(52, 130, `${economyFor(scene).sharedScrap ? 'SUCATAS EQUIPE' : 'SUCATAS'}: ${walletFor(scene).scrap}`, {
-      fontFamily: 'monospace', fontSize: '12px', color: '#55ffad', backgroundColor: '#020b08', padding: { x: 6, y: 3 },
+    this.counter = scene.add.text(44, HUD_TOP + 2, `${economyFor(scene).sharedScrap ? 'SUCATAS EQUIPE' : 'SUCATAS'}: ${walletFor(scene).scrap}`, {
+      fontFamily: 'monospace', fontSize: '10px', color: '#55ffad', backgroundColor: '#020b08', padding: { x: 4, y: 2 },
     }).setScrollFactor(0).setDepth(221).setName('scrap-balance');
     this.seen = new WeakSet(); this.lastRevision = -1; this.lastBalance = walletFor(scene).scrap;
+    this.hudObjects = [[this.counter, 44, HUD_TOP + 2], [this.counterIcon, 24, HUD_TOP + ICON_HEIGHT / 2],
+      ...(this.counterIconView ? [[this.counterIconView.object, 12, HUD_TOP]] : [])]
+      .map(([object, x, y]) => ({ object, x, y, sx: object.scaleX ?? 1, sy: object.scaleY ?? 1 }));
     this.update = this.update.bind(this); this.destroy = this.destroy.bind(this);
+    this.layoutHUD = this.layoutHUD.bind(this);
     scene.events.on('update', this.update); scene.events.once('shutdown', this.destroy);
+    scene.events.on('prerender', this.layoutHUD);
     this.updateHUDVisibility();
+    this.layoutHUD();
   }
   get mapKey() { return this.scene.sys.settings.key; }
   get authority() { return !this.scene.multiplayer || this.scene.coopRuntime?.host; }
@@ -149,7 +158,7 @@ export class ScrapSystem {
       const [, , width, height] = SCRAP_FRAMES[variant];
       const scale = 28 / Math.max(width, height);
       const image = s.add.image(drop.x, drop.y, 'scrap-components', `scrap-${variant}`)
-        .setDisplaySize(width * scale, height * scale).setDepth(s.calcularDepthMundo?.(drop.y) ?? 100);
+        .setDisplaySize(width * scale, height * scale).setDepth(calcularDepthChao(s, drop.y));
       image.coopLocalVisual = true;
       s.tweens.add({ targets: image, alpha: .5, duration: 850, yoyo: true, repeat: -1 });
       this.visuals.set(drop.id, image);
@@ -164,8 +173,29 @@ export class ScrapSystem {
     this.lastBalance = balance;
     s.events.emit('upgradesChanged');
   }
+  /** Abaixo da vida no solo ou do último aliado no coop, em coordenadas de tela. */
+  layoutHUD() {
+    const s = this.scene, camera = s.cameras?.main;
+    if (!camera) return;
+    let top = HUD_TOP;
+    const ancora = (s.multiplayer && s.hudAliados?.elemento) || s.hudStatus?.elemento;
+    const canvas = ancora && s.game.canvas?.getBoundingClientRect();
+    const caixa = ancora?.getBoundingClientRect?.();
+    if (canvas?.height > 0 && Number.isFinite(caixa?.bottom)) {
+      const height = s.scale?.gameSize?.height ?? camera.height;
+      top = Math.max(8, (caixa.bottom - canvas.top) * height / canvas.height - (camera.y || 0) + 8);
+    }
+    const key = [top, camera.width, camera.height, camera.zoomX ?? camera.zoom,
+      camera.zoomY ?? camera.zoom, camera.originX, camera.originY].join(':');
+    if (key === this.hudLayout) return;
+    this.hudLayout = key;
+    for (const { object, x, y, sx, sy } of this.hudObjects) {
+      posicionarBotaoFixo(camera, object, x, y + top - HUD_TOP, sx, sy);
+    }
+  }
   updateHUDVisibility() {
-    const hidden = recursosHUDOcultosNoBoss(this.scene);
+    const s = this.scene;
+    const hidden = !!(s.morteEmAndamento || s.telaMorteMostrada || s.vida <= 0 || recursosHUDOcultosNoBoss(s));
     if (hidden === this.hudHidden) return;
     this.hudHidden = hidden;
     this.counter?.setVisible(!hidden);
@@ -176,6 +206,11 @@ export class ScrapSystem {
     this.updateHUDVisibility();
     this.syncVisuals();
     const s = this.scene;
+    // A fábrica muda de faixa ao atravessar grades; o piso acompanha essa mudança.
+    for (const image of this.visuals.values()) {
+      const depth = calcularDepthChao(s, image.y);
+      if (image.depth !== depth) image.setDepth(depth);
+    }
     if (!s.player?.active || s.vida <= 0 || s.morteEmAndamento || s.upgradeMenuOpen) return;
     for (const [id] of this.visuals) {
       const drop = economyFor(s).drops[id];
@@ -194,6 +229,7 @@ export class ScrapSystem {
     const s = this.scene;
     s.events.off('shutdown', this.destroy);
     s.events.off('update', this.update);
+    s.events.off('prerender', this.layoutHUD);
     for (const image of this.visuals.values()) { s.tweens.killTweensOf(image); image.destroy(); }
     this.visuals.clear(); this.pending.clear(); this.counter?.destroy(); this.counterIcon?.destroy();
     if (this.refreshCounterIcon) s.scale.off('resize', this.refreshCounterIcon);

@@ -387,7 +387,7 @@ class Level1 extends Phaser.Scene {
       },
     });
 
-    this.textoCoordenadas.setScrollFactor(0).setDepth(200).setVisible(!this.multiplayer);
+    this.textoCoordenadas.setScrollFactor(0).setDepth(200).setVisible(false);
 
     // =====================================================
     // TECLA R
