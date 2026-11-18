@@ -15,6 +15,7 @@ const textureFor = character => ({ 'kai-mercer': 'walk', 'magnus-force': 'person
 export class UpgradeShopUI {
   constructor(scene) {
     this.scene = scene; this.category = 'cyber'; this.region = null; this.selected = 'muscle';
+    this.listPage = 0;
     this.refresh = () => { if (scene.upgradeMenuOpen) this.render(); };
     this.result = result => {
       if (!scene.upgradeMenuOpen) return;
@@ -28,7 +29,7 @@ export class UpgradeShopUI {
       if (!scene.upgradeMenuOpen) return;
       event.stopImmediatePropagation();
       if (event.type === 'keydown' && event.code === 'Tab') {
-        const buttons = [...this.root.querySelectorAll('button:not(:disabled)')];
+        const buttons = [...this.root.querySelectorAll('button:not(:disabled)')].filter(button => button.offsetWidth > 0);
         const first = buttons[0], last = buttons.at(-1);
         if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
         if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
@@ -44,18 +45,20 @@ export class UpgradeShopUI {
     root.innerHTML = `<section class="upgrade-shell" role="dialog" aria-modal="true" aria-label="Sistema de aprimoramento">
       <header><span class="upgrade-brand">N</span><div><strong>NULLBORNS</strong><small>THE HOLLOW // SISTEMA DE APRIMORAMENTO</small></div><button data-close aria-label="Fechar loja">FECHAR [ESC]</button></header>
       <nav aria-label="Categorias">${Object.entries(categories).map(([id, name]) => `<button data-category="${id}">${name}</button>`).join('')}</nav>
-      <div class="upgrade-grid"><aside data-panel="list"><h2 data-character></h2><p class="upgrade-balance" data-balance></p><p class="upgrade-muted" data-filter></p><div data-list></div></aside>
+      <div class="upgrade-grid"><aside data-panel="list"><h2 data-character></h2><p class="upgrade-balance" data-balance></p><p class="upgrade-muted" data-filter></p><div data-list></div><div class="upgrade-pages" hidden><button data-page="-1" aria-label="Componentes anteriores">‹</button><span data-page-label></span><button data-page="1" aria-label="Próximos componentes">›</button></div></aside>
       <section class="upgrade-body" data-panel="character"><p class="upgrade-muted">INTERFACE SOMÁTICA // AXIOM</p><div class="upgrade-scan"><img data-portrait alt="Personagem selecionado"><div class="upgrade-regions">${['Cabeça','Tronco','Braços','Pernas','Sistema neural'].map((r,i) => `<button data-region="${r}"><span>0${i+1} ◇</span> ${r}</button>`).join('')}</div></div><button data-all>EXIBIR TODOS OS MÓDULOS</button><p class="upgrade-muted">STATUS: COMPATÍVEL<br>TECNOLOGIA RECUPERADA</p></section>
       <section class="upgrade-details" data-panel="details"><small>MÓDULO SELECIONADO</small><h2 data-name></h2><p data-description></p><dl data-stats></dl><div class="upgrade-progress" role="img" aria-label="Nível instalado"><span></span></div><button class="upgrade-install" data-install></button><p class="upgrade-message" role="status" aria-live="polite"></p></section></div>
       <footer>SISTEMA DE APRIMORAMENTO NEURAL <span>TECNOLOGIA RECUPERADA DA AXIOM</span></footer></section>`;
     document.getElementById('game-container').append(root);
-    this.responsive = createResponsivePanel(root, root.querySelector('.upgrade-shell'), 1380, 1048);
+    this.responsive = createResponsivePanel(root, root.querySelector('.upgrade-shell'), 1380, null, { reflow: true });
     this.click = e => {
       const button = e.target.closest('button'); if (!button || button.disabled) return;
       if (button.hasAttribute('data-close')) return this.close();
       if (button.dataset.category) { this.category = button.dataset.category; this.region = null; }
       if (button.dataset.region) { this.region = button.dataset.region; this.category = null; }
       if (button.hasAttribute('data-all')) { this.region = null; this.category = null; }
+      if (button.dataset.category || button.dataset.region || button.hasAttribute('data-all')) this.listPage = 0;
+      if (button.dataset.page) this.listPage += Number(button.dataset.page);
       if (button.dataset.upgrade) this.selected = button.dataset.upgrade;
       if (button.hasAttribute('data-install')) {
         if (this.busy || this.pending) return;
@@ -104,17 +107,26 @@ export class UpgradeShopUI {
   render() {
     const q = selector => this.root.querySelector(selector), defs = this.definitions();
     const visible = defs.filter(d => (!this.category || d.category === this.category) && (!this.region || d.region === this.region));
-    if (!visible.some(d => d.id === this.selected)) this.selected = visible[0]?.id;
-    const d = defs.find(d => d.id === this.selected), account = walletFor(this.scene);
+    const account = walletFor(this.scene);
     q('[data-character]').textContent = CHARACTER_NAMES[this.scene.personagemSelecionada];
     q('[data-balance]').textContent = `${economyFor(this.scene).sharedScrap ? 'SUCATAS DA EQUIPE' : 'SUCATAS DISPONÍVEIS'}: ${account.scrap}`;
     q('[data-filter]').textContent = this.region || categories[this.category] || 'TODOS OS COMPONENTES';
-    q('[data-list]').innerHTML = visible.map(d => {
+    const pageSize = 4, pageCount = Math.max(1, Math.ceil(visible.length / pageSize));
+    this.listPage = Math.max(0, Math.min(this.listPage, pageCount - 1));
+    q('.upgrade-pages').hidden = pageCount === 1;
+    q('[data-page-label]').textContent = `${this.listPage + 1} / ${pageCount}`;
+    q('[data-page="-1"]').disabled = this.listPage === 0;
+    q('[data-page="1"]').disabled = this.listPage === pageCount - 1;
+    const page = visible.slice(this.listPage * pageSize, (this.listPage + 1) * pageSize);
+    if (!page.some(d => d.id === this.selected)) this.selected = page[0]?.id;
+    const d = page.find(entry => entry.id === this.selected);
+    q('[data-list]').innerHTML = page.map(d => {
       const level = this.level(d.id);
       return `<button class="upgrade-row ${d.id === this.selected ? 'selected' : ''}" data-upgrade="${d.id}"><strong>◇ ${d.name}</strong><small>NÍVEL ${level}/3 <span>${level < 3 ? `${d.prices[level]} SUCATAS` : 'MÁXIMO'}</span></small></button>`;
     }).join('');
     for (const b of this.root.querySelectorAll('[data-category]')) b.setAttribute('aria-pressed', String(b.dataset.category === this.category));
     for (const b of this.root.querySelectorAll('[data-region]')) b.setAttribute('aria-pressed', String(b.dataset.region === (this.region || d?.region)));
+    q('[data-panel=details]').hidden = !d;
     if (!d) return;
     const level = this.level(d.id), max = level >= d.max, cost = d.prices[level], insufficient = account.scrap < cost;
     q('[data-name]').textContent = d.name;
@@ -137,7 +149,7 @@ export class UpgradeShopUI {
     s.joystick?.reset?.(); s.input.keyboard.resetKeys(); s.input.enabled = false; s.input.keyboard.enabled = false;
     this.dismissFarewell();
     this.root.hidden = false; this.message = ''; this.portrait(); this.render(); this.responsive.update();
-    this.root.querySelector('[data-close]').focus();
+    this.root.querySelector('[data-close]').focus({ preventScroll: true });
     return true;
   }
   close(silent = false) {

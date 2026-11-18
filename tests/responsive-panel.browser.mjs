@@ -47,7 +47,7 @@ try {
     assert.ok(Math.abs(layout.scale - layout.expectedScale) < 0.015, `Wrong scale at ${width}x${height}`);
     assert.ok(layout.bounds[0] >= -1 && layout.bounds[1] >= -1, `Panel starts outside ${width}x${height}`);
     assert.ok(layout.bounds[2] <= width + 1 && layout.bounds[3] <= height + 1, `Panel ends outside ${width}x${height}`);
-    assert.equal(layout.columns, 2, `Desktop composition changed at ${width}x${height}`);
+    assert.equal(layout.columns, width <= 520 && height > width ? 1 : 2, `Wrong composition at ${width}x${height}`);
   }
 
   await page.setViewportSize({ width: 320, height: 568 });
@@ -56,7 +56,7 @@ try {
     [...Array(25).keys()].find(index => window.__responsiveModel.podeSelecionar(index)));
   await page.locator(`[data-cell="${cell}"]`).click();
   assert.deepEqual(await page.evaluate(() => window.__responsiveClicks.at(-1)), { op: 'selecionar', valor: cell });
-  console.log('PASS: 11 resolutions preserve uniform scaling, centered bounds, two-column layout, and selection.');
+  console.log('PASS: 11 resolutions preserve uniform scaling, centered bounds, responsive columns, and selection.');
 } finally {
   await browser.close();
 }

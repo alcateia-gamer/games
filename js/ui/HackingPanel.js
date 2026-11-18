@@ -15,6 +15,24 @@ export function criarPainelHacking(enviar, som) {
     .hacking-grid button:disabled{opacity:.35;cursor:default}.hacking-grid button.selected{background:#49bda2;color:#001712;opacity:1}.hacking-overlay .ready{background:#124d3f;border-color:#82ffd1}
     .hacking-target{border:1px solid #30515c;padding:9px;margin:8px 0}.hacking-target.done{border-color:#69fbb7;background:#124135}.hacking-target strong{display:block;font-size:14px;margin-bottom:7px}.hacking-target code{font-size:20px;letter-spacing:3px;white-space:nowrap}
     .hacking-buffer{letter-spacing:3px;min-height:30px;color:#6cf7dd;word-break:break-word;font-size:18px}.hacking-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.hacking-message{min-height:40px;color:#b8cdd8}.hacking-error{color:#ffb1a9}.hacking-close{min-width:44px}
+    @media(max-width:600px),(max-height:500px){
+      .hacking-panel{padding:8px;font-size:13px}.hacking-panel h2{font-size:17px}
+      .hacking-panel p{margin:3px 0;line-height:1.25}
+      .hacking-columns{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;margin-top:5px}
+      .hacking-grid{gap:3px}.hacking-grid button{min-width:0;padding:2px;font-size:16px}
+      .hacking-target{padding:4px;margin:4px 0}.hacking-target strong{font-size:12px;margin-bottom:2px}
+      .hacking-target code{font-size:15px;letter-spacing:1px;white-space:normal}
+      .hacking-buffer{min-height:18px;font-size:15px}.hacking-message{min-height:0}
+      .hacking-actions{margin-top:4px;gap:5px}.hacking-actions button{padding:4px}
+    }
+    @media(max-width:520px) and (orientation:portrait){
+      .hacking-columns{grid-template-columns:minmax(0,1fr)}
+      .hacking-targets{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
+      .hacking-target{margin:0}.hacking-target strong{overflow-wrap:anywhere}
+    }
+    @media(max-height:420px) and (orientation:landscape){
+      .hacking-grid button{min-height:34px}
+    }
   `;
   root.innerHTML = `<div class="hacking-panel"><div class="hacking-head"><h2>N.O.V.A. / INVASÃO AXIOM</h2><button class="hacking-close" aria-label="Cancelar hacking">×</button></div>
     <p>Comece na primeira linha. Alterne coluna e linha. Cada célula só pode ser usada uma vez.</p>
@@ -22,7 +40,7 @@ export function criarPainelHacking(enviar, som) {
     <div><p class="hacking-objectives"></p><div class="hacking-targets"></div><p class="hacking-clock"></p><p class="hacking-message" aria-live="polite"></p>
     <div class="hacking-actions"><button class="hacking-confirm" disabled>Confirmar acesso</button><button class="hacking-retry" hidden>Nova tentativa</button></div></div></div></div>`;
   root.append(style); document.body.append(root);
-  const responsive = createResponsivePanel(root, root.querySelector('.hacking-panel'), 840);
+  const responsive = createResponsivePanel(root, root.querySelector('.hacking-panel'), 840, null, { reflow: true });
   const q = s => root.querySelector(s), grid = q('.hacking-grid'), cells = [];
   for (let i = 0; i < 25; i++) {
     const b = document.createElement('button'); b.dataset.cell = i; b.setAttribute('aria-label', `Código linha ${Math.floor(i / 5) + 1}, coluna ${i % 5 + 1}`);

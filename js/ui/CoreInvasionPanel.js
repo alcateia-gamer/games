@@ -5,9 +5,22 @@ import { criarPainelNullnet } from './NullnetPanel.js';
 import { criarRegistroHacking } from './HackingRecordPanel.js';
 export function criarPainelInvasao(enviar, config, progresso) {
   const panel = criarPainelNullnet('AXIOM // MEMORY DECRYPTION', () => enviar({ op: 'cancelar' }));
+  panel.root.classList.add('core-invasion-overlay');
+  const style = document.createElement('style');
+  style.textContent = `
+    @media(max-height:500px) and (orientation:landscape){
+      .core-invasion-overlay .nullnet-panel>div{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:5px 8px}
+      .core-invasion-content,.core-invasion-info{grid-column:1/-1}
+      .core-invasion-overlay .nullnet-message{grid-column:1;min-width:0;margin:4px 0}
+      .core-invasion-overlay .nullnet-actions{grid-column:2;align-self:start;margin:4px 0}
+      .core-invasion-overlay .nullnet-actions button{font-size:12px}
+    }
+  `;
+  panel.root.append(style);
   const title = panel.root.querySelector('h2');
   const tutorial = anexarTutorialPuzzle(panel.root, panel.root.querySelector('header'), enviar);
   const info = document.createElement('p'), content = document.createElement('div');
+  info.className = 'core-invasion-info'; content.className = 'core-invasion-content';
   const message = document.createElement('p'); message.className = 'nullnet-message'; message.setAttribute('aria-live', 'polite');
   const actions = document.createElement('div'); actions.className = 'nullnet-actions'; panel.body.append(info, content, message, actions);
   let db = null, mode = '', last = null, memory = null, hackConnect = null, panelLayoutReady = false;

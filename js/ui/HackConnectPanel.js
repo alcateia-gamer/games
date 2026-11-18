@@ -7,10 +7,25 @@ export function criarHackConnectPanel(parent, command, bloqueado = () => false) 
   const style = document.createElement('style'); style.textContent = `
 .hackconnect{background:#020b06;border:1px solid #225d3c;padding:12px;border-radius:5px;min-width:0}.hack-target-title{font-size:12px;color:#8ac79f;letter-spacing:2px}.hack-target{font-size:32px;font-weight:bold;letter-spacing:2px;color:#b5ffac;margin:4px 0 12px;overflow-wrap:anywhere}.hack-matrix{position:relative;height:224px;border:1px solid #2f7550;overflow:hidden;background:#000805}.hack-row{box-sizing:border-box;height:56px;overflow:hidden;border-bottom:1px solid #183c28;position:relative}.hack-row:last-child{border-bottom:0}.hack-cell{position:absolute;left:0;top:0;height:56px;box-sizing:border-box;width:12.5%;min-width:0!important;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;color:#76dd85!important;min-height:56px!important;line-height:56px;font-size:24px!important;touch-action:manipulation;white-space:nowrap}.hack-cell.marked{background:#14665a!important;color:#c3ffff!important;box-shadow:inset 0 2px #84ffff,inset 0 -2px #84ffff}.hack-cell.first{box-shadow:inset 2px 0 #84ffff,inset 0 2px #84ffff,inset 0 -2px #84ffff}.hack-selection{font-size:17px;color:#a8ffff;margin:10px 0;min-height:26px;overflow-wrap:anywhere}.hack-confirm{width:100%;min-height:50px!important;border-color:#76e1d4!important}.hack-instruction{color:#a2cbb2;font-size:13px;margin:8px 0}
 `;
+  style.textContent += `
+.hackconnect{--hack-row-height:56px}
+.hack-matrix{height:calc(4 * var(--hack-row-height))}
+.hack-row,.hack-cell{height:var(--hack-row-height)}
+.hack-cell{min-height:var(--hack-row-height)!important;line-height:var(--hack-row-height)}
+@media(max-width:600px){.hackconnect{padding:6px;--hack-row-height:46px}.hack-cell{font-size:20px!important}.hack-target{font-size:24px}}
+@media(max-height:500px) and (orientation:landscape){
+  .hackconnect{--hack-row-height:38px;display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:2px 10px;align-items:start}
+  .hack-matrix{grid-column:1;grid-row:1/span 5}
+  .hack-target-title,.hack-target,.hack-instruction,.hack-selection,.hack-confirm{grid-column:2}
+  .hack-target,.hack-selection,.hack-instruction{margin:2px 0}
+  .hack-target{font-size:20px}.hack-selection,.hack-instruction{font-size:12px;min-height:0}
+  .hack-confirm{min-height:44px!important}
+}
+`;
   const root = document.createElement('div'); root.className = 'hackconnect'; root.tabIndex = 0; root.setAttribute('aria-label', 'Matriz móvel: setas para marcar quatro números, Enter para confirmar');
   const title = document.createElement('div'); title.className = 'hack-target-title';
   const target = document.createElement('div'); target.className = 'hack-target'; target.setAttribute('aria-label', 'Sequência alvo');
-  const instruction = document.createElement('p'); instruction.className = 'hack-instruction'; instruction.textContent = 'Os números avançam a cada 1 s: →, sobem de linha e voltam pela base. Localize os 4 números juntos na mesma linha. Toque no primeiro para marcar a sequência e confirme antes que o grupo vire a linha.';
+  const instruction = document.createElement('p'); instruction.className = 'hack-instruction'; instruction.textContent = 'A cada segundo, os números avançam e mudam de linha. Encontre os quatro na mesma linha, toque no primeiro e confirme antes que o grupo mude de linha.';
   const matrix = document.createElement('div'); matrix.className = 'hack-matrix';
   const selection = document.createElement('p'); selection.className = 'hack-selection';
   const confirm = document.createElement('button'); confirm.className = 'hack-confirm'; confirm.textContent = 'SELECIONAR SEQUÊNCIA';

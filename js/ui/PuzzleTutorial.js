@@ -74,6 +74,15 @@ export function criarTutorialPuzzle(tipo, concluir) {
 .guide-reel-drop{animation:guide-reel-drop 2.4s linear infinite}.guide-matrix-flow{animation:guide-matrix-flow 6s linear infinite}
 @keyframes guide-tap{0%,100%{opacity:.6}45%,70%{opacity:1;transform:translateY(3px)}}
 @keyframes guide-slide{0%,12%{transform:translateX(180px);opacity:.25}40%,70%{transform:translateX(0);opacity:1}95%,100%{transform:translateX(-190px);opacity:.25}}
+@media(max-height:500px) and (orientation:landscape){
+  .puzzle-tutorial-overlay .nullnet-panel{padding:8px}
+  .guide-layout{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:10px;align-items:center}
+  .guide-art svg{max-height:160px}.guide-topline{margin:4px 0 0}
+}
+@media(max-width:600px),(max-height:500px){
+  .guide-title{font-size:18px!important}.guide-text{font-size:13px;line-height:1.35;margin:5px 0!important}
+  .guide-note{margin:4px 0}.guide-next{min-width:100px!important}
+}
 @media(prefers-reduced-motion:reduce){.guide-finger,.guide-moving,.guide-reel-drop,.guide-matrix-flow{animation:none!important}}
 `;
   panel.root.append(style);
@@ -98,9 +107,9 @@ export function criarTutorialPuzzle(tipo, concluir) {
     prev.disabled = page === 0; next.textContent = page === guide.pages.length - 1 ? guide.contextual ? 'Voltar ao puzzle' : 'Começar puzzle' : 'Próximo';
     dots.replaceChildren(...guide.pages.map((_, i) => { const dot = document.createElement('span'); dot.className = i === page ? 'current' : ''; return dot; }));
     dots.setAttribute('aria-label', `Etapa ${page + 1} de ${guide.pages.length}`);
-    panel.root.scrollTop = 0;
+    panel.responsive.update();
   }
-  render(); panel.responsive.update(); next.focus(); return panel;
+  render(); panel.responsive.update(); next.focus({ preventScroll: true }); return panel;
 }
 
 /** O host pausa o modelo; a UI apenas acompanha a flag replicada da sessão. */
