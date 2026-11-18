@@ -23,9 +23,13 @@ class RelogioPartida {
     }
   }
 
-  concluir(agora) {
+  concluir(agora, criarRecompensa) {
     if (this.resultado) return null;
-    this.resultado = Object.freeze({ tempoMs: Math.floor(this.decorrido(agora)), tijolinhos: null });
+    const recompensa = criarRecompensa();
+    this.resultado = Object.freeze({
+      tempoMs: Math.floor(this.decorrido(agora)),
+      ...(recompensa && { recompensa }),
+    });
     return this.resultado;
   }
 }
@@ -34,6 +38,22 @@ const chave = scene => scene.multiplayer ? CHAVE_COOP : CHAVE_SOLO;
 const relogioLocal = scene => scene.registry?.get(chave(scene));
 const progressoCoop = scene => scene.multiplayerManager?.room?.coopProgress;
 const replica = scene => scene.multiplayer && !scene.coopRuntime?.host;
+
+// A abertura já registra um identificador que sobrevive à migração do host.
+export function idPartidaCoop(room) {
+  return room?.roomCode && room.hollow?.id ? `coop:${room.roomCode}:${room.hollow.id}` : null;
+}
+
+function criarRecompensaPartida(scene) {
+  if (!scene.multiplayer) {
+    const id = Array.from(globalThis.crypto.getRandomValues(new Uint32Array(4))).join("-");
+    return { partida: `solo:${id}`, participantes: ["solo"] };
+  }
+  const room = scene.multiplayerManager?.room;
+  const partida = idPartidaCoop(room);
+  if (partida) return { partida, participantes: room.players.map(p => p.id) };
+  return null;
+}
 
 function criarRelogio(scene, estado) {
   scene.registry.set(chave(scene), new RelogioPartida(scene.game.getTime(), estado));
@@ -92,7 +112,7 @@ export function resultadoPartida(scene) {
 
 export function concluirPartida(scene) {
   if (replica(scene)) return null;
-  const resultado = relogioLocal(scene)?.concluir(scene.game.getTime());
+  const resultado = relogioLocal(scene)?.concluir(scene.game.getTime(), () => criarRecompensaPartida(scene));
   if (resultado && scene.multiplayer) atualizarRelogioCoop(scene);
   return resultado;
 }

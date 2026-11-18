@@ -53,9 +53,10 @@ test("o relógio do host aceita o resultado uma vez e ignora amostras atrasadas"
   let progress = mergeCoopProgress({}, { relogio: { decorridoMs: 3600000 } });
   progress = mergeCoopProgress(progress, { relogio: { decorridoMs: 3599999 } });
   assert.equal(progress.relogio.decorridoMs, 3600000);
-  const resultado = { tempoMs: 3600042, tijolinhos: null };
+  const recompensa = { partida: "coop:TEST:hollow:123", participantes: ["host", "client"] };
+  const resultado = { tempoMs: 3600042, recompensa };
   progress = mergeCoopProgress(progress, { relogio: { decorridoMs: 3600042, resultado } });
-  for (const clock of [{ decorridoMs: 3800000 }, { resultado: { tempoMs: 4000000, tijolinhos: 0 } }]) {
+  for (const clock of [{ decorridoMs: 3800000 }, { resultado: { tempoMs: 4000000, recompensa } }]) {
     progress = mergeCoopProgress(progress, { relogio: clock });
     assert.deepEqual(progress.relogio, { decorridoMs: 3600042, resultado });
   }

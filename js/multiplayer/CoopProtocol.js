@@ -30,9 +30,14 @@ function mergeRunClock(previous, next) {
   if (previous?.resultado) return previous;
   const finalMs = next?.resultado?.tempoMs;
   if (Number.isSafeInteger(finalMs) && finalMs >= 0) {
-    const { tijolinhos } = next.resultado;
-    return { decorridoMs: finalMs, resultado: {
-      tempoMs: finalMs, tijolinhos: Number.isSafeInteger(tijolinhos) && tijolinhos >= 0 ? tijolinhos : null,
+    const { recompensa } = next.resultado;
+    const participantes = recompensa?.participantes;
+    const valida = typeof recompensa?.partida === "string" && recompensa.partida.length <= 160 &&
+      Array.isArray(participantes) && participantes.length >= 1 && participantes.length <= 4 &&
+      new Set(participantes).size === participantes.length &&
+      participantes.every(id => typeof id === "string" && id.length > 0 && id.length <= 100);
+    return { decorridoMs: finalMs, resultado: { tempoMs: finalMs,
+      ...(valida && { recompensa: { partida: recompensa.partida, participantes: [...participantes] } }),
     } };
   }
   const elapsed = next?.decorridoMs;

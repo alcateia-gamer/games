@@ -11,8 +11,9 @@ import { criarFalaFlutuante } from '../ui/PlayerSpeechBubble.js';
 import { drawCollectibleMarker } from '../ui/CollectibleMarker.js';
 import { prepararPetNoTerminal } from './HackingPetDock.js';
 import { atualizarAnimacaoParado } from '../controls/PlayerAnimations.js';
-import { concluirPartida, definirPausaRelogioSolo, resultadoPartida } from '../core/RelogioPartida.js';
-import { mostrarTelaConclusao } from '../ui/RunCompletion.js';
+import { concluirPartida, definirPausaRelogioSolo, idPartidaCoop, resultadoPartida } from '../core/RelogioPartida.js';
+import { pagamentoRecompensa } from '../systems/PagamentoRecompensa.js';
+import { atualizarPagamentoConclusao, mostrarTelaConclusao } from '../ui/RunCompletion.js';
 
 const tutoriaisPorJogo = new WeakMap();
 
@@ -28,9 +29,10 @@ export function criarHackingFabrica(scene) {
   let terminalPetPronto = false, victory = null, ultimaReplica = null, pausaSolo = false;
   let revisao = 0, revisaoRecebida = -1, replicaHost = null;
   let registro = null, falaPendente = null;
+  let finalConfirmado = false, estadoPagamento = { tipo: 'pendente' }, pararPagamento;
   const dizer = frase => { if (scene.generatorMenuOpen) falaPendente = frase; else fala.mostrar(frase); };
   const runtime = () => scene.coopRuntime;
-  const autoridade = () => !scene.multiplayer || !!runtime()?.host;
+  const autoridade = () => !scene.multiplayer || !!(runtime()?.host && runtime().manager.room);
   const meuId = () => runtime()?.manager.playerId ?? 'solo';
   let eraAutoridade = autoridade();
   const contexto = id => id === meuId() ? runtime()?.localContext ?? scene : runtime()?.players.remotes.get(id)?.context;
@@ -82,8 +84,10 @@ export function criarHackingFabrica(scene) {
       dizer('N.O.V.A.: EV041_ESCAPE_PROTOCOL.DAT recuperado. Autorização digital aprovada. Autentique também o cartão no leitor do SENTINEL.');
       scene.events.emit('hacking:bruteforce-concluido');
     } else {
-      if (!concluirPartida(scene)) return;
-      registry.set(K.final, true); scene.events.emit('hacking:matrix-concluida', { suporteVidaPreservado: true });
+      const fim = concluirPartida(scene);
+      if (!fim) return;
+      registry.set(K.final, true);
+      confirmarVitoria(fim);
     }
     publicar();
   }, () => missao(), salvarCheckpoint, () => {
@@ -159,6 +163,23 @@ export function criarHackingFabrica(scene) {
     if (localId != null && scene.input) scene.input.enabled = anteriorInput;
     localId = null;
   }
+  function confirmarVitoria(resultado) {
+    if (!resultado || finalConfirmado) return;
+    finalConfirmado = true;
+    scene.events.emit('hacking:matrix-concluida', { suporteVidaPreservado: true, resultado });
+  }
+  function receberVitoria({ resultado }) {
+    if (pararPagamento) return;
+    const recompensa = resultado?.recompensa;
+    const manager = scene.multiplayerManager;
+    if (!recompensa || (scene.multiplayer && recompensa.partida !== idPartidaCoop(manager?.room))) return;
+    pararPagamento = pagamentoRecompensa.iniciar(resultado, scene.multiplayer ? manager.playerId : 'solo', scene.multiplayer)
+      .observar(estado => {
+        estadoPagamento = estado;
+        if (victory) atualizarPagamentoConclusao(victory, estado);
+      });
+  }
+  scene.events.on('hacking:matrix-concluida', receberVitoria);
   function vitoria() {
     if (victory || destruido) return;
     const resultado = resultadoPartida(scene);
@@ -166,7 +187,7 @@ export function criarHackingFabrica(scene) {
     fecharLocal(); limparDockHost();
     scene.movimentoBloqueado = true; scene.generatorMenuOpen = true;
     scene.player?.setVelocity(0, 0); scene.physics.pause();
-    victory = mostrarTelaConclusao(resultado);
+    victory = mostrarTelaConclusao(resultado, estadoPagamento);
   }
   function projetar(state) {
     if (destruido || !state) return;
@@ -187,7 +208,7 @@ export function criarHackingFabrica(scene) {
     const session = state.session;
     if (session && session.id !== view?.id) scene.events.emit("hacking:terminal-aberto", session.tipo);
     view = session;
-    if (state.progress?.final) { vitoria(); return; }
+    if (state.progress?.final) return;
     if (!session || session.owner !== meuId()) { if (localId != null) fecharLocal(); return; }
     if (localId !== session.id) {
       fecharLocal(); localId = session.id; sequence = session.seq ?? 0;
@@ -324,7 +345,9 @@ export function criarHackingFabrica(scene) {
         }
       }
       const p = autoridade() ? progresso() : ultimaReplica?.progress ?? progresso();
-      if (!victory && resultadoPartida(scene)) vitoria();
+      const resultado = resultadoPartida(scene);
+      confirmarVitoria(resultado);
+      if (!victory && resultado) vitoria();
       databaseButton.hidden = p.final || !!registro || !!localId || scene.generatorMenuOpen || scene.upgradeMenuOpen || scene.upgradeDialogueOpen || scene.morteEmAndamento || scene.vida <= 0 || scene.cenaEntradaBossAtiva;
       let proxima = null;
       for (const [tipo, t] of Object.entries(T)) {
@@ -351,6 +374,8 @@ export function criarHackingFabrica(scene) {
       if (destruido) return; destruido = true;
       scene.events.off(Phaser.Scenes.Events.PRE_RENDER, posicionarDatabaseButton);
       databaseButton.remove();
+      scene.events.off('hacking:matrix-concluida', receberVitoria);
+      pararPagamento?.();
       fecharLocal(); limparDockHost(); engine.atual = null;
       victory?.remove(); victory = null; som.destruir(); fala.destroy();
       for (const m of Object.values(marcadores)) { m.marker.destroy(); m.label.destroy(); }

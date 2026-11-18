@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { iniciarJogoHacking, entrarFabricaHacking, resolverBreach, tocarInteracaoHacking } from './hacking-browser-helpers.mjs';
-import { sceneState, dispensarTutorial, resolverBruteforce, resolverMemoria, capturarHost, lerRelogio, observarConfirmacaoFinal, verificarConclusao } from './nullnet-browser-helpers.mjs';
+import { sceneState, dispensarTutorial, resolverBruteforce, resolverMemoria, capturarHost, lerRelogio, observarConfirmacaoFinal, simularCredito, verificarConclusao } from './nullnet-browser-helpers.mjs';
 const tools = process.env.HACKING_TEST_TOOLS ?? '/tmp/hacking-browser-tools', require = createRequire(import.meta.url);
 const brokerPort = Number(process.env.NULLNET_BROKER_PORT ?? 18884);
 const broker = require(`${tools}/node_modules/aedes`)();
@@ -16,8 +16,10 @@ const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PAT
     '--disable-background-timer-throttling', '--disable-backgrounding-occluded-windows', '--disable-renderer-backgrounding'] });
 const context = await browser.newContext({ viewport: { width: 960, height: 600 } });
 const pages = [], errors = [], report = {}, pasta = process.env.ARTIFACT_DIR ?? '/tmp/hacking-coop'; mkdirSync(pasta, { recursive: true });
+const creditos = new Map();
 async function boot() {
   const page = await context.newPage(); pages.push(page); page.setDefaultTimeout(25000);
+  creditos.set(page, await simularCredito(page, `conta-coop-${pages.length}`));
   page.on('pageerror', e => { errors.push(e.stack); console.error(e.stack); });
   await iniciarJogoHacking(page); await page.addScriptTag({ path: `${tools}/node_modules/mqtt/dist/mqtt.min.js` });
   await page.evaluate(async port => {
@@ -152,7 +154,7 @@ try {
     await resolverMemoria(operador, config);
     await capturarHost(operador, config);
     for (const p of participantes) await p.locator('.hacking-victory').waitFor({ timeout: 20000 });
-    const resultado = await verificarConclusao(operador);
+    const resultado = await verificarConclusao(operador, false, 'Você recebeu 350 tijolinhos');
     assert.deepEqual(await operador.evaluate(() => window.__confirmacoes), [{ resultado, ms: resultado.tempoMs }]);
     if (operador !== client) {
       await client.evaluate(state => {
@@ -162,7 +164,10 @@ try {
         s.hackingTerminals.receberSnapshot(state);
       }, await host.evaluate(() => window.__game.scene.getScene('Level1Parte2').hackingTerminals.snapshot()));
       assert.equal(await client.evaluate(() => window.__telaOriginal === document.querySelector('.hacking-victory')), true);
-      assert.deepEqual(await verificarConclusao(client), resultado);
+      assert.deepEqual(await verificarConclusao(client, false, 'Você recebeu 350 tijolinhos'), resultado);
+    }
+    for (const [p, { chamadas, autorizacao }] of creditos) {
+      assert.deepEqual(chamadas, participantes.includes(p) ? [{ corpo: { product: 85, value: 350 }, autorizacao }] : []);
     }
     for (const p of participantes) assert.equal(await p.evaluate(() => window.__game.registry.get('matrixZeroComplete')), true);
     report.sharedEnding = true;

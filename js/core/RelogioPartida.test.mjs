@@ -34,7 +34,9 @@ test("usa o tempo do jogo, conserva pausas sobrepostas e reinicia só em uma nov
   iniciarRelogioSolo(fabrica);
   assert.equal(tempoPartida(fabrica), 3000);
   const resultado = concluirPartida(fabrica);
-  assert.deepEqual(resultado, { tempoMs: 3000, tijolinhos: null });
+  assert.equal(resultado.tempoMs, 3000);
+  assert.match(resultado.recompensa.partida, /^solo:/);
+  assert.deepEqual(resultado.recompensa.participantes, ["solo"]);
   agora = 65000;
   assert.equal(concluirPartida(fabrica), null);
   assert.equal(tempoPartida(fabrica), 3000);

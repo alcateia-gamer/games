@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { assumirControleHacking, iniciarJogoHacking, entrarFabricaHacking, resolverBreach, tocarInteracaoHacking } from './hacking-browser-helpers.mjs';
-import { sceneState, dispensarTutorial, posicionarNullnet, resolverBruteforce, resolverMemoria, capturarHost, verificarLayoutNullnet, verificarPosicaoBotaoNullnet, lerRelogio, observarConfirmacaoFinal, verificarConclusao } from './nullnet-browser-helpers.mjs';
+import { sceneState, dispensarTutorial, posicionarNullnet, resolverBruteforce, resolverMemoria, capturarHost, verificarLayoutNullnet, verificarPosicaoBotaoNullnet, lerRelogio, observarConfirmacaoFinal, simularCredito, verificarConclusao } from './nullnet-browser-helpers.mjs';
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE ?? 'playwright');
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH, headless: true,
   args: ['--no-sandbox', '--disable-dev-shm-usage', '--enable-unsafe-swiftshader', '--disable-background-timer-throttling', '--disable-renderer-backgrounding'] });
@@ -10,6 +10,7 @@ const page = await browser.newPage({ viewport: { width: 1100, height: 740 }, has
 const errors = [], dir = process.env.ARTIFACT_DIR ?? '/tmp/nullnet-campaign'; mkdirSync(dir, { recursive: true });
 page.on('pageerror', e => { errors.push(e.stack); console.error(e.stack); });
 try {
+  const { chamadas, autorizacao } = await simularCredito(page, 'conta-solo');
   await iniciarJogoHacking(page);
   await page.evaluate(async () => { if (document.fullscreenElement) await document.exitFullscreen(); });
   await page.waitForFunction(() => document.querySelector('.run-timer')?.textContent !== '00:00' && document.querySelector('.run-timer'));
@@ -123,9 +124,11 @@ try {
   const transmitindo = await lerRelogio(page);
   assert.equal(transmitindo.resultado, null);
   assert.equal(await page.locator('.hacking-victory').count(), 0);
+  assert.equal(chamadas.length, 0);
   await page.waitForTimeout(1000);
   assert.ok((await lerRelogio(page)).ms > transmitindo.ms);
-  const resultado = await verificarConclusao(page, true);
+  const resultado = await verificarConclusao(page, true, 'Você recebeu 550 tijolinhos');
+  assert.deepEqual(chamadas, [{ corpo: { product: 85, value: 550 }, autorizacao }]);
   assert.deepEqual(await page.evaluate(() => window.__confirmacoes), [{ resultado, ms: resultado.tempoMs }]);
   await page.screenshot({ path: `${dir}/final.png` });
   assert.equal(await page.evaluate(() => window.__game.registry.get('hostConnectionComplete')), true);

@@ -18,16 +18,41 @@ export async function observarConfirmacaoFinal(page) {
   });
 }
 
+export async function simularCredito(page, conta) {
+  const credencial = `header.${Buffer.from(JSON.stringify({ sub: conta })).toString('base64url')}.signature`;
+  const chamadas = [];
+  await page.addInitScript(credential => {
+    globalThis.google = { accounts: { id: {
+      initialize({ callback }) { this.responder = callback; },
+      renderButton() {},
+      prompt() { this.responder({ credential }); },
+    } } };
+  }, credencial);
+  await page.route('https://feira-de-jogos.dev.br/api/v2/credit', route => {
+    const request = route.request();
+    const headers = {
+      'access-control-allow-origin': '*',
+      'access-control-allow-methods': 'OPTIONS, POST',
+      'access-control-allow-headers': 'authorization, content-type',
+    };
+    if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers });
+    chamadas.push({ corpo: request.postDataJSON(), autorizacao: request.headers().authorization });
+    return route.fulfill({ status: 201, headers, json: { operation: chamadas.length } });
+  });
+  return { chamadas, autorizacao: `Bearer ${credencial}` };
+}
+
 const formulario = 'https://docs.google.com/forms/d/e/1FAIpQLSeeleFRJ3PbTeX9nmxFtfqF_3VMD6bBGixNGFODEtqjbHGK9A/viewform?entry.52413313=NULLBORNS';
-export async function verificarConclusao(page, toque = false) {
+export async function verificarConclusao(page, toque, pagamento) {
   const tela = page.locator('.hacking-victory');
   await tela.waitFor({ timeout: 20000 });
   assert.equal(await tela.getByRole('heading').textContent(), 'Parabéns! Você concluiu NULLBORNS!');
   assert.equal(await tela.getByText('Hack final concluído com sucesso.').count(), 1);
-  assert.equal(await tela.locator('.run-completion-payment').textContent(), 'Pendente');
+  await tela.getByText(pagamento, { exact: true }).waitFor();
   const { ms, resultado } = await lerRelogio(page);
   assert.ok(ms > 0);
-  assert.deepEqual(resultado, { tempoMs: ms, tijolinhos: null });
+  assert.equal(resultado.tempoMs, ms);
+  assert.ok(resultado.recompensa.partida);
   assert.equal(await tela.locator('.run-completion-time').textContent(), await page.locator('.run-timer').textContent());
   const link = tela.getByRole('link', { name: 'Avaliar NULLBORNS', exact: true });
   assert.equal(await link.getAttribute('href'), formulario);
