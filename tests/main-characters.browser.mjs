@@ -28,15 +28,14 @@ try {
     if (!start.menuLayer) start.showMainMenu();
     start.selectMenuOption("SOLO");
   });
-  await page.waitForFunction(() => !!window.__game.scene.getScene("Start").soloLayer);
-  await page.waitForFunction(() => window.__game.scene.getScene("Start").soloLayer.alpha >= 0.99);
-  const menu = await page.evaluate(() => {
-    const s = window.__game.scene.getScene("Start");
-    return s.soloLayer.list.filter(o => o.type === "Image").map(o => o.texture.key);
-  });
-  assert.deepEqual(menu, ["start-character", "start-character-2", "start-character-3", "start-character-4"]);
+  const portraits = page.locator(".solo-selection-portrait");
+  await portraits.first().waitFor();
+  assert.deepEqual(await portraits.evaluateAll(nodes => nodes.map(node => node.parentElement.dataset.operator)),
+    ["kai-mercer", "magnus-force", "aria-kade", "nyx"]);
   await page.screenshot({ path: "/tmp/main-character-selection.png" });
-  await page.evaluate(() => window.__game.scene.getScene("Start").startSoloGame());
+  await portraits.first().click();
+  await page.getByRole("button", { name: "INICIAR SOLO" }).click();
+  await page.locator(".cutscene-skip").click();
   await page.waitForFunction(() => window.__game.scene.getScene("Level1")?.inventory,
     null, { timeout: 60000 });
   console.log("PASS: menu com quatro operadores e carregamento sem recursos removidos.");

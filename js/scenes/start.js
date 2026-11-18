@@ -4,6 +4,7 @@
  */
 
 import { criarTextoMenu } from "../ui/MenuText.js";
+import { createSoloSelection } from "../ui/SoloSelection.js";
 
 class Start extends Phaser.Scene {
   /**
@@ -32,7 +33,7 @@ class Start extends Phaser.Scene {
   // =====================================================
 
   /**
-   * O menu inicial precisa apenas da música; retratos são carregados ao escolher SOLO.
+   * O loader do Phaser prepara a música. A abertura adianta as artes do modo solo.
    */
   preload() {
     // Música dos menus, carregamento e multiplayer.
@@ -40,50 +41,6 @@ class Start extends Phaser.Scene {
       "musica-menu",
       "assets/sounds.mp3/sons.musicais.mp3/cyberpunk-2077.mp3",
     );
-  }
-
-  carregarRetratos() {
-    // Retratos dos quatro operadores disponíveis no menu.
-    this.load.spritesheet(
-      "start-character",
-      "assets/PERSONAGENS/PERSONAGENS PRICIPAIS/KAI_MERCER 1/KAI_WALK.png",
-      {
-        frameWidth: 128,
-        frameHeight: 128,
-      },
-    );
-
-    this.load.spritesheet(
-      "start-character-2",
-      "assets/PERSONAGENS/PERSONAGENS PRICIPAIS/MAGNUS_FORCE 2/magnus_walk_LARANJA.png",
-      {
-        frameWidth: 64,
-        frameHeight: 64,
-      },
-    );
-
-    this.load.spritesheet(
-      "start-character-3",
-      "assets/PERSONAGENS/PERSONAGENS PRICIPAIS/ARIA_KADE 3/ARIA_WALK.png",
-      {
-        frameWidth: 128,
-        frameHeight: 128,
-      },
-    );
-
-    this.load.spritesheet(
-      "start-character-4",
-      "assets/PERSONAGENS/PERSONAGENS PRICIPAIS/NYX_4/nyx_walk.png",
-      {
-        frameWidth: 64,
-        frameHeight: 64,
-      },
-    );
-  }
-
-  retratosProntos() {
-    return ["start-character", "start-character-2", "start-character-3", "start-character-4"]
-      .every(key => this.textures.exists(key));
   }
 
   // =====================================================
@@ -104,13 +61,12 @@ class Start extends Phaser.Scene {
     this.rainStartedAt = null;
     this.mode = "intro";
     this.sequenceStarted = false;
-    this.selectedCharacter = "kai-mercer";
     this.startingGame = false;
 
     const ajustarViewport = ({ width, height }) => {
       if (width === this.width && height === this.height) return;
       const dx = (width - this.width) / 2, dy = (height - this.height) / 2;
-      for (const layer of [this.menuLayer, this.optionsLayer, this.soloLayer]) {
+      for (const layer of [this.menuLayer, this.optionsLayer]) {
         if (!layer?.scene) continue;
         layer.x += dx;
         layer.y += dy;
@@ -128,14 +84,17 @@ class Start extends Phaser.Scene {
 
     // Disponível desde a tela JOGAR e durante os menus desta cena.
     const quickStart = (event) => {
-      if (event.repeat || event.ctrlKey || event.altKey || event.metaKey) return;
-      this.selectedCharacter = "kai-mercer";
-      this.startSoloGame();
+      if (this.soloSelection || event.repeat || event.ctrlKey || event.altKey || event.metaKey) return;
+      this.startSoloGame("kai-mercer");
     };
     this.input.keyboard.on("keydown-K", quickStart);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.input.keyboard.off("keydown-K", quickStart);
       this.scale.off("resize", ajustarViewport);
+      this.soloSelection?.remove();
+      this.soloSelection = null;
+      this.preparedSoloSelection = null;
+      this.openingSoloSelection = null;
     });
 
     if (this.scene.settings.data?.abrirMenu) {
@@ -145,7 +104,7 @@ class Start extends Phaser.Scene {
     }
 
     if (this.scene.settings.data?.jogoRapido) {
-      this.startSoloGame();
+      this.startSoloGame("kai-mercer");
       return;
     }
 
@@ -324,6 +283,7 @@ class Start extends Phaser.Scene {
    * símbolos.
    */
   beginRain() {
+    this.prepareSoloSelection();
     this.iniciarMusicaMenu();
     this.rainStartedAt = this.time.now;
     this.nextMessageAt = 1200;
@@ -537,6 +497,7 @@ class Start extends Phaser.Scene {
    * Monta título, opções e status do menu; inicia a música quando o fade de entrada começa.
    */
   showMainMenu() {
+    this.prepareSoloSelection();
     this.menuLayer = this.add.container(0, 0).setDepth(20).setAlpha(0);
 
     const shade = this.add.rectangle(
@@ -612,10 +573,14 @@ class Start extends Phaser.Scene {
    * a janela.
    */
   selectMenuOption(option) {
-    this.selecaoSoloSolicitada = option === "SOLO";
     if (option === "SOLO") {
-      this.showSoloSelection();
+      void this.showSoloSelection();
       return;
+    }
+
+    if (this.openingSoloSelection) {
+      this.openingSoloSelection = null;
+      this.menuStatus.setText("AGUARDANDO COMANDO...");
     }
 
     if (option === "SAIR") {
@@ -758,195 +723,56 @@ class Start extends Phaser.Scene {
   // SELEÇÃO DE PERSONAGEM
   // =====================================================
 
-  /**
-   * Cria os cartões de personagem, o destaque da seleção e os botões de iniciar e
-   * voltar.
-   */
-  showSoloSelection() {
-    if (!this.retratosProntos()) {
-      if (this.carregandoRetratos) return;
-      this.carregandoRetratos = true;
-      this.menuStatus.setText("CARREGANDO OPERADORES...");
-      const concluir = () => {
-        this.carregandoRetratos = false;
-        if (this.scene.isActive() && !this.startingGame && this.selecaoSoloSolicitada) {
-          if (this.retratosProntos()) this.showSoloSelection();
-          else this.menuStatus.setText("FALHA AO CARREGAR OPERADORES. TENTE NOVAMENTE.");
-        }
-      };
-      this.load.once("complete", concluir);
-      this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-        this.load.off("complete", concluir);
-        this.carregandoRetratos = false;
-      });
-      this.carregarRetratos();
-      this.load.start();
-      return;
-    }
-    this.menuLayer.setVisible(false);
-
-    this.soloLayer = this.add.container(0, 0).setDepth(21).setAlpha(0);
-
-    const shade = this.add.rectangle(
-      this.width / 2,
-      this.height / 2,
-      this.width,
-      this.height,
-      0x000000,
-      0.72,
-    );
-
-    const title = criarTextoMenu(this, this.width / 2, 62, "SELECIONE SEU OPERADOR", {
-      color: "#c9ffda",
-      fontFamily: "monospace",
-      fontSize: "20px",
-      fontStyle: "bold",
-    })
-      .setOrigin(0.5);
-
-    const characters = [
-      {
-        id: "kai-mercer",
-        x: this.width / 2 - 276,
-        texture: "start-character",
-        frame: 26,
-        scale: 1.45,
-        name: "KAI MERCER // 01",
+  prepareSoloSelection() {
+    if (this.preparedSoloSelection) return this.preparedSoloSelection;
+    const selection = createSoloSelection({
+      onStart: personagem => this.startSoloGame(personagem),
+      onBack: () => {
+        this.soloSelection.remove();
+        this.soloSelection = null;
+        this.menuLayer.setVisible(true);
+        this.prepareSoloSelection();
       },
-      {
-        id: "magnus-force",
-        x: this.width / 2 - 92,
-        texture: "start-character-2",
-        frame: 18,
-        scale: 1.5,
-        name: "MAGNUS FORCE // 02",
-      },
-      {
-        id: "aria-kade",
-        x: this.width / 2 + 92,
-        texture: "start-character-3",
-        frame: 18,
-        scale: 1.45,
-        name: "ARIA KADE // 03",
-      },
-      {
-        id: "nyx",
-        x: this.width / 2 + 276,
-        texture: "start-character-4",
-        frame: 18,
-        scale: 1.5,
-        name: "NYX // 04",
-      },
-    ];
-
-    const characterViews = characters.map((character) => {
-      const frame = this.add
-        .rectangle(character.x, 205, 112, 112, 0x062b16, 0.95)
-        .setStrokeStyle(2, 0x1b6b3b, 1)
-        .setInteractive({
-          useHandCursor: true,
-        });
-
-      const portrait = this.add
-        .image(character.x, 205, character.texture, character.frame)
-        .setScale(character.scale)
-        .setInteractive({
-          useHandCursor: true,
-        });
-
-      const name = criarTextoMenu(this, character.x, 285, character.name, {
-        color: "#9dffb9",
-        fontFamily: "monospace",
-        fontSize: "11px",
-      })
-        .setOrigin(0.5);
-
-      return {
-        ...character,
-        displayName: character.name,
-        frame,
-        portrait,
-        name,
-      };
     });
-
-    const choose = this.createButton(
-      this.width / 2,
-      338,
-      "INICIAR SOLO",
-      210,
-      40,
-    );
-
-    const back = this.createButton(this.width / 2, 385, "VOLTAR", 130, 30);
-
-    back.label.setFontSize("12px");
-
-    this.soloLayer.add([
-      shade,
-      title,
-      ...characterViews.flatMap(({ frame, portrait, name }) => [
-        frame,
-        portrait,
-        name,
-      ]),
-      choose,
-      back,
-    ]);
-
-    /**
-     * Guarda o ID do personagem escolhido e atualiza os destaques e o status da seleção.
-     */
-    const selectCharacter = (character) => {
-      this.selectedCharacter = character.id;
-
-      characterViews.forEach((view) =>
-        view.frame.setStrokeStyle(
-          2,
-          view.id === this.selectedCharacter ? 0x42ff84 : 0x1b6b3b,
-          1,
-        ),
-      );
-
-      this.menuStatus.setText(`${character.displayName} // SELECIONADO`);
-    };
-
-    characterViews.forEach((character) => {
-      character.frame.on("pointerdown", () => selectCharacter(character));
-
-      character.portrait.on("pointerdown", () => selectCharacter(character));
+    this.preparedSoloSelection = selection;
+    void selection.decodeArt().then(() => {
+      selection.artReady = true;
+    }, () => {
+      // Uma falha em segundo plano permite uma nova tentativa ao entrar em Solo.
+      if (this.preparedSoloSelection === selection && this.openingSoloSelection !== selection) {
+        this.preparedSoloSelection = null;
+      }
     });
-
-    selectCharacter(characterViews[0]);
-
-    choose.on("buttondown", () => this.startSoloGame());
-
-    back.on("buttondown", () => {
-      this.soloLayer.destroy();
-      this.menuLayer.setVisible(true);
-    });
-
-    this.tweens.add({
-      targets: this.soloLayer,
-      alpha: 1,
-      duration: 260,
-    });
+    return selection;
   }
 
-  // =====================================================
-  // INICIAR PARTIDA SOLO
-  // =====================================================
+  async showSoloSelection() {
+    if (this.soloSelection || this.openingSoloSelection || this.startingGame) return;
+    const selection = this.prepareSoloSelection();
+    this.openingSoloSelection = selection;
+    if (!selection.artReady) this.menuStatus.setText("CARREGANDO OPERADORES...");
+    // A decodificação no momento da troca também cobre imagens descartadas da memória.
+    const ready = await selection.decodeArt().then(() => true, () => false);
+    if (this.openingSoloSelection !== selection || this.startingGame) return;
+    this.openingSoloSelection = null;
+    this.preparedSoloSelection = null;
+    if (!ready) {
+      this.menuStatus.setText("FALHA AO CARREGAR OPERADORES. TENTE NOVAMENTE.");
+      return;
+    }
 
-  /**
-   * Entra no preloader passando o ID do personagem selecionado para a partida solo.
-   */
-  startSoloGame() {
-    if (this.startingGame) return;
+    this.menuStatus.setText("AGUARDANDO COMANDO...");
+    this.menuLayer.setVisible(false);
+    this.soloSelection = selection.root;
+    document.body.append(this.soloSelection);
+    this.soloSelection.focus();
+  }
+
+  /** Entra no preloader com o ID do operador escolhido para a partida solo. */
+  startSoloGame(personagem) {
+    if (!personagem || this.startingGame) return;
     this.startingGame = true;
-    this.scene.start("BootPartida", {
-      personagem: this.selectedCharacter,
-      multiplayer: false,
-    });
+    this.scene.start("BootPartida", { personagem, multiplayer: false });
   }
 
   // =====================================================

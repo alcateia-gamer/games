@@ -41,9 +41,13 @@ try {
       assetsBeforeMenu: initial.filter(p => p.startsWith("/assets/")).length }));
     assert.deepEqual(errors, []);
     if (!baseline) {
-      assert.equal(initial.some(p => /\/js\/(enemies|combat|controls|map)\//.test(p)), false);
+      const gameplayModules = initial.filter(p => /\/js\/(enemies|combat|controls|map)\//.test(p));
+      assert.deepEqual(gameplayModules.filter(path => path !== "/js/combat/CharacterBalance.js"), []);
       assert.equal(initial.some(p => /\/js\/scenes\/(Level1|preloader)/.test(p)), false);
-      assert.equal(initial.filter(p => p.startsWith("/assets/")).length, 1, "only menu music before the menu");
+      const menuAssets = initial.filter(p => p.startsWith("/assets/"));
+      assert.deepEqual(menuAssets.filter(p => !p.startsWith("/assets/solo-selection/")).map(p => p.split("/").at(-1)).sort(),
+        ["botao_jogar.mp3", "cyberpunk-2077.mp3"], "apenas sons do menu e artes da seleção durante a abertura");
+      assert.ok(menuAssets.includes("/assets/solo-selection/kai.jpeg"), "retratos solicitados antes do clique");
       assert.equal(initial.some(p => p.includes("mqtt.min.js") || p.includes("rexvirtualjoystick")), false);
       await page.evaluate(() => window.__game.scene.getScene("Start").selectMenuOption("MULTIJOGADOR"));
       await page.waitForFunction(() => window.__game.scene.isActive("MultiplayerMenu") && !!window.__game.registry.get("multiplayer"));
@@ -51,10 +55,12 @@ try {
       await page.evaluate(() => window.__game.scene.getScene("MultiplayerMenu").scene.start("Start", { abrirMenu: true }));
       await page.waitForFunction(() => window.__game.scene.isActive("Start"));
       await page.evaluate(() => window.__game.scene.getScene("Start").selectMenuOption("SOLO"));
-      await page.waitForFunction(() => !!window.__game.scene.getScene("Start").soloLayer);
+      await page.locator(".solo-selection").waitFor();
       assert.equal(requests.some(p => p.includes("arma-test") || /\/golpes\//.test(p)), false);
-      assert.equal(await page.evaluate(() => window.__game.scene.getScene("Start").retratosProntos()), true);
-      await page.evaluate(() => window.__game.scene.getScene("Start").startSoloGame());
+      assert.equal(await page.locator(".solo-selection-portrait").count(), 4);
+      await page.getByRole("button", { name: "Kai Mercer — 404", exact: true }).click();
+      await page.getByRole("button", { name: "INICIAR SOLO" }).click();
+      await page.locator(".cutscene-skip").click();
       await page.waitForFunction(() => window.__game.scene.isActive("Level1"), null, { timeout: 120000 });
       assert.deepEqual(errors, []);
       console.log("PASS: menu sem fases/combate; multiplayer carrega rede sob demanda; seleção carrega retratos; partida solo chega à cidade.");

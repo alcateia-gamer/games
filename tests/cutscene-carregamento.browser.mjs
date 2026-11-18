@@ -54,14 +54,8 @@ try {
   await page.waitForFunction(() => window.__game?.scene.getScene("Start")?.mode === "menu", null, { timeout: 45000 });
   check("vídeo e TV só aparecem depois de iniciar a partida", await page.locator(".cutscene-loading").count() === 0);
   await page.evaluate(() => window.__game.scene.getScene("Start").selectMenuOption("SOLO"));
-  await page.waitForFunction(() => window.__game.scene.getScene("Start").soloLayer?.alpha >= 0.99);
-  const click = async (x, y) => {
-    const rect = await page.locator("#game-container canvas").boundingBox();
-    await page.mouse.click(rect.x + rect.width * x / 800, rect.y + rect.height * y / 450, { delay: 50 });
-  };
-  await click(492, 205);
-  await page.waitForFunction(() => window.__game.scene.getScene("Start").selectedCharacter === "aria-kade");
-  await click(400, 338);
+  await page.getByRole("button", { name: "Aria Kade — Valkyrie", exact: true }).click();
+  await page.getByRole("button", { name: "INICIAR SOLO" }).click();
   await page.locator(".cutscene-loading").waitFor();
   await page.waitForFunction(() => document.querySelector(".cutscene-loading video")?.currentTime > 0.1);
   check("vídeo original adaptado toca dentro da TV", await page.evaluate(() => {

@@ -52,9 +52,11 @@ try {
   const solo = await page.getByText("SOLO", { exact: true }).boundingBox();
   assert.ok(solo);
   await page.touchscreen.tap(solo.x + solo.width / 2, solo.y + solo.height / 2);
-  await page.waitForFunction(() => !!window.__game.scene.getScene("Start").soloLayer);
+  await page.locator(".solo-selection").waitFor();
   console.log("PASS: toque no menu SOLO.");
-  await page.evaluate(() => window.__game.scene.getScene("Start").startSoloGame());
+  await page.getByRole("button", { name: "Kai Mercer — 404", exact: true }).tap();
+  await page.getByRole("button", { name: "INICIAR SOLO" }).tap();
+  await page.locator(".cutscene-skip").tap();
   await page.waitForFunction(() => window.__game.scene.getScene("Level1")?.player?.active,
     null, { timeout: 90000 });
   for (const viewport of [{ width: 1024, height: 768 }, { width: 412, height: 915 },
@@ -99,7 +101,7 @@ try {
     const game = window.__game;
     if (typeof game._viewportCleanup !== "function") throw new Error("Limpeza do viewport não foi integrada.");
     game.destroy(true);
-    if (game._viewportCleanup !== null || game._audioUnlockEvents !== null) {
+    if (game._viewportCleanup !== null || game._audioUnlockCleanup !== null) {
       throw new Error("Os eventos de tela e áudio não foram liberados.");
     }
   });
