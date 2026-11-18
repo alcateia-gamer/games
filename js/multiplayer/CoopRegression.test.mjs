@@ -116,7 +116,7 @@ test("agrupamento mantém keyframe completo e separa visitas ao mesmo mapa", () 
 });
 
 function worldFixture() {
-  const sent = [], registry = { events: new EventEmitter(), set() {} };
+  const sent = [], registry = { events: new EventEmitter(), get() {}, set() {} };
   const camera = { zoom: 0.8, zoomX: 0.8, zoomY: 0.8, roundPixels: false,
     once(event, fn) { this.complete = fn; },
     fadeOut() { this.complete(); },

@@ -77,6 +77,7 @@ const DEBUG_TELEPORTES = false;
 // =====================================================
 
 import { criarRuntimeCoop } from "../multiplayer/CoopRuntime.js";
+import { iniciarRelogioSolo } from "../core/RelogioPartida.js";
 
 class Level1 extends Phaser.Scene {
   /**
@@ -399,6 +400,7 @@ class Level1 extends Phaser.Scene {
     criarRuntimeCoop(this);
     criarRastreadorMissoes(this);
     iniciarMusicaCidade(this);
+    iniciarRelogioSolo(this);
   }
 
   // =====================================================

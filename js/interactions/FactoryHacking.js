@@ -11,6 +11,8 @@ import { criarFalaFlutuante } from '../ui/PlayerSpeechBubble.js';
 import { drawCollectibleMarker } from '../ui/CollectibleMarker.js';
 import { prepararPetNoTerminal } from './HackingPetDock.js';
 import { atualizarAnimacaoParado } from '../controls/PlayerAnimations.js';
+import { concluirPartida, definirPausaRelogioSolo, resultadoPartida } from '../core/RelogioPartida.js';
+import { mostrarTelaConclusao } from '../ui/RunCompletion.js';
 
 const tutoriaisPorJogo = new WeakMap();
 
@@ -60,7 +62,7 @@ export function criarHackingFabrica(scene) {
   }
   const progresso = () => {
     const flags = runtime()?.manager.room?.coopProgress?.flags;
-    const replica = !autoridade() && ultimaReplica?.hostId === runtime()?.manager.room?.hostId
+    const replica = !autoridade() && ultimaReplica && ultimaReplica.hostId === runtime()?.manager.room?.hostId
       ? ultimaReplica.progress : null;
     return Object.fromEntries(Object.entries(K).map(([k, key]) => [k,
       registry.get(key) === true || flags?.[key] === true || replica?.[k] === true]));
@@ -80,6 +82,7 @@ export function criarHackingFabrica(scene) {
       dizer('N.O.V.A.: EV041_ESCAPE_PROTOCOL.DAT recuperado. Autorização digital aprovada. Autentique também o cartão no leitor do SENTINEL.');
       scene.events.emit('hacking:bruteforce-concluido');
     } else {
+      if (!concluirPartida(scene)) return;
       registry.set(K.final, true); scene.events.emit('hacking:matrix-concluida', { suporteVidaPreservado: true });
     }
     publicar();
@@ -120,7 +123,10 @@ export function criarHackingFabrica(scene) {
     scene.input.enabled = atual.input;
     if (scene.input.keyboard) { scene.input.keyboard.resetKeys?.(); scene.input.keyboard.enabled = atual.teclado; }
     if (scene.player?.active && scene.player.body) scene.player.body.moves = atual.moves;
-    if (atual.pausou && !victory && scene.physics.world) scene.physics.resume();
+    if (atual.pausou) {
+      definirPausaRelogioSolo(scene, 'registro', false);
+      if (!victory && scene.physics.world) scene.physics.resume();
+    }
     scene.joystick?.reset?.();
   }
   function abrirRegistro(livre = false) {
@@ -137,7 +143,10 @@ export function criarHackingFabrica(scene) {
     if (scene.input.keyboard) { scene.input.keyboard.resetKeys?.(); scene.input.keyboard.enabled = false; }
     scene.player.setVelocity(0, 0); scene.player.body.moves = false; scene.somCorrida?.stop();
     scene.joystick?.reset?.(); scene.ariaAttackJoystick?.cancelar?.(); atualizarAnimacaoParado(scene);
-    if (registro.pausou) scene.physics.pause();
+    if (registro.pausou) {
+      definirPausaRelogioSolo(scene, 'registro', true);
+      scene.physics.pause();
+    }
     registro.painel = criarRegistroHacking(fecharRegistro, missao().config, progresso);
     if (p.registro) scene.events.emit("hacking:registro-aberto");
     return true;
@@ -152,13 +161,12 @@ export function criarHackingFabrica(scene) {
   }
   function vitoria() {
     if (victory || destruido) return;
+    const resultado = resultadoPartida(scene);
+    if (!resultado) return;
     fecharLocal(); limparDockHost();
     scene.movimentoBloqueado = true; scene.generatorMenuOpen = true;
     scene.player?.setVelocity(0, 0); scene.physics.pause();
-    victory = document.createElement('section'); victory.className = 'hacking-victory';
-    victory.style.cssText = 'position:fixed;inset:0;z-index:10070;background:#030d19f5;color:#caf8e4;display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:24px;box-sizing:border-box;text-align:center;font:16px monospace';
-    victory.innerHTML = `<div style="max-width:640px;margin:auto"><p style="color:#b498ee">THE HOLLOW / TRANSMISSÃO RESTABELECIDA</p><h1>MISSÃO CONCLUÍDA</h1><p>O Vírus Zero alcançou o núcleo.</p><p>O controle da AXIOM sobre o EDEN começou a se romper. O despertar será gradual.</p><p style="color:#7dffc4">SUPORTE À VIDA PRESERVADO</p><p>AXIOM: “A verdade não garante felicidade.”</p><p>N.O.V.A.: “Durante vinte e seis anos, a humanidade viveu um sonho. Agora poderá escolher quando abrir os olhos.”</p><button style="font:inherit;min-height:48px;padding:12px 24px;border:1px solid #70d6b4;background:#123e35;color:#e5fff5;cursor:pointer">Jogar novamente</button></div>`;
-    victory.querySelector('button').onclick = () => window.location.reload(); document.body.append(victory);
+    victory = mostrarTelaConclusao(resultado);
   }
   function projetar(state) {
     if (destruido || !state) return;
@@ -316,7 +324,7 @@ export function criarHackingFabrica(scene) {
         }
       }
       const p = autoridade() ? progresso() : ultimaReplica?.progress ?? progresso();
-      if (p.final) vitoria();
+      if (!victory && resultadoPartida(scene)) vitoria();
       databaseButton.hidden = p.final || !!registro || !!localId || scene.generatorMenuOpen || scene.upgradeMenuOpen || scene.upgradeDialogueOpen || scene.morteEmAndamento || scene.vida <= 0 || scene.cenaEntradaBossAtiva;
       let proxima = null;
       for (const [tipo, t] of Object.entries(T)) {

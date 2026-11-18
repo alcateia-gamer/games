@@ -26,8 +26,23 @@ export function mergeBossPreparation(room, previous, next) {
       ![next.camera?.x, next.camera?.y, next.camera?.zoom].every(Number.isFinite))) return previous;
   return next;
 }
+function mergeRunClock(previous, next) {
+  if (previous?.resultado) return previous;
+  const finalMs = next?.resultado?.tempoMs;
+  if (Number.isSafeInteger(finalMs) && finalMs >= 0) {
+    const { tijolinhos } = next.resultado;
+    return { decorridoMs: finalMs, resultado: {
+      tempoMs: finalMs, tijolinhos: Number.isSafeInteger(tijolinhos) && tijolinhos >= 0 ? tijolinhos : null,
+    } };
+  }
+  const elapsed = next?.decorridoMs;
+  return Number.isSafeInteger(elapsed) && elapsed >= (previous?.decorridoMs ?? 0)
+    ? { decorridoMs: elapsed } : previous;
+}
+
 /** Progresso é monotônico; um frame em trânsito não desfaz uma ação confiável. */
 export function mergeCoopProgress(previous = {}, next = {}) {
+  const { relogio: relogioRecebido, ...progressoRecebido } = next ?? {};
   const flags = { ...previous?.flags };
   for (const [key, value] of Object.entries(next?.flags || {})) if (value === true) flags[key] = true;
   if (flags[LEGACY_NETWORK_KEY]) { flags[MEMORY_PROGRESS_KEY] = true; delete flags[LEGACY_NETWORK_KEY]; }
@@ -35,7 +50,9 @@ export function mergeCoopProgress(previous = {}, next = {}) {
   const base = a ?? b;
   const intelligence = !a || !b || a.config?.seed !== b.config?.seed ? base && { ...base, checkpoint: mesclarCheckpoint(base.checkpoint) } : {
     config: a.config, checkpoint: mesclarCheckpoint(a.checkpoint, b.checkpoint) };
-  return { ...previous, ...next, ...(intelligence ? { intelligence } : {}), flags,
+  const relogio = mergeRunClock(previous?.relogio, relogioRecebido);
+  return { ...previous, ...progressoRecebido, ...(intelligence ? { intelligence } : {}),
+    ...(relogio && { relogio }), flags,
     collected: { ...previous?.collected, ...next?.collected },
     ...((previous?.inventoryDrops || next?.inventoryDrops) ? {
       inventoryDrops: { ...previous?.inventoryDrops, ...next?.inventoryDrops },

@@ -1,8 +1,8 @@
 /** Fluxo real Phaser: só deslocamentos longos, energia e combate são acelerados. */
 import assert from 'node:assert/strict';
 import { mkdirSync, writeFileSync } from 'node:fs';
-import { iniciarJogoHacking, entrarFabricaHacking, resolverBreach, tocarInteracaoHacking } from './hacking-browser-helpers.mjs';
-import { sceneState, dispensarTutorial, posicionarNullnet, resolverBruteforce, resolverMemoria, capturarHost, verificarLayoutNullnet, verificarPosicaoBotaoNullnet } from './nullnet-browser-helpers.mjs';
+import { assumirControleHacking, iniciarJogoHacking, entrarFabricaHacking, resolverBreach, tocarInteracaoHacking } from './hacking-browser-helpers.mjs';
+import { sceneState, dispensarTutorial, posicionarNullnet, resolverBruteforce, resolverMemoria, capturarHost, verificarLayoutNullnet, verificarPosicaoBotaoNullnet, lerRelogio, observarConfirmacaoFinal, verificarConclusao } from './nullnet-browser-helpers.mjs';
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE ?? 'playwright');
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH, headless: true,
   args: ['--no-sandbox', '--disable-dev-shm-usage', '--enable-unsafe-swiftshader', '--disable-background-timer-throttling', '--disable-renderer-backgrounding'] });
@@ -10,11 +10,27 @@ const page = await browser.newPage({ viewport: { width: 1100, height: 740 }, has
 const errors = [], dir = process.env.ARTIFACT_DIR ?? '/tmp/nullnet-campaign'; mkdirSync(dir, { recursive: true });
 page.on('pageerror', e => { errors.push(e.stack); console.error(e.stack); });
 try {
-  await iniciarJogoHacking(page); await entrarFabricaHacking(page);
+  await iniciarJogoHacking(page);
+  await page.evaluate(async () => { if (document.fullscreenElement) await document.exitFullscreen(); });
+  await page.waitForFunction(() => document.querySelector('.run-timer')?.textContent !== '00:00' && document.querySelector('.run-timer'));
+  const cidade = await lerRelogio(page);
+  await entrarFabricaHacking(page);
+  assert.ok((await lerRelogio(page)).ms > cidade.ms);
   console.log('BOOT: fábrica carregada');
   for (const [width, height] of [[568, 320], [390, 844], [1100, 740]]) {
-    await page.setViewportSize({ width, height }); await page.waitForTimeout(100);
+    await page.setViewportSize({ width, height });
     await verificarPosicaoBotaoNullnet(page);
+    const hud = await page.evaluate(() => {
+      const s = window.__game.scene.getScene('Level1Parte2'), { elemento, cronometro } = s.hudStatus;
+      const barra = elemento.getBoundingClientRect(), tempo = cronometro.getBoundingClientRect();
+      return { centro: tempo.left + tempo.width / 2, topo: tempo.top, largura: tempo.width,
+        fonte: parseFloat(getComputedStyle(cronometro).fontSize),
+        sobreposicao: tempo.bottom > barra.top && tempo.top < barra.bottom && tempo.left < barra.right };
+    });
+    assert.ok(Math.abs(hud.centro - width / 2) <= 1 && hud.topo <= 8);
+    assert.ok(hud.largura >= 110 && hud.fonte >= 18);
+    assert.equal(hud.sobreposicao, false);
+    await page.screenshot({ path: `${dir}/cronometro-${width}.png` });
   }
   await page.setViewportSize({ width: 1100, height: 740 });
   await page.getByRole('button', { name: 'NULLNET · ARQUIVOS', exact: true }).click();
@@ -22,7 +38,12 @@ try {
   const locked = await page.locator('.axiom-record-overlay').innerText();
   assert.ok(locked.includes('ACESSO BLOQUEADO') && locked.includes('CRIPTOGRAFADO'));
   assert.ok(!locked.includes('Elias Voss') && !locked.includes('EV041_ESCAPE_PROTOCOL.DAT'));
+  const pausado = await lerRelogio(page);
+  await page.waitForTimeout(1100);
+  assert.deepEqual(await lerRelogio(page), pausado);
   await page.keyboard.press('Escape');
+  await page.waitForTimeout(120);
+  assert.ok((await lerRelogio(page)).ms > pausado.ms);
   await page.evaluate(() => { const s = window.__game.scene.getScene('Level1Parte2'); s.acenderLuzFabrica(); s.player.invulneravel = true; });
   await tocarInteracaoHacking(page); await page.locator('.hacking-overlay').waitFor(); await dispensarTutorial(page);
   const path = resolverBreach((await sceneState(page)).model); assert.ok(path);
@@ -68,6 +89,7 @@ try {
   await page.waitForFunction(() => window.__game.scene.getScene('Level1Parte2').portasFabrica.filter(p => ['porta02', 'porta03'].includes(p.nome)).every(p => p.estado === 'aberta' && !p.colisao));
   console.log('SENTINEL: cartão e autorização removeram as colisões');
   await page.evaluate(() => { window.__game.scene.getScene('Level1Parte2').novoBoss.morto = true; });
+  await observarConfirmacaoFinal(page);
   await posicionarNullnet(page, -300, -5835); await tocarInteracaoHacking(page); await page.locator('.memory-decryption').waitFor();
   await dispensarTutorial(page);
   const config = await page.evaluate(() => window.__game.registry.get('nullnetMission').config);
@@ -78,18 +100,44 @@ try {
   for (const [width, height] of [[568, 320], [390, 844], [1100, 740]]) {
     await page.setViewportSize({ width, height }); await verificarLayoutNullnet(page); await page.screenshot({ path: `${dir}/memory-${width}.png` });
   }
+  const antesDoErro = await lerRelogio(page);
+  await page.locator(`[data-server="${config.seguranca[0]}"]`).tap();
+  assert.equal((await sceneState(page)).model.erros[0], 1);
+  await page.waitForTimeout(150);
+  const depoisDoErro = await lerRelogio(page);
+  assert.equal(depoisDoErro.resultado, null);
+  assert.ok(depoisDoErro.ms > antesDoErro.ms);
+  assert.equal(await page.locator('.hacking-victory').count(), 0);
   await resolverMemoria(page, config, 1);
+  const antesDeCancelar = await lerRelogio(page);
   await page.keyboard.press('Escape'); await page.locator('.nullnet-overlay').waitFor({ state: 'detached' });
+  assert.equal(await page.locator('.hacking-victory').count(), 0);
   await posicionarNullnet(page, -300, -5835); await tocarInteracaoHacking(page); await page.locator('.memory-decryption').waitFor();
+  const reaberto = await lerRelogio(page);
+  assert.equal(reaberto.resultado, null);
+  assert.ok(reaberto.ms > antesDeCancelar.ms);
   assert.equal((await sceneState(page)).model.recuperados, 1); console.log('CHECKPOINT: módulo recuperado preservado ao reabrir');
   await resolverMemoria(page, config);
   await page.setViewportSize({ width: 568, height: 320 }); await verificarLayoutNullnet(page);
   await page.screenshot({ path: `${dir}/host-mobile.png` }); await capturarHost(page, config, 1, true);
-  await page.locator('.hacking-victory').waitFor({ timeout: 20000 });
+  const transmitindo = await lerRelogio(page);
+  assert.equal(transmitindo.resultado, null);
+  assert.equal(await page.locator('.hacking-victory').count(), 0);
+  await page.waitForTimeout(1000);
+  assert.ok((await lerRelogio(page)).ms > transmitindo.ms);
+  const resultado = await verificarConclusao(page, true);
+  assert.deepEqual(await page.evaluate(() => window.__confirmacoes), [{ resultado, ms: resultado.tempoMs }]);
   await page.screenshot({ path: `${dir}/final.png` });
-  assert.ok((await page.locator('.hacking-victory').innerText()).includes('SUPORTE À VIDA PRESERVADO'));
   assert.equal(await page.evaluate(() => window.__game.registry.get('hostConnectionComplete')), true);
   assert.equal(await page.evaluate(() => window.__game.registry.get('matrixZeroComplete')), true);
+  await Promise.all([
+    page.waitForEvent('load'),
+    page.getByRole('button', { name: 'Jogar novamente', exact: true }).tap(),
+  ]);
+  await assumirControleHacking(page);
+  assert.equal(await page.locator('.run-timer').textContent(), '00:00');
+  assert.equal((await lerRelogio(page)).resultado, null);
+  assert.equal(await page.locator('.hacking-victory').count(), 0);
   assert.deepEqual(errors, []); writeFileSync(`${dir}/report.json`, JSON.stringify({ status: 'PASS', computer, errors }, null, 2));
   console.log('PASS: campanha, arquivos, coordenadas, cartão, memória, HOST, checkpoints, layouts e Vírus Zero.');
 } catch (e) { await page.screenshot({ path: `${dir}/failure.png` }).catch(() => {}); console.error(await sceneState(page).catch(() => null)); throw e; }

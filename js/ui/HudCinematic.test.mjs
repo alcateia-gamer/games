@@ -11,9 +11,10 @@ test("oculta HUD Phaser/HTML e elementos tardios sem apagar luzes ou alterar vis
   const luz = objeto(50), torre = { ...objeto(53), scrollFactorX: 1, scrollFactorY: 1 };
   const oculto = { ...objeto(200, 1), visible: false };
   const status = { style: { visibility: "visible" } };
+  const cronometro = { style: { visibility: "" } };
   const radarDOM = { ...objeto(100100), node: { style: { visibility: "" } } };
   const aliados = { style: { visibility: "" } };
-  const scene = { events: new EventEmitter(), hudStatus: { elemento: status }, hudAliados: { elemento: aliados },
+  const scene = { events: new EventEmitter(), hudStatus: { elemento: status, cronometro }, hudAliados: { elemento: aliados },
     children: { list: [botao, minimapa, barraBoss, luz, torre, oculto, radarDOM] } };
   const hud = ocultarHUDDuranteCena(scene, camera);
   assert.equal(botao.cameraFilter, 3); assert.equal(botao.visible, true);
@@ -21,6 +22,7 @@ test("oculta HUD Phaser/HTML e elementos tardios sem apagar luzes ou alterar vis
   assert.equal(luz.cameraFilter, 0); assert.equal(torre.cameraFilter, 0);
   assert.equal(aliados.style.visibility, "hidden");
   assert.equal(status.style.visibility, "hidden"); assert.equal(radarDOM.node.style.visibility, "hidden");
+  assert.equal(cronometro.style.visibility, "hidden");
   // Atualizações normais dos botões/minimapa não podem reexibir a interface na câmera.
   botao.visible = minimapa.visible = true;
   const novo = { ...objeto(232), node: { style: {} } };
@@ -35,6 +37,7 @@ test("oculta HUD Phaser/HTML e elementos tardios sem apagar luzes ou alterar vis
   assert.equal(oculto.visible, false); assert.equal(oculto.cameraFilter, 1);
   assert.equal(aliados.style.visibility, "");
   assert.equal(status.style.visibility, "visible"); assert.equal(radarDOM.node.style.visibility, "");
+  assert.equal(cronometro.style.visibility, "");
   assert.equal(novoStatus.style.visibility, ""); assert.equal(novo.cameraFilter, 0);
   assert.equal(scene.events.listenerCount("prerender"), 0);
 });

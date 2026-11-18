@@ -9,6 +9,7 @@ import { ASSETS_BOSS } from "../core/FactoryAssetPack.js";
 import { novoBossConfig, configurarZonasNovoBoss, jogadorNaArenaNovoBoss } from "../enemies/novoBoss/NovoBossConfig.js";
 import { retanguloLivreDoMapa } from "../enemies/EnemyPathfinding.js";
 import { mergeBossPreparation } from "./CoopProtocol.js";
+import { iniciarRelogioCoop, tempoPartida } from "../core/RelogioPartida.js";
 
 const clone = value => structuredClone(value);
 const raw = JSON.parse(readFileSync(new URL("../../assets/map/parte2-fase1.json", import.meta.url)));
@@ -30,7 +31,7 @@ function room(count = 2, roomCode = "TEST") {
   function makeNode(index, saved) {
     const id = `p${index}`, events = new EventEmitter(), registry = new Map(); registry.events = new EventEmitter();
     const scene = { multiplayer: true, movimentoBloqueado: false, generatorMenuOpen: false,
-      map, game: { registry }, events, time: { now: 0 },
+      map, registry, game: { registry, getTime: () => clock }, events, time: { now: 0 },
       inventory: { getQuantity: key => key === "card" && index === 0 ? 1 : 0, hasCollected: () => false },
       luzFabricaAcesa: true, player: actor(-1100, -5250), vida: 100, remotePlayers: new Map(),
       input: { enabled: true, keyboard: { enabled: true, resetKeys() {} } },
@@ -153,6 +154,9 @@ function room(count = 2, roomCode = "TEST") {
 for (const count of [2, 3, 4]) test(`${count} jogadores: cartão inicia carga local; portas e último cliente retêm a câmera`, t => {
   const h = room(count); t.after(() => h.dispose());
   const host = h.nodes[0];
+  Object.assign(host.scene, { coopRuntime: host.r, multiplayerManager: host.manager });
+  iniciarRelogioCoop(host.scene);
+  h.advance(20000);
   for (let i = 0; i < 5; i++) h.tick();
   assert.ok(h.nodes.every(n => n.calls.length === 0 && !n.r.bossAssetsPrepared));
   assert.equal(host.world.confirmarCartao(), true); h.flush();
@@ -179,6 +183,7 @@ for (const count of [2, 3, 4]) test(`${count} jogadores: cartão inicia carga lo
   assert.ok(h.nodes.every(n => !n.world.bossLoading.canStart()));
   h.advance(350); h.tick();
   assert.ok(h.nodes.every(n => n.world.bossLoading.canStart()));
+  assert.equal(tempoPartida(host.scene), 20350);
   assert.equal(host.world.iniciarIntroducaoBoss(), true);
   for (let i = 0; i < 5; i++) h.tick();
   assert.equal(h.sent.filter(a => a.kind === "bossIntro").length, 1);
@@ -429,7 +434,7 @@ test("cartão confirmado enquanto host termina a fábrica é reenviado sem exigi
 
 test('migração após vitória preserva SENTINEL derrotado sem repetir combate ou evento', () => {
   const events = new EventEmitter(); let limpezas = 0, preparacoes = 0, restores = 0;
-  const scene = { events, novoBoss: { morto: true } };
+  const scene = { events, registry: new Map(), game: { getTime: () => 1 }, novoBoss: { morto: true } };
   const r = { scene, manager: {}, players: { remotes: new Map() }, music: { changeAuthority() {} },
     replica: { encounter: scene.novoBoss, destroy() { scene.novoBoss = null; } }, receiver: { destroy() {} },
     world: { restoreIntro() {}, restore() { restores++; }, bossLoading: { now: () => 1, state: { phase: 'complete' }, retimeAfterMigration() {} } },

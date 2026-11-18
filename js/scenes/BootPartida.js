@@ -6,6 +6,7 @@ import { CutsceneLoading } from "../ui/CutsceneLoading.js";
 import { reiniciarResgatesSolo } from "../player/SoloRunState.js";
 import { INTELLIGENCE_KEY } from '../puzzles/MissionIntelligence.js';
 import { HACKING_KEYS } from '../puzzles/HackingConfig.js';
+import { reiniciarRelogioPartida } from "../core/RelogioPartida.js";
 
 /** A introdução começa junto com a importação e permanece durante a fila de assets. */
 export default class BootPartida extends Phaser.Scene {
@@ -14,6 +15,7 @@ export default class BootPartida extends Phaser.Scene {
   }
 
   create(data = {}) {
+    reiniciarRelogioPartida(this.registry);
     this.registry.remove(INTELLIGENCE_KEY);
     for (const key of [MISSION_FACTS_KEY, MISSION_POWER_KEY, "factoryDoorOpen", ...MISSION_DOOR_KEYS, "factoryDoorOpen:porta04", "factoryDoorOpen:porta05"]) this.registry.remove(key);
     this.registry.remove(LEGACY_NETWORK_KEY);

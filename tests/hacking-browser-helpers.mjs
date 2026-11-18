@@ -11,6 +11,9 @@ export async function iniciarJogoHacking(page) {
       'const game = window.__game = new Game(jogoRapido);') + '\nwindow.__hackingBootReady=true;' });
   });
   await page.goto(process.env.BASE_URL ?? 'http://127.0.0.1:8765/', { waitUntil: 'networkidle' });
+  await assumirControleHacking(page);
+}
+export async function assumirControleHacking(page) {
   await page.waitForFunction(() => window.__hackingBootReady); await page.keyboard.press('k');
   await page.locator('.cutscene-skip').waitFor({ state: 'visible', timeout: 60000 });
   await page.locator('.cutscene-skip').click();

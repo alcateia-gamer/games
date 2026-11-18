@@ -10,6 +10,7 @@ import { AllyStatusHud } from "../ui/AllyStatusHud.js";
 import { playPlayerHitEffects } from "../combat/CombatEffects.js";
 import { obterTemaPersonagem } from "../ui/CharacterTheme.js";
 import { colorirContornoEstaminaHUD, colorirMolduraHUD, colorirPixelHUD } from "../ui/HudTheme.js";
+import { formatarTempoPartida, tempoPartida } from "../core/RelogioPartida.js";
 
 // =====================================================
 // NULLBORNS — HUD NÍTIDA COM CARREGAMENTO ANTECIPADO
@@ -476,6 +477,7 @@ function criarImagemDeTela(origem, larguraPx, alturaPx) {
  */
 function atualizarPosicaoHUD(scene) {
   const overlay = scene.hudStatus?.elemento;
+  const cronometro = scene.hudStatus?.cronometro;
   const dados = scene.hudStatusDados;
   const canvasJogo = scene.game?.canvas;
 
@@ -498,27 +500,27 @@ function atualizarPosicaoHUD(scene) {
 
   const dpr = Math.max(1, window.devicePixelRatio || 1);
 
-  // Largura original preservada em 350.
-  const larguraLogica = Math.min(
-    HUD_CONFIG.largura,
-    Math.max(1, larguraJogo - HUD_CONFIG.x - 10),
+  const posX = Math.round((caixaJogo.left - caixaPai.left + HUD_CONFIG.x * escalaX) * dpr) / dpr;
+  const posY = Math.round((caixaJogo.top - caixaPai.top + HUD_CONFIG.y * escalaY) * dpr) / dpr;
+  let larguraCss = Math.min(
+    HUD_CONFIG.largura * escalaX,
+    caixaJogo.width - (HUD_CONFIG.x + 10) * escalaX,
   );
 
-  const larguraCss = larguraLogica * escalaX;
+  // Em telas estreitas o cronômetro e a barra podem ocupar a mesma faixa vertical.
+  const caixaCronometro = cronometro?.getBoundingClientRect();
+  const topoHud = caixaPai.top + posY;
+  if (caixaCronometro && caixaCronometro.bottom > topoHud &&
+      caixaCronometro.top < topoHud + larguraCss * dados.altura / dados.largura) {
+    larguraCss = Math.min(larguraCss, caixaCronometro.left - caixaPai.left - posX - 6);
+  }
 
-  const alturaCss = (larguraCss * dados.altura) / dados.largura;
-
-  const posX = caixaJogo.left - caixaPai.left + HUD_CONFIG.x * escalaX;
-
-  const posY = caixaJogo.top - caixaPai.top + HUD_CONFIG.y * escalaY;
-
-  overlay.style.left = `${Math.round(posX * dpr) / dpr}px`;
-
-  overlay.style.top = `${Math.round(posY * dpr) / dpr}px`;
+  overlay.style.left = `${posX}px`;
+  overlay.style.top = `${posY}px`;
 
   const larguraPx = Math.max(1, Math.round(larguraCss * dpr));
 
-  const alturaPx = Math.max(1, Math.round(alturaCss * dpr));
+  const alturaPx = Math.max(1, Math.round(larguraPx * dados.altura / dados.largura));
 
   // Exibe cada pixel do canvas em um pixel físico, evitando uma segunda interpolação CSS.
   overlay.style.width = `${larguraPx / dpr}px`;
@@ -655,6 +657,7 @@ function montarHUD(scene) {
   const dados = prepararHUDOriginal(scene, frameIndex);
 
   scene.hudStatus?.elemento?.remove();
+  scene.hudStatus?.cronometro?.remove();
 
   const canvasJogo = scene.game.canvas;
 
@@ -672,11 +675,18 @@ function montarHUD(scene) {
   overlay.style.touchAction = "none";
   overlay.style.imageRendering = "auto";
 
-  pai.appendChild(overlay);
+  const tema = obterTemaPersonagem(scene.personagemSelecionada);
+  const cronometro = document.createElement("time");
+  cronometro.className = "run-timer";
+  cronometro.style.setProperty("--timer-accent", tema.accentCss);
+  cronometro.style.setProperty("--timer-background", tema.label);
+  cronometro.textContent = formatarTempoPartida(tempoPartida(scene));
+  pai.append(overlay, cronometro);
 
   scene.hudStatus = {
     active: true,
     elemento: overlay,
+    cronometro,
     texturasDeTela: null,
   };
 
@@ -830,6 +840,11 @@ function iniciarHUD(scene) {
       ultimoDpr = dpr;
     }
     atualizarBarrasHUD(scene);
+    const cronometro = scene.hudStatus?.cronometro;
+    if (cronometro) {
+      const tempo = formatarTempoPartida(tempoPartida(scene));
+      if (cronometro.textContent !== tempo) cronometro.textContent = tempo;
+    }
     aliadosHUD.atualizar();
   }
 
@@ -862,6 +877,7 @@ function iniciarHUD(scene) {
     scene.events.off(Phaser.Scenes.Events.SHUTDOWN, limpar);
 
     scene.hudStatus?.elemento?.remove();
+    scene.hudStatus?.cronometro?.remove();
     aliadosHUD.destruir();
     if (scene.hudAliados === aliadosHUD) scene.hudAliados = null;
 

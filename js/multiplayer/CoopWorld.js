@@ -14,6 +14,7 @@ import { retanguloLivreDoMapa } from "../enemies/EnemyPathfinding.js";
 import { distanceToInteractionArea } from "../interactions/FactoryGenerator.js";
 import { HACKING_KEYS } from '../puzzles/HackingConfig.js';
 import { prepararBossDevFase2 } from '../controls/DeveloperBoss.js';
+import { atualizarRelogioCoop } from "../core/RelogioPartida.js";
 
 const hackingKey = key => Object.values(HACKING_KEYS).includes(key);
 const sharedKey = key => key === "factoryGeneratorPowered" || /^factoryDoorOpen(?::porta\d+)?$/.test(key) || hackingKey(key);
@@ -320,6 +321,7 @@ export class CoopWorld {
   }
   snapshot() {
     const s = this.scene;
+    if (this.r.host) atualizarRelogioCoop(s);
     return { progress: this.manager.room.coopProgress, map: this.manager.room.coopMap,
       hacking: s.hackingTerminals?.snapshot(),
       bossAssembly: this.bossAssembly, bossPreparation: this.bossLoading.state,

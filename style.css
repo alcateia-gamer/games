@@ -62,6 +62,94 @@ body {
   image-rendering: pixelated;
 }
 
+.run-timer {
+  position: absolute;
+  z-index: 100;
+  top: max(4px, env(safe-area-inset-top, 0px));
+  left: 50%;
+  width: clamp(110px, 24vw, 144px);
+  box-sizing: border-box;
+  transform: translateX(-50%);
+  border: 1px solid var(--timer-accent);
+  border-radius: 3px;
+  background: var(--timer-background);
+  color: #edf7fb;
+  box-shadow: inset 0 0 0 2px #07121b;
+  padding: 5px 4px;
+  font: bold clamp(18px, 3.6vw, 24px)/1.1 monospace;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.hacking-victory {
+  position: fixed;
+  inset: 0;
+  z-index: 10070;
+  display: flex;
+  overflow: auto;
+  padding: 16px;
+  background: #030d19f5;
+  color: #caf8e4;
+  font: 16px/1.5 monospace;
+  text-align: center;
+}
+
+.run-completion {
+  box-sizing: border-box;
+  width: min(100%, 620px);
+  margin: auto;
+  padding: clamp(16px, 5vw, 36px);
+  border: 1px solid #32725f;
+  background: #071921;
+}
+
+.run-completion h1 {
+  margin: 0;
+  color: #e5fff5;
+  font-size: clamp(20px, 4vw, 30px);
+  line-height: 1.2;
+}
+
+.run-completion p { margin: 10px 0; }
+.run-completion strong { color: #7dffc4; }
+
+.run-completion-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.run-completion-actions a,
+.run-completion-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: 46px;
+  padding: 8px 16px;
+  border: 1px solid #70d6b4;
+  background: #0c2529;
+  color: #e5fff5;
+  font: inherit;
+  cursor: pointer;
+}
+
+.run-completion-actions .run-completion-review {
+  background: #123e35;
+  font-weight: bold;
+  text-decoration: none;
+}
+
+.run-completion-actions :is(a, button):is(:hover, :focus-visible) {
+  background: #1b5547;
+  outline: 2px solid #7dffc4;
+  outline-offset: 2px;
+}
+
 /* O navegador desenha os rótulos na densidade real da tela, separados da pixel art. */
 .menu-text {
   pointer-events: none;

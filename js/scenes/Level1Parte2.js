@@ -85,6 +85,7 @@ import { criarInteracaoPortaFabrica } from "../interactions/FactoryDoor.js";
 import { criarRoboBola, atualizarRoboBola } from "../enemies/RoboBola.js";
 
 import { criarRuntimeCoop } from "../multiplayer/CoopRuntime.js";
+import { iniciarRelogioSolo } from "../core/RelogioPartida.js";
 
 class Level1Parte2 extends Phaser.Scene {
   /**
@@ -349,6 +350,7 @@ class Level1Parte2 extends Phaser.Scene {
     criarRastreadorMissoes(this);
     iniciarMusicaFabrica(this);
     if (this.luzFabricaAcesa) descarregarCidade(this);
+    iniciarRelogioSolo(this);
   }
 
   /**

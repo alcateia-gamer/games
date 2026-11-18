@@ -49,6 +49,18 @@ test("snapshot atrasado não apaga progresso já confirmado nem reinicia o gerad
   assert.deepEqual(client.room.coopProgress, progress);
 });
 
+test("o relógio do host aceita o resultado uma vez e ignora amostras atrasadas", () => {
+  let progress = mergeCoopProgress({}, { relogio: { decorridoMs: 3600000 } });
+  progress = mergeCoopProgress(progress, { relogio: { decorridoMs: 3599999 } });
+  assert.equal(progress.relogio.decorridoMs, 3600000);
+  const resultado = { tempoMs: 3600042, tijolinhos: null };
+  progress = mergeCoopProgress(progress, { relogio: { decorridoMs: 3600042, resultado } });
+  for (const clock of [{ decorridoMs: 3800000 }, { resultado: { tempoMs: 4000000, tijolinhos: 0 } }]) {
+    progress = mergeCoopProgress(progress, { relogio: clock });
+    assert.deepEqual(progress.relogio, { decorridoMs: 3600042, resultado });
+  }
+});
+
 test("frames e sala recebidos provam presença do host sem regredir o heartbeat", () => {
   const { host, client } = pair();
   host.room.players.forEach(p => { p.lastSeen = 1; });

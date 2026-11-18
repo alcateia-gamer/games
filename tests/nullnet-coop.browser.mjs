@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { iniciarJogoHacking, entrarFabricaHacking, resolverBreach, tocarInteracaoHacking } from './hacking-browser-helpers.mjs';
-import { sceneState, dispensarTutorial, resolverBruteforce, resolverMemoria, capturarHost } from './nullnet-browser-helpers.mjs';
+import { sceneState, dispensarTutorial, resolverBruteforce, resolverMemoria, capturarHost, lerRelogio, observarConfirmacaoFinal, verificarConclusao } from './nullnet-browser-helpers.mjs';
 const tools = process.env.HACKING_TEST_TOOLS ?? '/tmp/hacking-browser-tools', require = createRequire(import.meta.url);
 const brokerPort = Number(process.env.NULLNET_BROKER_PORT ?? 18884);
 const broker = require(`${tools}/node_modules/aedes`)();
@@ -44,7 +44,18 @@ try {
   for (const p of pages) { await p.waitForFunction(() => window.__manager.room.players.every(p => p.character)); await p.evaluate(() => window.__manager.setReady(true)); }
   await host.waitForFunction(() => window.__manager.canStart()); await host.evaluate(() => window.__manager.startGame());
   await client.waitForFunction(() => window.__manager.room.status === 'PLAYING');
+  await Promise.all(pages.map(async p => {
+    await p.evaluate(() => {
+      const personagem = window.__manager.room.players.find(p => p.id === window.__manager.playerId).character;
+      window.__game.scene.getScene('Level1').scene.restart({ multiplayer: true, personagem });
+    });
+    await p.waitForFunction(() => window.__game.scene.getScene('Level1').coopRuntime &&
+      (window.__manager.room.coopProgress?.relogio?.decorridoMs ?? 0) >= 1000);
+  }));
+  const cidade = await lerRelogio(client);
   await Promise.all(pages.map(p => entrarFabricaHacking(p, true)));
+  assert.ok((await lerRelogio(host)).ms > cidade.ms);
+  assert.ok((await lerRelogio(client)).ms >= cidade.ms);
   await host.waitForFunction(() => window.__game.scene.getScene('Level1Parte2').coopRuntime.players.remotes.size === 1);
   await host.evaluate(async () => {
     const s = window.__game.scene.getScene('Level1Parte2');
@@ -88,6 +99,10 @@ try {
     assert.ok(firstFiles.includes('ACESSO BLOQUEADO · TERMINAL 02'));
     assert.ok(!firstFiles.includes('EV041_ESCAPE_PROTOCOL.DAT'));
     assert.equal(await host.evaluate(() => window.__game.scene.getScene('Level1Parte2').physics.world.isPaused), false);
+    const menuAberto = await lerRelogio(host);
+    await host.waitForTimeout(1100);
+    assert.ok((await lerRelogio(host)).ms > menuAberto.ms);
+    assert.ok((await lerRelogio(client)).ms > menuAberto.ms);
     await host.keyboard.press('Escape'); await resolverBruteforce(client);
     for (const p of pages) {
       await p.waitForFunction(() => window.__game.registry.get('factoryBruteforceComplete') === true);
@@ -108,11 +123,13 @@ try {
     for (const p of pages) await p.waitForFunction(() => window.__game.registry.get('bossAccessCardAuthenticated') === true, null, { timeout: 30000 });
     for (const p of pages) await p.waitForFunction(() => window.__game.scene.getScene('Level1Parte2').portasFabrica.filter(p => ['porta02', 'porta03'].includes(p.nome)).every(p => p.estado === 'aberta' && !p.colisao));
     console.log('PASS: autorização compartilhada e duas portas sincronizadas com colisões removidas.');
+    const antesDoBoss = await lerRelogio(host);
     await posicionar(host, -1093, -5520);
     await host.waitForFunction(() => {
       const s = window.__game.scene.getScene('Level1Parte2');
       return s.preparacaoBoss?.pronto && s.novoBoss?.sprite?.active && s.coopRuntime.world.bossLoading.canStart();
     }, null, { timeout: 90000 });
+    assert.ok((await lerRelogio(host)).ms > antesDoBoss.ms);
     await host.evaluate(() => window.__game.scene.getScene('Level1Parte2').novoBoss.receberDano(100000));
     for (const p of pages) await p.waitForFunction(() => window.__game.scene.getScene('Level1Parte2').novoBoss?.morto === true);
     await posicionar(client, -300, -5835); await tocarInteracaoHacking(client); await client.locator('.memory-decryption').waitFor();
@@ -131,9 +148,22 @@ try {
       operador = client; participantes = [client]; report.migration = true;
       console.log('PASS: host operador desconectou; novo host recuperou dois arquivos e liberou o terminal.');
     }
+    await observarConfirmacaoFinal(operador);
     await resolverMemoria(operador, config);
     await capturarHost(operador, config);
     for (const p of participantes) await p.locator('.hacking-victory').waitFor({ timeout: 20000 });
+    const resultado = await verificarConclusao(operador);
+    assert.deepEqual(await operador.evaluate(() => window.__confirmacoes), [{ resultado, ms: resultado.tempoMs }]);
+    if (operador !== client) {
+      await client.evaluate(state => {
+        const s = window.__game.scene.getScene('Level1Parte2');
+        window.__telaOriginal = document.querySelector('.hacking-victory');
+        s.hackingTerminals.receberSnapshot(state);
+        s.hackingTerminals.receberSnapshot(state);
+      }, await host.evaluate(() => window.__game.scene.getScene('Level1Parte2').hackingTerminals.snapshot()));
+      assert.equal(await client.evaluate(() => window.__telaOriginal === document.querySelector('.hacking-victory')), true);
+      assert.deepEqual(await verificarConclusao(client), resultado);
+    }
     for (const p of participantes) assert.equal(await p.evaluate(() => window.__game.registry.get('matrixZeroComplete')), true);
     report.sharedEnding = true;
     console.log(report.migration ? 'PASS: migração, checkpoint, HOST e encerramento no novo host.' : 'PASS: memória e HOST autoritativos, transferência de operador com checkpoint e encerramento em ambas as telas.');

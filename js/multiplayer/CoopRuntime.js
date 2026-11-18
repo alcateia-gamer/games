@@ -36,6 +36,7 @@ import { playReplicatedHitEffects } from "../combat/CombatEffects.js";
 import { CoopMusic } from "./CoopMusic.js";
 import mostrarTelaMorte from "../scenes/DeathScreen.js";
 import { droparInventarioAoMorrer } from "../inventory/InventoryDrops.js";
+import { iniciarRelogioCoop } from "../core/RelogioPartida.js";
 
 export function criarRuntimeCoop(scene) {
   if (!scene.multiplayer || !scene.multiplayerManager?.room) return null;
@@ -97,6 +98,7 @@ export class CoopRuntime {
     if (this.host) this.prepareAuthority();
     this.receiveRoom(this.manager.room);
     this.world.restore();
+    if (this.host) iniciarRelogioCoop(scene);
     this.manager.sendCoopAction("keyframe", {});
   }
   prepareAuthority() {
@@ -512,6 +514,7 @@ export class CoopRuntime {
     this.host = host;
     this.music.changeAuthority(host);
     if (!host) return;
+    iniciarRelogioCoop(this.scene, true);
     this.manager.coopReceivedSequence = -1;
     this.forceKeyframe = true;
     this.replica.destroy(); this.receiver.destroy();
