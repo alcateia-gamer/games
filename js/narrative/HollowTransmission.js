@@ -22,7 +22,7 @@ export class HollowTransmission {
     try { this.view = new HollowMessenger(this.screen, () => this.audio.word()); }
     catch (error) { console.warn('Interface The Hollow indisponível:', error); }
     this.view?.wait('ESTABELECENDO CONEXÃO…');
-    if (!this.multiplayer) this.begin(validCast([this.character]), true, Date.now());
+    if (!this.multiplayer) this.begin(validCast([this.character]), Date.now());
     else this.sync();
   }
 
@@ -60,12 +60,12 @@ export class HollowTransmission {
       this.nextDone = Date.now() + 2500;
       this.send('hollow_done');
     }
-    if (this.prepared && state.startAt && !this.timeline) this.begin(state.cast, false, state.startAt - offset);
+    if (this.prepared && state.startAt && !this.timeline) this.begin(state.cast, state.startAt - offset);
     else if (this.prepared && !state.startAt) this.view?.wait('AGUARDANDO ASSINATURAS DOS AGENTES…');
   }
 
-  begin(cast, solo, startAt) {
-    this.timeline = hollowTimeline(cast, solo);
+  begin(cast, startAt) {
+    this.timeline = hollowTimeline(cast);
     this.startAt = startAt;
     this.index = -1;
     this.jump = 0;

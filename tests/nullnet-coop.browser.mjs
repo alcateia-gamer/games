@@ -30,6 +30,16 @@ async function boot() {
   }, brokerPort);
   await page.waitForFunction(() => window.__manager.mqtt.connected); console.log(`BOOT: instância ${pages.length} pronta.`); return page;
 }
+async function verificarNova(page, mapa, host) {
+  await page.waitForFunction(({ mapa, host }) => {
+    const s = window.__game.scene.getScene(mapa);
+    const pet = host ? s.coopRuntime?.nova?.pet : s.coopRuntime?.nova?.visual;
+    const robos = s.children.list.filter(o => o.active && o.texture?.key === 'robo-pet');
+    return pet?.active && robos.length === 1 && robos[0] === pet &&
+      (host ? s.companionPet === pet && pet.body?.checkCollision.none : !pet.body);
+  }, { mapa, host });
+}
+
 async function posicionar(page, x, y) {
   await page.evaluate(({ x, y }) => {
     const s = window.__game.scene.getScene('Level1Parte2'); s.player.body.reset(x, y); s.player.body.updateFromGameObject();
@@ -57,8 +67,12 @@ try {
     await p.waitForFunction(() => window.__game.scene.getScene('Level1').coopRuntime &&
       (window.__manager.room.coopProgress?.relogio?.decorridoMs ?? 0) >= 1000);
   }));
+  await verificarNova(host, 'Level1', true);
+  await verificarNova(client, 'Level1', false);
   const cidade = await lerRelogio(client);
   await Promise.all(pages.map(p => entrarFabricaHacking(p, true)));
+  await verificarNova(host, 'Level1Parte2', true);
+  await verificarNova(client, 'Level1Parte2', false);
   assert.ok((await lerRelogio(host)).ms > cidade.ms);
   assert.ok((await lerRelogio(client)).ms >= cidade.ms);
   await host.waitForFunction(() => window.__game.scene.getScene('Level1Parte2').coopRuntime.players.remotes.size === 1);
@@ -214,6 +228,8 @@ try {
   for (const p of pages) await posicionar(p, 1000, -1896);
   await tocarInteracaoHacking(client); await client.locator('.hacking-overlay').waitFor(); await dispensarTutorial(client);
   assert.equal(await host.evaluate(() => window.__game.scene.getScene('Level1Parte2').hackingTerminals.enviar({ op: 'abrir', tipo: 'fabrica' })), false);
+  await verificarNova(host, 'Level1Parte2', true);
+  await verificarNova(client, 'Level1Parte2', false);
   const oldState = await host.evaluate(() => window.__game.scene.getScene('Level1Parte2').hackingTerminals.snapshot());
   await client.keyboard.press('Escape'); await host.waitForFunction(() => !window.__game.scene.getScene('Level1Parte2').hackingTerminals.temSessao());
   await client.locator('.hacking-overlay').waitFor({ state: 'detached' });
@@ -227,6 +243,11 @@ try {
   }
   for (const p of pages) await p.waitForFunction(() => window.__game.registry.get('factoryHackingComplete') === true);
   await client.locator('.hacking-overlay').waitFor({ state: 'detached' });
+  await client.waitForFunction(() => {
+    const nova = window.__game.scene.getScene('Level1Parte2').coopRuntime.nova;
+    const fala = nova.falas.get('hacking-speech')?.bubble.texto;
+    return fala?.visible && fala.x === nova.visual.x + 8;
+  });
   const config = await host.evaluate(() => window.__game.registry.get('nullnetMission').config);
   await client.waitForFunction(seed => window.__game.registry.get('nullnetMission')?.config.seed === seed, config.seed);
   console.log('PASS: Breach pelo cliente, operador único, cancelamento, réplica antiga e semente compartilhada.');
@@ -283,6 +304,7 @@ try {
     if (process.env.NULLNET_COOP_DISCONNECT === '1') {
       await host.evaluate(() => window.__manager.leaveRoom());
       await client.waitForFunction(() => window.__game.scene.getScene('Level1Parte2').coopRuntime.host && !window.__game.scene.getScene('Level1Parte2').hackingTerminals.temSessao());
+      await verificarNova(client, 'Level1Parte2', true);
       await posicionar(client, -300, -5835); await tocarInteracaoHacking(client); await client.locator('.memory-decryption').waitFor();
       assert.equal((await sceneState(client)).model.recuperados, 2);
       assert.equal(await client.evaluate(() => window.__game.registry.get('nullnetMission').config.seed), config.seed);

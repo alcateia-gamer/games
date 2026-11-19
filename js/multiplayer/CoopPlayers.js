@@ -44,7 +44,7 @@ export class CoopPlayers {
         inventoryDrop: s.coopInventoryDrop ?? null,
         developer: !!s.developerMode,
         flashlight: { angle: round(this.flashlightPose.angulo, 10000) },
-        speech: [...(s.coopSpeechBubbles?.values() || [])].map(b => b.snapshot()).filter(Boolean),
+        speech: [...(s.coopSpeechBubbles?.values() || [])].map(b => b.snapshot()).filter(b => b && b.falante !== "nova"),
         effects: this.sender.capture(playerVisualObjects(s), true),
         hitbox: s.hitboxDanoPlayer && { dx: round(s.hitboxDanoPlayer.x - s.player.x),
           dy: round(s.hitboxDanoPlayer.y - s.player.y), w: round(s.hitboxDanoPlayer.width), h: round(s.hitboxDanoPlayer.height) },
@@ -113,14 +113,14 @@ export class CoopPlayers {
           !marretaImovel) actor.setPosition(data.x, data.y);
       const b = data.coop?.hitbox || { dx: -15, dy: -20, w: 30, h: 46 };
       entry.hitbox = new Phaser.Geom.Rectangle(actor.x + b.dx, actor.y + b.dy, b.w, b.h);
-      const speech = new Map((data.coop?.speech || []).filter(p => typeof p.nome === "string" &&
+      const speech = new Map((data.coop?.speech || []).filter(p => p.falante !== "nova" && typeof p.nome === "string" &&
         typeof p.frase === "string" && p.frase.length <= 1000).slice(0, 8).map(p => [p.nome, p]));
       for (const [name, state] of speech) {
         if (!entry.speeches.has(name)) {
           const ctx = { add: s.add, time: s.time, player: actor, personagemSelecionada: data.character,
             get morteEmAndamento() { return !!entry.data.dead; },
             get hitboxDanoPlayer() { return { y: actor.y + (entry.data.coop?.hitbox?.dy ?? -20) }; } };
-          entry.speeches.set(name, criarFalaFlutuante(ctx, `coop-${data.id}-${name}`, { replica: true, falante: state.falante === "nova" ? "nova" : "player" }));
+          entry.speeches.set(name, criarFalaFlutuante(ctx, `coop-${data.id}-${name}`, { replica: true }));
         }
         entry.speeches.get(name).aplicarEstadoRede(state);
       }

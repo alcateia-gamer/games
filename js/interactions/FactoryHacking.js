@@ -23,14 +23,38 @@ export function criarHackingFabrica(scene) {
   const registry = scene.game.registry;
   const tutoriaisMostrados = tutoriaisPorJogo.get(scene.game) ?? new Map();
   tutoriaisPorJogo.set(scene.game, tutoriaisMostrados);
-  const som = criarSonsLeitorCartao(scene), fala = criarFalaFlutuante(scene, 'hacking-speech', { falante: 'nova' });
+  const som = criarSonsLeitorCartao(scene), fala = criarFalaFlutuante(scene, 'hacking-speech', {
+    falante: 'nova', ancoraPet: scene.multiplayer ? () => scene.companionPet : null,
+  });
   let destruido = false, view = null, hostDock = null, clientDock = null, painel = null;
   let localId = null, anteriorTeclado = true, anteriorInput = true, sequence = 0, jamAte = 0;
   let terminalPetPronto = false, victory = null, ultimaReplica = null, pausaSolo = false;
   let revisao = 0, revisaoRecebida = -1, replicaHost = null;
   let registro = null, falaPendente = null;
+  const filaNova = [], falasDaSessao = new Set();
+  let sessaoDaFala = null;
   let finalConfirmado = false, estadoPagamento = { tipo: 'pendente' }, pararPagamento;
-  const dizer = frase => { if (scene.generatorMenuOpen) falaPendente = frase; else fala.mostrar(frase); };
+  const semEnergia = 'N.O.V.A.: ligue o gerador para energizar o terminal.';
+  const dizer = frase => {
+    if (scene.multiplayer) {
+      if (fala.snapshot()?.frase !== frase && !filaNova.includes(frase)) filaNova.push(frase);
+    } else if (scene.generatorMenuOpen) falaPendente = frase;
+    else fala.mostrar(frase);
+  };
+  function narrarTerminal(session) {
+    if (sessaoDaFala !== session.id) {
+      sessaoDaFala = session.id;
+      falasDaSessao.clear();
+    }
+    for (const campo of [session.model.mensagem, session.model.orientacao]) {
+      if (typeof campo !== 'string') continue;
+      for (const linha of campo.split(/\n| \/ /)) {
+        if (!linha.startsWith('N.O.V.A.:') || falasDaSessao.has(linha)) continue;
+        falasDaSessao.add(linha);
+        dizer(linha);
+      }
+    }
+  }
   const runtime = () => scene.coopRuntime;
   const autoridade = () => !scene.multiplayer || !!(runtime()?.host && runtime().manager.room);
   const meuId = () => runtime()?.manager.playerId ?? 'solo';
@@ -208,6 +232,7 @@ export function criarHackingFabrica(scene) {
     const session = state.session;
     if (session && session.id !== view?.id) scene.events.emit("hacking:terminal-aberto", session.tipo);
     view = session;
+    if (scene.multiplayer && autoridade() && session && state.pronto) narrarTerminal(session);
     if (state.progress?.final) return;
     if (!session || session.owner !== meuId()) { if (localId != null) fecharLocal(); return; }
     if (localId !== session.id) {
@@ -237,6 +262,12 @@ export function criarHackingFabrica(scene) {
     if (!ctx?.player?.active || ctx.vida <= 0 || ctx.morteEmAndamento) return false;
     if (payload.op === 'abrir') {
       const t = T[payload.tipo], p = progresso();
+      if (scene.multiplayer && (payload.tipo === 'fabrica' || payload.tipo === 'bruteforce') &&
+          !scene.luzFabricaAcesa && !engine.atual && !p.final && !scene.fabricaDescarregada &&
+          Math.hypot(ctx.player.x - t.x, ctx.player.y - t.y) <= t.alcance + 32) {
+        dizer(semEnergia);
+        return false;
+      }
       if (!t || engine.atual || p.final || (payload.tipo === 'fabrica' && (p.registro || !scene.luzFabricaAcesa)) ||
           (payload.tipo === 'bruteforce' && (p.bruteforce || !p.fabrica || !scene.luzFabricaAcesa)) ||
           (payload.tipo === 'matrix' && (!p.fabrica || !p.bruteforce || !p.cartao || !scene.novoBoss?.morto)) || scene.cenaEntradaBossAtiva ||
@@ -319,6 +350,7 @@ export function criarHackingFabrica(scene) {
         eraAutoridade = autoridade();
         revisaoRecebida = -1;
         engine.atual = null; limparDockHost(); fecharLocal(); view = null;
+        filaNova.length = 0; falasDaSessao.clear(); sessaoDaFala = null; fala.ocultar();
         if (eraAutoridade) publicar();
       }
       if (autoridade()) {
@@ -362,13 +394,16 @@ export function criarHackingFabrica(scene) {
         if (disponivel && !registro && !api.temSessao() && !scene.generatorMenuOpen && !scene.morteEmAndamento && distance <= t.alcance &&
             (!proxima || distance < proxima.distance)) proxima = { distance, interact: () => {
               if (podeLer) return abrirRegistro(true);
-              if (!scene.luzFabricaAcesa && tipo !== 'matrix') { dizer('N.O.V.A.: ligue o gerador para energizar o terminal.'); return true; }
+              if (!scene.multiplayer && !scene.luzFabricaAcesa && tipo !== 'matrix') { dizer(semEnergia); return true; }
               return api.enviar({ op: 'abrir', tipo });
             } };
       }
       scene.interacaoHackingProxima = proxima;
       if (falaPendente && !scene.generatorMenuOpen) { const frase = falaPendente; falaPendente = null; fala.mostrar(frase); }
       fala.atualizar();
+      if (scene.multiplayer && autoridade() && scene.companionPet?.active && !fala.snapshot() && filaNova.length) {
+        fala.mostrar(filaNova.shift());
+      }
       return !!victory || (!scene.multiplayer && (!!engine.atual || !!registro));
     },
     destruir() {

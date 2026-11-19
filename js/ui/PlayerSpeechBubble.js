@@ -7,7 +7,7 @@ const OPACIDADE_FUNDO = 0.78;
 const RAIO_CAIXA = 9;
 const TEMA_NOVA = { accent: 0x248bea, accentCss: "#248bea", label: "#eff8ff" };
 
-export function criarFalaFlutuante(scene, nome = "player-speech-bubble", { replica = false, falante = "player" } = {}) {
+export function criarFalaFlutuante(scene, nome = "player-speech-bubble", { replica = false, falante = "player", ancoraPet = null } = {}) {
   let nova = falante === "nova", ancoraRemota = null;
   let tema = nova ? TEMA_NOVA : obterTemaPersonagem(scene.personagemSelecionada);
   const texto = scene.add.text(0, 0, "", {
@@ -57,12 +57,15 @@ export function criarFalaFlutuante(scene, nome = "player-speech-bubble", { repli
       ponta.lineStyle(1, 0xffffff, 0.32).strokeRoundedRect(0, -altura, largura, altura, RAIO_CAIXA);
     }
     // O tempo para ler começa depois que a última letra aparece.
-    if (reveladas === letras.length) timer = scene.time.delayedCall(TEMPO_LEITURA_MS, ocultar);
+    if (reveladas === letras.length) {
+      const atrasoRede = ancoraPet ? Math.max(0, agora() - ultimaEm - (letras.length - 1) * INTERVALO_LETRA_MS) : 0;
+      timer = scene.time.delayedCall(Math.max(0, TEMPO_LEITURA_MS - atrasoRede), ocultar);
+    }
   };
   const ancora = () => {
     const player = scene.player;
     if (nova) {
-      const pet = scene.companionPet;
+      const pet = ancoraPet ? ancoraPet() : scene.companionPet;
       if (pet?.active && pet.visible !== false) {
         const topo = pet.getTopCenter?.();
         return { x: pet.x + 8, y: (topo?.y ?? pet.y - (pet.displayHeight ?? 48) * (pet.originY ?? .5)) + 8 };
@@ -86,8 +89,8 @@ export function criarFalaFlutuante(scene, nome = "player-speech-bubble", { repli
   const atualizar = () => {
     if (!visivel || destruido) return;
     const player = scene.player;
-    if (!player?.active || player.visible === false || scene.morteEmAndamento ||
-        scene.generatorMenuOpen || scene.devItemMenuOpen) { ocultar(); return; }
+    if (!ancoraPet && (!player?.active || player.visible === false || scene.morteEmAndamento ||
+        scene.generatorMenuOpen || scene.devItemMenuOpen)) { ocultar(); return; }
     revelar();
     const pos = ancora();
     if (!pos) { ocultar(); return; }

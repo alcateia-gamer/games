@@ -280,25 +280,22 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
         (player) => player.id === action.playerId,
       );
       if (existing) return;
-      if (
-        this.room.status === "PLAYING" ||
-        this.room.players.length >= MAX_PLAYERS
-      ) {
+      const playing = this.room.status === "PLAYING";
+      const releaseAt = this.room.hollow?.releaseAt;
+      const character = playing ? CHARACTER_IDS.find(id => !this.room.players.some(p => p.character === id)) : null;
+      const full = this.room.players.length >= MAX_PLAYERS || (playing && !character);
+      if (full || (playing && (!releaseAt || Date.now() < releaseAt))) {
         this.mqtt.publish(`${this.roomTopic}/presence`, {
           type: "room_rejected",
           playerId: action.playerId,
-          reason:
-            this.room.status === "PLAYING" ? "Sala já iniciada" : "Sala cheia",
+          reason: full ? "Sala cheia" : "Transmissão em andamento",
         });
         return;
       }
-      if (
-        this.room.status !== "PLAYING" &&
-        this.room.players.length < MAX_PLAYERS
-      ) {
-        this.room.players.push(this.normalizePlayer({ id: action.playerId }));
-        this.publishState();
-      }
+      const map = this.room.coopMap;
+      this.room.players.push(this.normalizePlayer({ id: action.playerId, character,
+        ...(playing && map ? { mapKey: map.key, x: map.x, y: map.y } : {}) }));
+      this.publishState();
       return;
     }
     if (action.type === "heartbeat") {

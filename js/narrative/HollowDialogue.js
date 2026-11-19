@@ -60,12 +60,12 @@ LIFE SUPPORT: PRESERVE
 MISSION STATUS: AUTHORIZED`;
 
 /** Blocos comuns e respostas rotativas; nenhum sorteio ou roteiro por combinação. */
-export function buildHollowDialogue(characters, solo = false) {
+export function buildHollowDialogue(characters) {
   const cast = validCast(characters), lines = [];
   const add = (role, name, text, extra = {}) => lines.push({ role, name, text, ...extra });
   const central = (text, extra) => add('hollow', 'THE HOLLOW // CENTRAL', text, extra);
   const system = (text, extra) => add('system', 'SISTEMA', text, extra);
-  const support = text => { if (solo) add('agent', 'N.O.V.A // SUPORTE', text); };
+  const support = text => add('agent', 'N.O.V.A // SUPORTE', text);
   let cursor = 0;
   const reply = slot => {
     const speakers = slot === 0 ? cast : cast.length ? [cast[cursor++ % cast.length]] : [];
@@ -119,9 +119,9 @@ export function buildHollowDialogue(characters, solo = false) {
   return lines;
 }
 
-export function hollowTimeline(cast, solo) {
+export function hollowTimeline(cast) {
   let time = 480; // Interferência curta e tela preta antes da busca de frequência.
-  const lines = buildHollowDialogue(cast, solo).map(line => {
+  const lines = buildHollowDialogue(cast).map(line => {
     const typing = line.connection || line.operation ? 0 : Math.min(2300, line.text.length * 18);
     const duration = line.duration ?? typing + Math.max(1000, line.text.length * 23) + (line.pause || 0);
     const entry = { ...line, start: time, typing, duration };

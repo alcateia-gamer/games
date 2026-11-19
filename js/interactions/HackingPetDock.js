@@ -4,8 +4,12 @@ import { atualizarAnimacaoParado } from '../controls/PlayerAnimations.js';
 /** Reserva o operador e conduz N.O.V.A. ao computador, conservando colisões e controles. */
 export function prepararPetNoTerminal(scene, context, terminal, { criarPet = true } = {}) {
   const player = context.player, inicio = { x: player.x, y: player.y }, b = player.body;
-  const temporario = criarPet && !context.companionPet?.active;
-  const pet = criarPet ? temporario ? criarCompanionPet(context) : context.companionPet : null;
+  const petDisponivel = scene.multiplayer
+    ? scene.coopRuntime?.host && player === scene.player && scene.companionPet?.active
+      ? scene.companionPet : null
+    : context.companionPet;
+  const temporario = criarPet && !scene.multiplayer && !petDisponivel?.active;
+  const pet = criarPet ? temporario ? criarCompanionPet(context) : petDisponivel : null;
   const petInicio = pet ? { x: pet.x, y: pet.y } : null;
   const petDestino = { x: terminal.x, y: terminal.y + 24 };
   const anterior = { movimento: !!context.movimentoBloqueado, menu: !!context.generatorMenuOpen,

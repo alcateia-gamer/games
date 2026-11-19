@@ -9,6 +9,7 @@ import { NYX_AURA } from "../combat/NyxHealingAura.js";
 import { COOP, round, sameMap } from "./CoopProtocol.js";
 import { VisualSender, VisualReceiver } from "./CoopVisuals.js";
 import { soloContext } from "./CoopContext.js";
+import { CoopNova } from "./CoopNova.js";
 import { CoopPlayers, playerVisualObjects } from "./CoopPlayers.js";
 import { BossReplica, describeBoss, describeCombatTarget } from "./CoopBossReplica.js";
 import { prepararBoss, atualizarBoss, destruirBoss, prepararVisuaisBossCoop } from "../enemies/BossPrincipal.js";
@@ -59,6 +60,7 @@ export class CoopRuntime {
     this.sender = new VisualSender(); this.receiver = new VisualReceiver(scene);
     this.baseline = new Set(scene.children.list);
     this.players = new CoopPlayers(this);
+    this.nova = new CoopNova(this);
     this.localContext = soloContext(scene);
     this.world = new CoopWorld(this);
     this.music = new CoopMusic(this);
@@ -84,6 +86,7 @@ export class CoopRuntime {
     this.onInput = () => { if (!this.teamDefeated) this.players.receive(this.manager.room.players); };
     this.onPost = (time, delta) => this.update(time, delta);
     this.onShutdown = () => this.destroy();
+    this.onRoomClosed = () => this.nova.destroy();
     this.onPointer = (pointer, objects = []) => {
       if (scene.restricaoControleNovoBoss && (objects.includes(scene.botaoAtaque) ||
           objects.length === 0 && pointer.leftButtonDown?.())) this.escape();
@@ -91,6 +94,7 @@ export class CoopRuntime {
     this.manager.on("coopFrame", this.onFrame);
     this.manager.on("coopAction", this.onAction);
     this.manager.on("roomUpdated", this.onRoom);
+    this.manager.on("roomClosed", this.onRoomClosed);
     this.manager.on("playerInput", this.onInput);
     scene.events.on("postupdate", this.onPost);
     scene.events.once("shutdown", this.onShutdown);
@@ -230,6 +234,7 @@ export class CoopRuntime {
     const host = room.hostId === this.manager.playerId;
     if (host !== this.host) this.changeAuthority(host);
     if (authorityChanged) {
+      this.nova?.clearReplica();
       this.music.hostOffset = undefined; this.music.bestRtt = Infinity; this.music.lastPing = -Infinity;
     }
     this.authorityId = room.hostId;
@@ -353,6 +358,7 @@ export class CoopRuntime {
     this.revival.receive(packet.revivals);
     if (this.receivedStream !== packet.streamId) {
       this.receivedStream = packet.streamId;
+      this.nova?.clearReplica();
       this.receiver.destroy(); this.replica.destroy();
       this.receivedSequence = null;
       this.awaitingKeyframe = true;
@@ -371,6 +377,7 @@ export class CoopRuntime {
     }
     this.awaitingKeyframe = false; this.keyframeRequestedAt = 0;
     this.receiver.receive(packet.visuals, this.scene.robosFabricaDescarregados);
+    this.nova?.receive(packet.nova);
     const s = this.scene;
     s.inimigos = (packet.targets || []).map(data => {
       if (s.robosFabricaDescarregados && !data.prologoEncontroId) return null;
@@ -422,7 +429,7 @@ export class CoopRuntime {
     }
     for (const effects of this.players.effects.values()) for (const { object } of effects.entries.values()) excluded.add(object);
     const objects = [];
-    const prioritarios = new Set([s.novoBoss?.sprite, ...(s.novoBoss?.geradores ?? []).map(torre => torre.visual ?? torre.sprite)]);
+    const prioritarios = new Set([this.nova?.pet, s.novoBoss?.sprite, ...(s.novoBoss?.geradores ?? []).map(torre => torre.visual ?? torre.sprite)]);
     function visit(o) {
       if (!o?.active || o.coopReplica || o.coopLocalVisual || excluded.has(o) || o.scrollFactorX === 0 || o.scrollFactorY === 0) return;
       if (!o.visible && !o.body && o.type === "Graphics") return;
@@ -450,6 +457,7 @@ export class CoopRuntime {
       this.checkRemoteProjectiles();
       s.atualizarFugaRoboBola?.(time);
     } else { this.receiver.update(delta); this.replica.update(delta); this.world.update(delta); }
+    this.nova?.update(time, delta);
     if (time - this.lastInput >= 1000 / COOP.inputHz) {
       this.lastInput = time;
       const extra = this.players.localState();
@@ -471,6 +479,7 @@ export class CoopRuntime {
         ...(full && s.scrapSystem ? { upgradeEconomy: economyFor(s) } : {}),
         music: this.music.snapshot(), revivals: this.revival.snapshot(),
         visuals: this.sender.capture(this.worldObjects(), full),
+        nova: this.nova?.snapshot(),
         targets: (s.inimigos || []).filter(e => e.active && !e.morto).map(e => describeCombatTarget(e, e.networkId, this.sender)),
         boss: describeBoss(s, this.sender), ...this.world.snapshot() };
       this.manager.saveFactoryWaves?.(s.spawnAreasRoboBola?.progresso());
@@ -519,6 +528,7 @@ export class CoopRuntime {
   finishTeamGame() {
     if (this.teamDefeated) return;
     this.teamDefeated = true;
+    this.nova?.destroy();
     this.scene.spawnAreasRoboBola?.cancelarBuscas();
     this.scene.ariaAttackJoystick?.cancelar();
     this.scene.atacando = false;
@@ -559,6 +569,7 @@ export class CoopRuntime {
     const previousNow = this.world.bossLoading.now();
     this.world.restoreIntro();
     this.host = host;
+    this.nova?.authority(host);
     this.music.changeAuthority(host);
     if (!host) return;
     iniciarRelogioCoop(this.scene, true);
@@ -588,9 +599,11 @@ export class CoopRuntime {
     this.manager.localVitals = { health: this.scene.vida, stamina: this.scene.estamina };
     this.manager.off("coopFrame", this.onFrame); this.manager.off("coopAction", this.onAction);
     this.manager.off("roomUpdated", this.onRoom);
+    this.manager.off("roomClosed", this.onRoomClosed);
     this.manager.off("playerInput", this.onInput);
     this.scene.events.off("postupdate", this.onPost); this.scene.events.off("shutdown", this.onShutdown);
     this.scene.input.off("pointerdown", this.onPointer);
+    this.nova?.destroy();
     this.players.destroy(); this.replica.destroy(); this.receiver.destroy(); this.world.destroy(); this.music.destroy(); this.revival.destroy();
     if (this.scene.coopRuntime === this) this.scene.coopRuntime = null;
   }
