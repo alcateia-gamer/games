@@ -1,10 +1,36 @@
 import { criarMissionManager } from "../systems/MissionManager.js";
+import { dispositivoComToque } from "../core/MobileDisplay.js";
+
+export function posicionarMissoesMobile(bounds, map, timer, status, allies) {
+  const gap = 8;
+  const minWidth = 164;
+  const right = map ? map.left - gap : bounds.right - gap;
+  let top = Math.max(bounds.top + gap, map?.top ?? bounds.top);
+  const leftLimit = bounds.left + gap;
+  const hud = [status, allies].filter(Boolean);
+  const leftAt = y => Math.max(leftLimit, ...hud
+    .filter(rect => rect.bottom + gap > y)
+    .map(rect => rect.right + gap));
+
+  let left = Math.max(leftAt(top), (timer?.right ?? leftLimit) + gap);
+  if (right - left < minWidth) {
+    top = Math.max(top, (timer?.bottom ?? bounds.top) + gap);
+    left = leftAt(top);
+    if (right - left < minWidth) {
+      top = Math.max(top, ...hud.map(rect => rect.bottom + gap));
+      left = leftLimit;
+    }
+  }
+  return { right, top, width: Math.max(0, right - left) };
+}
 
 export function criarRastreadorMissoes(scene) {
   const canvas = scene.game.canvas;
   if (!canvas?.parentElement) return;
   const root = document.createElement("aside");
   root.className = "mission-tracker";
+  const mobile = dispositivoComToque();
+  root.classList.toggle("mission-mobile", mobile);
   root.setAttribute("aria-label", "Objetivos da campanha");
   const sector = document.createElement("p");
   sector.className = "mission-sector";
@@ -60,18 +86,30 @@ export function criarRastreadorMissoes(scene) {
     root.style.setProperty("--mission-x", `${bounds.left - parent.left}px`);
     root.style.setProperty("--mission-y", `${bounds.top - parent.top}px`);
     const map = scene.minimap?.hudPosition;
+    let mapRect;
     if (map) {
       const camera = scene.cameras.main;
       const size = scene.scale.gameSize;
-      const mapLeft = bounds.left - parent.left + map.x * bounds.width / (size?.width || camera.width);
-      const mapTop = bounds.top - parent.top + map.y * bounds.height / (size?.height || camera.height);
-      root.style.setProperty("--mission-map-left", `${mapLeft - 9}px`);
-      root.style.setProperty("--mission-map-top", `${mapTop}px`);
-      root.classList.add("mission-next-to-map");
+      mapRect = {
+        left: bounds.left + map.x * bounds.width / (size?.width || camera.width),
+        top: bounds.top + map.y * bounds.height / (size?.height || camera.height),
+      };
+      root.style.setProperty("--mission-map-left", `${mapRect.left - parent.left - 9}px`);
+      root.style.setProperty("--mission-map-top", `${mapRect.top - parent.top}px`);
+    }
+    root.classList.toggle("mission-next-to-map", !!map);
+    const status = statusHud?.getBoundingClientRect();
+    const allies = allyHud?.getBoundingClientRect();
+    if (mobile) {
+      const timer = scene.hudStatus?.cronometro?.getBoundingClientRect();
+      const position = posicionarMissoesMobile(bounds, mapRect, timer, status, allies);
+      root.style.setProperty("--mission-mobile-right", `${parent.right - position.right}px`);
+      root.style.setProperty("--mission-mobile-top", `${position.top - parent.top}px`);
+      root.style.setProperty("--mission-mobile-width", `${position.width}px`);
     }
     const occupiedBottom = Math.max(
-      statusHud?.getBoundingClientRect().bottom ?? bounds.top,
-      allyHud?.getBoundingClientRect().bottom ?? bounds.top,
+      status?.bottom ?? bounds.top,
+      allies?.bottom ?? bounds.top,
     );
     root.style.setProperty("--mission-hud-bottom", `${occupiedBottom - parent.top + 7}px`);
   }
