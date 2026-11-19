@@ -66,4 +66,27 @@ try {
     await page.close();
     console.log(`PASS: TV oculta enquanto carrega, abertura de olho e limpeza em ${width}x${height}.`);
   }
+  // Erro de mídia não pode deixar as ações de recuperação atrás da tela preta
+  // enquanto a imagem da TV continua sem responder.
+  const fallback = await browser.newPage();
+  await fallback.route('**/js/core/game.js*', route => route.fulfill({ body: '', contentType: 'text/javascript' }));
+  let releaseArt;
+  const blockedArt = new Promise(resolve => { releaseArt = resolve; });
+  await fallback.route('**/*Industrial.png', async route => { await blockedArt; await route.abort(); });
+  await fallback.route('**/cutscene-tv.mp4', route => route.abort());
+  await fallback.goto(process.env.BASE_URL ?? 'http://127.0.0.1:8765/');
+  await fallback.evaluate(async () => {
+    document.body.replaceChildren();
+    const { CutsceneLoading } = await import('/js/ui/CutsceneLoading.js');
+    window.__cut = new CutsceneLoading({ events: { once() {}, off() {} }, registry: new Map() });
+  });
+  try {
+    await fallback.waitForFunction(() => document.querySelector('.cutscene-eye-opening'), null, { timeout: 5000 });
+    await fallback.locator('.cutscene-eye').waitFor({ state: 'detached', timeout: 5000 });
+    assert.equal(await fallback.evaluate(() => window.__cut.television.complete), false);
+    console.log('PASS: falha de vídeo libera a tela mesmo com a arte sem resposta.');
+  } finally {
+    await fallback.evaluate(() => window.__cut.destroy());
+    releaseArt(); await fallback.close();
+  }
 } finally { await browser.close(); }

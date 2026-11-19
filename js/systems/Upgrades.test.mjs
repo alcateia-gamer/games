@@ -227,23 +227,25 @@ test('NPC usa frame existente, coordenada exata e interação compartilhada por 
 test('abrir/fechar repetidamente restaura input e não duplica listeners; soltar E não fecha', () => {
   const s=scene(),shop=new UpgradeShopUI(s);
   shop.root={hidden:true,querySelector:()=>({focus(){}})};shop.render=()=>{};shop.portrait=()=>{};shop.showFarewell=()=>{};
+  let layouts=0;shop.responsive={update(){layouts++;},destroy(){}};
   globalThis.document={activeElement:null};
   for(let n=0;n<5;n++){
     assert.equal(shop.open(),true);assert.equal(s.input.enabled,false);assert.equal(s.movimentoBloqueado,true);
     shop.onKey({type:'keyup',code:'KeyE',stopImmediatePropagation(){}});assert.equal(s.upgradeMenuOpen,true);
     shop.close();assert.equal(s.input.enabled,true);assert.equal(s.input.keyboard.enabled,true);assert.equal(s.movimentoBloqueado,undefined);
   }
+  assert.equal(layouts,5);
   assert.equal(s.events.listenerCount('upgradeResult'),1);assert.equal(s.events.listenerCount('upgradesChanged'),1);
   shop.root.remove=()=>{};globalThis.window={removeEventListener(){}};shop.destroy();
   assert.equal(s.events.listenerCount('upgradeResult'),0);delete globalThis.document;delete globalThis.window;
 });
 
-test('sprite NPC tem células 64px válidas e interface prevê rolagem e telas menores', () => {
+test('sprite NPC tem células 64px válidas e interface prevê paginação e telas menores', () => {
   const png=readFileSync(new URL('../../assets/PERSONAGENS/NPC/NPC.png',import.meta.url));
   assert.equal(png.readUInt32BE(16),1152);assert.equal(png.readUInt32BE(20),3968);
   assert.ok(UPGRADE_NPC.frame<18*62);
   const css=readFileSync(new URL('../../style.css',import.meta.url),'utf8');
-  assert.match(css,/max-width:650px/);assert.match(css,/overflow:auto/);assert.match(css,/touch-action:pan-y/);
+  assert.match(css,/@media\(max-width:900px\),\(max-height:650px\)/);assert.match(css,/\.upgrade-pages/);assert.match(css,/\.upgrade-terminal \{ touch-action:manipulation; overflow:hidden; \}/);
 });
 
 test('aura real da Nyx amplifica dez pulsos e encerra sem ultrapassar a vida máxima', () => {
@@ -330,7 +332,7 @@ test('comerciante da fábrica usa a coordenada informada e a mesma interação',
   const position=UPGRADE_NPCS.Level1Parte2;s.player.setPosition(position.x,position.y);
   const {npc,shop,dialogue}=createUpgradeNPC(s);
   assert.equal(npc.x,-1253);assert.equal(npc.y,-1928);assert.equal(npc.frame,UPGRADE_NPC.frame);
-  assert.equal(npc.depth,16.5);assert.equal(npc.coopLocalVisual,true);
+  assert.ok(npc.depth<16.5 && npc.depth>16.4995,'NPC permanece na faixa dos pés da fábrica');assert.equal(npc.coopLocalVisual,true);
   s.events.emit('update');assert.ok(s.interacaoCiberneticasProxima);
   let opened=0;dialogue.open=()=>{opened++;return true;};s.interacaoCiberneticasProxima.interact();assert.equal(opened,1);
   s.player.x+=91;s.events.emit('update');assert.equal(s.interacaoCiberneticasProxima,null);

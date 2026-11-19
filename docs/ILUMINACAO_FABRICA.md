@@ -103,7 +103,7 @@ Três quedas contínuas representam núcleo, dispersão e halo. A intensidade ta
 varia ao longo do segmento, evitando uma faixa central uniforme. Uma função
 `smootherstep` leva todo o efeito suavemente a zero no limite de `Raio × MULTIPLICADOR_ALCANCE_FABRICA`, sem anel
 separado ou degraus entre as regiões. A orientação vertical gira o mesmo perfil.
-Um ganho suave de 1,2 reforça o núcleo e a dispersão sem recortar o gradiente.
+Um ganho suave de 1,6 reforça o núcleo e a dispersão sem recortar o gradiente.
 A dispersão e o halo recebem ganho de 2 fora do núcleo. Uma transição contínua
 reduz esse reforço ao se aproximar do foco, preservando a intensidade máxima do centro.
 O alcance da dispersão e do halo é 50% maior (255 px para `Raio = 170`); o núcleo

@@ -201,6 +201,7 @@ test("áudio desativado pelo Phaser não prende a fábrica em retentativa; mute/
 test("encerrar o preloader remove conclusão pendente e uma falha síncrona permite nova tentativa", async () => {
   const Preloader = await preloader(), s = fixture();
   let concluiu = false;
+  s.cutscene = { setLoadProgress() {} };
   s.carregarAssets = () => {};
   s.load.start = () => s.load;
   s.prepararRenderizacaoPersonagens = () => { concluiu = true; };

@@ -863,6 +863,7 @@ test("energia azul dos projéteis e do escudo ilumina o cenário, acompanha o bo
         novoBossDisparoEnergia: true };
       const sprite = { active: true, visible: escudo, alpha: 1, x: 400, y: 209 };
       const novoBoss = { jogadorNaArena: true, sprite, barreiraAtiva: escudo,
+        introducao: { iluminacao: { aura: 0 } }, // Isola o halo azul da aura vermelha.
         projeteisBoss: escudo ? [] : [projetil], config: { geradores: { raioBarreira: 95 } } };
       const body = { x: escudo ? 510 : 418, y: 50, width: 4, height: 350, enable: false };
       const { scene, render, texture, cleanup, canvases } = cenaComMascara(t, [], false,
@@ -877,7 +878,7 @@ test("energia azul dos projéteis e do escudo ilumina o cenário, acompanha o bo
         camera.setZoom(zoom).setRotation(rotacao);
         render();
         const halo = rgba(antes, 225);
-        assert.ok(halo[2] > 0.01 && halo[2] > halo[0] * 3, "o cenário recebe um halo azul");
+        assert.ok(halo[2] > 0.01 && halo[2] > halo[0] * 3, `o cenário recebe um halo azul: ${halo}`);
         assert.ok(halo[3] < ESCURIDAO_AMBIENTE_FABRICA, "a energia clareia o piso ao redor");
         assert.ok(rgba(depois, 225)[2] > 0.005, "o halo também alcança além do contorno do efeito");
         body.enable = true;
@@ -910,7 +911,7 @@ test("energia azul dos projéteis e do escudo ilumina o cenário, acompanha o bo
   }
 });
 
-test("foco branco ilumina o personagem durante o combate, acompanha movimento e respeita portas", t => {
+test("combate não adiciona um foco branco artificial ao personagem", t => {
   const novoBoss = { active: true, jogadorNaArena: true,
     sprite: { active: true, visible: true, x: -5000, y: 225 } };
   const body = { x: 440, y: 50, width: 4, height: 350, enable: true };
@@ -924,25 +925,19 @@ test("foco branco ilumina o personagem durante o combate, acompanha movimento e 
   };
   for (const [zoom, rotacao] of [[1, 0], [1.4, 0.15]]) {
     camera.setZoom(zoom).setRotation(rotacao);
-    render();
-    const centro = rgba(400, 217);
-    assert.ok(centro[3] < 0.4, "o foco clareia bem o personagem");
-    assert.ok(centro[0] > 0.05);
-    assert.equal(centro[0], centro[1]);
-    assert.equal(centro[1], centro[2], "a luz é branca neutra");
-    assertSombraAmbiente(rgba(460, 217)[3], "a porta bloqueia o foco");
-    assert.equal(rgba(460, 217)[0], 0);
+    for (const x of [400, 600]) {
+      scene.player.x = x;
+      render();
+      for (const sampleX of [400, 460, 600]) {
+        assertSombraAmbiente(rgba(sampleX, 217)[3]);
+        assert.deepEqual(rgba(sampleX, 217).slice(0, 3), [0, 0, 0]);
+      }
+    }
   }
   body.enable = false;
-  render();
-  assert.ok(rgba(460, 217)[0] > 0.001);
-  scene.player.x = 600;
-  render();
-  assertSombraAmbiente(rgba(400, 217)[3], "o foco não fica na posição anterior");
-  assert.ok(rgba(600, 217)[3] < 0.4);
   novoBoss.active = false;
   render();
-  assertSombraAmbiente(rgba(600, 217)[3], "encerrar o combate apaga o foco branco");
+  assertSombraAmbiente(rgba(600, 217)[3]);
 });
 
 test("rajadas com cópias preservam todas as luzes, portas e a silhueta do personagem na composição reduzida", t => {
@@ -1249,7 +1244,7 @@ test("LuzApagada oculta no Tiled cobre todas as luzes e revela só a sala aberta
 
 test("capsule light varies continuously along and across its core without a uniform rectangular plateau", () => {
   const center = calcularPerfilLuz(0, 0);
-  assert.ok(center > 0.9 && center < 0.95);
+  assert.ok(Math.abs(center - 0.9748811356849043) < 1e-12, "pico preserva o ganho suave atual de 1,6");
   assert.ok(center > calcularPerfilLuz(0.03, 0));
   assert.ok(calcularPerfilLuz(0.03, 0) > calcularPerfilLuz(0.08, 0));
   assert.ok(calcularPerfilLuz(0.08, 0) > calcularPerfilLuz(0, 0.08), "core follows a short line segment");

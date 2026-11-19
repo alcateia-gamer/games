@@ -587,7 +587,9 @@ class EnemySpawnManager {
       }
       if (!escolhido) {
         // Também encontra corredores livres quando o RNG repete pontos bloqueados.
-        const passo = Math.max(48, Math.sqrt((maxX - minX) * (maxY - minY) / 400));
+        // Passos de 48 px pulavam vãos válidos na zona 639. Refina a grade
+        // com limite de aproximadamente 1600 candidatos nas áreas maiores.
+        const passo = Math.max(16, Math.sqrt((maxX - minX) * (maxY - minY) / 1600));
         for (let x = minX; x <= maxX; x += passo) for (let y = minY; y <= maxY; y += passo)
           avaliar(pontoNaArea(area, x, y));
       }

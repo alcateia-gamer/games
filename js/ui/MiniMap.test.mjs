@@ -567,6 +567,7 @@ test("minimap shows unvisited tiles immediately and follows the player without s
     (...args) => { target[key] = args; return display(); } });
   let refreshes = 0, removed = false;
   const scene = {
+    game: { canvas: { getBoundingClientRect: () => ({ height: 450 }) } },
     cache: { tilemap: { get: () => null } },
     events: new EventEmitter(),
     player: { active: true, x: -200, y: -220 }, direcaoAtual: "down",

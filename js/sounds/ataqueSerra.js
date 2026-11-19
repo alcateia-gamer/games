@@ -5,7 +5,7 @@ const PREFIXO = "robo-serra-ataque-";
 const ALCANCE = 700;
 const VOLUME = 0.45;
 export function carregarSomAtaqueSerra(loader) {
-  loader.audio(CHAVE, "sounds.mp3/SONS PARA BOTAR AINDA/serra_circular.mp3");
+  loader.audio(CHAVE, "sounds.mp3/walk_robo_serra.mp3");
 }
 
 export function configurarSomAtaqueSerra(scene, robo) {

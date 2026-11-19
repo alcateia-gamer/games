@@ -94,7 +94,7 @@ export class CutsceneLoading {
     this.onPlaying = () => {
       window.clearTimeout(this.stallTimer);
       if (!this.gate.videoFinished) this.video.hidden = false;
-      if (this.video.requestVideoFrameCallback) {
+      if (!this.openingStarted && this.video.requestVideoFrameCallback) {
         this.openingVideoFrame ??= this.video.requestVideoFrameCallback(() => {
           this.openingVideoFrame = null;
           this.revealOpening();
@@ -180,18 +180,20 @@ export class CutsceneLoading {
     scene.events.once("shutdown", this.onSceneShutdown);
   }
 
-  revealOpening() {
+  revealOpening(waitForArt = true) {
     if (this.destroyed || this.openingStarted) return;
-    this.openingStarted = true;
-    void this.televisionRenderer.ready.then(() => {
-      if (this.destroyed) return;
+    const open = () => {
+      if (this.destroyed || this.openingStarted) return;
+      this.openingStarted = true;
       this.onResize();
       this.openingFrame = requestAnimationFrame(() => {
         this.openingFrame = requestAnimationFrame(() => {
           if (!this.destroyed) this.eye.classList.add('cutscene-eye-opening');
         });
       });
-    });
+    };
+    if (waitForArt) void this.televisionRenderer.ready.then(open);
+    else open();
   }
 
   /** Transfere a mesma apresentação entre BootPartida e preloader sem reiniciá-la. */
@@ -278,7 +280,8 @@ export class CutsceneLoading {
     this.action.hidden = false;
     this.action.textContent = label;
     this.action.onclick = callback;
-    this.revealOpening();
+    // As ações de erro/autoplay precisam aparecer mesmo se a imagem não responder.
+    this.revealOpening(false);
   }
 
   showMediaError() {

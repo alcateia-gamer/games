@@ -22,37 +22,37 @@ test("retorna a configuração de colisão de Kai Mercer", () => {
 
 test("retorna configurações independentes para cada personagem", () => {
   assert.deepEqual(obterConfiguracaoHitboxWalk("magnus-force"), {
-    width: 23,
-    height: 11,
-    offsetX: 21,
-    offsetY: 47,
+    width: 30,
+    height: 15,
+    offsetX: 17,
+    offsetY: 44,
   });
   assert.deepEqual(obterConfiguracaoHitboxWalk("aria-kade"), {
     width: 30,
     height: 15,
-    offsetX: 50,
-    offsetY: 78,
+    offsetX: 49,
+    offsetY: 79,
   });
   assert.deepEqual(obterConfiguracaoHitboxWalk("nyx"), {
     width: 30,
     height: 15,
-    offsetX: 18,
-    offsetY: 45,
+    offsetX: 17,
+    offsetY: 43,
   });
 });
 
 test("retorna a configuração de colisão de ataque de cada personagem", () => {
   assert.deepEqual(obterConfiguracaoHitboxAtaque("kai-mercer"), {
     width: 30,
-    height: 50,
+    height: 15,
     offsetX: 49,
     offsetY: 73,
   });
   assert.deepEqual(obterConfiguracaoHitboxAtaque("magnus-force"), {
-    width: 23,
-    height: 11,
-    offsetX: 48,
-    offsetY: 72,
+    width: 30,
+    height: 15,
+    offsetX: 44,
+    offsetY: 69,
   });
   assert.deepEqual(obterConfiguracaoHitboxAtaque("aria-kade"), {
     width: 30,
@@ -63,7 +63,7 @@ test("retorna a configuração de colisão de ataque de cada personagem", () => 
   assert.deepEqual(obterConfiguracaoHitboxAtaque("nyx"), {
     width: 30,
     height: 15,
-    offsetX: 82,
-    offsetY: 99,
+    offsetX: 81,
+    offsetY: 98,
   });
 });

@@ -116,6 +116,7 @@ test('host valida o DEV do cliente e a arena antes de mudar a fase; payload não
   world.manager = { playerId: 'host', room: { coopProgress: { flags: {} } } };
   world.r = { host: true, mapKey: 'Level1Parte2', players: { remotes: new Map([['cliente', remote]]) } };
   world.bossLoading = new CoopBossLoading(world);
+  world.generator = { receive: () => false };
   const pedido = { kind: 'devBossPhase2', playerId: 'cliente', payload: { developer: true } };
   world.receive(pedido); assert.equal(boss.morto, false);
   assert.equal(scene.game.registry.get(HACKING_KEYS.fabrica), undefined);
