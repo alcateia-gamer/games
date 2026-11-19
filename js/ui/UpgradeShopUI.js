@@ -16,9 +16,9 @@ export class UpgradeShopUI {
   constructor(scene) {
     this.scene = scene; this.category = 'cyber'; this.region = null; this.selected = 'muscle';
     this.listPage = 0;
-    this.refresh = () => { if (scene.upgradeMenuOpen) this.render(); };
+    this.refresh = () => { if (scene.upgradeMenuOpen && this.root && !scene.scrapTutorialOpen) this.render(); };
     this.result = result => {
-      if (!scene.upgradeMenuOpen) return;
+      if (!scene.upgradeMenuOpen || scene.scrapTutorialOpen) return;
       clearTimeout(this.purchaseTimer);
       this.message = result.ok ? SHOP_LINES.purchase : result.reason === 'SUCATAS INSUFICIENTES' ? SHOP_LINES.insufficient : result.reason; this.pending = false;
       clearTimeout(this.timer);
@@ -26,7 +26,7 @@ export class UpgradeShopUI {
       this.refresh();
     };
     this.onKey = event => {
-      if (!scene.upgradeMenuOpen) return;
+      if (!scene.upgradeMenuOpen || scene.scrapTutorialOpen) return;
       event.stopImmediatePropagation();
       if (event.type === 'keydown' && event.code === 'Tab') {
         const buttons = [...this.root.querySelectorAll('button:not(:disabled)')].filter(button => button.offsetWidth > 0);
@@ -155,7 +155,7 @@ export class UpgradeShopUI {
   close(silent = false) {
     const s = this.scene;
     if (silent) { clearTimeout(this.farewellTimer); this.farewell?.remove(); }
-    if (!s.upgradeMenuOpen) return;
+    if (!s.upgradeMenuOpen || s.scrapTutorialOpen) return;
     s.upgradeMenuOpen = false; this.root.hidden = true;
     if (!silent) this.showFarewell();
     else { clearTimeout(this.farewellTimer); this.farewell?.remove(); }

@@ -6,6 +6,7 @@ import { createEconomy, economyFor, accountFor, playerAccount, purchase, modifie
   applyUpgrades, basicDamage, specialCooldown, localPlayerId, walletFor, enableSharedScrap } from './UpgradeSystem.js';
 import { rollScrap, SCRAP_BALANCE, UPGRADE_NPC, UPGRADE_NPCS } from './UpgradeBalance.js';
 import { upgradeDefinitions, CHARACTER_NAMES } from './UpgradeDefinitions.js';
+import { prepareScrapIndicators } from './ScrapIndicator.js';
 import { ScrapSystem, claimScrap, canUseShop } from './ScrapSystem.js';
 import { UpgradeShopUI } from '../ui/UpgradeShopUI.js';
 import { createUpgradeNPC } from '../interactions/UpgradeNPC.js';
@@ -37,7 +38,7 @@ function scene(character = 'kai-mercer', registry = new Map()) {
     vida: 50, vidaMaxima: 100, speed: 200, time: { now: 0 },
     input: { enabled: true, keyboard: Object.assign(new EventEmitter(), { enabled: true, resetKeys(){} }) },
     add: { text: visual, image: visual, rectangle: visual, sprite: visual, circle: visual },
-    textures: { get: () => ({ has: () => true }) },
+    textures: { exists: key => key.startsWith('scrap-indicator-'), get: () => ({ has: () => true }) },
     tweens: { add(){}, killTweensOf(){} },
   };
   return s;
@@ -173,7 +174,11 @@ test('limite de drops, limpeza de animações e coleta após recriar cena', () =
   system.syncVisuals();assert.equal(system.visuals.size,48);
   assert.equal(new Set([...system.visuals.values()].map(image=>image.frame)).size,12);
   assert.equal(system.counterIcon.frame,'scrap-10');
-  const images=[...system.visuals.values()];system.destroy();assert.ok(images.every(i=>i.destroyed));
+  const images=[...system.visuals.values()];
+  const indicators=[...system.indicators.values()];
+  system.destroy();assert.ok(images.every(i=>i.destroyed));
+  assert.ok(indicators.every(i=>i.arrow.destroyed));
+  assert.equal(system.indicators.size,0);
   const next=scene('kai-mercer',s.game.registry),recreated=new ScrapSystem(next);recreated.update();
   assert.ok(accountFor(next).scrap>=48*4);recreated.update();assert.equal(Object.keys(economyFor(next).drops).length,0);
   recreated.destroy();
@@ -505,4 +510,60 @@ for(const count of [2,3,4]) test(`drops com ${count} jogadores: quantidade propo
   const sys=new ScrapSystem(s);sys.onRobotDeath({tipoRobo:'olhao',upgradeZoneId:1,x:0,y:0});
   const e=economyFor(s),drop=Object.values(e.drops)[0];assert.ok(drop.quantity>=4*count && drop.quantity<=7*count);
   assert.equal(e.rewarded,1);assert.equal(e.zones['Level1:1'],1);sys.destroy();
+});
+
+
+test('indicadores sem etiquetas compartilham animação e saem da câmera', () => {
+  const s = scene(), sys = new ScrapSystem(s), e = economyFor(s);
+  let tweens = 0; s.tweens.add = () => { tweens++; };
+  s.cameras = { main: { worldView: { x: -100, y: -100, width: 400, height: 300 } } };
+  s.player.setPosition(0, 0); s.upgradeMenuOpen = true;
+  for (const [id, x] of [['a', 80], ['b', 90], ['c', 900]])
+    e.drops[id] = { id, x, y: 0, mapKey: 'Level1', quantity: 4 };
+  e.revision++; sys.update();
+  assert.equal(tweens, 0, 'drops e indicadores não criam tweens individuais');
+  const a = sys.indicators.get('a'), b = sys.indicators.get('b'), c = sys.indicators.get('c');
+  assert.equal(a.label, undefined);
+  assert.equal(a.arrow.visible, true);
+  assert.equal(b.arrow.visible, true);
+  assert.equal(c.arrow.visible, false);
+  assert.ok(a.arrow.depth > a.image.depth && a.arrow.depth < a.image.depth + .001);
+  const y = a.arrow.y; s.time.now = 550; sys.update();
+  assert.equal(a.arrow.y, y + 2); assert.equal(a.arrow.x, a.image.x);
+  sys.syncVisuals(); assert.equal(sys.indicators.get('a'), a);
+  s.upgradeMenuOpen = false; s.player.setPosition(80, 0); sys.update();
+  assert.equal(a.arrow.destroyed, true);
+  assert.equal(sys.indicators.has('a'), false);
+  sys.destroy(); assert.equal(c.arrow.destroyed, true);
+  assert.equal(sys.indicators.size, 0);
+});
+
+test('cliente conserva indicador até confirmação autoritativa e não duplica no reenvio', () => {
+  const s = scene(); s.multiplayer = true;
+  s.multiplayerManager = { playerId: 'guest', room: {} };
+  let requests = 0;
+  s.coopRuntime = { host: false, manager: { sendCoopAction() { requests++; } } };
+  const sys = new ScrapSystem(s), e = economyFor(s);
+  e.drops.a = { id: 'a', x: s.player.x, y: s.player.y, mapKey: 'Level1', quantity: 4 };
+  e.revision++; sys.update();
+  const indicator = sys.indicators.get('a');
+  assert.equal(requests, 1); assert.equal(indicator.arrow.active, true);
+  s.time.now = 1100; sys.update();
+  assert.equal(requests, 2); assert.equal(sys.indicators.get('a'), indicator);
+  const incoming = structuredClone(e); delete incoming.drops.a; incoming.revision++;
+  sys.restore(incoming);
+  assert.equal(indicator.arrow.destroyed, true);
+  assert.equal(sys.pending.size, 0); sys.destroy();
+});
+
+
+test('texturas dos indicadores são rasterizadas uma única vez entre cenas', () => {
+  const cache = new Map(); let refreshes = 0;
+  const context = new Proxy({}, { get: (target, key) => target[key] ?? (() => {}) });
+  const textures = { exists: key => cache.has(key), createCanvas(key, width, height) {
+    assert.ok(width <= 108 && height <= 28);
+    const texture = { context, refresh() { refreshes++; } }; cache.set(key, texture); return texture;
+  } };
+  prepareScrapIndicators(textures); prepareScrapIndicators(textures);
+  assert.equal(cache.size, 1); assert.equal(refreshes, 1);
 });

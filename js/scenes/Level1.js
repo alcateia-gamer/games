@@ -1,3 +1,4 @@
+import { showScrapTutorial } from '../ui/ScrapTutorial.js';
 import { criarRastreadorMissoes } from "../ui/MissionTracker.js";
 import { createUpgradeNPC } from '../interactions/UpgradeNPC.js';
 import { prepararReanimacaoSolo, atualizarReanimacaoSolo } from "../player/SoloPetRevival.js";
@@ -401,6 +402,7 @@ class Level1 extends Phaser.Scene {
     criarRastreadorMissoes(this);
     iniciarMusicaCidade(this);
     iniciarRelogioSolo(this);
+    showScrapTutorial(this);
   }
 
   // =====================================================

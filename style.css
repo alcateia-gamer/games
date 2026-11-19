@@ -1112,3 +1112,22 @@ html:has(.solo-selection, .coop-lobby), body:has(.solo-selection, .coop-lobby) {
 
 .mission-mobile .mission-sector { margin-bottom: 2px; }
 .mission-mobile h2 { margin-bottom: 3px; font-size: 1.1em; }
+
+/* Guia local de sucatas: sem loop de layout e acima dos controles virtuais. */
+.scrap-tutorial{position:fixed;inset:0;z-index:11000;box-sizing:border-box;display:grid;place-items:center;padding:max(12px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));background:#000b;color:#f2fff8;font-family:monospace;touch-action:none}
+.scrap-tutorial *{box-sizing:border-box}
+.scrap-guide{width:min(880px,100%);padding:clamp(14px,2vw,26px);border:1px solid #39ff88;background:linear-gradient(135deg,#061811f5,#020705fa);box-shadow:0 0 24px #39ff8818;clip-path:polygon(12px 0,100% 0,100% calc(100% - 12px),calc(100% - 12px) 100%,0 100%,0 12px);text-align:center}
+.scrap-guide>small{color:#39ff88;font-size:10px;letter-spacing:2px}
+.scrap-guide h2{color:#ffe66b;font-size:clamp(16px,2vw,23px);margin:10px 0 20px;line-height:1.2}
+.scrap-guide-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.scrap-guide article{position:relative;border:1px solid #39ff8844;background:#39ff8806;padding:14px 10px}
+.scrap-guide-number{position:absolute;left:8px;top:7px;color:#39ff8888;font-size:10px}
+.scrap-guide img{width:56px;height:56px;object-fit:contain;image-rendering:pixelated;display:block;margin:0 auto 10px}
+.scrap-guide h3{color:#ffe66b;font-size:14px;margin:8px 0}
+.scrap-guide p{font-size:14px;line-height:1.45;margin:8px 0}
+.scrap-guide-auto{display:block;font-size:10px;color:#39ff88;margin-top:10px}
+.scrap-guide-team{color:#b8ffd3;border-left:2px solid #39ff88;padding:8px;text-align:left}
+.scrap-guide button{min-height:44px;min-width:160px;margin-top:16px;border:1px solid #39ff88;background:#103c26;color:#edfff4;font:bold 15px monospace;cursor:pointer}
+.scrap-guide button:focus-visible,.scrap-guide button:hover{outline:2px solid #ffe66b;outline-offset:3px;background:#195734}
+@media(max-height:500px){.scrap-guide{padding:12px}.scrap-guide h2{font-size:17px;margin:6px 0 10px}.scrap-guide-steps{gap:8px}.scrap-guide article{padding:8px}.scrap-guide img{width:34px;height:34px;margin-bottom:4px}.scrap-guide h3{font-size:12px;margin:5px 0}.scrap-guide p{font-size:12px;line-height:1.3;margin:5px 0}.scrap-guide-auto{font-size:9px;margin-top:5px}.scrap-guide-team{padding:5px!important;font-size:12px!important}.scrap-guide button{margin-top:8px}}
+@media(max-width:500px) and (min-height:501px){.scrap-guide-steps{grid-template-columns:1fr;gap:8px}.scrap-guide article{padding:8px 8px 8px 65px;text-align:left;min-height:88px}.scrap-guide img{position:absolute;left:12px;top:24px;width:42px;height:42px}.scrap-guide h3{font-size:12px;margin:2px 0}.scrap-guide p{font-size:12px;margin:4px 0}.scrap-guide h2{margin-bottom:12px}}

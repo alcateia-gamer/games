@@ -22,6 +22,7 @@ async function page() {
   await p.goto(process.env.GAME_URL || 'http://127.0.0.1:8765'); return p;
 }
 async function near(p) {
+  if (await p.locator('.scrap-tutorial').count()) await p.getByRole('button', { name: 'ENTENDI', exact: true }).click();
   await p.evaluate(() => { const s = __game.scene.getScene('Level1'); s.player.body.reset(-410, 8872); s.player.setVelocity(0, 0); s.cameras.main.stopFollow().centerOn(-410, 8850); });
   await p.waitForFunction(() => !!__game.scene.getScene('Level1').interacaoCiberneticasProxima);
 }
@@ -87,7 +88,27 @@ try {
   }
   for (const p of peers) await p.waitForFunction(() => !!__game.scene.getScene('preloader').cutscene.transmission.timeline);
   for (const p of peers) await p.evaluate(() => { const t = __game.scene.getScene('preloader').cutscene.transmission; t.startAt = Date.now() - t.timeline.duration - 1; t.update(); });
-  for (const p of peers) { await p.waitForFunction(() => __game.scene.getScene('Level1')?.coopRuntime, null, { timeout: 60000 }); await near(p); }
+  for (const p of peers) {
+    await p.waitForFunction(() => __game.scene.getScene('Level1')?.coopRuntime, null, { timeout: 60000 });
+    await p.locator('.scrap-tutorial').waitFor();
+    assert.equal(await p.locator('.scrap-guide-team').count(), 1);
+  }
+  await peers[0].getByRole('button', {name:'ENTENDI',exact:true}).click();
+  assert.equal(await peers[1].locator('.scrap-tutorial').count(), 1);
+  assert.equal(await peers[1].evaluate(() => __game.scene.getScene('Level1').input.enabled), false);
+  for (const p of peers) await near(p);
+  await peers[0].evaluate(async () => {
+    const s=__game.scene.getScene('Level1'), {economyFor}=await import('/js/systems/UpgradeSystem.js');
+    const e=economyFor(s); e.drops['indicator-coop']={id:'indicator-coop',mapKey:'Level1',x:s.player.x+150,y:s.player.y,quantity:1};
+    e.revision++;s.scrapSystem.changed();
+  });
+  for (const p of peers) await p.waitForFunction(() => __game.scene.getScene('Level1').scrapSystem.indicators.has('indicator-coop'));
+  await peers[0].evaluate(async () => {
+    const s=__game.scene.getScene('Level1'), {economyFor}=await import('/js/systems/UpgradeSystem.js');
+    const e=economyFor(s);delete e.drops['indicator-coop'];e.revision++;s.scrapSystem.changed();
+  });
+  for (const p of peers) await p.waitForFunction(() => !__game.scene.getScene('Level1').scrapSystem.indicators.has('indicator-coop'));
+  log('tutorial independente e indicadores criados/removidos nos dois clientes pela economia autoritativa');
   await peers[0].waitForFunction(() => __game.scene.getScene('Level1').coopRuntime.players.contexts().some(c => Math.abs(c.player.y - 8872) < 10));
   await peers[0].evaluate(async () => {
     const s = __game.scene.getScene('Level1'), { economyFor, walletFor } = await import('/js/systems/UpgradeSystem.js');

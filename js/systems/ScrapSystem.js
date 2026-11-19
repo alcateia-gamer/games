@@ -1,3 +1,4 @@
+import { prepareScrapIndicators, createScrapIndicator, updateScrapIndicators } from './ScrapIndicator.js';
 import { recursosHUDOcultosNoBoss } from '../ui/HudCinematic.js';
 import { criarCanvasHUDNitido } from '../ui/HudCanvas.js';
 import { calcularDepthChao } from '../map/ProfundidadeMapa.js';
@@ -35,6 +36,8 @@ export function canUseShop(context, mapKey) {
 export class ScrapSystem {
   constructor(scene) {
     this.scene = scene; this.visuals = new Map(); this.pending = new Map();
+    this.indicators = new Map();
+    prepareScrapIndicators(scene.textures);
     const texture = scene.textures.get('scrap-components');
     SCRAP_FRAMES.forEach((rect, index) => {
       const name = `scrap-${index}`;
@@ -134,7 +137,9 @@ export class ScrapSystem {
       if (!context || context.vida <= 0 || context.morteEmAndamento) return true;
       if (action.kind === 'upgradeBuy') this.buy(action.playerId, context, p.id, p.level);
       if (action.kind === 'scrapClaim' && claimScrap(economyFor(s), p.id, action.playerId,
-        context.personagemSelecionada, this.mapKey, context.player)) this.changed();
+        context.personagemSelecionada, this.mapKey, context.player)) {
+        this.removeVisual(p.id); this.changed();
+      }
     }
     return true;
   }
@@ -142,6 +147,7 @@ export class ScrapSystem {
     if (!incoming || !Number.isSafeInteger(incoming.revision) || incoming.revision <= economyFor(this.scene).revision) return;
     this.scene.multiplayerManager.room.upgradeEconomy = incoming;
     applyUpgrades(this.scene); this.lastRevision = -1;
+    this.syncVisuals();
     this.scene.events.emit('upgradesChanged');
   }
   syncVisuals() {
@@ -151,7 +157,7 @@ export class ScrapSystem {
     applyUpgrades(s);
     this.counter?.setText(`${e.sharedScrap ? 'SUCATAS EQUIPE' : 'SUCATAS'}: ${walletFor(s).scrap}`);
     for (const [id, image] of this.visuals) if (!e.drops[id] || e.drops[id].mapKey !== this.mapKey) {
-      s.tweens.killTweensOf(image); image.destroy(); this.visuals.delete(id); this.pending.delete(id);
+      this.removeVisual(id, image);
     }
     for (const drop of Object.values(e.drops)) if (drop.mapKey === this.mapKey && !this.visuals.has(drop.id)) {
       const variant = scrapVariant(drop.id);
@@ -160,8 +166,8 @@ export class ScrapSystem {
       const image = s.add.image(drop.x, drop.y, 'scrap-components', `scrap-${variant}`)
         .setDisplaySize(width * scale, height * scale).setDepth(calcularDepthChao(s, drop.y));
       image.coopLocalVisual = true;
-      s.tweens.add({ targets: image, alpha: .5, duration: 850, yoyo: true, repeat: -1 });
       this.visuals.set(drop.id, image);
+      this.indicators.set(drop.id, createScrapIndicator(s, image));
     }
     const balance = walletFor(s).scrap;
     if (balance > this.lastBalance && s.player?.active) {
@@ -172,6 +178,13 @@ export class ScrapSystem {
     }
     this.lastBalance = balance;
     s.events.emit('upgradesChanged');
+  }
+  removeVisual(id, image = this.visuals.get(id)) {
+    const indicator = this.indicators.get(id);
+    indicator?.arrow.destroy();
+    this.indicators.delete(id);
+    if (image) { this.scene.tweens.killTweensOf(image); image.destroy(); }
+    this.visuals.delete(id); this.pending.delete(id);
   }
   /** Abaixo da vida no solo ou do último aliado no coop, em coordenadas de tela. */
   layoutHUD() {
@@ -211,12 +224,15 @@ export class ScrapSystem {
       const depth = calcularDepthChao(s, image.y);
       if (image.depth !== depth) image.setDepth(depth);
     }
+    updateScrapIndicators(s, this.indicators);
     if (!s.player?.active || s.vida <= 0 || s.morteEmAndamento || s.upgradeMenuOpen) return;
     for (const [id] of this.visuals) {
       const drop = economyFor(s).drops[id];
       if (!drop || Math.hypot(s.player.x - drop.x, s.player.y - drop.y) > 46) continue;
       if (this.authority) {
-        if (claimScrap(economyFor(s), id, localPlayerId(s), s.personagemSelecionada, this.mapKey, s.player)) this.changed();
+        if (claimScrap(economyFor(s), id, localPlayerId(s), s.personagemSelecionada, this.mapKey, s.player)) {
+          this.removeVisual(id); this.changed();
+        }
       } else if (s.coopRuntime && (this.pending.get(id) ?? -Infinity) <= s.time.now) {
         this.pending.set(id, s.time.now + 1000);
         s.coopRuntime.manager.sendCoopAction('scrapClaim', { id });
@@ -230,7 +246,7 @@ export class ScrapSystem {
     s.events.off('shutdown', this.destroy);
     s.events.off('update', this.update);
     s.events.off('prerender', this.layoutHUD);
-    for (const image of this.visuals.values()) { s.tweens.killTweensOf(image); image.destroy(); }
+    for (const [id, image] of this.visuals) this.removeVisual(id, image);
     this.visuals.clear(); this.pending.clear(); this.counter?.destroy(); this.counterIcon?.destroy();
     if (this.refreshCounterIcon) s.scale.off('resize', this.refreshCounterIcon);
     this.counterIconView?.destroy();
