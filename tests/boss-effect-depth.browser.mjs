@@ -24,20 +24,27 @@ try {
   const result = await page.evaluate(async () => {
     const s = __game.scene.getScene('Level1Parte2'), tower = s.novoBoss.geradores.find(t => t.torre);
     tower.visual.setVisible(true); tower.visual.setDepth(60);
-    s.player.body.reset(tower.x + 30, tower.y - 40); s.player.depth = 16.5;
-    s.cameras.main.stopFollow().centerOn(tower.x, tower.y);
+    s.cameras.main.stopFollow().centerOn(s.player.x, s.player.y);
     s.movimentoBloqueado = false; s.estadoEspecial.proximoUso = 0;
     s.events.emit('player:especial');
     const { atualizarSistemaEspeciais } = await import('/js/combat/PlayerSpecialAbilities.js');
-    s.time.now += 400; atualizarSistemaEspeciais(s);
-    s.children.depthSort();
-    return { tower: tower.visual.depth, base: s.estadoEspecial.parryEfeito.sprite.depth, dome: s.estadoEspecial.parryGrafico.depth };
+    const inicio = s.time.now;
+    return [100, 400, 1800, 3900].map((tempo, i) => {
+      s.player.setDepth(i % 2 === 0 ? 16.5 : 61);
+      s.time.now = inicio + tempo;
+      atualizarSistemaEspeciais(s);
+      const { parryEfeito, parryGrafico } = s.estadoEspecial;
+      return { player: s.player.depth, base: parryEfeito.sprite.depth, dome: parryGrafico.depth,
+        elevado: parryEfeito.sprite.aboveBossTowers || parryGrafico.aboveBossTowers };
+    });
   });
-  assert.ok(result.base > result.tower && result.dome > result.tower, JSON.stringify(result));
+  for (const frame of result) {
+    assert.ok(frame.base < frame.dome && frame.dome < frame.player && !frame.elevado, JSON.stringify(frame));
+  }
   await page.waitForFunction(() => {
     const s = __game.scene.getScene('Level1Parte2');
     return s.children.list.find(o => o.texture?.key === 'level1-parte2-escuridao')?.depth > 60;
   });
   mkdirSync('/tmp/boss-effect-depth', { recursive: true }); await page.screenshot({ path: '/tmp/boss-effect-depth/fixed.png' });
-  assert.deepEqual(errors, []); console.log('PASSOU: base e cúpula do Kai e camada de iluminação acima das torres no Phaser real', result);
+  assert.deepEqual(errors, []); console.log('PASSOU: base e cúpula atrás de Kai e iluminação acima das torres no Phaser real', result);
 } finally { await browser.close(); }

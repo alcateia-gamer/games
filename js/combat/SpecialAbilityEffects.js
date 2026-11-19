@@ -60,7 +60,7 @@ export function desenharDomoKai(g, efeito, x, y, raio, decorrido, depth) {
   const rx = limites && efeito ? (limites[2]-limites[0])*efeito.escala*abertura/2 : raio*abertura;
   const ry = limites && efeito ? (limites[3]-limites[1])*efeito.escala*abertura/2 : rx*.65;
   const altura = rx*1.15;
-  g.setDepth(depth+.15).clear();
+  g.setDepth(depth).clear();
   const ponto = (angulo, vertical, extra = 0) => ({
     x:x+Math.cos(angulo)*(rx+extra),
     y:y+Math.sin(angulo)*(vertical+extra),

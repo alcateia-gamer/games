@@ -6,6 +6,7 @@ import { modifiersFor, specialCooldown } from '../systems/UpgradeSystem.js';
  * Não modifica dash, ataques normais ou hitboxes originais.
  */
 
+import { jogadorNaArenaNovoBoss } from "../enemies/novoBoss/NovoBossConfig.js";
 import { causarDanoInimigo } from "../enemies/EnemyHealth.js";
 import { jogadorPresoNovoBoss } from "../player/PlayerControlEffects.js";
 import { tocarSomEspecialMagnus } from "../sounds/magnusEspecial.js";
@@ -227,10 +228,18 @@ function atualizarParry(scene, estado, agora) {
 
   const r = CONFIG.kaiRaio;
   const decorrido = agora-(estado.parryAte-CONFIG.kaiDuracao);
+  const boss = scene.novoBoss;
+  const naLutaFinal = boss?.sprite?.active && !boss.morto &&
+    jogadorNaArenaNovoBoss(player, boss.config.arena);
+  const depthPlayer = player.depth ?? 50;
+  const depthBase = depthPlayer - 0.04;
+  // As réplicas também respeitam a camada do jogador durante o encontro.
+  g.aboveBossTowers = !naLutaFinal;
+  if (estado.parryEfeito) estado.parryEfeito.sprite.aboveBossTowers = !naLutaFinal;
   atualizarEfeitoEspecial(estado.parryEfeito,player.x,player.y+deslocamentoChao(scene),decorrido,
-    depthAcimaTorres(scene, (player.depth ?? 50)-.04),decorrido/CONFIG.kaiDuracao);
+    naLutaFinal ? depthBase : depthAcimaTorres(scene, depthBase),decorrido/CONFIG.kaiDuracao);
   desenharDomoKai(g,estado.parryEfeito,player.x,player.y+deslocamentoChao(scene),
-    r,decorrido,depthAcimaTorres(scene, player.depth ?? 50));
+    r,decorrido,naLutaFinal ? depthPlayer - 0.02 : depthAcimaTorres(scene, depthPlayer) + 0.15);
   estado.parryColisao?.atualizar(player.x,player.y+deslocamentoChao(scene));
 }
 
