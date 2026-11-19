@@ -94,8 +94,10 @@ export async function resolverBruteforce(page) {
         const s = window.__game.scene.getScene('Level1Parte2').hackingTerminals.estadoLocal()?.model;
         if (!s || s.ativa !== coluna || s.colunas[coluna].falhaAte > s.tempo) return false;
         const el = document.querySelectorAll('.brute-column')[coluna]?.querySelector('.brute-letter.target');
-        const y = Number(el?.style.transform.match(/translateY\(([-\d.]+)px\)/)?.[1]);
-        const offset = (y + 27) / 54;
+        const letter = el?.getBoundingClientRect();
+        const band = document.querySelector('.brute-band')?.getBoundingClientRect();
+        if (!letter?.height || !band) return false;
+        const offset = (letter.y + letter.height / 2 - band.y - band.height / 2) / letter.height;
         return !s.tutorial && offset > -.15 && offset < .04;
       }, coluna, { timeout: 45000 });
       if (touch) await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);

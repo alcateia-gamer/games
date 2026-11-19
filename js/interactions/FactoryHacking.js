@@ -215,7 +215,7 @@ export function criarHackingFabrica(scene) {
       anteriorTeclado = scene.input.keyboard?.enabled ?? true;
       anteriorInput = scene.input.enabled; scene.input.enabled = false;
       if (scene.input.keyboard) { scene.input.keyboard.resetKeys?.(); scene.input.keyboard.enabled = false; }
-      if (!autoridade()) clientDock = prepararPetNoTerminal(scene, scene, T[session.tipo], { destino: state.dock?.player, criarPet: false });
+      if (!autoridade()) clientDock = prepararPetNoTerminal(scene, scene, T[session.tipo], { criarPet: false });
     }
     sequence = Math.max(sequence, session.seq ?? 0);
     if (!state.pronto) return;
