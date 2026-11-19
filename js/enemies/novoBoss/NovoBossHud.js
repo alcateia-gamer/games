@@ -56,7 +56,7 @@ export function atualizarHudNovoBoss(scene, encontro) {
     const clones = encontro.sistemaClones.alvos.filter(alvo => alvo.active).length;
     detalhe += ` · ${clones} CLONES`;
   }
-  const captura = scene.restricaoControleNovoBoss;
+  const captura = scene.coopRuntime?.localContext?.restricaoControleNovoBoss ?? scene.restricaoControleNovoBoss;
   if (encontro.prologo?.bloqueiaCombatePrincipal && !encontro.introducao?.bloqueiaCombate) {
     const p = encontro.prologo.snapshot();
     const mensagens = {

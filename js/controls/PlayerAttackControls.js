@@ -3,6 +3,7 @@
  * arco da Aria.
  */
 
+import { criarEntradaLibertacaoAtaque } from "../enemies/novoBoss/NovoBossLibertacao.js";
 import { atacar, soltarAtaque } from "../player/Player.js";
 import { posicionarBotaoAcao } from "./FixedActionButton.js";
 
@@ -118,6 +119,8 @@ function criarControlesAtaque(scene) {
   };
 
   let botaoPressionado = false;
+  const fuga = criarEntradaLibertacaoAtaque(scene);
+  const solturasFuga = new Set();
 
   // =====================================================
   // ANIMAÇÃO VISUAL DO BOTÃO
@@ -135,6 +138,7 @@ function criarControlesAtaque(scene) {
   };
 
   const limparPosicao = () => {
+    fuga.destruir();
     scene.events.off("prerender", atualizarPosicaoAtaque);
     scene.events.off("shutdown", limparPosicao);
     scene.input.off("pointerdown", aoPressionarMouse);
@@ -187,6 +191,8 @@ function criarControlesAtaque(scene) {
    * Guarda o ponteiro responsável pelo ataque e aplica a resposta visual de pressionamento.
    */
   const apertarBotao = (pointer) => {
+    if (fuga.pressionar(pointer)) { solturasFuga.add(pointer?.id); return; }
+    solturasFuga.delete(pointer?.id);
     scene.pointerAtaque = pointer?.id ?? null;
 
     botaoPressionado = true;
@@ -218,6 +224,8 @@ function criarControlesAtaque(scene) {
    * Aria.
    */
   const soltarAtaqueAtual = (pointer) => {
+    if (solturasFuga.delete(pointer?.id)) return;
+    if (scene.restricaoControleNovoBoss) return;
     // Não libera a flecha com o toque de outro dedo.
     if (
       ponteiroEhToque(pointer) &&
@@ -272,7 +280,7 @@ function criarControlesAtaque(scene) {
 
   const aoPressionarMouse = (pointer, objetosClicados) => {
     // Toques atacam só pelo botão; o Phaser também pode sinalizá-los como clique esquerdo.
-    if (ponteiroEhToque(pointer) || !pointer.leftButtonDown()) {
+    if (scene.restricaoControleNovoBoss || ponteiroEhToque(pointer) || !pointer.leftButtonDown()) {
       return;
     }
 

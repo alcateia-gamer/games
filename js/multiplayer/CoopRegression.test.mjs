@@ -308,21 +308,13 @@ test("perda de quadro pede keyframe, ignora deltas incompletos e recupera o mund
   assert.equal(r.awaitingKeyframe, false);
 });
 
-test("piscadas do gerador usam o perfil do host mesmo com relógios de cena diferentes", () => {
-  const make = () => new FactoryLighting({ getObjectLayer: () => ({ objects: [] }) },
-    { aleatorio: () => 0.5, avisar() {} });
-  const host = make(), client = make();
-  host.estados = [{ indice: 0, luz: {}, falha: host.criarFalha(1000) }];
-  client.estados = [{ indice: 0, luz: {}, falha: null }];
-  client.aplicarEstadoRede(host.snapshotRede(1200), 5200);
-  for (const elapsed of [0, 400, 800, 1600, 2200]) {
-    assert.equal(client.calcularFalha(client.estados[0], 5200 + elapsed),
-      host.calcularFalha(host.estados[0], 1200 + elapsed));
-  }
-  assert.equal(client.coopReplica, true);
-  host.estados[0].falha = null;
-  client.aplicarEstadoRede(host.snapshotRede(1500), 5500);
-  assert.equal(client.estados[0].falha, null);
+test("a partida uniforme usa o relógio compartilhado sem estados de luminárias", () => {
+  const host = new FactoryLighting(), client = new FactoryLighting();
+  let progresso = .4;
+  host.definirEnergia(true,()=>progresso,1000);client.definirEnergia(true,()=>progresso,5000);
+  assert.equal(host.atualizarPartida(1200),client.atualizarPartida(5200));
+  progresso=1;host.atualizarPartida(1500);client.atualizarPartida(5500);
+  assert.equal(host.partida,null);assert.equal(client.partida,null);
 });
 
 test("sair do mapa encerra a réplica do boss e libera referências para a próxima visita", () => {
@@ -367,9 +359,6 @@ test("cliente mantém sala do boss apagada antes do spawn e durante recuperaçã
   const runtime = { scene, host: false, mapKey: "Level1Parte2" };
   const replica = new BossReplica(runtime);
   const espera = scene.iluminacaoEntradaBossReplica;
-  const dentro = { x: 40, y: -160, neon: true }, fora = { x: 400, y: -160, neon: true };
-  assert.equal(espera.fatorLuz(dentro), 0);
-  assert.equal(espera.fatorLuz(fora), 1);
   assert.equal(espera.ambiente, 0);
   replica.receive(null);
   replica.destroy();
@@ -607,4 +596,22 @@ test('escudo do Kai replicado respeita a torre local e atualiza depth mesmo anco
   const receiver=new VisualReceiver(scene);receiver.entries.set('shield',{object,state});
   scene.novoBoss.geradores[0].visual.depth=70;receiver.update(16);assert.ok(object.depth>70);
   assert.equal(object.x,80);assert.equal(object.y,100);
+});
+
+
+test('fuga remota exige captura, participante, mapa e sessão atuais e afeta apenas o solicitante',()=>{
+ const context={player:{active:true},vida:100,coopRemotePlayerId:'ally',
+  restricaoControleNovoBoss:{capturaId:'capture-2',fonte:'tentaculo',apertos:0,apertosNecessarios:8}};
+ const local={player:{active:true},vida:100,restricaoControleNovoBoss:{apertos:0,apertosNecessarios:8}};
+ let updates=0;
+ const r={scene:{},host:true,localContext:local,players:{remotes:new Map([['ally',{context}]])},
+  manager:{playerId:'host',room:{coopMap:{id:4},players:[{id:'ally',coop:{sceneSession:'session-2'}}]}},
+  sendControl(c){assert.equal(c,context);updates++;}};
+ const payload={capturaId:'capture-2',session:'session-2',mapId:4};
+ const send=p=>CoopRuntime.prototype.receiveAction.call(r,{kind:'escape',playerId:'ally',payload:p});
+ for(const changed of [{capturaId:'capture-1'},{session:'old'},{mapId:3}])send({...payload,...changed});
+ assert.equal(context.restricaoControleNovoBoss.apertos,0);
+ send(payload);assert.equal(context.restricaoControleNovoBoss.apertos,1);assert.equal(updates,1);
+ assert.equal(local.restricaoControleNovoBoss.apertos,0);
+ context.morteEmAndamento=true;send(payload);assert.equal(updates,1);
 });

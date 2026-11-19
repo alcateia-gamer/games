@@ -1,5 +1,7 @@
 # Iluminação estática da arena final
 
+> Documento histórico da implementação de 18/11. A arquitetura atual removeu as fontes fixas do Tiled; consulte [Iluminação da fábrica](ILUMINACAO_FABRICA.md).
+
 Implementação e validação em 18/11/2026.
 
 ## Análise antes da edição

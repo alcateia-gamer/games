@@ -19,7 +19,7 @@ export default class BootPartida extends Phaser.Scene {
     reiniciarRelogioPartida(this.registry);
     this.registry.set(SCRAP_TUTORIAL_KEY, { seen: false });
     this.registry.remove(INTELLIGENCE_KEY);
-    for (const key of [MISSION_FACTS_KEY, MISSION_POWER_KEY, "factoryDoorOpen", ...MISSION_DOOR_KEYS, "factoryDoorOpen:porta04", "factoryDoorOpen:porta05"]) this.registry.remove(key);
+    for (const key of [MISSION_FACTS_KEY, MISSION_POWER_KEY, "factoryFlashlightRetired", "factoryDoorOpen", ...MISSION_DOOR_KEYS, "factoryDoorOpen:porta04", "factoryDoorOpen:porta05"]) this.registry.remove(key);
     this.registry.remove(LEGACY_NETWORK_KEY);
     for (const key of Object.values(HACKING_KEYS)) this.registry.remove(key);
     if (data.multiplayer !== true) reiniciarResgatesSolo(this.registry);

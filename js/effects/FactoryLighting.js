@@ -1,16 +1,8 @@
-/**
- * @file Pontos de luz da fábrica, partida sincronizada com o gerador e falhas elétricas.
- * Não cria sprites nem altera coordenadas do Tiled: fornece luzes à máscara compartilhada.
- */
-
+/** Estado uniforme de energia e perfil da partida do gerador. */
 import { GENERATOR_LOOP_START_SECONDS } from "../sounds/gerador.js";
 
 const ESCURIDAO_AMBIENTE_FABRICA = 0.75;
 const MULTIPLICADOR_ALCANCE_FABRICA = 1.5;
-const PADROES_LUZ_FABRICA = Object.freeze({
-  raio: 170, intensidade: 1, cor: "#FFD27A", piscando: false, pulsando: false, ligada: true,
-  orientacao: "horizontal",
-});
 const PARTIDA_GERADOR = [
   [0, 0], [0.06, 0.025], [0.13, 0.09], [0.18, 0.03],
   [0.28, 0.22], [0.34, 0.08], [0.46, 0.4], [0.5, 0.14],
@@ -30,21 +22,6 @@ const QUEDAS_LUZ_FABRICA = PARTIDA_GERADOR.flatMap(([inicio, luz], indice) => {
     : [];
 });
 const limitar = valor => Math.max(0, Math.min(1, valor));
-const PERIODO_PULSO_MS = 1600;
-// Mau contato ambiental é raro e isolado; alarmes e a partida têm seus próprios efeitos.
-const INTERVALO_FALHA_INICIAL = 18000;
-const VARIACAO_FALHA_INICIAL = 24000;
-const DESCANSO_LUMINARIA = 45000;
-const VARIACAO_DESCANSO = 45000;
-const DESCANSO_ENTRE_FALHAS = 8000;
-const VARIACAO_DESCANSO_GLOBAL = 6000;
-const PASSO_FALHA_MS = 50;
-
-/** Ciclo suave e sincronizado de emergência, entre 10% e 100% da luz configurada. */
-function intensidadePulso(agora) {
-  return 0.1 + 0.9 * (0.5 + 0.5 * Math.cos(agora * 2 * Math.PI / PERIODO_PULSO_MS));
-}
-
 function suavizar(valor) {
   const p = limitar(valor);
   return p * p * (3 - 2 * p);
@@ -59,72 +36,6 @@ function intensidadeLuzPartida(progresso) {
     return luzInicio + (luzFim - luzInicio) * suavizar((p - inicio) / (fim - inicio));
   }
   return 1;
-}
-
-/** Tiled exporta cores com alpha como #AARRGGBB, não #RRGGBBAA. */
-function lerCorTiled(valor) {
-  if (typeof valor !== "string") valor = PADROES_LUZ_FABRICA.cor;
-  let hex = valor.replace(/^#/, "");
-  if (/^[\da-f]{3}$/i.test(hex)) hex = [...hex].map(c => c + c).join("");
-  if (!/^(?:[\da-f]{6}|[\da-f]{8})$/i.test(hex)) hex = "FFD27A";
-  const alpha = hex.length === 8 ? parseInt(hex.slice(0, 2), 16) / 255 : 1;
-  const rgb = hex.slice(-6).toUpperCase();
-  return { css: `#${rgb}`, phaser: parseInt(rgb, 16), alpha };
-}
-
-function lerPropriedade(objeto, nome) {
-  const propriedades = objeto.properties;
-  return Array.isArray(propriedades)
-    ? propriedades.find(propriedade => propriedade.name === nome)?.value
-    : propriedades?.[nome];
-}
-
-/** Só valores dos tipos esperados substituem os padrões; false e zero são válidos. */
-function lerLuzesFabrica(map, avisar = console.warn) {
-  const camada = map.getObjectLayer("LuzesFabrica");
-  if (!camada) {
-    avisar('[Iluminação da fábrica] Camada de objetos "LuzesFabrica" ausente. Nenhuma lâmpada foi criada.');
-    return [];
-  }
-  return (camada.objects ?? []).flatMap(objeto => {
-    const area = objeto.point !== true && !objeto.ellipse && !objeto.polygon && !objeto.polyline && !objeto.gid &&
-      Number.isFinite(objeto.width) && objeto.width > 0 && Number.isFinite(objeto.height) && objeto.height > 0;
-    if ((!area && objeto.point !== true) || !Number.isFinite(objeto.x) || !Number.isFinite(objeto.y)) {
-      avisar(`[Iluminação da fábrica] Objeto ${objeto.id} ignorado: use Point ou retângulo com X/Y válidos em LuzesFabrica.`);
-      return [];
-    }
-    const raio = lerPropriedade(objeto, "Raio");
-    const intensidade = lerPropriedade(objeto, "Intensidade");
-    const piscando = lerPropriedade(objeto, "Piscando");
-    const pulsando = lerPropriedade(objeto, "Pulsando");
-    const ligada = lerPropriedade(objeto, "Ligada");
-    const orientacaoConfigurada = lerPropriedade(objeto, "Orientacao");
-    const orientacao = typeof orientacaoConfigurada === "string"
-      ? orientacaoConfigurada.trim().toLowerCase()
-      : null;
-    const cor = lerCorTiled(lerPropriedade(objeto, "Cor"));
-    if (pulsando === true) {
-      cor.css = "#FF0000";
-      cor.phaser = 0xFF0000;
-    }
-    return [{
-      id: objeto.id, x: objeto.x, y: objeto.y,
-      ...(area ? { area: true, largura: objeto.width, altura: objeto.height,
-        rotacao: Number.isFinite(objeto.rotation) ? objeto.rotation * Math.PI / 180 : 0 } : {}),
-      raio: Number.isInteger(raio) && raio > 0 ? raio : PADROES_LUZ_FABRICA.raio,
-      intensidade: typeof intensidade === "number" && Number.isFinite(intensidade) && intensidade >= 0
-        ? intensidade : PADROES_LUZ_FABRICA.intensidade,
-      cor,
-      piscando: typeof piscando === "boolean" ? piscando : PADROES_LUZ_FABRICA.piscando,
-      pulsando: typeof pulsando === "boolean" ? pulsando : PADROES_LUZ_FABRICA.pulsando,
-      ligada: (typeof ligada === "boolean" ? ligada : PADROES_LUZ_FABRICA.ligada) &&
-        camada.visible !== false && objeto.visible !== false,
-      // Exportações antigas do mapa usam "Vetical" para as luminárias verticais.
-      orientacao: orientacao === "vetical" ? "vertical"
-        : ["horizontal", "vertical"].includes(orientacao)
-          ? orientacao : PADROES_LUZ_FABRICA.orientacao,
-    }];
-  });
 }
 
 /** Usa a matriz já atualizada da câmera, inclusive scroll negativo, zoom e viewport. */
@@ -151,241 +62,24 @@ function luzAfetaCamera(luz, camera, escalaX, escalaY) {
     y + raioY > 0 && y - raioY < camera.height;
 }
 
-// Exige a luminária dentro da tela, mesmo quando seu halo alcança a câmera de fora.
-export function luzDentroCampoVisao(luz, camera) {
-  const m = camera?.matrix;
-  if (!m) return false;
-  const x = m.a * luz.x + m.c * luz.y + m.e;
-  const y = m.b * luz.x + m.d * luz.y + m.f;
-  return x >= 0 && x < camera.width && y >= 0 && y < camera.height;
-}
-
+/** Estado de energia e relógio da partida; não lê nem armazena fontes do mapa. */
 class FactoryLighting {
-  constructor(map, { aleatorio = Math.random, avisar = console.warn } = {}) {
-    this.lampadas = lerLuzesFabrica(map, avisar);
-    this.aleatorio = aleatorio;
-    this.energia = false;
-    this.partida = null;
-    this.progressoPartida = null;
-    this.fontesVisiveis = [];
-    this.candidatas = [];
-    this.ultimaCamera = {};
-    this.revisao = 0;
-    this.falhasIniciadas = [];
-    this.estadoEmFalha = null;
-    this.proximaFalhaPermitida = 0;
-    // Estados separados dos dados do mapa: nada é escrito nos objetos do Tiled.
-    this.estados = this.lampadas.map((luz, indice) => ({
-      luz, indice, intensidade: 0, falha: null, proximaFalha: null,
-      intensidadeBase: limitar(luz.intensidade * luz.cor.alpha),
-    }));
-    this.estadosRenderizaveis = this.estados.filter(({ luz, intensidadeBase }) => luz.ligada && intensidadeBase > 0);
-  }
-
+  constructor() { this.energia = false; this.partida = null; this.progressoPartida = null; }
   definirEnergia(ligada, obterProgresso = null, agora = 0) {
     this.energia = ligada === true;
-    this.revisaoEstaticaAnterior = undefined;
     this.progressoPartida = null;
-    this.partida = this.energia && typeof obterProgresso === "function"
-      ? { obterProgresso, inicio: agora } : null;
-    this.falhasIniciadas.length = 0;
-    this.estadoEmFalha = null;
-    this.proximaFalhaPermitida = 0;
-    for (const estado of this.estados) {
-      estado.falha = null;
-      estado.proximaFalha = null;
-    }
+    this.partida = this.energia && typeof obterProgresso === 'function' ? { obterProgresso, inicio: agora } : null;
   }
-
-  /** Uma pequena queda de tensão, com retorno suave, sem apagar ou repicar. */
-  criarFalha(agora) {
-    const minimo = 0.72 + this.aleatorio() * 0.15;
-    const queda = 120 + this.aleatorio() * 100;
-    const pausa = 70 + this.aleatorio() * 80;
-    const retorno = 300 + this.aleatorio() * 180;
-    const duracao = queda + pausa + retorno;
-    return { inicio: agora, duracao,
-      pontos: [[0, 1], [queda, minimo], [queda + pausa, minimo], [duracao, 1]],
-      estalos: [{ tempo: queda * 0.6, inicio: 0, luz: null, duracaoQueda: queda / 1000 }],
-      proximoEstalo: 0 };
-  }
-
-  registrarEstalos(estado, agora, camera) {
-    const perfil = estado.falha;
-    while (perfil.proximoEstalo < perfil.estalos.length) {
-      const estalo = perfil.estalos[perfil.proximoEstalo];
-      const inicioEstalo = perfil.inicio + estalo.tempo;
-      if (agora < inicioEstalo) break;
-      perfil.proximoEstalo++;
-      // Eventos fora da tela ou vencidos não formam uma fila ao retornar.
-      if (agora - inicioEstalo > 100 || !luzDentroCampoVisao(estado.luz, camera)) continue;
-      estalo.luz = estado.luz;
-      estalo.inicio = inicioEstalo;
-      this.falhasIniciadas.push(estalo);
-    }
-  }
-
-  /** Só luminárias marcadas falham, uma por vez, com longos períodos estáveis. */
-  atualizarFalha(estado, agora, camera) {
-    if (this.coopReplica) {
-      if (estado.falha) this.registrarEstalos(estado, agora, camera);
-      return;
-    }
-    if (estado.falha) {
-      if (agora < estado.falha.inicio + estado.falha.duracao) {
-        this.registrarEstalos(estado, agora, camera);
-        return;
-      }
-      estado.falha = null;
-      estado.proximaFalha = agora + DESCANSO_LUMINARIA + this.aleatorio() * VARIACAO_DESCANSO;
-      if (this.estadoEmFalha === estado) this.estadoEmFalha = null;
-      this.proximaFalhaPermitida = agora + DESCANSO_ENTRE_FALHAS + this.aleatorio() * VARIACAO_DESCANSO_GLOBAL;
-      return;
-    }
-    if (!estado.luz.piscando || estado.luz.pulsando || !luzDentroCampoVisao(estado.luz, camera)) return;
-    if (estado.proximaFalha === null) {
-      estado.proximaFalha = agora + INTERVALO_FALHA_INICIAL + this.aleatorio() * VARIACAO_FALHA_INICIAL;
-      return;
-    }
-    if (agora < estado.proximaFalha || this.estadoEmFalha || agora < this.proximaFalhaPermitida) return;
-    if (agora - estado.proximaFalha > 1000) {
-      // Não cria rajadas ao voltar de outra sala ou de uma aba suspensa.
-      estado.proximaFalha = agora + INTERVALO_FALHA_INICIAL + this.aleatorio() * VARIACAO_FALHA_INICIAL;
-      return;
-    }
-    estado.falha = this.criarFalha(agora);
-    estado.proximaFalha = null;
-    this.estadoEmFalha = estado;
-  }
-
-  /** Queda suave em passos de 50 ms: menos invalidações da máscara compartilhada. */
-  calcularFalha(estado, agora) {
-    if (!estado.falha) return 1;
-    const tempo = Math.floor((agora - estado.falha.inicio) / PASSO_FALHA_MS) * PASSO_FALHA_MS;
-    const pontos = estado.falha.pontos;
-    for (let i = 1; i < pontos.length; i++) {
-      const [fim, intensidade] = pontos[i];
-      if (tempo > fim) continue;
-      const [inicio, anterior] = pontos[i - 1];
-      return anterior + (intensidade - anterior) * suavizar((tempo - inicio) / (fim - inicio));
-    }
-    return 1;
-  }
-
-  snapshotRede(agora) {
-    return { agora, falhas: this.estados.filter(e => e.falha).map(e => ({ indice: e.indice,
-      inicio: e.falha.inicio, duracao: e.falha.duracao, pontos: e.falha.pontos,
-      estalos: e.falha.estalos.map(s => ({ tempo: s.tempo, duracaoQueda: s.duracaoQueda })) })) };
-  }
-
-  aplicarEstadoRede(dados, agora) {
-    if (!dados || !Array.isArray(dados.falhas) || !Number.isFinite(dados.agora)) return;
-    this.coopReplica = true;
-    this.revisaoEstaticaAnterior = undefined;
-    this.falhasRedeAtivas = dados.falhas.length > 0;
-    this.estadoEmFalha = null;
-    const ativos = new Set();
-    for (const f of dados.falhas) {
-      const e = this.estados[f.indice];
-      if (!e) continue;
-      ativos.add(f.indice);
-      if (e.falha?.inicioRede === f.inicio) continue;
-      e.falha = { ...f, inicioRede: f.inicio, inicio: agora + f.inicio - dados.agora,
-        proximoEstalo: 0, estalos: f.estalos.map(s => ({ ...s, luz: e.luz, inicio: 0 })) };
-    }
-    for (const e of this.estados) if (!ativos.has(e.indice)) e.falha = null;
-  }
-
   atualizarPartida(agora) {
-    let progresso = 1;
     this.progressoPartida = null;
-    if (this.partida) {
-      const medido = this.partida.obterProgresso();
-      progresso = typeof medido === "number" && Number.isFinite(medido)
-        ? limitar(medido)
-        : limitar((agora - this.partida.inicio) / (GENERATOR_LOOP_START_SECONDS * 1000));
-      this.progressoPartida = progresso;
-      if (progresso >= 1) this.partida = null;
-    }
-    return progresso;
+    if (!this.partida) return 1;
+    const medido = this.partida.obterProgresso();
+    const p = Number.isFinite(medido) ? limitar(medido) : limitar((agora-this.partida.inicio)/(GENERATOR_LOOP_START_SECONDS*1000));
+    this.progressoPartida = p;
+    if (p >= 1) this.partida = null;
+    return p;
   }
-
-  candidatasNaCamera(camera) {
-    const { a, b, c, d, e, f } = camera.matrix;
-    const { width, height } = camera;
-    const ultima = this.ultimaCamera;
-    if (ultima.a === a && ultima.b === b && ultima.c === c && ultima.d === d &&
-        ultima.e === e && ultima.f === f && ultima.width === width && ultima.height === height) return this.candidatas;
-    ultima.a = a; ultima.b = b; ultima.c = c; ultima.d = d;
-    ultima.e = e; ultima.f = f; ultima.width = width; ultima.height = height;
-    this.revisaoEstaticaAnterior = undefined;
-    const escalaX = Math.hypot(a, c), escalaY = Math.hypot(b, d);
-    this.candidatas.length = 0;
-    this.cameraTemLuzDinamica = false;
-    for (const estado of this.estadosRenderizaveis) {
-      const luz = estado.luz;
-      if (!luzAfetaCamera(luz, camera, escalaX, escalaY)) continue;
-      this.candidatas.push(estado);
-      this.cameraTemLuzDinamica ||= luz.piscando || luz.pulsando;
-    }
-    return this.candidatas;
-  }
-
-  atualizar(agora, camera, zonas = null) {
-    this.falhasIniciadas.length = 0;
-    const progresso = this.atualizarPartida(agora);
-    const energia = this.energia ? (progresso === 1 ? 1 : intensidadeLuzPartida(progresso)) : 0;
-    // Só a falha ativa avança fora da câmera, para liberar seu horário sem acumular eventos.
-    if (this.estadoEmFalha && !this.partida) {
-      const visivelNaZona = (zonas?.fatorLuz(this.estadoEmFalha.luz, agora) ?? 1) === 1;
-      this.atualizarFalha(this.estadoEmFalha, agora, visivelNaZona ? camera : null);
-    }
-    let quantidade = 0;
-    let alteradas = false;
-    const candidatas = energia ? this.candidatasNaCamera(camera) : null;
-    const revisaoEstatica = energia === 1 && progresso === 1 && !this.cameraTemLuzDinamica &&
-      !this.estadoEmFalha && !this.falhasRedeAtivas ? zonas?.revisaoEstaticaLampadas : undefined;
-    if (revisaoEstatica !== undefined && this.revisaoEstaticaAnterior === revisaoEstatica) return this.fontesVisiveis;
-    this.revisaoEstaticaAnterior = revisaoEstatica;
-    let pulso;
-    for (let i = 0; i < (candidatas?.length ?? 0); i++) {
-      const estado = candidatas[i];
-      const luz = estado.luz;
-      const fatorZona = zonas?.fatorLuz(luz, agora) ?? 1;
-      if (!fatorZona) continue;
-      if (!this.partida && fatorZona === 1 && estado !== this.estadoEmFalha &&
-          (this.coopReplica ? estado.falha : luz.piscando)) this.atualizarFalha(estado, agora, camera);
-      const oscilacao = this.partida
-        ? 1 - (1 - progresso) * 0.12 * Math.sin(progresso * 15 + estado.indice) ** 2
-        : fatorZona < 1 ? 1 : this.calcularFalha(estado, agora);
-      // Limita e quantiza em passos de alpha: evita saturação e uploads sem mudança visível.
-      const fatorPulso = luz.pulsando ? (pulso ??= intensidadePulso(agora)) : 1;
-      const intensidade = Math.round(estado.intensidadeBase * energia * oscilacao * fatorPulso * fatorZona * 255) / 255;
-      if (this.fontesVisiveis[quantidade] !== estado || estado.intensidade !== intensidade) alteradas = true;
-      estado.intensidade = intensidade;
-      this.fontesVisiveis[quantidade++] = estado;
-    }
-    if (quantidade !== this.fontesVisiveis.length) alteradas = true;
-    this.fontesVisiveis.length = quantidade;
-    if (alteradas) this.revisao++;
-    return this.fontesVisiveis;
-  }
-
-  destroy() {
-    this.estadoEmFalha = null;
-    this.partida = null;
-    this.progressoPartida = null;
-    this.energia = false;
-    this.fontesVisiveis.length = 0;
-    this.estados.length = 0;
-    this.estadosRenderizaveis.length = this.candidatas.length = 0;
-    this.falhasIniciadas.length = 0;
-    this.lampadas.length = 0;
-  }
+  destroy() { this.partida = null; this.progressoPartida = null; }
 }
-
-export {
-  ESCURIDAO_AMBIENTE_FABRICA, MULTIPLICADOR_ALCANCE_FABRICA, PADROES_LUZ_FABRICA, lerCorTiled,
-  lerLuzesFabrica, luzAfetaCamera, intensidadeLuzPartida, QUEDAS_LUZ_FABRICA,
-};
+export { ESCURIDAO_AMBIENTE_FABRICA, MULTIPLICADOR_ALCANCE_FABRICA, luzAfetaCamera, intensidadeLuzPartida, QUEDAS_LUZ_FABRICA };
 export default FactoryLighting;

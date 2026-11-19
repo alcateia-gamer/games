@@ -1,8 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { intensidadeLuzPartida, QUEDAS_LUZ_FABRICA } from "../effects/TerrorLighting.js";
-import { criarSomLuzFabrica, carregarSomLuzFabrica, criarSomPiscadasAmbiente } from "./luzFabrica.js";
-import FactoryLighting from "../effects/FactoryLighting.js";
+import { criarSomLuzFabrica, carregarSomLuzFabrica } from "./luzFabrica.js";
 
 function criarAudioSimulado(audioBuffer, automacao = null) {
   const reproducoes = [];
@@ -216,83 +215,4 @@ test("sem áudio carregado mantém o controle visual utilizável", () => {
   controle.update(0.5);
   controle.stop();
   controle.destroy();
-});
-
-
-test("piscadas ambientes usam o mesmo áudio bem baixo, atenuam distância e não repetem por quadro", () => {
-  const reproducoes = [];
-  const volumes = [];
-  let destruido = false;
-  let paradas = 0;
-  const som = {
-    totalDuration: 0.78, addMarker() {},
-    play(nome, config) { reproducoes.push({ nome, ...config }); return true; },
-    setVolume(volume) { volumes.push(volume); },
-    stop() { paradas++; }, destroy() { destruido = true; },
-  };
-  const scene = {
-    time: { now: 0 }, player: { active: true, x: 0, y: 0 },
-    cameras: { main: { width: 1200, height: 600,
-      matrix: { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 } } },
-    cache: { audio: { exists: () => true } },
-    sound: { add(chave) { assert.equal(chave, "luz-fabrica-oscilando"); return som; } },
-  };
-  const controle = criarSomPiscadasAmbiente(scene);
-  const piscar = luzes => controle.update(luzes.map(luz => ({ luz, inicio: scene.time.now, duracaoQueda: 0.2 })));
-  piscar([{ x: 450, y: 0 }, { x: 0, y: 0 }, { x: 200, y: 0 }]);
-  scene.time.now = 30;
-  piscar([{ x: 100, y: 0 }]);
-  const perto = volumes.at(-1);
-  assert.ok(perto > 0 && perto <= 0.025);
-  assert.equal(reproducoes.length, 1, "falhas simultâneas escolhem o estalo mais próximo sem interrompê-lo");
-  scene.time.now = 3000;
-  piscar([{ x: 450, y: 0 }]);
-  scene.time.now += 30;
-  piscar([]);
-  assert.ok(Math.abs(volumes.at(-1) - perto / 4) < 1e-10);
-  scene.time.now = 6000;
-  piscar([{ x: 1000, y: 0 }]);
-  assert.equal(reproducoes.length, 2);
-  assert.ok(reproducoes.every(som => som.loop === false && som.rate === 1));
-  // Fora da tela, mas perto do personagem e com halo potencialmente visível.
-  piscar([{ x: -1, y: 0 }, { x: 0, y: -1 }, { x: 0, y: 600 }]);
-  assert.equal(reproducoes.length, 2);
-  // Scroll e zoom devem usar a posição projetada na tela.
-  scene.cameras.main.matrix = { a: 2, b: 0, c: 0, d: 2, e: 400, f: 200 };
-  scene.time.now = 7000;
-  piscar([{ x: -100, y: -50 }]);
-  assert.equal(reproducoes.length, 3);
-  const antes = paradas;
-  scene.cameras.main.matrix.e = -500;
-  scene.time.now += 30;
-  piscar([]);
-  assert.equal(paradas, antes + 1, "silencia quando a luminária sai do campo de visão");
-  piscar([{ x: -100, y: -50 }]);
-  assert.equal(reproducoes.length, 3);
-  controle.destroy();
-  assert.equal(destruido, true);
-});
-
-
-test("queda suave emite um estalo discreto e não repete durante o descanso", () => {
-  for (const sorteio of [0, 0.5, 1]) {
-    const { som, reproducoes } = criarAudioSimulado();
-    const camera = { width:800,height:450,matrix:{a:1,b:0,c:0,d:1,e:0,f:0} };
-    const scene = {time:{now:0},player:{active:true,x:400,y:225},cameras:{main:camera},
-      cache:{audio:{exists:()=>true}},sound:{add:()=>som}};
-    const lights=new FactoryLighting({getObjectLayer:()=>({objects:[{id:1,point:true,x:400,y:225,properties:{Piscando:true}}]})},{aleatorio:()=>sorteio});
-    const audio=criarSomPiscadasAmbiente(scene);lights.definirEnergia(true);lights.atualizar(0,camera);
-    const start=lights.estados[0].proximaFalha;lights.atualizar(start,camera);
-    const profile=lights.estados[0].falha;assert.ok(profile.duracao>=490 && profile.duracao<=850);
-    let events=0;
-    for(let now=start;now<start+profile.duracao+2000;now+=16) {
-      scene.time.now=now;lights.atualizar(now,camera);audio.update(lights.falhasIniciadas);
-      events+=lights.falhasIniciadas.length;
-      assert.ok(lights.fontesVisiveis[0].intensidade>=.71);
-    }
-    assert.equal(events,1);assert.equal(reproducoes.length,1);assert.equal(reproducoes[0].rate,1);
-    const count=reproducoes.length;scene.time.now+=1000;
-    audio.update([{luz:lights.lampadas[0],inicio:scene.time.now-600,duracaoQueda:.2}]);
-    assert.equal(reproducoes.length,count);audio.destroy();lights.destroy();
-  }
 });

@@ -1,192 +1,101 @@
-# Iluminação da fábrica
+# Iluminação da fábrica — revisão de 19/11/2026
 
-O sistema é exclusivo de `Level1Parte2`. Lê os pontos de `LuzesFabrica` por
-`map.getObjectLayer`, depois da criação do mapa. Preserva posições, coordenadas
-negativas, gerador, partida elétrica, falhas e estado persistente da energia.
-Sem energia, a lanterna do jogador ilumina a fábrica; ela apaga quando a energia liga.
+A fase `Level1Parte2` não lê pontos de `LuzesFabrica`, `Luzedeemergencia` ou `IluminaçãoBoss`. O JSON do mapa foi mantido como estava no workspace, com as alterações do usuário.
 
-## Lanterna na barriga
+## Estrutura atual
 
-`FlashlightPose.js` posiciona a origem no centro da barriga de cada personagem,
-respeitando a origem visual, escala, espelhamento e rotação do sprite. O movimento
-dos braços e as mudanças de direção não deslocam esse ponto pelo corpo.
+- `FactoryLighting`: somente estado de energia e relógio da partida do gerador. Não possui lâmpadas, estados individuais, candidatos, cores, falhas aleatórias ou listas vazias de luminárias.
+- `TerrorLighting` / `FactoryAmbientLighting`: um compositor de escuridão, compartilhado pelo ambiente, cone antes da energia e efeitos dinâmicos essenciais da arena.
+- `DoorLightingZones`: geometria de `LuzApagada`, associação às portas, opacidade, transição e restauração de rede. Cada zona é desenhada por um retângulo reutilizado; não depende de índices de luminárias.
+- `BossRoomLighting`, `BossIntroLighting` e `BossEnergyLighting`: geometria da arena, ambiente/aura da introdução e fontes dinâmicas dos ataques, torres, escudo, boss e cópias. Nenhuma fonte fixa é inventada para substituir os antigos pontos.
+- `FlashlightLifecycle`: progresso irreversível da lanterna dentro da partida.
 
-O feixe segue a velocidade nas oito direções e conserva o último ângulo ao parar.
-Uma mudança explícita de direção parado atualiza a mira. A abertura do cone começa
-perto da barriga, com transição suave nos primeiros 8 pixels. Para baixo, quadros
-animados com a mesma posição do tronco reutilizam a máscara; com energia, a lanterna apaga.
+## Antes do gerador
 
-O feixe apontando para cima, inclusive nas diagonais, passa por trás do jogador.
-A silhueta do frame atual bloqueia só a contribuição da lanterna, mantendo a
-cabeça e o corpo na sombra sem recortar o cenário transparente ao redor. Para
-baixo, a luz passa sobre o personagem. Um carimbo local reutilizado acompanha
-frame, escala, origem, rotação, espelhamento e alpha; as luzes da fábrica continuam
-iluminando o personagem normalmente quando há energia.
+O ambiente conserva a escuridão de 0,75. O cone usa a posição da barriga, direção, escala e espelhamento originais. Paredes, portas e camadas de primeiro plano continuam recortando o feixe; a silhueta do jogador recorta a lanterna quando ele olha para cima. Aliados usam a pose replicada existente.
 
-`FlashlightWalls.js` limita o feixe e seu halo à região visível desde a barriga.
-Os tiles de `ParedeAbaixoPerso` e `ParedeAcimaPerso` e os objetos de `ParedePortaBoss`
-bloqueiam a luz. `BordaAlta` e `BordaCurvas` ficam fora desse bloqueio. Colisões comuns de máquinas e
-móveis deixam os objetos receberem o feixe; a física de movimento permanece igual.
-Uma colisão extra só bloqueia luz quando seu tipo é `parede` ou `wall`. Portas com
-colisão bloqueiam até terminar a abertura. Abrir uma porta atualiza a sombra mesmo
-com o jogador parado. Aberturas e quinas preservam a passagem da luz onde há visão.
-Um índice espacial consulta só os contornos próximos; o polígono é reutilizado
-enquanto origem e portas não mudam. O recorte usa a matriz atual da câmera.
+São criados apenas os recursos necessários à lanterna, ambiente e zonas. Recursos dinâmicos de composição do boss são inicializados quando suas fontes ficam visíveis. O cone e a máscara de oclusão são canvases locais; não são texturas Phaser exclusivas nem são enviados pela rede.
 
-A primeira parede atingida recebe luz em toda sua face, até a borda de trás da
-superfície. O espaço depois dessa borda permanece escuro. Cruzamentos de contornos
-levam em conta paredes sobrepostas e quinas; uma segunda parede não recebe luz
-através da primeira. Portas fechadas também recebem luz na superfície e bloqueiam
-o cenário atrás delas.
+## Ativação e descarregamento definitivo
 
-## Configuração no Tiled
+A primeira ativação grava `factoryFlashlightRetired` no registry da partida. Essa chave é independente de `luzFabricaAcesa` e não volta para falso durante a mesma partida.
 
-Cada fonte deve ser um objeto **Point**:
+A rotina é idempotente e:
 
-| Propriedade | Tipo | Padrão | Comportamento |
-| --- | --- | --- | --- |
-| `Raio` | int | 170 | Alcance de referência em pixels de mundo; a dispersão usa 1,5 × esse valor. Inteiro positivo. |
-| `Intensidade` | float | 1.0 | Número finito não negativo; zero apaga a fonte, valores acima de 1 são limitados. |
-| `Cor` | color | `#FFD27A` | RGB ou ARGB do Tiled (`#AARRGGBB`); alpha controla a força da fonte. |
-| `Piscando` | bool | false | `true` permite quedas ocasionais suaves; `false` ou ausente mantém a luminária estável. |
-| `Ligada` | bool | true | Permite acender a fonte apenas quando o gerador fornece energia. |
-| `Orientacao` | string | `horizontal` | `horizontal` ou `vertical`; orienta o segmento luminoso em cápsula. |
+1. Destrói o índice `FlashlightWalls` exclusivo da lanterna.
+2. Zera e libera as referências do canvas do cone e do canvas de oclusão.
+3. Esvazia e libera as lanternas aliadas e a referência `scene.recursosLanterna`.
+4. Retira a atualização da pose do fluxo de estado local do cooperativo e passa a publicar `flashlight: null` no envelope já existente.
+5. Ignora poses remotas e cálculos de cone/oclusão posteriores.
 
-A leitura de `Orientacao` aceita maiúsculas, minúsculas e espaços nas extremidades.
-Os valores `Vetical` e `Vertical` são interpretados como `vertical`, sem precisar
-alterar a grafia no mapa. O foco gira no próprio ponto da lâmpada, preservando
-suas coordenadas X/Y.
+Não há novos envios por frame. A flag autoritativa já existente `coopProgress.flags.factoryGeneratorPowered` determina a aposentadoria em reconexão, entrada tardia ou migração de host. `CoopWorld.applyFlags()` aplica o descarregamento local mesmo quando a iluminação atual foi apagada por DEV.
 
-Propriedades ausentes ou inválidas usam os padrões. Objetos sem Point ou sem
-coordenadas válidas são ignorados com aviso. Uma camada ausente também gera aviso
-e mantém a escuridão, sem inventar lâmpadas. As luminárias físicas do mapa não são
-alteradas pela forma da projeção luminosa.
+Antes de criar recursos, o compositor consulta o registry e o progresso autorizado da sala. Uma visita com histórico de gerador ativado não cria os canvases nem o índice exclusivo da lanterna. O estado pode ser registrado antes de o runtime multiplayer terminar de inicializar.
 
-## Mau contato ocasional e iluminação estável
+`BootPartida` remove `factoryFlashlightRetired` ao começar uma nova partida. Uma nova partida solo ignora o histórico de uma sala multiplayer antiga que ainda esteja no registry. O gerador atual e sua progressão continuam com os contratos existentes.
 
-As luminárias comuns (`Piscando=false` ou ausente) permanecem estáveis depois da
-partida. Somente as marcadas podem apresentar mau contato, e apenas uma falha
-ambiental fica ativa por vez em toda a fábrica. Não são alterados pontos, cores,
-orientações ou propriedades do mapa, nem os neons fixos, alarmes e efeitos do boss.
+## Ambiente e ferramentas DEV
 
-A primeira falha é agendada 18–42 segundos após a luminária entrar no campo de visão,
-com o gerador estabilizado. Uma queda dura 490–850 ms, reduz o brilho para 72–87%
-do valor configurado e volta suavemente, sem apagões ou repiques. Depois, a mesma
-luminária descansa por 45–90 segundos; há ainda 8–14 segundos de intervalo mínimo
-entre falhas de fontes diferentes. Assim, várias fontes próximas não oscilam juntas.
+Com energia, a fábrica usa iluminação uniforme, conservando as cores do mapa e a transição de partida sincronizada com o gerador e seus três estalos. O brilho estabilizado conserva a sombra ambiente básica de 0,4.
 
-Não são iniciadas falhas fora do campo de visão. Uma falha já iniciada pode terminar
-fora dele para liberar seu horário; eventos de áudio vencidos ou invisíveis são
-descartados. Voltar de uma aba suspensa não dispara uma fila de falhas acumuladas.
-O perfil e seus instantes continuam sendo enviados pelo host no protocolo existente,
-permitindo reprodução equivalente com relógios de cena diferentes.
+Depois da aposentadoria, apagar a luz por DEV pode escurecer a fábrica, mas não recria a lanterna. Fora da arena, o compositor reutiliza uma máscara preta uniforme e altera apenas o alpha do overlay. Câmera e portas não exigem atualizar a textura inteira: os retângulos das zonas continuam posicionados no mundo.
 
-Cada falha tem um único estalo discreto, ligado ao mesmo relógio da queda. A partida
-do gerador mantém seu áudio e sua progressão. Desligar a energia cancela o efeito e os
-agendamentos. Não há novos temporizadores. Só fontes visíveis são avaliadas para
-iniciar falhas; o brilho de uma queda ativa avança em passos de 50 ms (até 20 Hz).
-Durante os longos trechos estáveis, o cache reutiliza a máscara e evita uploads.
+Resize e entrada/saída da arena invalidam o modo quando necessário. Os índices do boss, as máscaras de energia, a máscara ambiente e as zonas não são destruídos junto com a lanterna.
 
-## Causa das manchas e correção
+## Portas e boss
 
-O perfil anterior usava uma área retangular de intensidade praticamente constante,
-com pico de 0,995 e remoção de sombra multiplicada por 0,99. O centro ficava com
-aproximadamente 1% de sombra; fontes sobrepostas removiam ainda mais. A transição
-em torno desse platô produzia a aparência de retângulo com blur.
+As zonas conservam os limites e rotações do mapa. Uma área continua escura enquanto a porta está fechada ou abrindo; a revelação original acontece após a abertura. O pareamento de porta01/porta04, as salas conectadas, a restauração e a replicação foram mantidos. Foram retirados apenas o escalonamento por lâmpada e os índices que não possuem mais fontes.
 
-Não havia um filtro de blur nem uma imagem branca desenhada diretamente sobre o
-piso: a textura branca era usada em `destination-out`. A causa estava no formato
-do perfil e na remoção quase total e repetida da sombra.
+A arena conserva sua escuridão própria, independente do ambiente externo. A introdução usa os limites já existentes da arena para ambiente e aura. `NovoBossIntroducao` não busca neons para iniciar a sequência. A energia de projéteis, torres, escudo e aura mantém seus perfis e cores existentes; as silhuetas continuam ocultando o brilho e os sprites do boss conservam o clareamento próprio.
 
-O novo perfil em `TerrorLighting.js` calcula a distância a um segmento curto de reta.
-Três quedas contínuas representam núcleo, dispersão e halo. A intensidade também
-varia ao longo do segmento, evitando uma faixa central uniforme. Uma função
-`smootherstep` leva todo o efeito suavemente a zero no limite de `Raio × MULTIPLICADOR_ALCANCE_FABRICA`, sem anel
-separado ou degraus entre as regiões. A orientação vertical gira o mesmo perfil.
-Um ganho suave de 1,6 reforça o núcleo e a dispersão sem recortar o gradiente.
-A dispersão e o halo recebem ganho de 2 fora do núcleo. Uma transição contínua
-reduz esse reforço ao se aproximar do foco, preservando a intensidade máxima do centro.
-O alcance da dispersão e do halo é 50% maior (255 px para `Raio = 170`); o núcleo
-conserva suas dimensões e sua queda de intensidade originais.
+Os neons e as arandelas fixas removidos do mapa não são recriados manualmente. Seus parsers, controladores e caches não são instanciados. Os módulos `EmergencyLighting.js` e `BossWallLighting.js` conservam somente perfis matemáticos reutilizáveis, sem classes, leitura do Tiled ou fontes. O arquivo `FactoryNeonDefaults.js`, que continha os antigos IDs, foi removido após verificar que não tinha mais consumidores.
 
-## Composição e exposição
+## Código obsoleto retirado
 
-Existe uma única máscara de tela inteira. Os carimbos brancos apenas removem
-escuridão; o cenário e suas cores continuam sendo os tiles e objetos originais.
-A sombra ambiente segue `ESCURIDAO_AMBIENTE_FABRICA` (**90%** na configuração local atual). Mesmo com várias fontes coincidentes,
-a sombra nunca cai abaixo de **20%**.
+- Parsing de pontos, áreas luminosas e propriedades de cor, intensidade, raio, orientação e piscada.
+- Estados, seleção por câmera e relógios de falhas de luminárias em `FactoryLighting`.
+- Composição dos neons, arandelas e atlas fixo pelo compositor da fábrica.
+- Índices de luminárias nas zonas e limiares individuais na introdução.
+- Sons ocasionais de luminárias e seus timers; preservados os sons da partida do gerador.
+- Snapshot periódico de falhas luminosas e flag de réplica desses estados.
 
-Depois de acumular a remoção, `source-in` normaliza o campo e `destination-over`
-reintroduz a sombra residual. Para sombra restante `q` entre 0 e 1:
+A busca por nomes das três camadas, `lerLuzesFabrica`, `criarSomPiscadasAmbiente` e `padraoNeonFabrica` não encontrou referências no código de produção.
 
-```text
-alpha final = 0,20 + (escuridão ambiente - 0,20) × q
-```
+## Arquivos alterados nesta refatoração
 
-Uma lâmpada padrão deixa aproximadamente 24,4% de sombra no centro. A combinação
-de várias fontes se aproxima do limite de 20%, sem revelar o piso de forma
-excessiva. Isso dispensa leitura de pixels por quadro.
+Produção:
 
-A coloração usa `source-atop` depois da composição e preserva o alpha. Seu peso
-somado é limitado a 2,5%, inclusive com muitas fontes próximas, mantendo o amarelo
-como complemento discreto.
+- `js/effects/FactoryLighting.js`, `FactoryAmbientLighting.js`, `TerrorLighting.js`.
+- `js/effects/FlashlightLifecycle.js` (novo) e `FlashlightPose.js`.
+- `js/effects/DoorLightingZones.js`, `BossIntroLighting.js`, `BossRoomLighting.js`.
+- `js/effects/EmergencyLighting.js`, `BossWallLighting.js`; remoção de `FactoryNeonDefaults.js`.
+- `js/sounds/luzFabrica.js` e `js/enemies/novoBoss/NovoBossIntroducao.js`.
+- `js/multiplayer/CoopPlayers.js`, `CoopWorld.js`, `CoopRuntime.js`.
+- `js/scenes/BootPartida.js` e comentário de inicialização em `Level1Parte2.js`.
 
-## Integração e desempenho
+Os testes desses módulos foram adaptados à remoção das fontes, incluindo `FactoryDoor.test.mjs`, `CoopRegression.test.mjs` e `NovoBossIntroducao.test.mjs`. Novos roteiros: `tests/factory-lighting-lifecycle.browser.mjs`, `tests/factory-lighting-lifecycle-coop.browser.mjs` e fixture unitária `tests/lighting-fixture.mjs`.
 
-- `FactoryLighting.js` lê propriedades, controla energia, progressão, falhas e
-  seleção das luzes pelo alcance ampliado na matriz atual da câmera.
-- `TerrorLighting.js` prepara o perfil de cápsula uma vez por visita e reutiliza
-  uma máscara branca e as máscaras de cor. Cada fonte exige dois desenhos,
-  em vez dos quatro do antigo foco mais halo separados.
-- O gerador mantém sua API, áudio, sequência e registry. O progresso do áudio
-  controla a partida; sem áudio, usa o relógio existente de cinco segundos.
-- O evento `Phaser.Renderer.Events.RENDER` fornece a matriz depois de
-  `camera.preRender`, preservando alinhamento durante movimento, zoom e resize.
-- Quadros sem mudança na câmera ou intensidade reutilizam a textura. Não há
-  novos shaders, canvas de tela inteira adicionais ou processamento de pixels por frame.
-- As luzes giratórias foram removidas, incluindo pontos do mapa, perfis e cache exclusivo.
-  A camada de emergência contém apenas neons fixos.
-- O encerramento remove listener, overlay, textura e canvases temporários.
+As alterações anteriores de fuga do tentáculo e o JSON do mapa não foram revertidos ou incluídos como correções de iluminação.
 
-## Comparação com o GitHub
+## Testes e evidências
 
-Comparação realizada com a `main` em
-[`ce810993a24df2c55e7446a2ad537beb3ce89a77`](https://github.com/alcateia-gamer/games/commit/ce810993a24df2c55e7446a2ad537beb3ce89a77).
-A cópia local parte de `bdcbce570084617b28f0012130f706ee66183b57`, com alterações
-locais ainda não commitadas.
+As sete suítes obrigatórias passaram: **59 casos aprovados** em `FactoryAmbientLighting`, `TerrorLighting`, `FactoryLighting`, `DoorLightingZones`, `FlashlightPose`, `FactoryGenerator` e `CoopRegression`.
 
-Na versão consultada do GitHub, `FactoryLighting.js` não existe.
-[`TerrorLighting.js`](https://github.com/alcateia-gamer/games/blob/ce810993a24df2c55e7446a2ad537beb3ce89a77/js/effects/TerrorLighting.js)
-ainda desenha o cone da lanterna e esconde a máscara inteira quando o gerador
-estabiliza. Também contém áudio de oscilações e uma otimização de resolução móvel
-que não fazem parte da cópia local. Esta correção foi aplicada ao sistema local,
-sem substituir arquivos por versões remotas ou publicar alterações.
+A suíte geral foi executada com cada arquivo em processo Node separado: **150 arquivos, 1.427 casos aprovados e sete falhas**. As sete falhas estão em `PlayerAnimations.test.mjs`, e foram reproduzidas extraindo e executando o mesmo arquivo no HEAD anterior, sem esta refatoração. Os outros 149 arquivos passaram. Também passaram os 19 casos da introdução e os 12 casos restantes dos sons do gerador.
 
-## Verificação
+Navegador real, Brave/Playwright:
 
-```sh
-node --test js/effects/FactoryLighting.test.mjs
-node --test js/effects/EmergencyLighting.test.mjs
-node --test
-```
+- `factory-lighting-lifecycle.browser.mjs`: fábrica sem fontes, cone antes da energia, recursos liberados, iluminação ligada, DEV apagado, retorno sem recriar lanterna e nova partida com lanterna disponível.
+- `factory-lighting-lifecycle-coop.browser.mjs`: dois jogos com MQTT local. Host instala bateria, cliente instala gasolina e solicita a ativação; ambos liberam canvases, índice e aliados. Pose de lanterna deixa de ser publicada; flags e retorno preservam a desativação.
+- `tentaculo-coop.browser.mjs`: entrada e preparação do boss em dois jogos, boss e HUD presentes, efeitos em execução e fuga do host/cliente funcionando sem erros JavaScript.
+- `factory-flashlight.browser.mjs` foi executado. Após a correção da invalidação por animação dos braços, chegou à etapa de caminhada, mas parou por timeout esperando velocidade do jogador. O roteiro completo não foi declarado aprovado; seu cenário antigo de entrada na arena não foi reescrito nesta tarefa.
 
-Os testes usam parser, câmera e matrizes do Phaser incluído no projeto. O Canvas
-simulado amostra alpha e RGBA pelas equações Porter-Duff. Conferem propriedades,
-pontos reais, energia, partida, falhas, cápsula sem platô, transições contínuas,
-limite do alcance ampliado, 80 fontes sobrepostas, cores do piso, lanterna condicionada à energia,
-alinhamento, persistência e limpeza. Não substituem navegador ou GPU reais.
+Medição isolada do compositor fora da arena, após a energia: **300 chamadas consecutivas sem upload da textura**. O tempo observado está em `/tmp/factory-lighting-solo/report.json`; não é uma comparação de FPS do jogo nem uma medição em celular físico. Não foi calculada uma redução percentual de memória ou desempenho sem baseline equivalente.
 
-Validação manual:
+Evidências: `/tmp/factory-lighting-all-unit/summary.json`, `/tmp/factory-lighting-baseline-animations.log`, `/tmp/factory-lighting-coop/report.json`, `/tmp/factory-lighting-solo/report.json`, screenshots `antes.png`/`depois.png` na mesma pasta e `/tmp/factory-lighting-boss.log`.
 
-1. Entre com o gerador desligado e confira a lanterna na barriga ao caminhar
-   nas oito direções e ao parar, sem deslocar a origem junto com os braços durante a animação.
-2. Ligue o gerador. Confira a partida progressiva e a revelação do piso perto de
-   cada luminária, mantendo sombras e sem retângulos ou anéis luminosos.
-3. Compare locais com uma e com várias fontes: o brilho deve se combinar suavemente,
-   preservando os detalhes e as cores do cenário.
-4. Teste `Orientacao = vertical` e raios diferentes. As posições não devem mudar.
-   Após estabilizar o gerador, só lâmpadas com `Piscando=true` podem ter uma queda
-   breve e suave por vez; as demais permanecem estáveis, com longas pausas entre eventos.
-5. Mova a câmera, altere zoom, redimensione e gire o celular. Saia e retorne à fábrica
-   para conferir energia persistida e ausência de erros ou vazamentos.
-6. Confira a cidade e a loja e meça FPS/memória em um celular intermediário.
+`git diff --check -- js docs tests` passou. O JSON modificado pelo usuário tem whitespace próprio, preservado.
+
+## Limitações
+
+Não houve teste em celular físico, comparação de FPS com a implementação anterior ou auditoria visual pixel a pixel dos antigos neons, que foram removidos junto com sua origem. Os roteiros antigos de diagnóstico exclusivos de luminárias individuais precisam usar a nova arquitetura antes de servirem como benchmarks comparáveis.

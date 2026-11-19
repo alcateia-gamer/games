@@ -12,7 +12,6 @@ import { criarSistemaInventario } from "../inventory/ItemPickup.js";
 import { criarInteracaoGeradorFabrica, findGeneratorInteraction } from "./FactoryGenerator.js";
 import { calcularDepthAtor } from "../map/ProfundidadeMapa.js";
 import DoorLightingZones from "../effects/DoorLightingZones.js";
-import { lerLuzesFabrica } from "../effects/FactoryLighting.js";
 import { CoopWorld } from "../multiplayer/CoopWorld.js";
 import { prepararBossDevFase2 } from '../controls/DeveloperBoss.js';
 import { prepararFasesNovoBoss } from '../enemies/novoBoss/NovoBossFases.js';
@@ -459,7 +458,7 @@ test("porta05 abre após a morte do boss por E ou toque e revela a sala menor", 
     const tiles = layer.getTilesWithinWorldXY(-480, -5904, 48, 144);
     assert.equal(tiles.length, 3);
     assert.ok(tiles.every(tile => tile.alpha === 1));
-    const zonas = new DoorLightingZones(scene.map, lerLuzesFabrica(scene.map));
+    const zonas = new DoorLightingZones(scene.map);
     zonas.atualizar(0, scene.portasFabrica, false);
     const sala = zonas.zonas.filter(zona => zona.porta === porta);
     assert.deepEqual(sala.map(zona => zona.id), [1310, 1311]);
@@ -487,12 +486,7 @@ test("porta05 abre após a morte do boss por E ou toque e revela a sala menor", 
     assert.ok(zonas.zonas.filter(zona => zona.porta !== porta).every(zona => zona.opacidade === 1));
     scene.acenderLuzFabrica();
     zonas.atualizar(300, scene.portasFabrica, true);
-    const lampadasSala = sala.flatMap(zona => [...zona.indices.keys()]);
-    assert.equal(lampadasSala.length, 16);
-    assert.ok(lampadasSala.every(luz => zonas.fatorLuz(luz, 300) === 0));
-    zonas.atualizar(1700, scene.portasFabrica, true);
-    assert.ok(lampadasSala.every(luz => luz.ligada && zonas.fatorLuz(luz, 1700) === 1),
-      "as novas lâmpadas da sala ligam mesmo com a camada LuzApagada oculta");
+    assert.ok(sala.every(zona => zona.opacidade === 0), "a sala revelada independe de luminárias");
     const registry = scene.game.registry;
     zonas.destroy();
     scene.events.emit("shutdown");
@@ -500,7 +494,7 @@ test("porta05 abre após a morte do boss por E ou toque e revela a sala menor", 
     assert.equal(bodies.size, 0);
 
     const { scene: retorno, layer: camadaRetorno } = createScene(registry);
-    const restauradas = new DoorLightingZones(retorno.map, lerLuzesFabrica(retorno.map));
+    const restauradas = new DoorLightingZones(retorno.map);
     restauradas.atualizar(0, retorno.portasFabrica, false);
     assert.ok(retorno.portasFabrica.find(porta => porta.nome === "porta05").colisao, "uma nova luta exige derrotar o boss novamente");
     assert.ok(camadaRetorno.getTilesWithinWorldXY(-480, -5904, 48, 144).every(tile => tile.alpha === 1));
@@ -529,41 +523,33 @@ test("porta05 revalida alcance, morte e menus antes de abrir instantaneamente", 
 test("abrir a porta04 libera as duas zonas pareadas e restaura a iluminação ao voltar ao mapa", () => {
   const { scene } = createScene();
   const registry = scene.game.registry;
-  const lampadas = lerLuzesFabrica(scene.map);
-  const zonas = new DoorLightingZones(scene.map, lampadas);
+  const zonas = new DoorLightingZones(scene.map);
   zonas.atualizar(0, scene.portasFabrica, true);
   const zona04 = zonas.zonas.find(zona => zona.porta.nome === "porta04");
   const zona01 = zonas.zonas.find(zona => zona.porta.nome === "porta01");
-  const luz = [...zona04.indices.keys()][0];
   scene.acenderLuzFabrica();
   aproximarPorta(scene, zona04.porta);
   const animation = abrirComE(scene);
   zonas.atualizar(400, scene.portasFabrica, true);
   assert.equal(zona04.opacidade, 1, "a sala permanece escura enquanto a persiana abre");
-  assert.equal(zonas.fatorLuz(luz, 400), 0);
   zona04.porta.progresso = 1;
   animation.onUpdate();
   animation.onComplete();
   zonas.atualizar(850, scene.portasFabrica, true);
-  assert.equal(zona04.inicioLampadas, 850);
   zonas.atualizar(1200, scene.portasFabrica, true);
   assert.equal(zona04.opacidade, 0);
   zonas.atualizar(3200, scene.portasFabrica, true);
-  assert.equal(zonas.fatorLuz(luz, 3200), 1);
   assert.equal(zona01.opacidade, 0);
-  assert.ok([...zona01.indices.keys()].every(luz => zonas.fatorLuz(luz, 3200) === 1));
   zonas.destroy();
   scene.events.emit("shutdown");
 
   const { scene: retorno } = createScene(registry);
-  const restauradas = new DoorLightingZones(retorno.map, lerLuzesFabrica(retorno.map));
+  const restauradas = new DoorLightingZones(retorno.map);
   restauradas.atualizar(0, retorno.portasFabrica, true);
   const aberta = restauradas.zonas.find(zona => zona.porta.nome === "porta04");
   const pareada = restauradas.zonas.find(zona => zona.porta.nome === "porta01");
   assert.equal(aberta.opacidade, 0);
-  assert.ok([...aberta.indices.keys()].every(luz => restauradas.fatorLuz(luz, 0) === 1));
   assert.equal(pareada.opacidade, 0);
-  assert.ok([...pareada.indices.keys()].every(luz => restauradas.fatorLuz(luz, 0) === 1));
   restauradas.destroy();
   retorno.events.emit("shutdown");
 });

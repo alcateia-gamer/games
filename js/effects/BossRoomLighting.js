@@ -22,7 +22,7 @@ export default class BossRoomLighting {
     this.canvas.width = Math.ceil(right) - this.x;
     this.canvas.height = Math.ceil(bottom) - this.y;
     const c = this.canvas.getContext("2d");
-    c.fillStyle = "#FFFFFF";
+    c.fillStyle = "#000000";
     for (const zona of zonas) {
       c.setTransform(zona.cos, zona.sin, -zona.sin, zona.cos, zona.x - this.x, zona.y - this.y);
       c.fillRect(0, 0, zona.width, zona.height);

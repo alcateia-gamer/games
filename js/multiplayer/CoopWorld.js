@@ -1,3 +1,4 @@
+import { desativarLanternaDefinitivamente } from "../effects/FlashlightLifecycle.js";
 import { CoopBossLoading } from "./CoopBossLoading.js";
 import { CoopGenerator } from './CoopGenerator.js';
 import { desvanecerMusicaAmbiente, DURACAO_SAIDA_MUSICA_MS } from "../sounds/musicaAmbiente.js";
@@ -200,6 +201,7 @@ export class CoopWorld {
   }
   applyFlags(flags = {}) {
     const s = this.scene;
+    if (flags.factoryGeneratorPowered) desativarLanternaDefinitivamente(s);
     const portasArena = ["factoryDoorOpen:porta02", "factoryDoorOpen:porta03"];
     const bloquearNovaEntrada = this.r.host && !this.bossLoading.current() &&
       portasArena.some(key => flags[key]) && !this.bossLoading.teamStatus().alive;
@@ -338,7 +340,7 @@ export class CoopWorld {
       hacking: s.hackingTerminals?.snapshot(),
       bossAssembly: this.bossAssembly, bossPreparation: this.bossLoading.state,
       devLighting: this.manager.room.coopDevLighting ?? null,
-      lighting: s.iluminacaoFabrica?.snapshotRede(s.time.now),
+
       lightingZones: s.zonasLuzApagada?.snapshotRede(s.time.now),
       doors: (s.portasFabrica || []).map(d => ({ nome: d.nome, estado: d.estado,
         progresso: d.progresso, bloqueadaPorBoss: d.bloqueadaPorBoss })),
@@ -355,7 +357,7 @@ export class CoopWorld {
     this.restore();
     this.scene.hackingTerminals?.receberSnapshot(packet.hacking);
     this.aplicarEntradaBoss(packet.bossAssembly);
-    this.scene.iluminacaoFabrica?.aplicarEstadoRede(packet.lighting, this.scene.time.now);
+
     for (const d of packet.doors || []) this.scene.portasFabrica?.find(p => p.nome === d.nome)?.aplicarEstadoRede?.(d);
     this.scene.zonasLuzApagada?.aplicarEstadoRede(packet.lightingZones, this.scene.time.now,
       this.scene.portasFabrica || [], this.scene.luzFabricaAcesa);

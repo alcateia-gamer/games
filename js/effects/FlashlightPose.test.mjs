@@ -108,3 +108,10 @@ test("mudança de direção parado atualiza a mira e ataques não usam o centro 
   atualizarPoseLanterna(scene, pose);
   assert.deepEqual([pose.x, pose.y], [200, 310]);
 });
+
+test('progresso definitivo impede ler a pose e esvazia aliados sem atualizar seus atores',()=>{
+ const registry=new Map([['factoryFlashlightRetired',true]]);
+ const scene={game:{registry},get player(){throw Error('pose não deve ser calculada');}};
+ const pose={angulo:1};assert.equal(atualizarPoseLanterna(scene,pose),pose);
+ const aliadas=new Map([[{},{}]]);assert.equal(atualizarLanternasAliadas(scene,aliadas),true);assert.equal(aliadas.size,0);
+});

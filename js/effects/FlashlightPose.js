@@ -1,3 +1,4 @@
+import { lanternaDesativada } from './FlashlightLifecycle.js';
 /** Centro da barriga nas coordenadas originais de cada folha, independente dos braços. */
 const ORIGENS_BARRIGA = {
   walk: { tamanho: 128, x: 64, y: 74 },
@@ -11,6 +12,7 @@ const CAMPOS_SILHUETA = ["scaleX", "scaleY", "flipX", "flipY", "rotation", "disp
 
 /** Reutiliza a pose e conserva a mira diagonal quando a caminhada para. */
 export function atualizarPoseLanterna(scene, pose) {
+  if (lanternaDesativada(scene)) return pose;
   const player = scene.player;
   const direcao = scene.direcaoAtual ?? "down";
   const velocidade = player.body?.velocity;
@@ -45,6 +47,7 @@ export function atualizarPoseLanterna(scene, pose) {
 
 /** Usa a mira enviada pelo dono e a posição interpolada vista nesta tela. */
 export function atualizarLanternasAliadas(scene, lanternas, energia = false) {
+  if (lanternaDesativada(scene)) { const mudou = lanternas.size > 0; lanternas.clear(); return mudou; }
   const presentes = new Set();
   let alteradas = false;
   for (const player of scene.remotePlayers?.values() || []) {

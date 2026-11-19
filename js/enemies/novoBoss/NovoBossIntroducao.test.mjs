@@ -202,13 +202,12 @@ test("câmera real vai ao boss, retorna ao jogador e só então fecha as duas pe
 
 test("a entrada espera o corpo passar pelas portas, menus e animações de abertura", () => {
   const { scene, portas, sistema } = fixture();
-  const luz = { x: -1080, y: -5600, neon: true };
-  assert.equal(sistema.iluminacao.fatorLuz(luz), 0);
+  assert.equal(sistema.iluminacao.ambiente, 0);
   Object.assign(scene.player.body, { x: -1200, y: -5350, height: 50 });
   sistema.atualizar(1000);
   assert.equal(sistema.snapshot().etapa, "aguardando");
   assert.equal(scene.movimentoBloqueado, false, "permite terminar a passagem");
-  assert.equal(sistema.iluminacao.fatorLuz(luz), 0);
+  assert.equal(sistema.iluminacao.ambiente, 0);
   scene.player.body.y = -5500;
   portas[0].estado = "abrindo";
   sistema.atualizar(1000);
@@ -271,19 +270,18 @@ test("a música entra durante a aproximação da câmera e acompanha o avanço d
 
 test("sair durante a apresentação volta a deixar a arena apagada para a próxima entrada", () => {
   const { encontro, sistema } = fixture();
-  const luz = { x: -1080, y: -5600, neon: true };
   sistema.atualizar(0); sistema.atualizar(3650);
-  assert.equal(sistema.iluminacao.fatorLuz(luz), 1);
+  assert.equal(sistema.iluminacao.ambiente, 1);
   assert.equal(sistema.iluminacao.aura, 1);
   encontro.jogadorNaArena = false;
   sistema.atualizar(0);
   assert.equal(sistema.snapshot().etapa, "aguardando");
-  assert.equal(sistema.iluminacao.fatorLuz(luz), 0);
+  assert.equal(sistema.iluminacao.ambiente, 0);
   assert.equal(sistema.iluminacao.aura, 0);
   encontro.jogadorNaArena = true;
   sistema.atualizar(0);
   assert.equal(sistema.snapshot().etapa, "indo");
-  assert.equal(sistema.iluminacao.fatorLuz(luz), 0);
+  assert.equal(sistema.iluminacao.ambiente, 0);
   sistema.destruir();
 });
 

@@ -542,3 +542,14 @@ test("mira prende na torre antes da colisão de sua base, mas respeita paredes �
     assert.equal(obterDirecaoMiraAutomaticaAria(scene), null);
   }
 });
+
+
+test('controle legado da Aria usa fuga exclusiva pelo botão sem carregar flecha',t=>{
+ const scene=cena(t);scene.restricaoControleNovoBoss={apertosNecessarios:8};
+ let n=0;scene.events.on('boss:attack-escape',()=>n++);
+ const p=dedo(2);scene.input.emit('pointerdown',{id:9,isDown:true,leftButtonDown:()=>true},[]);
+ assert.equal(n,0);pressionar(scene,p);pressionar(scene,p);assert.equal(n,1);
+ assert.ok(!scene.ariaAtaqueCarregando);assert.equal(flechas(scene).length,0);
+ soltar(scene,p);p.isDown=true;pressionar(scene,p);assert.equal(n,2);
+ scene.ariaAttackJoystick.destroy();
+});

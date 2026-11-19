@@ -1,3 +1,4 @@
+let sequenciaCaptura = 0;
 import { criarPuxaoNovoBoss, atualizarPuxaoNovoBoss } from "../enemies/novoBoss/NovoBossPuxao.js";
 
 /** Contenção por fonte: nunca altera bloqueios de menu, morte ou outros sistemas. */
@@ -16,6 +17,7 @@ export function capturarJogadorNovoBoss(scene, fonte, duracaoMs, ponto = null, o
   if (ponto && !puxao) return false;
   scene.restricaoControleNovoBoss = { fonte, restanteMs: duracaoMs, ...(puxao ? { puxao } : {}) };
   if (opcoes.apertos > 0) Object.assign(scene.restricaoControleNovoBoss, {
+    capturaId: `${scene.coopRuntime?.streamId ?? "solo"}:${++sequenciaCaptura}`,
     restanteMs: null, apertos: 0, apertosNecessarios: Math.max(6, Math.min(10, Math.round(opcoes.apertos))),
   });
   if (scene.estadoDash) scene.estadoDash.ativo = false;
@@ -40,6 +42,7 @@ export function liberarJogadorNovoBoss(scene, fonte = null) {
   if (!scene?.restricaoControleNovoBoss ||
       (fonte !== null && scene.restricaoControleNovoBoss.fonte !== fonte)) return;
   scene.restricaoControleNovoBoss = null;
+  scene.events?.emit?.("boss:released");
 }
 
 export function atualizarRestricaoNovoBoss(scene, delta) {

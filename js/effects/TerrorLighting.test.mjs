@@ -1,255 +1,30 @@
-import test from "node:test";
-import assert from "node:assert/strict";
-import { EventEmitter } from "node:events";
-import criarIluminacaoTerror from "./TerrorLighting.js";
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import criar from './TerrorLighting.js';
+import {lightingFixture} from '../../tests/lighting-fixture.mjs';
+import {FLASHLIGHT_RETIRED_KEY} from './FlashlightLifecycle.js';
 
-test("flashlight updates on movement and direction changes only while factory power is off", t => {
-  const previousPhaser = globalThis.Phaser;
-  const previousDocument = globalThis.document;
-  globalThis.Phaser = {
-    Math: { Vector2: class {
-      constructor(x = 0, y = 0) { this.set(x, y); }
-      set(x, y) { Object.assign(this, { x, y }); }
-    } },
-    Textures: { FilterMode: { LINEAR: 0 } },
-    Renderer: { Events: { RENDER: "render" } },
-    Scenes: { Events: { PRE_RENDER: "prerender", SHUTDOWN: "shutdown" } },
-  };
-  globalThis.document = { createElement: () => ({ getContext: () => ({
-    createImageData: (w, h) => ({ data: new Uint8ClampedArray(w * h * 4) }),
-    putImageData() {},
-  }) }) };
-  t.after(() => { globalThis.Phaser = previousPhaser; globalThis.document = previousDocument; });
-  let uploads = 0;
-  let recortes = 0;
-  let dimensions;
-  const context = Object.fromEntries(["setTransform", "scale", "clearRect", "fillRect", "save", "restore",
-    "transform", "drawImage", "translate", "beginPath", "arc", "fill", "moveTo", "lineTo", "closePath"]
-    .map(name => [name, () => {}]));
-  context.clip = () => { recortes++; };
-  context.createRadialGradient = () => ({ addColorStop() {} });
-  const texture = { getContext: () => context, setFilter() {}, refresh() { uploads++; } };
-  const overlay = { visible: true };
-  for (const name of ["setOrigin", "setScrollFactor", "setDepth", "setDisplaySize", "setPosition", "setRotation", "setScale"])
-    overlay[name] = () => overlay;
-  overlay.setDepth = depth => { overlay.depth = depth; return overlay; };
-  overlay.setAlpha = alpha => { overlay.alpha = alpha; return overlay; };
-  overlay.setVisible = visible => { overlay.visible = visible; return overlay; };
-  overlay.destroy = () => {};
-  const scene = {
-    game: { renderer: new EventEmitter() },
-    map: { getObjectLayer: name => ({ objects: name === "collision"
-      ? [{ x: 200, y: 0, width: 10, height: 300, type: "" }] : [] }) },
-    sys: { game: { device: { input: { touch: true } } } },
-    cameras: { main: { width: 850, height: 405, originX: 0.5, originY: 0.5,
-      zoom: 1, scrollX: 0, scrollY: 0,
-      matrix: { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 } } },
-    textures: { exists: () => false, createCanvas(key, w, h) {
-      dimensions = [w, h]; return texture;
-    } },
-    events: new EventEmitter(), time: { now: 0 },
-    player: { active: true, x: 100, y: 100, body: { velocity: { x: 0, y: 0 } },
-      getCenter(point) { point.set(this.x, this.y); } },
-    add: { image: () => overlay },
-  };
-  const cleanup = criarIluminacaoTerror(scene);
-  t.after(cleanup);
-  const render = () => scene.game.renderer.emit("render", scene, scene.cameras.main);
-  assert.deepEqual(dimensions, [850, 405]);
-  render();
-  assert.equal(recortes, 1, "o desenho da lanterna é recortado pelas colisões sem tipo do mapa");
-  const stationaryUploads = uploads;
-  for (let i = 0; i < 120; i++) render();
-  assert.equal(uploads, stationaryUploads);
-  scene.generatorMenuOpen = true;
-  scene.player.body.velocity.x = 100;
-  render();
-  assert.equal(uploads, stationaryUploads, "o menu conserva a iluminação já desenhada");
-  scene.generatorMenuOpen = false;
-  render();
-  assert.equal(uploads, stationaryUploads + 1, "mudar direção atualiza o cone");
-  const recortesSemEnergia = recortes;
-  scene.definirIluminacaoFabrica(true);
-  render();
-  assert.equal(uploads, stationaryUploads + 2, "ligar a fábrica apaga a lanterna");
-  assert.equal(recortes, recortesSemEnergia, "o bloqueio da lanterna não recorta as lâmpadas da fábrica");
-  scene.player.x += 40;
-  scene.player.body.velocity.x = -100;
-  render();
-  assert.equal(uploads, stationaryUploads + 2, "personagem não invalida a máscara com a fábrica ligada");
-  scene.definirIluminacaoFabrica(false);
-  render();
-  assert.equal(uploads, stationaryUploads + 3);
-  scene.player.x += 10;
-  render();
-  assert.equal(uploads, stationaryUploads + 4, "lanterna acompanha o personagem sem energia");
-  Object.assign(scene.player, { texture: { key: "walk" }, frame: { name: 18 },
-    displayOriginX: 64, displayOriginY: 64 });
-  render();
-  const animationUploads = uploads;
-  scene.player.frame.name = 21;
-  render();
-  assert.equal(uploads, animationUploads, "o movimento dos braços não desloca a origem na barriga");
-  scene.player.body.velocity.x = 0;
-  render();
-  assert.equal(uploads, animationUploads, "parar preserva a mira e reutiliza a máscara");
-  scene.novoBoss = { geradores: [{ torre: true, visual: { active: true, visible: true, depth: 60 } }] };
-  render(); assert.ok(overlay.depth > 60, "a luz da arena fica acima das torres");
-  scene.novoBoss.geradores[0].visual.depth = 70;
-  render(); assert.ok(overlay.depth > 70, "acompanha mudanças de depth sem recriar a máscara");
-  cleanup();
-  assert.equal(scene.game.renderer.listenerCount("render"), 0);
+test('sem fontes do Tiled: lanterna com oclusão, cache e liberação definitiva dos recursos',t=>{
+ const {scene,metrics,render}=lightingFixture(t);const cleanup=criar(scene);t.after(cleanup);
+ render();assert.ok(metrics.clips>0);assert.ok(scene.recursosLanterna);
+ assert.ok(!metrics.queries.some(n=>['LuzesFabrica','Luzedeemergencia','IluminaçãoBoss'].includes(n)));
+ const quiet=metrics.uploads;render();assert.equal(metrics.uploads,quiet);
+ scene.player.x+=10;render();assert.equal(metrics.uploads,quiet+1);
+ const {canvas,oclusao,paredes}=scene.recursosLanterna;
+ scene.definirIluminacaoFabrica(true);render();
+ assert.equal(scene.registry.get(FLASHLIGHT_RETIRED_KEY),true);assert.equal(scene.recursosLanterna,null);
+ assert.equal(canvas.width,0);assert.equal(oclusao.width,0);assert.equal(paredes.scene,null);
+ const allocated=metrics.canvases.length;scene.definirIluminacaoFabrica(false);render();const n=metrics.uploads;
+ for(let i=0;i<10;i++){scene.player.x++;render();}
+ assert.equal(metrics.uploads,n);assert.equal(metrics.canvases.length,allocated);
+ scene.definirIluminacaoFabrica(true);scene.definirIluminacaoFabrica(false);assert.equal(scene.recursosLanterna,null);
+ cleanup();assert.equal(scene.game.renderer.listenerCount('render'),0);
 });
-
-test("neon fica atrás do boss, cópias, Robô Bola e NOVA, acompanhando suas poses", t => {
-  const previousPhaser = globalThis.Phaser, previousDocument = globalThis.document;
-  let limpar;
-  const chamadas = [];
-  function canvas(width = 256, height = 256) {
-    const pilha = [];
-    const context = {
-      globalAlpha: 1, globalCompositeOperation: "source-over",
-      createImageData: (w, h) => ({ data: new Uint8ClampedArray(w * h * 4) }),
-      putImageData() {},
-      save() { pilha.push([this.globalAlpha, this.globalCompositeOperation]); },
-      restore() { [this.globalAlpha, this.globalCompositeOperation] = pilha.pop(); },
-      drawImage(...args) { chamadas.push({ context, args, alpha: this.globalAlpha, op: this.globalCompositeOperation }); },
-    };
-    for (const nome of ["setTransform", "transform", "clearRect", "fillRect", "translate", "beginPath",
-      "rect", "clip", "moveTo", "lineTo", "closePath"]) context[nome] = () => {};
-    return { width, height, getContext: () => context };
-  }
-  globalThis.document = { createElement: () => canvas() };
-  globalThis.Phaser = {
-    Math: { Vector2: class { constructor() { this.x = this.y = 0; } } },
-    Textures: { FilterMode: { LINEAR: 0 } },
-    Renderer: { Events: { RENDER: "render" } }, Scenes: { Events: { SHUTDOWN: "shutdown" } },
-  };
-  t.after(() => {
-    limpar?.();
-    globalThis.Phaser = previousPhaser; globalThis.document = previousDocument;
-  });
-  let uploads = 0;
-  const texture = Object.assign(canvas(800, 450), {
-    setFilter() {}, refresh() { uploads++; },
-  });
-  const overlay = {};
-  for (const nome of ["setOrigin", "setScrollFactor", "setDepth", "setPosition", "setRotation", "setScale", "destroy"])
-    overlay[nome] = () => overlay;
-  const imagemBoss = {}, imagemCopia = {};
-  const sprite = imagem => ({ x: 100, y: 100, active: true, visible: true, alpha: 1,
-    scaleX: 0.55, scaleY: 0.55, displayOriginX: 144, displayOriginY: 144,
-    frame: { source: { image: imagem }, cutX: 0, cutY: 0, cutWidth: 288, cutHeight: 288 } });
-  const boss = sprite(imagemBoss), copia = sprite(imagemCopia);
-  const imagemRobo = {}, imagemNova = {}, imagemAliado = {}, imagemPlayer = {};
-  const robo = { ...sprite(imagemRobo), tipoRobo: "bola" };
-  const nova = sprite(imagemNova);
-  const aliado = sprite(imagemAliado);
-  const scene = {
-    game: { renderer: new EventEmitter() }, events: new EventEmitter(), time: { now: 0 },
-    map: { getObjectLayer: name => ({ objects: name === "Luzedeemergencia" ? [{
-      id: 1, point: true, x: 100, y: 100, name: "neon vermelho vertical",
-      properties: { Raio: 48, Intensidade: 1 },
-    }] : name === "ZonaBoss" ? [{ x: 0, y: 0, width: 250, height: 250 }] : [] }) },
-    cameras: { main: { width: 800, height: 450, zoom: 1, scrollX: 0, scrollY: 0,
-      matrix: { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 } } },
-    textures: { exists: () => false, createCanvas: () => texture },
-    add: { image: () => overlay }, luzFabricaAcesa: true,
-    player: { active: false, visible: false },
-    inimigos: [robo], companionPet: nova, remotePlayers: new Map([["aliado", aliado]]),
-    novoBoss: { jogadorNaArena: true, sprite: boss,
-      alvosIlusorios: [{ active: true, visible: true, sprite: copia }] },
-  };
-  limpar = criarIluminacaoTerror(scene);
-  const render = () => scene.game.renderer.emit("render", scene, scene.cameras.main);
-  chamadas.length = 0;
-  render();
-  const composicao = chamadas.find(ch => ch.context === texture.getContext() && ch.args.length === 3 &&
-    ch.args[0]?.width === 800 && ch.args[0]?.height === 450);
-  assert.ok(composicao, "a cor é composta separadamente mesmo sem jogador visível");
-  const corContext = composicao.args[0].getContext();
-  for (const imagem of [imagemBoss, imagemCopia, imagemRobo, imagemNova, imagemAliado]) {
-    const recorte = chamadas.find(ch => ch.context === corContext && ch.args[0] === imagem);
-    assert.ok(recorte, "o corpo oculta o neon antes de compor a luz");
-    assert.equal(recorte.op, "destination-out");
-    assert.equal(recorte.alpha, 1, "remove a faixa inteira, não só parte do brilho");
-    assert.ok(chamadas.indexOf(recorte) < chamadas.indexOf(composicao));
-    if ([imagemRobo, imagemNova, imagemAliado].includes(imagem)) continue;
-    const clareamento = chamadas.find(ch => ch.context === texture.getContext() && ch.args[0] === imagem);
-    assert.equal(clareamento.op, "destination-out");
-    assert.equal(clareamento.alpha, 0.55, "a sombra conserva o clareamento pedido para o sprite");
-    assert.ok(chamadas.indexOf(clareamento) > chamadas.indexOf(composicao));
-  }
-  assert.ok(chamadas.some(ch => ch.context === corContext && ch.op === "source-over" &&
-    chamadas.indexOf(ch) < chamadas.indexOf(composicao)), "a luz continua desenhada fora das silhuetas");
-  const antes = uploads;
-  for (let i = 0; i < 120; i++) render();
-  assert.equal(uploads, antes, "a correção preserva o cache com poses paradas");
-  boss.flipX = true;
-  render();
-  assert.equal(uploads, antes + 1, "o recorte acompanha o espelhamento");
-  copia.frame = { ...copia.frame, cutX: 288 };
-  render();
-  assert.equal(uploads, antes + 2, "o recorte acompanha a animação das cópias");
-  robo.x += 10;
-  render();
-  assert.equal(uploads, antes + 3, "o recorte acompanha o movimento do Robô Bola");
-  nova.frame = { ...nova.frame, cutX: 288 };
-  render();
-  assert.equal(uploads, antes + 4, "o recorte acompanha a animação da NOVA");
-  nova.displayOriginY += 5;
-  render();
-  assert.equal(uploads, antes + 5, "o recorte acompanha mudanças de origem e flutuação");
-  // Durante o combate, o atlas fixo usa o mesmo recorte mesmo sem aura ativa.
-  scene.novoBoss.encerrado = true;
-  scene.player = sprite(imagemPlayer);
-  chamadas.length = 0;
-  render();
-  const atlasColorido = chamadas.findIndex(ch => ch.context === corContext &&
-    ch.op === "source-over" && ch.args.length === 3);
-  assert.ok(atlasColorido >= 0, "a cor fixa entra no buffer de brilho");
-  for (const imagem of [imagemBoss, imagemAliado, imagemPlayer]) {
-    assert.ok(chamadas.findIndex(ch => ch.context === corContext && ch.args[0] === imagem &&
-      ch.op === "destination-out") > atlasColorido, "o recorte vem depois da cor fixa");
-  }
-  // O brilho fixo continua recortado depois de retirar o encontro.
-  scene.player.visible = false;
-  scene.novoBoss = null;
-  chamadas.length = 0;
-  render();
-  for (const imagem of [imagemRobo, imagemNova, imagemAliado]) {
-    assert.ok(chamadas.some(ch => ch.context === corContext && ch.args[0] === imagem &&
-      ch.op === "destination-out"), "recorta o neon sem depender da aura do boss ou do jogador");
-  }
-  const parado = uploads;
-  render();
-  assert.equal(uploads, parado, "neons e atores parados reutilizam a máscara");
-  robo.visible = false;
-  chamadas.length = 0;
-  render();
-  assert.equal(uploads, parado + 1, "esconder o robô remove sua silhueta antiga");
-  assert.ok(!chamadas.some(ch => ch.args[0] === imagemRobo));
-  scene.companionPet = null;
-  chamadas.length = 0;
-  render();
-  assert.equal(uploads, parado + 2, "remover a NOVA também invalida o recorte");
-  assert.ok(!chamadas.some(ch => ch.args[0] === imagemNova));
-  aliado.x += 20;
-  aliado.flipX = true;
-  render();
-  assert.equal(uploads, parado + 3, "recorte acompanha posição e espelhamento recebidos pela rede");
-  aliado.frame = { ...aliado.frame, cutX: 288 };
-  render();
-  assert.equal(uploads, parado + 4, "recorte acompanha a animação do aliado");
-  scene.remotePlayers.clear();
-  chamadas.length = 0;
-  render();
-  assert.equal(uploads, parado + 5, "saída do aliado remove a silhueta antiga");
-  assert.ok(!chamadas.some(ch => ch.args[0] === imagemAliado));
-  const antesDaLimpeza = uploads;
-  scene.limiteFabricaDescarregadaY = 150;
-  render();
-  assert.equal(uploads, antesDaLimpeza + 1, "descarregar a fábrica atualiza o cache das luzes");
-  render();
-  assert.equal(uploads, antesDaLimpeza + 1, "a limpeza não é refeita a cada quadro");
+test('retomada ligada não inicializa recursos de lanterna; DEV e nova visita preservam aposentadoria',t=>{
+ const registry=new Map([['factoryGeneratorPowered',true]]);
+ const {scene,metrics}=lightingFixture(t,{powered:true,registry});let cleanup=criar(scene);
+ assert.equal(scene.recursosLanterna,null);assert.equal(metrics.canvases.length,0);
+ registry.set('factoryGeneratorPowered',false);scene.definirIluminacaoFabrica(false);cleanup();
+ cleanup=criar(scene);assert.equal(scene.recursosLanterna,null);cleanup();
+ registry.clear();scene.luzFabricaAcesa=false;cleanup=criar(scene);assert.ok(scene.recursosLanterna);cleanup();
 });

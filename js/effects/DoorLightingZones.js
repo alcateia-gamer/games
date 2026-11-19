@@ -1,25 +1,9 @@
-import { intensidadeLuzPartida } from "./FactoryLighting.js";
 
 const DURACAO_REVELACAO = 150;
-const DURACAO_PARTIDA_ZONA = 700;
-const ATRASO_ENTRE_LAMPADAS = 40;
 const PORTAS_SOMBRA_COMPARTILHADA = new Set(["porta01", "porta04"]);
 // Retângulos desenhados no Tiled podem deixar pequenas frestas por arredondamento.
 const TOLERANCIA_CONEXAO_ZONAS = 1;
 const limitar = valor => Math.max(0, Math.min(1, valor));
-
-function centroLuz(luz) {
-  if (!luz.area) return { x: luz.x, y: luz.y };
-  const cos = Math.cos(luz.rotacao), sin = Math.sin(luz.rotacao);
-  return { x: luz.x + cos * luz.largura / 2 - sin * luz.altura / 2,
-    y: luz.y + sin * luz.largura / 2 + cos * luz.altura / 2 };
-}
-
-function contem(zona, ponto) {
-  const dx = ponto.x - zona.x, dy = ponto.y - zona.y;
-  const x = dx * zona.cos + dy * zona.sin, y = -dx * zona.sin + dy * zona.cos;
-  return x >= 0 && x < zona.largura && y >= 0 && y < zona.altura;
-}
 
 function zonasConectadas(a, b) {
   const x = Math.min(a.right, b.right) - Math.max(a.left, b.left);
@@ -46,20 +30,12 @@ export function lerZonasLuzApagada(map) {
   });
 }
 
-/** A porta controla a revelação; o gerador continua controlando a energia das lâmpadas. */
+/** A porta controla diretamente a opacidade da região; a energia é independente. */
 export default class DoorLightingZones {
-  constructor(map, lampadas = [], emergencias = []) {
+  constructor(map) {
     this.zonas = lerZonasLuzApagada(map).map(zona => ({ ...zona, porta: null,
-      liberada: false, restaurada: false, inicioRevelacao: null, inicioLampadas: null,
-      opacidade: 1, indices: new Map() }));
-    this.normais = new Set(lampadas);
-    this.porLuz = new WeakMap();
-    for (const luz of [...lampadas, ...emergencias]) {
-      const ponto = centroLuz(luz);
-      const zonas = this.zonas.filter(zona => contem(zona, ponto));
-      this.porLuz.set(luz, zonas);
-      for (const zona of zonas) zona.indices.set(luz, zona.indices.size);
-    }
+      liberada: false, restaurada: false, inicioRevelacao: null,
+      opacidade: 1 }));
     this.distanciaMaximaPorta = (map.tileWidth ?? 48) * 2;
     this.revisao = 0;
     this.portasPareadasInicializadas = false;
@@ -92,13 +68,6 @@ export default class DoorLightingZones {
     // Uma porta já aberta ao entrar no mapa restaura a sala sem repetir a animação.
     zona.restaurada = candidata.estado === "aberta";
     zona.liberada = zona.restaurada;
-    const a = candidata.area;
-    const distancia = luz => {
-      const p = centroLuz(luz);
-      return Math.hypot(p.x - a.x - a.width / 2, p.y - a.y - a.height / 2);
-    };
-    [...zona.indices.keys()].sort((a, b) => distancia(a) - distancia(b))
-      .forEach((luz, indice) => zona.indices.set(luz, indice));
     this.revisao++;
   }
 
@@ -139,10 +108,6 @@ export default class DoorLightingZones {
         zona.inicioRevelacao = agora;
         this.revisao++;
       }
-      if (zona.liberada && energia && zona.inicioLampadas === null && !zona.restaurada) {
-        zona.inicioLampadas = agora;
-        this.revisao++;
-      }
       const p = zona.restaurada ? 1 : zona.liberada
         ? limitar((agora - zona.inicioRevelacao) / DURACAO_REVELACAO) : 0;
       const opacidade = Math.round((1 - p * p * (3 - 2 * p)) * 255) / 255;
@@ -162,8 +127,7 @@ export default class DoorLightingZones {
 
   snapshotRede(agora) {
     return this.zonas.filter(z => z.liberada).map(z => ({ id: z.id, restaurada: z.restaurada,
-      revelacao: z.inicioRevelacao === null ? null : agora - z.inicioRevelacao,
-      lampadas: z.inicioLampadas === null ? null : agora - z.inicioLampadas }));
+      revelacao: z.inicioRevelacao === null ? null : agora - z.inicioRevelacao }));
   }
 
   aplicarEstadoRede(dados, agora, portas, energia) {
@@ -175,25 +139,12 @@ export default class DoorLightingZones {
       if (!z) continue;
       let mudou = !z.liberada || z.restaurada !== d.restaurada;
       z.liberada = true; z.restaurada = d.restaurada;
-      for (const [campo, idade] of [["inicioRevelacao", d.revelacao], ["inicioLampadas", d.lampadas]]) {
+      for (const [campo, idade] of [["inicioRevelacao", d.revelacao]]) {
         if (z[campo] === null && Number.isFinite(idade)) { z[campo] = agora - idade; mudou = true; }
       }
       if (z.restaurada && z.opacidade !== 0) { z.opacidade = 0; mudou = true; }
       if (mudou) this.revisao++;
     }
-  }
-
-  fatorLuz(luz, agora) {
-    let fator = 1;
-    for (const zona of this.porLuz.get(luz) ?? []) {
-      if (!zona.liberada) return 0;
-      if (zona.restaurada) continue;
-      const inicio = this.normais.has(luz) ? zona.inicioLampadas : zona.inicioRevelacao;
-      if (inicio === null) return 0;
-      const tempo = agora - inicio - zona.indices.get(luz) * ATRASO_ENTRE_LAMPADAS;
-      fator = Math.min(fator, intensidadeLuzPartida(tempo / DURACAO_PARTIDA_ZONA));
-    }
-    return fator;
   }
 
   desenharEscuridao(context) {
@@ -210,11 +161,8 @@ export default class DoorLightingZones {
   }
 
   destroy() {
-    for (const zona of this.zonas) zona.indices.clear();
     this.zonas.length = 0;
-    this.normais.clear();
-    this.porLuz = new WeakMap();
   }
 }
 
-export { DURACAO_REVELACAO, DURACAO_PARTIDA_ZONA, ATRASO_ENTRE_LAMPADAS };
+export { DURACAO_REVELACAO };

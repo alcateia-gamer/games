@@ -270,7 +270,7 @@ class Level1Parte2 extends Phaser.Scene {
     criarPlayer(this);
 
     this.definirProfundidadePersonagem(this.profundidadePersonagemParte2);
-    // Os pontos de LuzesFabrica só ficam disponíveis depois da criação do mapa.
+    // A máscara usa apenas a geometria do mapa, zonas de portas e efeitos do boss.
     this.removerLanternaParte2 = criarIluminacaoBasicaFabrica(this);
 
     if (!this.multiplayer) {

@@ -87,10 +87,7 @@ export class CoopRuntime {
     this.onPost = (time, delta) => this.update(time, delta);
     this.onShutdown = () => this.destroy();
     this.onRoomClosed = () => this.nova.destroy();
-    this.onPointer = (pointer, objects = []) => {
-      if (scene.restricaoControleNovoBoss && (objects.includes(scene.botaoAtaque) ||
-          objects.length === 0 && pointer.leftButtonDown?.())) this.escape();
-    };
+
     this.manager.on("coopFrame", this.onFrame);
     this.manager.on("coopAction", this.onAction);
     this.manager.on("roomUpdated", this.onRoom);
@@ -98,7 +95,7 @@ export class CoopRuntime {
     this.manager.on("playerInput", this.onInput);
     scene.events.on("postupdate", this.onPost);
     scene.events.once("shutdown", this.onShutdown);
-    scene.input.on("pointerdown", this.onPointer);
+
     if (this.host) this.prepareAuthority();
     this.receiveRoom(this.manager.room);
     this.world.restore();
@@ -187,8 +184,11 @@ export class CoopRuntime {
     return this.manager.sendCoopAction("special", {});
   }
   escape() {
+    const state = this.scene.restricaoControleNovoBoss;
+    if (this.teamDefeated || this.scene.morteEmAndamento || this.scene.vida <= 0 || !state?.capturaId || !state.apertosNecessarios) return false;
     if (this.host) return registrarApertoLibertacaoNovoBoss(this.localContext);
-    return this.manager.sendCoopAction("escape", {});
+    return this.manager.sendCoopAction("escape", { capturaId: state.capturaId,
+      session: this.streamId, mapId: this.manager.room.coopMap?.id ?? 0 });
   }
   requestDamage(target, amount, area = null, attack = null) {
     if (this.teamDefeated || this.scene.morteEmAndamento || this.scene.vida <= 0) return false;
@@ -220,7 +220,7 @@ export class CoopRuntime {
     const id = context.coopRemotePlayerId;
     if (!id) return;
     const r = context.restricaoControleNovoBoss;
-    const state = r ? { fonte: r.fonte, restanteMs: r.restanteMs,
+    const state = r ? { capturaId: r.capturaId, fonte: r.fonte, restanteMs: r.restanteMs,
       apertos: r.apertos, apertosNecessarios: r.apertosNecessarios,
       x: round(context.player.x), y: round(context.player.y) } : null;
     const now = this.scene.time.now, last = this.controlsSent.get(id);
@@ -275,7 +275,9 @@ export class CoopRuntime {
           iniciarAnimacaoMarreta(s);
         }
       } else if (action.kind === "control") {
+        const capturado = !!s.restricaoControleNovoBoss;
         s.restricaoControleNovoBoss = p.state;
+        if (capturado && !p.state) s.events.emit("boss:released");
         if (p.state) this.teleport(p.state.x, p.state.y);
       } else this.world.receive(action);
       return;
@@ -299,7 +301,13 @@ export class CoopRuntime {
     } else if (action.kind === "devSpawn" && ["padrao", "serra", "bola", "olhao"].includes(p.tipo) &&
         Number.isInteger(p.quantidade) && p.quantidade >= 1 && p.quantidade <= 3) {
       executarSpawnDev(soloContext(s, { player: context.player }), p.tipo, p.quantidade);
-    } else if (action.kind === "escape") registrarApertoLibertacaoNovoBoss(context);
+    } else if (action.kind === "escape") {
+      const data = this.manager.room.players.find(player => player.id === action.playerId);
+      const capture = context.restricaoControleNovoBoss;
+      if (data && capture?.capturaId && p.capturaId === capture.capturaId &&
+          p.session === (context.coopRemotePlayerId ? data.coop?.sceneSession : this.streamId) &&
+          p.mapId === (this.manager.room.coopMap?.id ?? 0) && registrarApertoLibertacaoNovoBoss(context)) this.sendControl(context);
+    }
     else if (action.kind === "damage") this.applyDamage(context, p, action.playerId);
     else this.world.receive(action);
   }
@@ -576,7 +584,6 @@ export class CoopRuntime {
     this.manager.coopReceivedSequence = -1;
     this.forceKeyframe = true;
     this.replica.destroy(); this.receiver.destroy();
-    if (this.scene.iluminacaoFabrica) this.scene.iluminacaoFabrica.coopReplica = false;
     this.scene.inimigos = []; this.scene.novoBoss = null;
     for (const entry of this.players.remotes.values()) if (!entry.context) this.players.prepareContext(entry);
     this.prepareAuthority();
@@ -602,7 +609,7 @@ export class CoopRuntime {
     this.manager.off("roomClosed", this.onRoomClosed);
     this.manager.off("playerInput", this.onInput);
     this.scene.events.off("postupdate", this.onPost); this.scene.events.off("shutdown", this.onShutdown);
-    this.scene.input.off("pointerdown", this.onPointer);
+
     this.nova?.destroy();
     this.players.destroy(); this.replica.destroy(); this.receiver.destroy(); this.world.destroy(); this.music.destroy(); this.revival.destroy();
     if (this.scene.coopRuntime === this) this.scene.coopRuntime = null;

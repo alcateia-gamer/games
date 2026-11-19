@@ -311,3 +311,16 @@ test("um toque mínimo solicita o primeiro passo sem repetir por evento de movim
   pressionar(scene, 101, 305, 2);
   assert.equal(passos, 2);
 });
+
+
+test('botão e ícone compartilham uma única tentativa; cenário, segurar e outro dedo não escapam',t=>{
+ const scene=criarCena(t);criarControlesAtaque(scene);t.after(()=>scene.limparControlesAtaqueFixos());
+ scene.restricaoControleNovoBoss={apertosNecessarios:8};
+ let apertos=0;scene.events.on('boss:attack-escape',()=>apertos++);
+ const p={id:7,isDown:true,wasTouch:true};
+ scene.input.emit('pointerdown',p,[]);assert.equal(apertos,0);
+ scene.botaoAtaque.emit('pointerdown',p);scene.iconeAtaque.emit('pointerdown',p);
+ assert.equal(apertos,1);assert.equal(scene.estamina,100);assert.ok(!scene.atacando);
+ scene.input.emit('pointerup',{id:8,wasTouch:true});scene.botaoAtaque.emit('pointerdown',p);assert.equal(apertos,1);
+ scene.input.emit('pointerupoutside',p);scene.iconeAtaque.emit('pointerdown',p);assert.equal(apertos,2);
+});

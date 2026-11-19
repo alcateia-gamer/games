@@ -7,6 +7,7 @@ import { supportsCompression } from "./CoopCompression.js";
 import { criarSistemaEspeciais, atualizarSistemaEspeciais } from "../combat/PlayerSpecialAbilities.js";
 import { atualizarRestricaoNovoBoss } from "../player/PlayerControlEffects.js";
 import { criarFalaFlutuante } from "../ui/PlayerSpeechBubble.js";
+import { lanternaDesativada } from "../effects/FlashlightLifecycle.js";
 import { atualizarPoseLanterna } from "../effects/FlashlightPose.js";
 
 export function playerVisualObjects(scene) {
@@ -31,8 +32,9 @@ export class CoopPlayers {
     const s = this.scene, r = this.r;
     const health = s.vida || 0;
     const visual = describeVisual(s.player);
-    this.flashlightPose ||= {};
-    atualizarPoseLanterna(s, this.flashlightPose);
+    const lanternaDisponivel = !lanternaDesativada(s);
+    if (lanternaDisponivel) { this.flashlightPose ||= {}; atualizarPoseLanterna(s, this.flashlightPose); }
+    else this.flashlightPose = null;
     // Posição segue no envelope; não invalida novamente a comparação da pose.
     if (visual) { visual.x = 0; visual.y = 0; }
     return { mapKey: r.mapKey, health: round(health, 100), maxHealth: s.vidaMaxima,
@@ -43,7 +45,7 @@ export class CoopPlayers {
         fuelReady: s.inventory?.getQuantity("gasolina", { minFuel: 1 }) > 0,
         inventoryDrop: s.coopInventoryDrop ?? null,
         developer: !!s.developerMode,
-        flashlight: { angle: round(this.flashlightPose.angulo, 10000) },
+        flashlight: lanternaDisponivel ? { angle: round(this.flashlightPose.angulo, 10000) } : null,
         speech: [...(s.coopSpeechBubbles?.values() || [])].map(b => b.snapshot()).filter(b => b && b.falante !== "nova"),
         effects: this.sender.capture(playerVisualObjects(s), true),
         hitbox: s.hitboxDanoPlayer && { dx: round(s.hitboxDanoPlayer.x - s.player.x),
@@ -102,7 +104,7 @@ export class CoopPlayers {
       if (data.dead && entry.context) {
         entry.context.atacando = false; entry.context.restricaoControleNovoBoss = null;
       }
-      actor.coopFlashlightAngle = Number.isFinite(data.coop?.flashlight?.angle) ? data.coop.flashlight.angle : null;
+      actor.coopFlashlightAngle = !lanternaDesativada(s) && Number.isFinite(data.coop?.flashlight?.angle) ? data.coop.flashlight.angle : null;
       actor.direcaoAtual = data.direction;
       const marretaImovel = r.host && magnusEspecialBloqueiaMovimento(entry.context);
       // Nunca substitui o movimento autoritativo do puxão pela posição anterior do cliente.

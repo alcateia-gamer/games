@@ -1,4 +1,5 @@
 /** Mira e entrada do arco. Um único ponteiro controla tanto o joystick quanto o mouse. */
+import { criarEntradaLibertacaoAtaque } from "../enemies/novoBoss/NovoBossLibertacao.js";
 import { atacar, soltarAtaque, cancelarAtaqueAria, atualizarDirecaoAtaqueAria } from "../player/Player.js";
 import { ARIA_ATTACK_CONFIG, direcaoVisualAria, tempoEntradaAria } from "./AriaAttackConfig.js";
 import { posicionarBotaoAcao, posicaoAcaoNaTela } from "./FixedActionButton.js";
@@ -12,6 +13,7 @@ const foiCancelado = pointer => pointer.wasCanceled || /cancel/i.test(pointer.ev
 export class AriaAttackJoystick {
   constructor(scene, aoTrocarPersonagem) {
     this.scene = scene;
+    this.fuga = criarEntradaLibertacaoAtaque(scene);
     this.config = scene.ariaAttackConfig = { ...ARIA_ATTACK_CONFIG, ...scene.ariaAttackConfig };
     this.pointer = null;
     this.deslocamento = { x: 0, y: 0 };
@@ -96,6 +98,10 @@ export class AriaAttackJoystick {
   }
 
   iniciar(pointer, usandoJoystick) {
+    if (this.scene.restricaoControleNovoBoss) {
+      if (usandoJoystick) this.fuga.pressionar(pointer);
+      return;
+    }
     if (this.pointer || !pointer.isDown || this.bloqueado()) return;
     if (!ehToque(pointer) && !pointer.leftButtonDown()) return;
     if (pointer.id === this.scene.joystickPointerId) return;
@@ -174,6 +180,7 @@ export class AriaAttackJoystick {
   }
 
   destroy() {
+    this.fuga.destruir();
     if (!this.scene) return;
     const scene = this.scene;
     this.cancelar();

@@ -70,7 +70,7 @@ export function prepararIntroducaoNovoBoss(scene, encontro) {
     musica.parar();
     encontro.sistemaGeradores?.cancelarApresentacao?.();
     restaurarControle(true);
-    iluminacao.iniciar(scene.iluminacaoEmergencia?.luzes);
+    iluminacao.iniciar();
     liberarPortas();
     etapa = "aguardando";
     tempo = 0;
@@ -106,7 +106,7 @@ export function prepararIntroducaoNovoBoss(scene, encontro) {
     portasLiberadas = false;
     torres = encontro.sistemaGeradores?.iniciarApresentacao?.() ?? [];
     scene.zonasLuzApagada?.revelarPortas(portas, scene.time?.now ?? 0);
-    iluminacao.iniciar(scene.iluminacaoEmergencia?.luzes);
+    iluminacao.iniciar();
     criarRoteiro();
     entrarEtapa(0);
   }

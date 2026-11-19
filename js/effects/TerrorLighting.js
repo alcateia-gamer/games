@@ -1,98 +1,28 @@
+import FactoryLighting, { ESCURIDAO_AMBIENTE_FABRICA, MULTIPLICADOR_ALCANCE_FABRICA, QUEDAS_LUZ_FABRICA } from './FactoryLighting.js';
+import { criarSomLuzFabrica } from '../sounds/luzFabrica.js';
+import { atualizarPoseLanterna, atualizarLanternasAliadas } from './FlashlightPose.js';
+import FlashlightWalls from './FlashlightWalls.js';
+import { ocultarLanternaAtrasCamada, ocultarLanternaAtrasSala, obterRegiaoFrenteLanterna } from './FlashlightTileOcclusion.js';
+import { ocultarBrilhoAtrasSprite as ocultarBrilhoAtrasPersonagem } from './SpriteLightOcclusion.js';
+import DoorLightingZones from './DoorLightingZones.js';
+import BossRoomLighting from './BossRoomLighting.js';
+import BossEnergyLighting, { calcularPerfilEnergiaBoss, calcularPerfilAuraBoss } from './BossEnergyLighting.js';
+import BossAuraLightCache from './BossAuraLightCache.js';
+import BossEnergyLightBuffer from './BossEnergyLightBuffer.js';
+import { criarTexturaIluminacao } from './LightingTexture.js';
+import { alphaOscilacaoFabrica } from './FactoryAmbientOscillation.js';
 import { depthAcimaTorres } from './EffectDepth.js';
-/**
- * @file Máscara de escuridão da fábrica: cápsulas difusas revelam o cenário sem pintar luz
- * branca no chão. A sombra residual limita a exposição mesmo entre fontes sobrepostas.
- */
-
-import FactoryLighting, { ESCURIDAO_AMBIENTE_FABRICA, MULTIPLICADOR_ALCANCE_FABRICA, QUEDAS_LUZ_FABRICA } from "./FactoryLighting.js";
-import { criarSomLuzFabrica, criarSomPiscadasAmbiente } from "../sounds/luzFabrica.js";
-import { atualizarPoseLanterna, atualizarLanternasAliadas } from "./FlashlightPose.js";
-import FlashlightWalls from "./FlashlightWalls.js";
-import { ocultarLanternaAtrasCamada, ocultarLanternaAtrasSala, obterRegiaoFrenteLanterna } from "./FlashlightTileOcclusion.js";
-import { camadaEhPisoFabrica } from "../map/TrocaCamada.js";
-import EmergencyLighting, { calcularPerfilNeon } from "./EmergencyLighting.js";
-import EmergencyStatueOcclusion from "./EmergencyStatueOcclusion.js";
-import DoorLightingZones, { DURACAO_PARTIDA_ZONA, ATRASO_ENTRE_LAMPADAS } from "./DoorLightingZones.js";
-import BossWallLighting, { calcularPerfilLuzParede, calcularEmissorLuzParede } from "./BossWallLighting.js";
-import BossEmitterOcclusion from "./BossEmitterOcclusion.js";
-import BossEnergyLighting, { calcularPerfilEnergiaBoss, calcularPerfilAuraBoss } from "./BossEnergyLighting.js";
-import FixedLightCache from "./FixedLightCache.js";
-import BossRoomLighting from "./BossRoomLighting.js";
-import BossEnergyLightBuffer from "./BossEnergyLightBuffer.js";
-import BossAuraLightCache from "./BossAuraLightCache.js";
-import { ocultarBrilhoAtrasSprite as ocultarBrilhoAtrasPersonagem } from "./SpriteLightOcclusion.js";
-import { criarTexturaIluminacao } from "./LightingTexture.js";
-import { alphaOscilacaoFabrica } from "./FactoryAmbientOscillation.js";
-export { intensidadeLuzPartida, QUEDAS_LUZ_FABRICA } from "./FactoryLighting.js";
-
-const TEXTURA_ESCURIDAO_PARTE2 = "level1-parte2-escuridao";
-const DEPTH_ESCURIDAO = 50;
+import { lanternaDesativada, desativarLanternaDefinitivamente } from './FlashlightLifecycle.js';
+export { intensidadeLuzPartida, QUEDAS_LUZ_FABRICA } from './FactoryLighting.js';
 const TAMANHO_MASCARA = 256;
 const ESCURIDAO_MINIMA_FABRICA = 0.2;
-const GANHO_LUZ_FABRICA = 1.6;
-const GANHO_DISPERSAO_FABRICA = 2;
-const CLARIDADE_SPRITE_BOSS = 0.55;
-const CAMPOS_OCLUSAO = ["x", "y", "scaleX", "scaleY", "rotation", "flipX", "flipY",
-  "displayOriginX", "displayOriginY", "alpha"];
-const CAMPOS_BRILHO_ATOR = ["frame", ...CAMPOS_OCLUSAO];
-const CAMPOS_OCLUSAO_CAMADA = ["x", "y", "scaleX", "scaleY", "rotation", "alpha", "visible"];
-const COR_ESCURIDAO = `rgba(0,0,0,${ESCURIDAO_AMBIENTE_FABRICA})`;
-// Após destination-out, q é a sombra restante em [0,1]. A composição final produz
-// alpha = mínima + (ambiente - mínima) * q, sem readback de pixels por frame.
-const OPACIDADE_CAMPO = (ESCURIDAO_AMBIENTE_FABRICA - ESCURIDAO_MINIMA_FABRICA) /
-  (1 - ESCURIDAO_MINIMA_FABRICA);
-
+const TEXTURA_ESCURIDAO_PARTE2 = 'level1-parte2-escuridao';
 function suavizar(valor) {
   const p = Math.max(0, Math.min(1, valor));
   return p * p * p * (p * (6 * p - 15) + 10);
 }
 
-/**
- * Distância ao segmento horizontal [-0.1, 0.1], em unidades do Raio do Tiled.
- * Três quedas contínuas misturam núcleo, dispersão e halo. A variação longitudinal
- * impede a área uniforme que fazia o núcleo anterior parecer um retângulo com blur.
- */
-function calcularPerfilLuz(nx, ny) {
-  const radial = Math.hypot(nx, ny);
-  if (radial >= MULTIPLICADOR_ALCANCE_FABRICA) return 0;
-  const distancia = Math.hypot(Math.max(0, Math.abs(nx) - 0.1), ny);
-  const axial = Math.exp(-0.8 * (nx / 0.14) ** 2);
-  const pesoNucleo = axial * Math.exp(-0.5 * (distancia / 0.045) ** 2);
-  const nucleo = 0.46 * pesoNucleo;
-  const dispersao = 0.28 * Math.exp(-0.5 * (distancia / (0.16 * MULTIPLICADOR_ALCANCE_FABRICA)) ** 2);
-  const halo = 0.16 * Math.exp(-0.5 * (distancia / (0.45 * MULTIPLICADOR_ALCANCE_FABRICA)) ** 2);
-  // Dobra a luz difusa fora do núcleo, com transição contínua que preserva seu pico.
-  const ganhoDifuso = 1 + (GANHO_DISPERSAO_FABRICA - 1) * (1 - pesoNucleo);
-  // Amplia só a dispersão; o núcleo conserva suas dimensões e queda anteriores.
-  const perfil = nucleo * (1 - suavizar(radial)) +
-    (dispersao + halo) * ganhoDifuso * (1 - suavizar(radial / MULTIPLICADOR_ALCANCE_FABRICA));
-  // Reforça a luz suavemente, sem recortar o gradiente ou criar um platô no núcleo.
-  return 1 - (1 - perfil) ** GANHO_LUZ_FABRICA;
-}
 
-/** Um perfil compartilhado, calculado só na criação da iluminação. */
-function criarPerfilLuminaria(pulsando = false) {
-  const perfil = new Uint8Array(TAMANHO_MASCARA * TAMANHO_MASCARA);
-  for (let y = 0; y < TAMANHO_MASCARA; y++) {
-    const ny = ((y + 0.5) / TAMANHO_MASCARA * 2 - 1) * MULTIPLICADOR_ALCANCE_FABRICA;
-    for (let x = 0; x < TAMANHO_MASCARA; x++) {
-      const nx = ((x + 0.5) / TAMANHO_MASCARA * 2 - 1) * MULTIPLICADOR_ALCANCE_FABRICA;
-      let alpha = calcularPerfilLuz(nx, ny);
-      if (pulsando) {
-        const radial = Math.hypot(nx, ny);
-        const distancia = Math.hypot(Math.max(0, Math.abs(nx) - 0.1), ny);
-        // Núcleo discreto com halo largo; o alcance continua respeitando o raio do mapa.
-        const halo = Math.exp(-0.5 * (distancia / 0.55) ** 2) *
-          (1 - suavizar(radial / MULTIPLICADOR_ALCANCE_FABRICA));
-        alpha = alpha * 0.12 + halo * 0.65;
-      }
-      perfil[y * TAMANHO_MASCARA + x] = Math.round(alpha * 255);
-    }
-  }
-  return perfil;
-}
-
-/** Branco é usado apenas para apagar a máscara; nunca é desenhado sobre o cenário. */
 function criarMascaraLuminaria(perfil, cor = 0xFFFFFF) {
   const canvas = document.createElement("canvas");
   canvas.width = canvas.height = TAMANHO_MASCARA;
@@ -139,26 +69,7 @@ function criarPerfilParede(calcular) {
   return perfil;
 }
 
-function desenharFonteDirecional(context, canvas, fonte, paredes, estatuas, oclusaoEmissor = null) {
-  const { luz, angulo } = fonte;
-  const cos = Math.cos(angulo), sin = Math.sin(angulo);
-  const raio = luz.raio * MULTIPLICADOR_ALCANCE_FABRICA;
-  context.save();
-  if (luz.parede) {
-    // Recorta também o halo: nenhum brilho é projetado para fora da sala.
-    context.beginPath();
-    context.rect(luz.parede === "direita" ? luz.x - raio : luz.x, luz.y - raio, raio, raio * 2);
-    context.clip();
-  }
-  paredes.recortarFonte(context, luz, raio);
-  if (!oclusaoEmissor?.desenhar(context, canvas, fonte, estatuas) && !estatuas.desenhar(context, canvas, fonte)) {
-    context.transform(cos, sin, -sin, cos, luz.x, luz.y);
-    context.drawImage(canvas, -raio, -raio, raio * 2, raio * 2);
-  }
-  context.restore();
-}
 
-/** A camada e o jogador ocultam só a lanterna, conservando a ordem visual do mapa. */
 function ocultarLanterna(context, lanterna, scene, pose, atrasPlayer, regiao, player = scene.player) {
   const camera = scene.cameras.main;
   context.setTransform(1, 0, 0, 1, 0, 0);
@@ -196,695 +107,183 @@ function desenharLuminaria(context, canvas, luz, limites) {
   context.restore();
 }
 
-/** Uma única máscara combina sombra ambiente, luzes do teto e lanterna sem energia. */
-function criarIluminacaoTerror(scene, { ambienteBasico = false } = {}) {
-  const camera = scene.cameras.main;
-  const renderer = scene.game.renderer;
-  let width = Math.ceil(camera.width);
-  let height = Math.ceil(camera.height);
-  let invalidada = true;
-  const ultimoQuadro = { width: 0, height: 0, a: 0, b: 0, c: 0, d: 0, e: 0, f: 0,
-    revisao: -1, revisaoEmergencia: -1, revisaoZonas: -1, revisaoBoss: -1, revisaoEnergiaBoss: -1, revisaoFixas: -1,
-    revisaoIntroducao: -1 };
-  let encerrada = false;
-  const iluminacao = new FactoryLighting(scene.map);
-  const salaBoss = new BossRoomLighting(scene.map);
-  // Os controladores de energia e rede conservam seus dados; só as fontes visuais são limitadas.
-  const mapaLuzes = ambienteBasico ? Object.assign(Object.create(scene.map), {
-    getObjectLayer(nome) {
-      const layer = scene.map.getObjectLayer(nome);
-      if (!["Luzedeemergencia", "IluminaçãoBoss"].includes(nome) || !layer) return layer;
-      return { ...layer, objects: (layer.objects ?? []).filter(luz => salaBoss.contem(luz)) };
-    },
-  }) : scene.map;
-  let bossVisivelAnterior = null, modoBasico = false, ultimoAlphaBasico = null;
-  const dispositivo = scene.sys?.game?.device;
-  // Só a composição de luz usa menos pixels no celular; a máscara é ampliada com filtro linear.
-  const resolucao = ambienteBasico ? 1 : dispositivo?.os?.desktop === false ? 0.5 : 1;
-  let larguraMascara = Math.ceil(width * resolucao), alturaMascara = Math.ceil(height * resolucao);
-  const transformarMascara = (ctx, a = 1, b = 0, c = 0, d = 1, e = 0, f = 0) => {
-    const sx = larguraMascara / width, sy = alturaMascara / height;
-    ctx.setTransform(a * sx, b * sy, c * sx, d * sy, e * sx, f * sy);
-  };
-  const emergencia = new EmergencyLighting(mapaLuzes);
-  const arandelas = new BossWallLighting(mapaLuzes);
-  const energiaBoss = new BossEnergyLighting(scene);
-  const luzesIndependentes = [...emergencia.luzes, ...arandelas.luzes];
-  const zonas = new DoorLightingZones(scene.map, iluminacao.lampadas, luzesIndependentes);
-  const obterLuzesIntroducao = () => scene.novoBoss?.introducao?.iluminacao ?? scene.iluminacaoEntradaBossReplica;
-  let luzesIntroducao, progressoIntroducao, revisaoIntroducao, revisaoPortas, revisaoLampadas = 0;
-  const zonasCena = { fatorLuz(luz, agora) {
-    return zonas.fatorLuz(luz, agora) * (luzesIntroducao?.fatorLuz(luz) ?? 1);
-  } };
-  const paredesLanterna = new FlashlightWalls(scene);
-  const limitesLampadas = scene.map.getObjectLayer("LimitaLuz")?.objects?.length
-    ? new FlashlightWalls(scene, { somenteLimites: true }) : null;
-  let revisaoParedes = -1;
-  scene.iluminacaoFabrica = iluminacao;
-  scene.iluminacaoEmergencia = emergencia;
-  scene.iluminacaoBoss = arandelas;
-  scene.iluminacaoEnergiaBoss = energiaBoss;
-  scene.zonasLuzApagada = zonas;
-  const somPartida = criarSomLuzFabrica(scene, QUEDAS_LUZ_FABRICA, { consecutivas: ambienteBasico });
-  const somPiscadas = criarSomPiscadasAmbiente(scene);
-
-  if (scene.textures.exists(TEXTURA_ESCURIDAO_PARTE2)) {
-    scene.textures.remove(TEXTURA_ESCURIDAO_PARTE2);
-  }
-  const texture = criarTexturaIluminacao(scene.textures, TEXTURA_ESCURIDAO_PARTE2, larguraMascara, alturaMascara);
-  // A máscara é um gradiente; esse filtro não altera o pixel art dos tiles e personagens.
+/** Um compositor para ambiente, zonas e efeitos de combate; nenhuma fonte fixa do Tiled. */
+export default function criarIluminacaoTerror(scene) {
+  const camera = scene.cameras.main, renderer = scene.game.renderer;
+  const renderEvent = Phaser.Renderer.Events.RENDER;
+  scene.recursosLanterna = scene.lanternasAliadas = null;
+  const iluminacao = scene.iluminacaoFabrica = new FactoryLighting();
+  const zonas = scene.zonasLuzApagada = new DoorLightingZones(scene.map);
+  const sala = new BossRoomLighting(scene.map);
+  const energiaBoss = scene.iluminacaoEnergiaBoss = new BossEnergyLighting(scene);
+  const som = criarSomLuzFabrica(scene, QUEDAS_LUZ_FABRICA, { consecutivas: true });
+  let width = Math.ceil(camera.width), height = Math.ceil(camera.height), anterior = null, encerrada = false;
+  const texture = criarTexturaIluminacao(scene.textures, TEXTURA_ESCURIDAO_PARTE2, width, height);
   texture.setFilter(Phaser.Textures.FilterMode.LINEAR);
   const context = texture.getContext();
-  const perfil = criarPerfilLuminaria();
-  const luminariaCanvas = criarMascaraLuminaria(perfil);
-  const perfilPulso = iluminacao.lampadas.some(luz => luz.pulsando && !luz.area && luz.ligada)
-    ? criarPerfilLuminaria(true) : null;
-  const luminariaPulsoCanvas = perfilPulso ? criarMascaraLuminaria(perfilPulso) : null;
-  const corPulsoCanvas = perfilPulso ? criarMascaraLuminaria(perfilPulso, 0xFF0000) : null;
-  const lanternaCanvas = criarMascaraLanterna();
-  const perfilNeon = emergencia.luzes.some(luz => luz.neon) ? criarPerfilParede(calcularPerfilNeon) : null;
-  const neonCanvas = perfilNeon ? criarMascaraLuminaria(perfilNeon) : null;
-  const perfilEmissorNeon = perfilNeon ? criarPerfilParede((x, y) => calcularPerfilNeon(x, y, true)) : null;
-  const coresNeonCanvas = new Map();
-  for (const luz of emergencia.luzes) {
-    if (!luz.neon || coresNeonCanvas.has(luz.cor.css)) continue;
-    const canais = [16, 8, 0].map(shift => (luz.cor.phaser >> shift) & 255);
-    const clara = canais.reduce((cor, canal) => (cor << 8) | Math.round(canal + (255 - canal) * 0.6), 0);
-    coresNeonCanvas.set(luz.cor.css, { halo: criarMascaraLuminaria(perfilNeon, luz.cor.phaser),
-      emissor: criarMascaraLuminaria(perfilEmissorNeon, clara) });
+  const overlay = scene.add.image(0, 0, TEXTURA_ESCURIDAO_PARTE2).setOrigin(0).setScrollFactor(0).setDepth(50);
+  const mascarasPortas = zonas.zonas.map(z => scene.add.rectangle(z.x,z.y,z.largura,z.altura,0x000000)
+    .setOrigin(0).setRotation(Math.atan2(z.sin,z.cos)).setDepth(50.001));
+  let uniforme=false;
+  let aposentada = lanternaDesativada(scene), lanterna = null, boss = null;
+  const liberarLanterna = () => {
+    aposentada = true;
+    if (lanterna) {
+      lanterna.paredes.destroy();
+      lanterna.canvas.width = lanterna.canvas.height = 0;
+      lanterna.oclusao.width = lanterna.oclusao.height = 0;
+      lanterna.aliadas.clear(); lanterna = null;
+    }
+    scene.lanternasAliadas = null;
+    scene.recursosLanterna = null;
+    anterior = null;
+  };
+  scene.descarregarLanterna = liberarLanterna;
+  if (aposentada) desativarLanternaDefinitivamente(scene);
+  if (!aposentada) {
+    const oclusao = document.createElement('canvas'); oclusao.width = 460; oclusao.height = 320;
+    lanterna = scene.recursosLanterna = { canvas: criarMascaraLanterna(), oclusao,
+      context: oclusao.getContext('2d'), paredes: new FlashlightWalls(scene), pose: {}, aliadas: new Map() };
+    scene.lanternasAliadas = lanterna.aliadas;
   }
-  const perfilParede = arandelas.luzes.length ? criarPerfilParede(calcularPerfilLuzParede) : null;
-  const perfilEmissorParede = arandelas.luzes.length ? criarPerfilParede(calcularEmissorLuzParede) : null;
-  const paredeCanvas = perfilParede ? criarMascaraLuminaria(perfilParede) : null;
-  const perfilEnergia = criarPerfilParede(calcularPerfilEnergiaBoss);
-  const perfilEscudo = criarPerfilParede((x, y) => calcularPerfilEnergiaBoss(x, y, true));
-  const perfisEnergiaBoss = [0x289DFF, 0x289DFF, 0x40A8FF].map((cor, indice) => {
-    const perfil = indice === 1 ? perfilEscudo : perfilEnergia;
-    return { mascara: criarMascaraLuminaria(perfil), cor: criarMascaraLuminaria(perfil, cor) };
-  });
-  const auraBoss = new BossAuraLightCache(criarMascaraLuminaria(criarPerfilParede(calcularPerfilAuraBoss)));
-  const obterPerfilEnergia = fonte => fonte.vermelha ? auraBoss.obter(fonte)
-    : perfisEnergiaBoss[fonte.choqueTorre ? 2 : Number(fonte.escudo)];
-  const campoEnergiaBoss = new BossEnergyLightBuffer((c, fonte, colorido) => {
-    const perfil = obterPerfilEnergia(fonte);
-    desenharLuminaria(c, colorido ? perfil.cor : perfil.mascara, fonte.luz, paredesLanterna);
-  });
-  const coresParedeCanvas = new Map();
-  for (const luz of arandelas.luzes) {
-    if (coresParedeCanvas.has(luz.cor.css)) continue;
-    const canais = [16, 8, 0].map(shift => (luz.cor.phaser >> shift) & 255);
-    const clara = canais.reduce((cor, canal) => (cor << 8) | Math.round(canal + (255 - canal) * 0.65), 0);
-    coresParedeCanvas.set(luz.cor.css, { halo: criarMascaraLuminaria(perfilParede, luz.cor.phaser),
-      emissor: criarMascaraLuminaria(perfilEmissorParede, clara) });
-  }
-  const oclusaoEstatuas = new EmergencyStatueOcclusion(scene, luzesIndependentes);
-  const oclusaoEmissorBoss = new BossEmitterOcclusion(scene, arandelas.luzes);
-  let limiteLuzesDescartadas = null;
-  const luzesFixas = new FixedLightCache((c, perfil, fonte) => desenharFonteDirecional(c, perfil, fonte,
-    paredesLanterna, oclusaoEstatuas, fonte.luz.direcao ? oclusaoEmissorBoss : null));
-  for (const luz of emergencia.luzes) {
-    if (!luz.neon) continue;
-    const cor = coresNeonCanvas.get(luz.cor.css);
-    luzesFixas.adicionar(luz, [neonCanvas, cor.halo, cor.emissor]);
-  }
-  for (const luz of arandelas.luzes) {
-    const cor = coresParedeCanvas.get(luz.cor.css);
-    luzesFixas.adicionar(luz, [paredeCanvas, cor.halo, cor.emissor]);
-  }
-  // O caminho estático é exclusivo das fontes fixas da arena. Mapas com fontes
-  // externas conservam a composição anterior, inclusive a ordem de mistura.
-  const fixasSomenteArena = luzesFixas.fontes.length > 0 &&
-    luzesFixas.fontes.every(({ luz }) => salaBoss.contem(luz));
-  const zonasFixas = [...new Set(luzesFixas.fontes.flatMap(({ luz }) => zonas.porLuz.get(luz) ?? []))];
-  let fixasEstaveisAnterior = false;
-  let ultimaRevisaoFontesFixas;
-  // Carimbo local reutilizado; não cria outra máscara do tamanho da tela.
-  const lanternaOclusaoCanvas = document.createElement("canvas");
-  lanternaOclusaoCanvas.width = 460;
-  lanternaOclusaoCanvas.height = 320;
-  const oclusaoContext = lanternaOclusaoCanvas.getContext("2d");
-  // Uma composição compartilhada permite recortar o brilho atrás dos atores.
-  const brilhoCanvas = document.createElement("canvas");
-  brilhoCanvas.width = larguraMascara; brilhoCanvas.height = alturaMascara;
-  const brilhoContext = brilhoCanvas.getContext("2d");
-  const brilhoAnterior = { frame: null };
-  const brilhoAtoresAnteriores = new Map();
-  const atoresSobreBrilho = new Set();
-  const registrarAtorSobreBrilho = ator => {
-    if (!ator || ator.active === false || ator.visible === false || (ator.alpha ?? 1) <= 0 ||
-        !ator.frame?.source?.image || !Number.isFinite(ator.x) || !Number.isFinite(ator.y)) return;
-    atoresSobreBrilho.add(ator);
-    let anterior = brilhoAtoresAnteriores.get(ator);
-    if (!anterior) { anterior = {}; brilhoAtoresAnteriores.set(ator, anterior); invalidada = true; }
-    for (const campo of CAMPOS_BRILHO_ATOR) {
-      if (anterior[campo] !== ator[campo]) { anterior[campo] = ator[campo]; invalidada = true; }
-    }
+  const iniciarBoss = () => {
+    if (boss) return;
+    const paredes = new FlashlightWalls(scene);
+    const perfis = [false, true, false].map((escudo, i) => {
+      const perfil = criarPerfilParede((x,y) => calcularPerfilEnergiaBoss(x,y,escudo));
+      return { mascara: criarMascaraLuminaria(perfil), cor: criarMascaraLuminaria(perfil, i === 2 ? 0x40A8FF : 0x289DFF) };
+    });
+    const aura = new BossAuraLightCache(criarMascaraLuminaria(criarPerfilParede(calcularPerfilAuraBoss)));
+    const obter = f => f.vermelha ? aura.obter(f) : perfis[f.choqueTorre ? 2 : Number(f.escudo)];
+    const buffer = new BossEnergyLightBuffer((c,f,colorido) => desenharLuminaria(c, colorido ? obter(f).cor : obter(f).mascara, f.luz, paredes));
+    const canvas = document.createElement('canvas'); canvas.width = width; canvas.height = height;
+    boss = { paredes, perfis, aura, obter, buffer, canvas, context: canvas.getContext('2d') };
   };
-  const oclusaoAnterior = { frame: null };
-  const camadasAnteriores = new Map();
-  let paredeAnterior = null;
-  let regiaoAnterior = null;
-  const verificarCamada = layer => {
-    if (!layer) return;
-    let anterior = camadasAnteriores.get(layer);
-    if (!anterior) {
-      anterior = {};
-      camadasAnteriores.set(layer, anterior);
-      invalidada = true;
-    }
-    for (const campo of CAMPOS_OCLUSAO_CAMADA) {
-      if (anterior[campo] !== layer[campo]) {
-        anterior[campo] = layer[campo];
-        invalidada = true;
-      }
-    }
+  let inicializada=false;
+  const definir = (ligada, progresso = null) => {
+    if (inicializada && iluminacao.energia === (ligada === true)) return;
+    if (ligada && inicializada && typeof progresso !== "function") progresso=()=>null;
+    inicializada=true;
+    if (ligada && !aposentada) desativarLanternaDefinitivamente(scene);
+    som.stop(); iluminacao.definirEnergia(ligada, progresso, scene.time.now); anterior = null;
   };
-  const poseLanterna = { x: 0, y: 0, angulo: null, direcao: null };
-  const lanternasAliadas = scene.lanternasAliadas = new Map();
-  const lanternaAnterior = { x: null, y: null, angulo: null };
-  const coresCanvas = new Map();
-  const coresAreaCanvas = new Map();
-  const lampadasArena = new Set();
-  let areaMascara = null;
-  let perfilArea;
-  for (const luz of iluminacao.lampadas) {
-    if (ambienteBasico && salaBoss.contem(luz)) lampadasArena.add(luz);
-    if (!luz.area && !luz.pulsando && !coresCanvas.has(luz.cor.css)) {
-      coresCanvas.set(luz.cor.css, criarMascaraLuminaria(perfil, luz.cor.phaser));
-    }
-    if (luz.area && !areaMascara) {
-      perfilArea = new Uint8Array(TAMANHO_MASCARA * TAMANHO_MASCARA);
-      // A área inteira recebe a mesma luz, inclusive junto às bordas e nos cantos.
-      perfilArea.fill(Math.round(0.55 * 255));
-      areaMascara = criarMascaraLuminaria(perfilArea);
-    }
-    if (luz.area && !coresAreaCanvas.has(luz.cor.css)) {
-      coresAreaCanvas.set(luz.cor.css, criarMascaraLuminaria(perfilArea, luz.cor.phaser));
-    }
-  }
-  const fontesArena = [], fontesExterior = [];
-  let revisaoLampadasSeparadas = -1;
-  const desenharMascaraLampadas = fontes => {
-    for (const { luz, intensidade } of fontes) {
-      context.globalAlpha = intensidade;
-      desenharLuminaria(context, luz.area ? areaMascara : luz.pulsando ? luminariaPulsoCanvas : luminariaCanvas,
-        luz, limitesLampadas);
-    }
+  scene.definirIluminacaoFabrica = definir;
+  definir(scene.luzFabricaAcesa === true);
+  const registry = scene.game.registry;
+  const progresso = (_registry, key, value) => {
+    if (key === 'factoryGeneratorPowered' && value === true && !aposentada) desativarLanternaDefinitivamente(scene);
   };
-  const desenharCorLampadas = (c, fontes, pulso) => {
-    const escala = pulso ? 0.45 : 0.025 / Math.max(1, fontes.length);
-    for (const { luz, intensidade } of fontes) {
-      if (luz.pulsando !== pulso) continue;
-      c.globalAlpha = intensidade * escala;
-      desenharLuminaria(c, luz.area ? coresAreaCanvas.get(luz.cor.css) : pulso ? corPulsoCanvas : coresCanvas.get(luz.cor.css),
-        luz, limitesLampadas);
-    }
+  registry?.events?.on('setdata', progresso); registry?.events?.on('changedata', progresso);
+  const transformar = c => { const m = camera.matrix; c.setTransform(m.a,m.b,m.c,m.d,m.e,m.f); };
+  const pintarLanterna = (player, pose, frame, regiao) => {
+    const l = lanterna, atras = !!frame;
+    const recorte = atras || scene.camadaParedeAcimaPerso || regiao;
+    if (recorte) ocultarLanterna(l.context, l.canvas, scene, pose, atras, regiao, player);
+    context.save(); context.globalAlpha = 1;
+    l.paredes.recortar(context, pose.x, pose.y, regiao);
+    const cos = Math.cos(pose.angulo), sin = Math.sin(pose.angulo);
+    context.transform(cos,sin,-sin,cos,pose.x,pose.y);
+    context.drawImage(recorte ? l.oclusao : l.canvas,-100,-160,460,320); context.restore();
   };
-  const comporExterior = (alpha, recortarArena) => {
-    context.save();
-    if (recortarArena) salaBoss.recortarExterior(context, camera, width, height);
-    transformarMascara(context);
-    context.globalAlpha = 1;
-    context.globalCompositeOperation = "source-over";
-    context.clearRect(0, 0, width, height);
-    const piso = ESCURIDAO_MINIMA_FABRICA;
-    const campo = fontesExterior.length ? (alpha - piso) / (1 - piso) : alpha;
-    context.fillStyle = `rgba(0,0,0,${campo})`;
-    context.fillRect(0, 0, width, height);
-    if (fontesExterior.length) {
-      const m = camera.matrix;
-      transformarMascara(context, m.a, m.b, m.c, m.d, m.e, m.f);
-      context.globalCompositeOperation = "destination-out";
-      desenharMascaraLampadas(fontesExterior);
-      transformarMascara(context);
-      context.globalAlpha = 1;
-      context.globalCompositeOperation = "destination-over";
-      context.fillStyle = `rgba(0,0,0,${piso})`;
-      context.fillRect(0, 0, width, height);
-      transformarMascara(context, m.a, m.b, m.c, m.d, m.e, m.f);
-      context.globalCompositeOperation = "source-atop";
-      desenharCorLampadas(context, fontesExterior, false);
-      context.globalCompositeOperation = "source-over";
-      desenharCorLampadas(context, fontesExterior, true);
+  const atualizar = (cena, cam) => {
+    if (encerrada || cena !== scene || cam !== camera) return;
+    const w = Math.ceil(camera.width), h = Math.ceil(camera.height);
+    if (w !== width || h !== height) {
+      width=w; height=h; texture.setSize(w,h); overlay.setTexture(TEXTURA_ESCURIDAO_PARTE2); anterior=null; uniforme=false;
+      if (boss) { boss.canvas.width=w; boss.canvas.height=h; }
     }
-    context.restore();
-  };
-
-  // Já cobre a cena antes do primeiro render, mesmo sem jogador ou lâmpadas visíveis.
-  transformarMascara(context);
-  context.fillStyle = COR_ESCURIDAO;
-  context.fillRect(0, 0, width, height);
-  texture.refresh();
-  const overlay = scene.add.image(0, 0, TEXTURA_ESCURIDAO_PARTE2)
-    .setOrigin(0).setScrollFactor(0).setDepth(DEPTH_ESCURIDAO);
-
-  // As zonas usam a geometria/opacidade originais. No caminho leve, são apenas retângulos reutilizados.
-  const mascarasPortas = ambienteBasico ? zonas.zonas.map(zona =>
-    scene.add.rectangle(zona.x, zona.y, zona.largura, zona.altura, 0x000000)
-      .setOrigin(0).setRotation(Math.atan2(zona.sin, zona.cos)).setDepth(DEPTH_ESCURIDAO).setVisible(false)) : [];
-  const alphaBasico = () => alphaOscilacaoFabrica(
-    iluminacao.progressoPartida ?? 1, iluminacao.progressoPartida !== null);
-  let energiaInicializada = false;
-  const definirIluminacaoFabrica = (ligada, obterProgresso = null) => {
-    if (ambienteBasico && energiaInicializada && iluminacao.energia === (ligada === true)) return;
-    // DEV usa o mesmo caminho do gerador, com o relógio da cena quando não existe áudio do motor.
-    if (ambienteBasico && energiaInicializada && ligada === true && typeof obterProgresso !== "function") {
-      obterProgresso = () => null;
-    }
-    energiaInicializada = true;
-    somPartida.stop();
-    somPiscadas.stop();
-    iluminacao.definirEnergia(ligada, obterProgresso, scene.time.now);
-    invalidada = true;
-  };
-  scene.definirIluminacaoFabrica = definirIluminacaoFabrica;
-  definirIluminacaoFabrica(scene.luzFabricaAcesa === true);
-
-  /** Compensa a transformação da câmera, incluindo deslocamentos do efeito de tremor. */
-  const posicionarOverlay = () => {
-    const m = camera.matrix;
-    const e = m.e + m.a * camera.scrollX + m.c * camera.scrollY;
-    const f = m.f + m.b * camera.scrollX + m.d * camera.scrollY;
-    const det = m.a * m.d - m.b * m.c;
-    const escalaX = Math.hypot(m.d, m.b) / det;
-    overlay.setPosition((m.c * f - m.d * e) / det, (m.b * e - m.a * f) / det)
-      .setRotation(Math.atan2(-m.b, m.d))
-      .setScale(escalaX * width / larguraMascara, height / (det * escalaX * alturaMascara));
-  };
-
-  /**
-   * Renderer.RENDER acontece depois de camera.preRender tanto em Canvas quanto em WebGL.
-   * Scene.PRE_RENDER ainda tem a matriz do frame anterior durante o seguimento do jogador.
-   */
-  const atualizarIluminacao = (cenaRenderizada, cameraRenderizada) => {
-    if (encerrada || cenaRenderizada !== scene || cameraRenderizada !== camera) return;
-    // O painel cobre a tela e bloqueia a câmera; a partida do gerador retoma a luz imediatamente.
-    if (scene.generatorMenuOpen && !scene.luzFabricaAcesa && !scene.cenaEntradaBossAtiva) return;
-    if (width !== Math.ceil(camera.width) || height !== Math.ceil(camera.height)) {
-      width = Math.ceil(camera.width);
-      height = Math.ceil(camera.height);
-      larguraMascara = Math.ceil(width * resolucao);
-      alturaMascara = Math.ceil(height * resolucao);
-      texture.setSize(larguraMascara, alturaMascara);
-      brilhoCanvas.width = larguraMascara; brilhoCanvas.height = alturaMascara;
-      overlay.setTexture(TEXTURA_ESCURIDAO_PARTE2);
-      invalidada = true;
-    }
-    const depthLuz = depthAcimaTorres(scene, DEPTH_ESCURIDAO);
-    if (overlay.depth !== depthLuz) overlay.setDepth(depthLuz);
-    for (const mascara of mascarasPortas) if (mascara.depth !== depthLuz) mascara.setDepth(depthLuz);
-    posicionarOverlay();
-    const limite = scene.limiteFabricaDescarregadaY;
-    if (Number.isFinite(limite) && limiteLuzesDescartadas !== limite) {
-      luzesFixas.descartarAbaixo(limite);
-      limiteLuzesDescartadas = limite;
-      invalidada = true;
-    }
+    const m=camera.matrix, e=m.e+m.a*camera.scrollX+m.c*camera.scrollY, f=m.f+m.b*camera.scrollX+m.d*camera.scrollY;
+    const det=m.a*m.d-m.b*m.c, sx=Math.hypot(m.d,m.b)/det;
+    overlay.setPosition((m.c*f-m.d*e)/det,(m.b*e-m.a*f)/det).setRotation(Math.atan2(-m.b,m.d)).setScale(sx,1/(det*sx));
+    overlay.setDepth(depthAcimaTorres(scene,50));
+    iluminacao.atualizarPartida(scene.time.now);
+    if (iluminacao.progressoPartida !== null) som.update(iluminacao.progressoPartida);
     zonas.atualizar(scene.time.now, scene.portasFabrica ?? [], iluminacao.energia);
-    const bossVisivel = !ambienteBasico || salaBoss.visivel(camera);
-    if (bossVisivelAnterior !== bossVisivel) {
-      invalidada = true;
-      if (bossVisivelAnterior === true && !bossVisivel) somPiscadas.stop();
-      bossVisivelAnterior = bossVisivel;
+    const intro=scene.novoBoss?.introducao?.iluminacao ?? scene.iluminacaoEntradaBossReplica;
+    const visivel=sala.visivel(camera);
+    const fontes=visivel ? energiaBoss.atualizar(camera) : null;
+    if (fontes?.length) { iniciarBoss(); boss.paredes.atualizarPortas(); boss.aura.sincronizar(fontes); }
+    const alpha=iluminacao.energia ? alphaOscilacaoFabrica(iluminacao.progressoPartida ?? 1, iluminacao.progressoPartida !== null) : ESCURIDAO_AMBIENTE_FABRICA;
+    let poseKey='';
+    if (lanterna) {
+      lanterna.paredes.atualizarPortas();
+      atualizarLanternasAliadas(scene,lanterna.aliadas);
+      if (scene.player?.active) atualizarPoseLanterna(scene,lanterna.pose);
+      const p=lanterna.pose, ator=scene.player;
+      poseKey=`${p.x},${p.y},${p.angulo},${Math.sin(p.angulo)<-.001?ator?.frame?.name:''},${ator?.flipX},${ator?.flipY},${ator?.scaleX},${ator?.scaleY},${ator?.rotation},${ator?.alpha},${ator?.visible},${ator?.texture?.key},${ator?.displayOriginX},${ator?.displayOriginY},${lanterna.paredes.revisao}`;
+      for (const e of lanterna.aliadas.values()) poseKey+=`:${e.pose.x},${e.pose.y},${e.pose.angulo},${e.frame?.name},${e.player.scaleX},${e.player.scaleY},${e.player.flipX},${e.player.flipY},${e.player.alpha},${e.player.rotation}`;
     }
-    const somenteExterior = ambienteBasico && iluminacao.energia && !bossVisivel;
-    const introducao = obterLuzesIntroducao();
-    if (introducao !== luzesIntroducao || introducao?.progresso !== progressoIntroducao ||
-        introducao?.revisao !== revisaoIntroducao || zonas.revisao !== revisaoPortas) {
-      luzesIntroducao = introducao;
-      progressoIntroducao = introducao?.progresso;
-      revisaoIntroducao = introducao?.revisao;
-      revisaoPortas = zonas.revisao;
-      revisaoLampadas++;
-    }
-    zonasCena.revisaoEstaticaLampadas = iluminacao.energia && zonas.zonas.every(zona =>
-      zona.restaurada || !zona.liberada || (zona.inicioLampadas !== null &&
-        scene.time.now - zona.inicioLampadas >= DURACAO_PARTIDA_ZONA +
-          Math.max(0, zona.indices.size - 1) * ATRASO_ENTRE_LAMPADAS)) ? revisaoLampadas : undefined;
-    const todasFontes = iluminacao.atualizar(scene.time.now, camera, zonasCena);
-    if (ambienteBasico && revisaoLampadasSeparadas !== iluminacao.revisao) {
-      revisaoLampadasSeparadas = iluminacao.revisao;
-      fontesArena.length = fontesExterior.length = 0;
-      for (const fonte of todasFontes) {
-        (lampadasArena.has(fonte.luz) ? fontesArena : fontesExterior).push(fonte);
+    let atoresKey='';
+    const atores = fontes?.length ? [scene.player,scene.companionPet,...(scene.inimigos ?? []),
+      ...(scene.remotePlayers?.values() ?? []),scene.novoBoss?.sprite,
+      ...(scene.novoBoss?.alvosIlusorios ?? []).map(a=>a.sprite)] : null;
+    if (atores) for (const a of atores) if (a) atoresKey+=`${a.x},${a.y},${a.alpha},${a.active},${a.visible},${a.displayOriginX},${a.displayOriginY},${a.texture?.key},${a.flipX},${a.flipY},${a.scaleX},${a.scaleY},${a.rotation},${a.frame?.name},${a.frame?.cutX},${a.frame?.cutY}:`;
+    const depth=depthAcimaTorres(scene,50);
+    for (let i=0;i<mascarasPortas.length;i++) mascarasPortas[i].setDepth(depth+.001).setAlpha(zonas.zonas[i].opacidade);
+    if (aposentada && !visivel) {
+      if (!uniforme) {
+        context.setTransform(1,0,0,1,0,0);context.globalAlpha=1;context.globalCompositeOperation='source-over';
+        context.fillStyle='#000000';context.fillRect(0,0,width,height);texture.refresh();uniforme=true;
       }
+      overlay.setAlpha(alpha);return;
     }
-    if (somenteExterior && !fontesExterior.length) {
-      if (iluminacao.progressoPartida !== null) somPartida.update(iluminacao.progressoPartida);
-      somPiscadas.update(iluminacao.falhasIniciadas);
-      if (!modoBasico || invalidada) {
-        transformarMascara(context);
-        context.globalAlpha = 1;
-        context.globalCompositeOperation = "source-over";
-        context.fillStyle = "#000000";
-        context.fillRect(0, 0, width, height);
-        texture.refresh();
-        invalidada = false;
+    if (uniforme) { uniforme=false;anterior=null; }
+    overlay.setAlpha(1);
+    const chave=`${width},${height},${m.a},${m.b},${m.c},${m.d},${m.e},${m.f},${alpha},${zonas.revisao},${intro?.revisao},${energiaBoss.revisao},${poseKey},${atoresKey}`;
+    if (anterior === chave) return;
+    anterior=chave;
+    context.setTransform(1,0,0,1,0,0); context.globalAlpha=1; context.globalCompositeOperation='source-over';
+    context.clearRect(0,0,width,height); context.fillStyle=`rgba(0,0,0,${alpha})`; context.fillRect(0,0,width,height);
+    context.save(); transformar(context);
+    if (visivel && alpha < ESCURIDAO_AMBIENTE_FABRICA) {
+      context.globalAlpha=(ESCURIDAO_AMBIENTE_FABRICA-alpha)/(1-alpha);
+      context.drawImage(sala.canvas,sala.x,sala.y);context.globalAlpha=1;
+    }
+    context.globalCompositeOperation='destination-out';
+    if (visivel) sala.desenhar(context,camera,intro?.ambiente ?? 1);
+    if (fontes?.length) {
+      boss.buffer.preparar(fontes,camera,width,height);
+      context.save();context.setTransform(1,0,0,1,0,0);boss.buffer.desenhar(context,false,width,height);context.restore();
+    }
+    if (lanterna) {
+      const l=lanterna, player=scene.player;
+      l.paredes.atualizarPortas(); atualizarLanternasAliadas(scene,l.aliadas);
+      if (player?.active && !scene.morteEmAndamento) {
+        atualizarPoseLanterna(scene,l.pose);
+        pintarLanterna(player,l.pose,Math.sin(l.pose.angulo)<-.001 && player.frame?.source?.image ? player.frame : null,obterRegiaoFrenteLanterna(scene,player));
       }
-      overlay.setAlpha(alphaBasico());
-      mascarasPortas.forEach((sprite, i) => sprite.setAlpha(zonas.zonas[i].opacidade).setVisible(true));
-      atualizarLanternasAliadas(scene, lanternasAliadas, iluminacao.energia);
-      modoBasico = true;
-      return;
-    }
-    if (ambienteBasico) {
-      if (modoBasico) invalidada = true;
-      modoBasico = false;
-      overlay.setAlpha(1);
-      mascarasPortas.forEach((sprite, i) => {
-        if (somenteExterior) sprite.setAlpha(zonas.zonas[i].opacidade);
-        sprite.setVisible(somenteExterior);
-      });
-    }
-    // Só congela os fatores do atlas depois da abertura, inclusive nas réplicas.
-    const fixasEstaveis = fixasSomenteArena && (luzesIntroducao
-      ? luzesIntroducao.ativa === false : !!scene.novoBoss);
-    if (fixasEstaveisAnterior !== fixasEstaveis) {
-      fixasEstaveisAnterior = fixasEstaveis;
-      invalidada = true;
-    }
-    zonasCena.revisaoEstatica = fixasEstaveis && zonasFixas.every(zona =>
-      zona.restaurada || !zona.liberada || (zona.inicioRevelacao !== null &&
-        scene.time.now - zona.inicioRevelacao >= DURACAO_PARTIDA_ZONA +
-          Math.max(0, zona.indices.size - 1) * ATRASO_ENTRE_LAMPADAS))
-      ? zonas.revisao : undefined;
-    const fontes = !ambienteBasico ? todasFontes : fontesArena;
-    const m = camera.matrix;
-    const mesmaCamera = ultimoQuadro.width === width && ultimoQuadro.height === height &&
-      ultimoQuadro.a === m.a && ultimoQuadro.b === m.b && ultimoQuadro.c === m.c &&
-      ultimoQuadro.d === m.d && ultimoQuadro.e === m.e && ultimoQuadro.f === m.f;
-    if (bossVisivel) {
-      // O atlas da arena já é estático. Reutiliza também as listas auxiliares de
-      // visibilidade quando câmera e fatores de porta continuam os mesmos.
-      const revisaoFixas = zonasCena.revisaoEstatica;
-      if (revisaoFixas === undefined || revisaoFixas !== ultimaRevisaoFontesFixas || !mesmaCamera) {
-        emergencia.atualizar(scene.time.now, camera, zonasCena);
-        arandelas.atualizar(scene.time.now, camera, zonasCena);
-      }
-      ultimaRevisaoFontesFixas = revisaoFixas;
-    } else ultimaRevisaoFontesFixas = undefined;
-    const fontesNeon = bossVisivel ? emergencia.fontesVisiveis : [];
-    const fontesParede = bossVisivel ? arandelas.fontesVisiveis : [];
-    const fontesEnergiaBoss = bossVisivel ? energiaBoss.atualizar(camera) : [];
-    if (bossVisivel) auraBoss.sincronizar(fontesEnergiaBoss);
-    if (fontesParede.some(fonte => fonte.luz.direcao === "Cima") && oclusaoEmissorBoss.atualizar(camera)) invalidada = true;
-    if ((fontesNeon.length || fontesParede.length) && oclusaoEstatuas.atualizar()) invalidada = true;
-    const player = scene.player;
-    const temBrilho = fontesEnergiaBoss.length || fontes.some(fonte => fonte.luz.pulsando) ||
-      fontesNeon.length || fontesParede.length ||
-      (!fixasEstaveis && bossVisivel && luzesFixas.fontes.length);
-    atoresSobreBrilho.clear();
-    if (temBrilho) {
-      registrarAtorSobreBrilho(scene.companionPet);
-      for (const inimigo of scene.inimigos ?? []) {
-        if (bossVisivel || inimigo?.tipoRobo === "bola") registrarAtorSobreBrilho(inimigo);
-      }
-      if (bossVisivel) {
-        const boss = scene.novoBoss?.sprite;
-        registrarAtorSobreBrilho(boss);
-        for (const fonte of fontesEnergiaBoss) {
-          if (fonte.vermelha && fonte.emissor !== boss) registrarAtorSobreBrilho(fonte.emissor);
-        }
-      }
-      for (const ator of scene.remotePlayers?.values?.() ?? []) registrarAtorSobreBrilho(ator);
-    }
-    for (const ator of brilhoAtoresAnteriores.keys()) {
-      if (atoresSobreBrilho.has(ator)) continue;
-      brilhoAtoresAnteriores.delete(ator);
-      invalidada = true;
-    }
-    const personagemSobreBrilho = !!(temBrilho && player?.active !== false && player?.visible !== false &&
-      (player?.alpha ?? 1) > 0 && player?.frame?.source?.image && Number.isFinite(player.x) && Number.isFinite(player.y));
-    const separarBrilho = personagemSobreBrilho || atoresSobreBrilho.size > 0;
-    const frameBrilho = personagemSobreBrilho ? player.frame : null;
-    if (brilhoAnterior.frame !== frameBrilho) { brilhoAnterior.frame = frameBrilho; invalidada = true; }
-    if (personagemSobreBrilho) {
-      for (const campo of CAMPOS_OCLUSAO) {
-        if (brilhoAnterior[campo] !== player[campo]) { brilhoAnterior[campo] = player[campo]; invalidada = true; }
-      }
-    }
-    const lanternaAtiva = !iluminacao.energia && player?.active !== false &&
-      !!player && Number.isFinite(player.x) && Number.isFinite(player.y);
-    if (atualizarLanternasAliadas(scene, lanternasAliadas, iluminacao.energia)) invalidada = true;
-    let angulo = null;
-    if (lanternaAtiva || lanternasAliadas.size || fontesNeon.length || fontesParede.length || fontesEnergiaBoss.length) {
-      paredesLanterna.atualizarPortas();
-      if (revisaoParedes !== paredesLanterna.revisao) {
-        invalidada = true;
-        revisaoParedes = paredesLanterna.revisao;
-      }
-    }
-    if (bossVisivel) luzesFixas.atualizar(scene.time.now, zonasCena, paredesLanterna, oclusaoEstatuas, oclusaoEmissorBoss);
-    if (lanternaAtiva) {
-      atualizarPoseLanterna(scene, poseLanterna);
-      angulo = poseLanterna.angulo;
-    }
-    const lx = lanternaAtiva ? poseLanterna.x : null;
-    const ly = lanternaAtiva ? poseLanterna.y : null;
-    const lanternaAtras = lanternaAtiva && Math.sin(angulo) < -0.001 &&
-      player.visible !== false && !!player.frame?.source?.image;
-    const camadaFrenteLanterna = scene.camadaParedeAcimaPerso;
-    const regiaoFrenteLanterna = lanternaAtiva ? obterRegiaoFrenteLanterna(scene, player) : null;
-    if (lanternaAtiva || lanternasAliadas.size) {
-      if (paredeAnterior !== camadaFrenteLanterna || regiaoAnterior !== regiaoFrenteLanterna) {
-        paredeAnterior = camadaFrenteLanterna;
-        regiaoAnterior = regiaoFrenteLanterna;
-        invalidada = true;
-      }
-      verificarCamada(camadaFrenteLanterna);
-      let fachadaVisivel = !!regiaoFrenteLanterna;
-      for (const entrada of lanternasAliadas.values()) {
-        const regiao = obterRegiaoFrenteLanterna(scene, entrada.player);
-        if (entrada.regiao !== regiao) invalidada = true;
-        entrada.regiao = regiao;
-        fachadaVisivel ||= !!regiao;
-      }
-      if (fachadaVisivel) {
-        for (const layer of scene.camadasMapaParte2 ?? []) {
-          if (layer !== camadaFrenteLanterna && !camadaEhPisoFabrica(layer.layer?.name)) verificarCamada(layer);
-        }
-      }
-    }
-    const frameOclusao = lanternaAtras ? player.frame : null;
-    if (oclusaoAnterior.frame !== frameOclusao) {
-      invalidada = true;
-      oclusaoAnterior.frame = frameOclusao;
-    }
-    if (lanternaAtras) {
-      for (const campo of CAMPOS_OCLUSAO) {
-        if (oclusaoAnterior[campo] !== player[campo]) {
-          invalidada = true;
-          oclusaoAnterior[campo] = player[campo];
-        }
-      }
-    }
-    if (lanternaAnterior.x !== lx || lanternaAnterior.y !== ly || lanternaAnterior.angulo !== angulo) {
-      invalidada = true;
-      Object.assign(lanternaAnterior, { x: lx, y: ly, angulo });
-    }
-    // Usa a mesma leitura do relógio do gerador que move as luzes, inclusive no último quadro.
-    // O som da partida e os estalos ambientes têm volumes e controles próprios.
-    if (iluminacao.progressoPartida !== null) somPartida.update(iluminacao.progressoPartida);
-    somPiscadas.update(iluminacao.falhasIniciadas);
-    const alphaExterior = ambienteBasico && iluminacao.energia ? alphaBasico() : null;
-    if (ultimoAlphaBasico !== alphaExterior) {
-      ultimoAlphaBasico = alphaExterior;
-      invalidada = true;
-    }
-    // Compara valores em memória reutilizada, sem criar arrays ou strings a cada frame.
-    if (!invalidada && mesmaCamera && ultimoQuadro.revisao === iluminacao.revisao &&
-      ultimoQuadro.revisaoEmergencia === emergencia.revisao && ultimoQuadro.revisaoZonas === zonas.revisao &&
-      ultimoQuadro.revisaoBoss === arandelas.revisao && ultimoQuadro.revisaoEnergiaBoss === energiaBoss.revisao &&
-      ultimoQuadro.revisaoFixas === luzesFixas.revisao &&
-      ultimoQuadro.revisaoIntroducao === (luzesIntroducao?.revisao ?? 0)) return;
-    invalidada = false;
-    ultimoQuadro.width = width;
-    ultimoQuadro.height = height;
-    ultimoQuadro.a = m.a;
-    ultimoQuadro.b = m.b;
-    ultimoQuadro.c = m.c;
-    ultimoQuadro.d = m.d;
-    ultimoQuadro.e = m.e;
-    ultimoQuadro.f = m.f;
-    ultimoQuadro.revisao = iluminacao.revisao;
-    ultimoQuadro.revisaoEmergencia = emergencia.revisao;
-    ultimoQuadro.revisaoZonas = zonas.revisao;
-    ultimoQuadro.revisaoBoss = arandelas.revisao;
-    ultimoQuadro.revisaoEnergiaBoss = energiaBoss.revisao;
-    ultimoQuadro.revisaoFixas = luzesFixas.revisao;
-    ultimoQuadro.revisaoIntroducao = luzesIntroducao?.revisao ?? 0;
-    if (somenteExterior) {
-      comporExterior(alphaExterior, false);
-      texture.refresh();
-      return;
-    }
-    const energiaReduzida = fontesEnergiaBoss.length >= 32;
-    if (energiaReduzida) campoEnergiaBoss.preparar(fontesEnergiaBoss, camera, width, height);
-
-    transformarMascara(context);
-    context.globalAlpha = 1;
-    context.globalCompositeOperation = "source-over";
-    // O preenchimento opaco cobre todos os pixels; não é preciso limpá-los antes.
-    context.fillStyle = "#000000";
-    context.fillRect(0, 0, width, height);
-    context.save();
-    transformarMascara(context, m.a, m.b, m.c, m.d, m.e, m.f);
-    context.globalCompositeOperation = "destination-out";
-    if (bossVisivel) salaBoss.desenhar(context, camera, luzesIntroducao?.ambiente ?? 1);
-    desenharMascaraLampadas(fontes);
-    if (bossVisivel) luzesFixas.desenhar(context, false, camera);
-    if (energiaReduzida) campoEnergiaBoss.desenhar(context, false, larguraMascara, alturaMascara);
-    else for (const fonte of fontesEnergiaBoss) {
-      context.globalAlpha = fonte.intensidade;
-      desenharLuminaria(context, obterPerfilEnergia(fonte).mascara, fonte.luz, paredesLanterna);
-    }
-    if (lanternaAtiva) {
-      const usarOclusao = lanternaAtras || !!camadaFrenteLanterna || !!regiaoFrenteLanterna;
-      if (usarOclusao) ocultarLanterna(oclusaoContext, lanternaCanvas, scene, poseLanterna,
-        lanternaAtras, regiaoFrenteLanterna);
-      context.save();
-      context.globalAlpha = 1;
-      paredesLanterna.recortar(context, lx, ly, regiaoFrenteLanterna);
-      const cos = Math.cos(angulo), sin = Math.sin(angulo);
-      context.transform(cos, sin, -sin, cos, lx, ly);
-      context.drawImage(usarOclusao ? lanternaOclusaoCanvas : lanternaCanvas, -100, -160, 460, 320);
-      context.restore();
-    }
-    for (const { player: aliado, pose, regiao, frame } of lanternasAliadas.values()) {
-      const atras = !!frame;
-      const oclusao = atras || !!camadaFrenteLanterna || !!regiao;
-      if (oclusao) ocultarLanterna(oclusaoContext, lanternaCanvas, scene, pose, atras, regiao, aliado);
-      context.save();
-      context.globalAlpha = 1;
-      paredesLanterna.recortar(context, pose.x, pose.y, regiao);
-      const cos = Math.cos(pose.angulo), sin = Math.sin(pose.angulo);
-      context.transform(cos, sin, -sin, cos, pose.x, pose.y);
-      context.drawImage(oclusao ? lanternaOclusaoCanvas : lanternaCanvas, -100, -160, 460, 320);
-      context.restore();
+      for (const entrada of l.aliadas.values()) pintarLanterna(entrada.player,entrada.pose,entrada.frame,obterRegiaoFrenteLanterna(scene,entrada.player));
     }
     context.restore();
-    // Reintroduz a sombra mínima em coordenadas de tela, antes da coloração.
-    // source-in escala o campo e destination-over estabelece seu piso de opacidade.
-    context.globalCompositeOperation = "source-in";
-    context.fillStyle = `rgba(0,0,0,${OPACIDADE_CAMPO})`;
-    context.fillRect(0, 0, width, height);
-    context.globalCompositeOperation = "destination-over";
-    context.fillStyle = `rgba(0,0,0,${ESCURIDAO_MINIMA_FABRICA})`;
-    context.fillRect(0, 0, width, height);
-    context.save();
-    transformarMascara(context, m.a, m.b, m.c, m.d, m.e, m.f);
-    // Colore suavemente só a sombra restante. source-atop preserva seu alpha e evita
-    // acumular círculos amarelos opacos quando várias lâmpadas se sobrepõem.
-    context.globalCompositeOperation = "source-atop";
-    desenharCorLampadas(context, fontes, false);
-    context.restore();
-    const corContext = separarBrilho ? brilhoContext : context;
-    if (separarBrilho) {
-      transformarMascara(corContext);
-      corContext.clearRect(0, 0, width, height);
-    }
-    corContext.save();
-    transformarMascara(corContext, m.a, m.b, m.c, m.d, m.e, m.f);
-    // Vermelho puro sobre o cenário: limitar a cor à sombra residual deixava o piso
-    // claro dominar o pulso. O mesmo gradiente mantém as bordas suaves.
-    corContext.globalCompositeOperation = "source-over";
-    desenharCorLampadas(corContext, fontes, true);
-    // O atlas continua estático. O recorte das silhuetas é aplicado na composição da câmera.
-    if (bossVisivel) luzesFixas.desenhar(corContext, true, camera);
-    if (energiaReduzida) campoEnergiaBoss.desenhar(corContext, true, larguraMascara, alturaMascara);
-    else for (const fonte of fontesEnergiaBoss) {
-      corContext.globalAlpha = fonte.intensidade * 0.45;
-      desenharLuminaria(corContext, obterPerfilEnergia(fonte).cor, fonte.luz, paredesLanterna);
-    }
-    if (personagemSobreBrilho) ocultarBrilhoAtrasPersonagem(corContext, player);
-    for (const ator of atoresSobreBrilho) ocultarBrilhoAtrasPersonagem(corContext, ator);
-    corContext.restore();
-    if (separarBrilho) {
-      context.save();
-      context.setTransform(1, 0, 0, 1, 0, 0);
-      context.globalAlpha = 1;
-      context.globalCompositeOperation = "source-over";
-      context.drawImage(brilhoCanvas, 0, 0);
+    if (fontes?.length) {
+      const c=boss.context;c.setTransform(1,0,0,1,0,0);c.clearRect(0,0,width,height);c.globalCompositeOperation='source-over';
+      boss.buffer.desenhar(c,true,width,height);c.save();transformar(c);
+      for (const ator of atores) {
+        if (ator?.active && ator.frame?.source?.image) ocultarBrilhoAtrasPersonagem(c,ator);
+      }
+      c.restore();context.save();context.setTransform(1,0,0,1,0,0);context.globalAlpha=1;context.globalCompositeOperation='source-over';context.drawImage(boss.canvas,0,0);context.restore();
+      context.save();transformar(context);
+      for (const fonte of fontes) if (fonte.vermelha) ocultarBrilhoAtrasPersonagem(context,fonte.emissor,fonte.emissor.x,fonte.emissor.y,.55);
       context.restore();
     }
-    if (alphaExterior !== null) comporExterior(alphaExterior, true);
-    context.save();
-    transformarMascara(context, m.a, m.b, m.c, m.d, m.e, m.f);
-    zonas.desenharEscuridao(context);
-    // Clareia apenas os pixels do boss e das cópias, preservando as cores da arte.
-    // Reutiliza o overlay e sua invalidação por pose, sem outra textura ou luz no chão.
-    for (const fonte of fontesEnergiaBoss) {
-      if (fonte.vermelha) ocultarBrilhoAtrasPersonagem(context, fonte.emissor,
-        fonte.emissor.x, fonte.emissor.y, CLARIDADE_SPRITE_BOSS);
-    }
-    context.restore();
-    context.globalCompositeOperation = "source-over";
     texture.refresh();
   };
-
-  const limparIluminacao = () => {
-    if (encerrada) return;
-    encerrada = true;
-    scene.events.off(Phaser.Scenes.Events.SHUTDOWN, limparIluminacao);
-    renderer.off(Phaser.Renderer.Events.RENDER, atualizarIluminacao);
-    if (scene.definirIluminacaoFabrica === definirIluminacaoFabrica) scene.definirIluminacaoFabrica = null;
-    if (scene.iluminacaoFabrica === iluminacao) scene.iluminacaoFabrica = null;
-    if (scene.iluminacaoEmergencia === emergencia) scene.iluminacaoEmergencia = null;
-    if (scene.iluminacaoBoss === arandelas) scene.iluminacaoBoss = null;
-    if (scene.iluminacaoEnergiaBoss === energiaBoss) scene.iluminacaoEnergiaBoss = null;
-    if (scene.zonasLuzApagada === zonas) scene.zonasLuzApagada = null;
-    somPartida.destroy();
-    somPiscadas.destroy();
-    iluminacao.destroy();
-    emergencia.destroy();
-    arandelas.destroy();
-    energiaBoss.destroy();
-    campoEnergiaBoss.destroy();
-    auraBoss.destroy();
-    salaBoss.destroy();
-    luzesFixas.destroy();
-    zonas.destroy();
-    oclusaoEstatuas.destroy();
-    oclusaoEmissorBoss.destroy();
-    paredesLanterna.destroy();
-    brilhoAtoresAnteriores.clear();
-    atoresSobreBrilho.clear();
-    lanternasAliadas.clear();
-    if (scene.lanternasAliadas === lanternasAliadas) scene.lanternasAliadas = null;
-    limitesLampadas?.destroy();
-    for (const sprite of mascarasPortas) sprite.destroy();
-    overlay.destroy();
-    if (scene.textures.exists(TEXTURA_ESCURIDAO_PARTE2)) scene.textures.remove(TEXTURA_ESCURIDAO_PARTE2);
-    for (const canvas of [luminariaCanvas, luminariaPulsoCanvas, corPulsoCanvas, lanternaCanvas,
-      lanternaOclusaoCanvas, brilhoCanvas, neonCanvas,
-      paredeCanvas, ...coresCanvas.values()]) {
-      if (!canvas) continue;
-      canvas.width = canvas.height = 0;
+  context.fillStyle=`rgba(0,0,0,${ESCURIDAO_AMBIENTE_FABRICA})`;context.fillRect(0,0,width,height);texture.refresh();
+  const limpar = () => {
+    if (encerrada) return; encerrada=true;
+    renderer.off(renderEvent,atualizar); scene.events.off('shutdown',limpar);
+    registry?.events?.off('setdata',progresso);registry?.events?.off('changedata',progresso);
+    liberarLanterna();som.destroy();iluminacao.destroy();zonas.destroy();sala.destroy();energiaBoss.destroy();
+    if (boss) {
+      boss.paredes.destroy();boss.aura.destroy();boss.buffer.destroy();boss.canvas.width=boss.canvas.height=0;
+      for (const p of boss.perfis) p.mascara.width=p.mascara.height=p.cor.width=p.cor.height=0;
     }
-    coresCanvas.clear();
-    for (const { halo, emissor } of coresNeonCanvas.values()) {
-      halo.width = halo.height = emissor.width = emissor.height = 0;
-    }
-    coresNeonCanvas.clear();
-    for (const { halo, emissor } of coresParedeCanvas.values()) {
-      halo.width = halo.height = emissor.width = emissor.height = 0;
-    }
-    coresParedeCanvas.clear();
-    for (const { mascara, cor } of perfisEnergiaBoss) {
-      mascara.width = mascara.height = cor.width = cor.height = 0;
-    }
-    perfisEnergiaBoss.length = 0;
-    if (areaMascara) areaMascara.width = areaMascara.height = 0;
-    for (const canvas of coresAreaCanvas.values()) canvas.width = canvas.height = 0;
-    coresAreaCanvas.clear();
-    lampadasArena.clear();
-    fontesArena.length = fontesExterior.length = 0;
-    camadasAnteriores.clear();
+    for (const mascara of mascarasPortas) mascara.destroy();
+    overlay.destroy();scene.textures.remove(TEXTURA_ESCURIDAO_PARTE2);
+    scene.definirIluminacaoFabrica=null;scene.descarregarLanterna=null;
+    scene.iluminacaoFabrica=scene.zonasLuzApagada=scene.iluminacaoEnergiaBoss=null;
   };
-  renderer.on(Phaser.Renderer.Events.RENDER, atualizarIluminacao);
-  scene.events.once(Phaser.Scenes.Events.SHUTDOWN, limparIluminacao);
-  return limparIluminacao;
+  renderer.on(renderEvent,atualizar);scene.events.once('shutdown',limpar);
+  return limpar;
 }
-
-export { calcularPerfilLuz, ESCURIDAO_MINIMA_FABRICA };
-export default criarIluminacaoTerror;
+export { ESCURIDAO_MINIMA_FABRICA };
