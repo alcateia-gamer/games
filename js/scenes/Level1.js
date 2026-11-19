@@ -4,7 +4,6 @@ import { createUpgradeNPC } from '../interactions/UpgradeNPC.js';
 import { prepararReanimacaoSolo, atualizarReanimacaoSolo } from "../player/SoloPetRevival.js";
 import { ScrapSystem } from '../systems/ScrapSystem.js';
 import { prepararAudioCoop } from "../multiplayer/CoopAudio.js";
-import { atualizarSpawnsDev } from "../controls/DeveloperSpawns.js";
 import { obterBocaMetralhadora, criarMunicaoRobo } from "../enemies/WarRobotProjectile.js";
 /**
  * @file Cena da cidade. Coordena mapa, jogador, companheiro, inimigos, clima, inventário,
@@ -94,9 +93,7 @@ class Level1 extends Phaser.Scene {
     // =====================================================
 
     this.speed = 200;
-    this.speedTurbo = 400;
     this.velocidadeProjetil = 420;
-    this.developerMode = false;
 
     this.direction = undefined;
 
@@ -118,7 +115,6 @@ class Level1 extends Phaser.Scene {
    * entre mapas.
    */
   init(data) {
-    this.developerMode = data.developerMode ?? this.developerMode;
     this.respawnX = data.spawnX ?? -1405;
     this.respawnY = data.spawnY ?? 475;
     this.personagemSelecionada = data.personagem || "kai-mercer";
@@ -322,28 +318,9 @@ class Level1 extends Phaser.Scene {
     this.minimap = new MiniMapManager(this, this.map, "cidade");
 
     // =====================================================
-    // COMANDOS DE SPAWN DOS ROBÔS
-    // =====================================================
-
     this.inimigos = [];
     this.inimigoTeste = null;
     this.enemySpawnManager = new EnemySpawnManager(this, this.map);
-    this.teclaSpawnRobo1 = this.input.keyboard.addKey(
-      Phaser.Input.Keyboard.KeyCodes.ONE,
-    );
-    this.teclaSpawnRobo2 = this.input.keyboard.addKey(
-      Phaser.Input.Keyboard.KeyCodes.TWO,
-    );
-    this.teclaSpawnRobo3 = this.input.keyboard.addKey(
-      Phaser.Input.Keyboard.KeyCodes.THREE,
-    );
-    this.teclaSpawnRoboSerra = this.input.keyboard.addKey(
-      Phaser.Input.Keyboard.KeyCodes.FIVE,
-    );
-    this.teclaSpawnRoboOlhao = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SEVEN);
-    this.teclaSpawnRoboBola = this.input.keyboard.addKey(
-      Phaser.Input.Keyboard.KeyCodes.SIX,
-    );
 
     // =====================================================
     // CÂMERA
@@ -471,7 +448,6 @@ class Level1 extends Phaser.Scene {
     // INIMIGO
     // =====================================================
 
-    if (!resgatando) atualizarSpawnsDev(this);
 
     atualizarInimigoTeste(this, time);
     atualizarRoboBola(this, time, delta);

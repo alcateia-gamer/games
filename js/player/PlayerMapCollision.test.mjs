@@ -43,7 +43,6 @@ test('dash diagonal não corta a quina; afastar-se da parede continua permitido'
 test('grade aberta, caminhada e noclip DEV mantêm seus comportamentos', () => {
   for (const liberar of [s => s.estadoDash.ativo = false,
     s => s.colliderPlayerMapa.active = false,
-    s => { s.developerMode = true; s.teclaEspaco = { isDown: true }; },
     s => s.collisionGroup = { getChildren: () => [{ body: { x: 100, y: -100, width: 2, height: 250, enable: false } }] },
   ]) {
     const { scene, player, world } = preparar(); liberar(scene); world.emit('worldstep');

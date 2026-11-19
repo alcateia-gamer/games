@@ -279,8 +279,6 @@ try {
     });
     await client.waitForFunction(() => window.__enemyImpact?.damage === 5);
     check("impacto de inimigo é transmitido mesmo quando dura menos que um snapshot", true);
-    await get(client, () => window.__game.scene.getScene("Level1").botaoDesenvolvedor.emit("pointerdown"));
-    await host.waitForFunction(() => window.__game.scene.getScene("Level1").coopRuntime.players.contexts()[0]?.developerMode);
     check("DEV do cliente é independente do host", await get(host, () => !window.__game.scene.getScene("Level1").developerMode));
     await client.keyboard.press("o");
     for (const page of pages) await page.waitForFunction(() => {
@@ -315,12 +313,10 @@ try {
     await host.waitForFunction(() => [...window.__game.scene.getScene("Level1Parte2").coopRuntime.players.remotes.values()]
       .every(e => [...e.speeches.values()].every(b => !b.texto.visible)));
     check("ocultar a fala também a remove na tela do aliado", true);
-    await get(client, () => window.__game.scene.getScene("Level1Parte2").botaoLuzFabrica.emit("pointerdown"));
     for (const page of pages) await page.waitForFunction(() => {
       const s = window.__game.scene.getScene("Level1Parte2");
       return s.luzFabricaAcesa && s.iluminacaoFabrica.energia && s.lanternasAliadas.size === 0;
     });
-    await get(client, () => window.__game.scene.getScene("Level1Parte2").botaoLuzFabrica.emit("pointerdown"));
     for (const page of pages) await page.waitForFunction(() => {
       const s = window.__game.scene.getScene("Level1Parte2");
       return !s.luzFabricaAcesa && !s.iluminacaoFabrica.energia && s.lanternasAliadas.size === 1;
@@ -419,9 +415,6 @@ try {
   if (process.env.COOP_BROWSER_DEBUG) console.log("GENERATOR STARTS", starts);
   check("gerador acionado pelo cliente compartilha energia e relógio de partida", starts[0] === starts[1]);
   if (phase === "world") {
-    await get(client, () => window.__game.scene.getScene("Level1Parte2").botaoDesenvolvedor.emit("pointerdown"));
-    await host.waitForFunction(() => window.__game.scene.getScene("Level1Parte2").coopRuntime.players.contexts()[0]?.developerMode);
-    await get(client, () => window.__game.scene.getScene("Level1Parte2").botaoLuzFabrica.emit("pointerdown"));
     for (const page of pages) await page.waitForFunction(() => {
       const s = window.__game.scene.getScene("Level1Parte2");
       return !s.luzFabricaAcesa && !s.iluminacaoFabrica.energia;

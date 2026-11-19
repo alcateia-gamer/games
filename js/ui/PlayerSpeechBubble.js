@@ -90,7 +90,7 @@ export function criarFalaFlutuante(scene, nome = "player-speech-bubble", { repli
     if (!visivel || destruido) return;
     const player = scene.player;
     if (!ancoraPet && (!player?.active || player.visible === false || scene.morteEmAndamento ||
-        scene.generatorMenuOpen || scene.devItemMenuOpen)) { ocultar(); return; }
+        scene.        generatorMenuOpen)) { ocultar(); return; }
     revelar();
     const pos = ancora();
     if (!pos) { ocultar(); return; }

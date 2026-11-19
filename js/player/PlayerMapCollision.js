@@ -10,8 +10,7 @@ export function protegerDashNoMapa(scene) {
   const atualizar = () => {
     const b = player.body, dash = scene.estadoDash;
     if (!player.active || player.morto || scene.morteEmAndamento || !dash?.ativo ||
-        !b || b.enable === false || !b.prev || scene.colliderPlayerMapa?.active === false ||
-        (scene.developerMode && scene.teclaEspaco?.isDown)) return;
+        !b || b.enable === false || !b.prev || scene.colliderPlayerMapa?.active === false) return;
     const inicio = { x: b.prev.x, y: b.prev.y, width: b.width, height: b.height };
     // Não trata teleporte ou uma origem já sobreposta como se fossem um dash livre.
     if (!retanguloLivreDoMapa(scene, inicio)) return;

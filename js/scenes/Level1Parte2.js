@@ -8,7 +8,6 @@ import { criarHackingFabrica } from '../interactions/FactoryHacking.js';
 import { ScrapSystem } from '../systems/ScrapSystem.js';
 import { prepararAudioCoop } from "../multiplayer/CoopAudio.js";
 import { descarregarCidade, descarregarFabricaParaBoss } from "../map/ProgressaoMapa.js";
-import { atualizarSpawnsDev } from "../controls/DeveloperSpawns.js";
 import { obterBocaMetralhadora, criarMunicaoRobo } from "../enemies/WarRobotProjectile.js";
 /**
  * @file Cena da fábrica. Integra iluminação, gerador, porta interativa, inventário e
@@ -97,9 +96,7 @@ class Level1Parte2 extends Phaser.Scene {
     this.DEBUG_MAP = true;
     this.profundidadePersonagemParte2 = 16.5;
     this.speed = 200;
-    this.speedTurbo = 400;
     this.velocidadeProjetil = 420;
-    this.developerMode = false;
     this.direcaoAtual = "down";
     this.atacando = false;
   }
@@ -109,7 +106,6 @@ class Level1Parte2 extends Phaser.Scene {
    * de transição.
    */
   init(data) {
-    this.developerMode = data.developerMode ?? this.developerMode;
     this.novoBossConfig = data.novoBossConfig ?? null;
     this.luzFabricaAcesa =
       this.game.registry.get(FACTORY_GENERATOR_STATE_KEY) === true;
@@ -242,25 +238,6 @@ class Level1Parte2 extends Phaser.Scene {
     this.input.keyboard.enabled = true;
     this.input.keyboard.resetKeys();
 
-    this.teclaSpawnRobo1 = this.input.keyboard.addKey(
-      Phaser.Input.Keyboard.KeyCodes.ONE,
-    );
-
-    this.teclaSpawnRobo2 = this.input.keyboard.addKey(
-      Phaser.Input.Keyboard.KeyCodes.TWO,
-    );
-
-    this.teclaSpawnRobo3 = this.input.keyboard.addKey(
-      Phaser.Input.Keyboard.KeyCodes.THREE,
-    );
-
-    this.teclaSpawnRoboSerra = this.input.keyboard.addKey(
-      Phaser.Input.Keyboard.KeyCodes.FIVE,
-    );
-    this.teclaSpawnRoboOlhao = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SEVEN);
-    this.teclaSpawnRoboBola = this.input.keyboard.addKey(
-      Phaser.Input.Keyboard.KeyCodes.SIX,
-    );
 
     this.map = criarLevel1Parte2Map(this);
     this.inicializarTrocaCamada();
@@ -371,14 +348,6 @@ class Level1Parte2 extends Phaser.Scene {
     descarregarFabricaParaBoss(this);
   }
 
-  /** Permite repetir o teste da fábrica sem energia pelo mesmo controle DEV. */
-  apagarLuzFabrica() {
-    if (!this.developerMode || !this.luzFabricaAcesa) return;
-
-    this.luzFabricaAcesa = false;
-    this.game.registry.set(FACTORY_GENERATOR_STATE_KEY, false);
-    this.definirIluminacaoFabrica(false);
-  }
 
   /** Carrega o gatilho do Tiled sem alterar a ordem global do mapa. */
   inicializarTrocaCamada() {
@@ -438,7 +407,6 @@ class Level1Parte2 extends Phaser.Scene {
       atualizarStatusPlayer(this, delta);
     }
 
-    if (!resgatando) atualizarSpawnsDev(this);
 
     if (!this.multiplayer) this.spawnAreasRoboBola?.atualizar(delta);
     atualizarInimigoTeste(this, time);

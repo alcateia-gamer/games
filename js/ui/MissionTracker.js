@@ -125,7 +125,7 @@ export function criarRastreadorMissoes(scene) {
       layout();
     }
     const oculto = !!(scene.generatorMenuOpen || scene.cardReaderMenuOpen || scene.upgradeMenuOpen || scene.upgradeDialogueOpen ||
-      scene.devItemMenuOpen || scene.cenaEntradaBossAtiva || scene.morteEmAndamento);
+      scene.cenaEntradaBossAtiva || scene.morteEmAndamento);
     if (root.hidden !== oculto) root.hidden = oculto;
   }
   const observer = new ResizeObserver(layout);

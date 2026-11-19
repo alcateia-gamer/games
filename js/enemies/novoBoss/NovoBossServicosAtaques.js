@@ -27,7 +27,7 @@ export function criarServicosAtaques(scene, encontro) {
     const antes = scene.vida;
     const invulneravelAntes = scene.player.invulneravel;
     causarDanoPlayer(scene, quantidade, origem);
-    const aceito = scene.vida < antes || (scene.developerMode && !invulneravelAntes && scene.player.invulneravel);
+    const aceito = scene.vida < antes;
     if (aceito && opcoes.empurrao > 0 && !scene.morteEmAndamento) {
       applyKnockback(scene, origem, scene.player, opcoes.empurrao, opcoes.duracaoEmpurrao);
     }

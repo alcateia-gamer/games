@@ -184,7 +184,7 @@ function criarPorta(scene, layer, area, fala) {
   const podeInteragir = (alvo = area, contexto = scene) =>
     !encerrada && hackingLiberado(scene) && !porta.bloqueadaPorBoss && !scene.cenaEntradaBossAtiva &&
     porta.estado === "fechada" && contexto.player?.active &&
-    !contexto.morteEmAndamento && !contexto.generatorMenuOpen && !contexto.devItemMenuOpen &&
+    !contexto.morteEmAndamento && !contexto.generatorMenuOpen &&
     distanceToInteractionArea(contexto.player.x, contexto.player.y, alvo) <=
       INTERACTION_RANGE;
 
@@ -326,7 +326,7 @@ function criarPorta(scene, layer, area, fala) {
     prompt?.setText(motivoBloqueio() ?? "E - ABRIR PORTA");
     marcador?.setVisible(hackingLiberado(scene) && porta.estado === "fechada" && !porta.bloqueadaPorBoss &&
       !scene.cenaEntradaBossAtiva && !scene.morteEmAndamento &&
-      !scene.generatorMenuOpen && !scene.devItemMenuOpen);
+      !scene.generatorMenuOpen);
   };
 
   const limpar = () => {
@@ -377,7 +377,6 @@ function criarInteracaoPortaFabrica(scene) {
   const leitorProximo = (comPainel = false) => hackingLiberado(scene) && !!marcadorLeitor && scene.player?.active &&
     !scene.cenaEntradaBossAtiva &&
     !scene.morteEmAndamento && (!scene.generatorMenuOpen || (comPainel && scene.cardReaderMenuOpen)) &&
-    !scene.devItemMenuOpen &&
     distanceToInteractionArea(scene.player.x, scene.player.y, areaLeitor) <= INTERACTION_RANGE;
   const terminal = marcadorLeitor ? criarInteracaoLeitorCartao(scene, {
     podeUsar: comPainel => leitorProximo(comPainel) &&
@@ -449,7 +448,7 @@ function criarInteracaoPortaFabrica(scene) {
       const perto = leitorProximo();
       const fechadas = portasLeitor.filter(controle => controle.porta.estado === "fechada" && !controle.porta.bloqueadaPorBoss);
       marcadorLeitor.setVisible(hackingLiberado(scene) && fechadas.length > 0 && !scene.morteEmAndamento &&
-        !scene.generatorMenuOpen && !scene.devItemMenuOpen && !scene.cenaEntradaBossAtiva);
+        !scene.generatorMenuOpen && !scene.cenaEntradaBossAtiva);
       const distanciaLeitor = perto ? distanceToInteractionArea(scene.player.x, scene.player.y, areaLeitor) : Infinity;
       if (fechadas.length && distanciaLeitor < distancia) {
         scene.interacaoMundoProxima = { distance: distanciaLeitor, interact: passarCartao };

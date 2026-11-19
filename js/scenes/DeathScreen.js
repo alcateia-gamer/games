@@ -81,15 +81,6 @@ function mostrarTelaMorte(scene, { equipeDerrotada = false, aposQuedaSolo = fals
   scene.limparPainelStatusFixo?.();
   // Esses elementos usam canvas HTML e ficam acima do overlay desenhado pelo Phaser.
   scene.minimap?.destroy();
-  for (const controle of [
-    scene.botaoDesenvolvedor,
-    scene.textoBotaoDesenvolvedor,
-    scene.botaoLuzFabrica,
-    scene.textoLuzFabrica,
-  ]) {
-    controle?.setVisible(false);
-    controle?.disableInteractive();
-  }
   scene.player.invulneravel = true;
   scene.player.setVelocity(0, 0);
   scene.physics.pause();

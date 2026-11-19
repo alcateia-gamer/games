@@ -274,14 +274,12 @@ test("the weapon shop floor and entrance mat are visible at the interior telepor
   assert.ok(player.y > corner.y && player.y < corner.y + floor[6] * transform.scale);
 });
 
-test("the NULLNET HUD reservation keeps the minimap above DEV and its database button", () => {
+test("the NULLNET HUD reservation keeps the minimap above normal HUD elements", () => {
   const camera = { width: 390, height: 220, zoom: 1, originX: 0, originY: 0 };
-  const dev = { height: 30 };
-  const original = miniMapLayout(camera, dev);
-  const reserved = miniMapLayout(camera, dev, null, null, 54);
-  assert.ok(reserved.devScreenY < original.devScreenY);
-  assert.ok(reserved.devScreenY + 15 + 10 + 22 + 12 <= camera.height);
-  assert.equal(miniMapLayout(camera, dev, null, null, -54).devScreenY, original.devScreenY);
+  const original = miniMapLayout(camera);
+  const reserved = miniMapLayout(camera, null, null, 54);
+  assert.ok(reserved.scaleY <= original.scaleY);
+  assert.equal(miniMapLayout(camera, null, null, -54).scaleY, original.scaleY);
 });
 
 test("sidewalk connects in asphalt gray only through open passages, including around obstacles", () => {
@@ -329,16 +327,14 @@ test("asphalt and connected sidewalk share an opaque edge without an internal ou
   assert.deepEqual(asphalt, original, "a origem não deve ser alterada");
 });
 
-test("HUD stays in the top-right corner with DEV below it at multiple zooms", () => {
+test("HUD stays in the top-right corner at multiple zooms", () => {
   for (const [width, height] of [[800, 450], [450, 800], [1280, 720]]) {
     for (const zoom of [0.5, 1, 1.8, 2.5]) {
       const camera = { width, height, zoom, originX: 0.5, originY: 0.5 };
       const ox = width / 2, oy = height / 2;
-      const dev = { scene: true, y: oy + (24 - oy) / zoom, displayHeight: 30 / zoom };
-      const result = miniMapLayout(camera, dev);
+      const result = miniMapLayout(camera);
       assert.equal(result.visible, true);
       assert.ok(Math.abs(oy + (result.y - oy) * zoom - 12) < 1e-8);
-      assert.equal(result.devScreenY, 147);
       assert.equal(result.scaleX * zoom * 90, 90);
       assert.equal(result.scaleY * zoom * 90, 90);
       assert.ok(Math.abs(ox + (result.x - ox) * zoom + 90 - (width - 12)) < 1e-8);
@@ -347,7 +343,6 @@ test("HUD stays in the top-right corner with DEV below it at multiple zooms", ()
   const camera = { width: 800, height: 260, zoom: 1, originX: 0.5, originY: 0.5 };
   const compact = miniMapLayout(camera, null, { scene: true, y: 160, displayHeight: 92 });
   assert.ok(compact.y + compact.scaleY * 90 <= 102);
-  assert.ok(compact.devScreenY + 15 <= 102);
   const hiddenPickup = miniMapLayout({ ...camera, height: 450 }, null, null,
     { scene: true, visible: false, y: 0, displayHeight: 60 });
   assert.equal(hiddenPickup.scaleY, 1);

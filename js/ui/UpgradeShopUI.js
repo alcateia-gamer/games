@@ -141,7 +141,7 @@ export class UpgradeShopUI {
   }
   open() {
     const s = this.scene;
-    if (s.upgradeDialogueOpen || s.upgradeMenuOpen || !canUseShop(s, s.sys.settings.key) || s.movimentoBloqueado || s.atacando || s.estadoDash?.ativo || s.generatorMenuOpen || s.devItemMenuOpen) return false;
+    if (s.upgradeDialogueOpen || s.upgradeMenuOpen || !canUseShop(s, s.sys.settings.key) || s.movimentoBloqueado || s.atacando || s.estadoDash?.ativo || s.generatorMenuOpen) return false;
     if (!this.root) this.create();
     this.previous = { input: s.input.enabled, keyboard: s.input.keyboard.enabled, lock: s.movimentoBloqueado };
     this.focused = document.activeElement;

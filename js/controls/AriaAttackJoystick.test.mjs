@@ -253,7 +253,6 @@ for (const [emissor, evento] of [["events", "pause"], ["events", "sleep"], ["sca
 
 test("o menu de coletáveis DEV impede ataques e movimento por trás do catálogo", t => {
   const scene = cena(t);
-  scene.devItemMenuOpen = true;
   scene.movimentoBloqueado = true;
   const pointer = pressionar(scene);
   soltar(scene, pointer);

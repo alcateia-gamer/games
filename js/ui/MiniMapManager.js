@@ -121,21 +121,25 @@ export default class MiniMapManager {
     const scaleY = canvasHeight > 0 ? canvasHeight / camera.height : 1;
     const buttonHeight = databaseButton?.getBoundingClientRect().height || 44;
     const databaseReservation = databaseButton && !databaseButton.hidden ? (10 + buttonHeight) / scaleY : 0;
-    const result = miniMapLayout(camera, this.scene.botaoDesenvolvedor,
-      this.scene.botaoAtaque, this.scene.botaoColetarItem, databaseReservation + (this.scene.espacoAtalhosDev?.() ?? 0));
-    this.devScreenY = result.devScreenY;
+    const result = miniMapLayout(camera,
+      this.scene.botaoAtaque, this.scene.botaoColetarItem, databaseReservation);
     const zoomX = camera.zoomX || camera.zoom || 1;
     const zoomY = camera.zoomY || camera.zoom || 1;
     const originX = camera.width * camera.originX;
     const originY = camera.height * camera.originY;
     const x = (camera.x ?? 0) + originX + (result.x - originX) * zoomX;
     const y = (camera.y ?? 0) + originY + (result.y - originY) * zoomY;
+    const hudWidth = WIDTH * result.scaleX * zoomX;
+    const hudHeight = (HEIGHT + 14) * result.scaleY * zoomY;
     if (Math.abs((this.hudPosition?.x ?? Infinity) - x) > 0.1 ||
-        Math.abs((this.hudPosition?.y ?? Infinity) - y) > 0.1) {
+        Math.abs((this.hudPosition?.y ?? Infinity) - y) > 0.1 ||
+        Math.abs((this.hudSize?.width ?? Infinity) - hudWidth) > 0.1 ||
+        Math.abs((this.hudSize?.height ?? Infinity) - hudHeight) > 0.1) {
       this.hudPosition = { x, y };
+      this.hudSize = { width: hudWidth, height: hudHeight };
       this.scene.events?.emit("minimap:layout");
     }
-    const visible = result.visible && !this.scene.generatorMenuOpen && !this.scene.devItemMenuOpen;
+    const visible = result.visible && !this.scene.generatorMenuOpen;
     this.root.setPosition(result.x, result.y).setScale(result.scaleX, result.scaleY)
       .setVisible(visible && !this.nativeView);
     this.nativeView?.object.setPosition(result.x, result.y)

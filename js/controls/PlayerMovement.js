@@ -36,9 +36,7 @@ function atualizarColisaoMapaPlayer(scene) {
     return;
   }
 
-  const atravessandoMapa = !!scene.developerMode && !!scene.teclaEspaco?.isDown;
-
-  scene.colliderPlayerMapa.active = !atravessandoMapa;
+  scene.colliderPlayerMapa.active = true;
 }
 
 /**
@@ -85,12 +83,7 @@ function atualizarMovimento(scene) {
   const direcao = obterDirecaoMovimento(scene);
 
   const velocidadeBase = scene.speed ?? 200;
-  const velocidadeTurbo = scene.speedTurbo ?? 400;
-
-  const usandoTurbo =
-    !!scene.developerMode && !!scene.teclaShift && scene.teclaShift.isDown;
-
-  const velocidadeAtualBase = (usandoTurbo ? velocidadeTurbo : velocidadeBase) * (1 + (modifiersFor(scene).speed || 0));
+  const velocidadeAtualBase = velocidadeBase * (1 + (modifiersFor(scene).speed || 0));
 
   const velocidadeAtual = scene.personagemSelecionada === "aria-kade"
     ? velocidadeAtualBase

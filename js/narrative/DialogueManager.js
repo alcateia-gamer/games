@@ -31,7 +31,7 @@ export class DialogueManager {
   }
   open() {
     const s = this.scene;
-    if (this.active || s.upgradeMenuOpen || !canUseShop(s, s.sys.settings.key) || s.movimentoBloqueado || s.atacando || s.estadoDash?.ativo || s.generatorMenuOpen || s.devItemMenuOpen) return false;
+    if (this.active || s.upgradeMenuOpen || !canUseShop(s, s.sys.settings.key) || s.movimentoBloqueado || s.atacando || s.estadoDash?.ativo || s.generatorMenuOpen) return false;
     const registry = s.game.registry, key = `nullborns:npc-dialogue:${s.multiplayer ? 'coop' : 'solo'}:${localPlayerId(s)}`;
     let history = registry.get(key); if (!history) { history = {}; registry.set(key, history); }
     this.shop.dismissFarewell?.();

@@ -483,13 +483,11 @@ body {
 .hollow-operation { margin: 0; }
 .hollow-operation-active .hollow-feed { padding: 5px 0; }
 .cutscene-advance { position: absolute; bottom: max(57px, env(safe-area-inset-bottom)); right: 18px; padding: 7px 10px; border: 1px solid #123b25; background: #000c; color: #84b194; font: 11px monospace; cursor: pointer; }
-.cutscene-skip.hollow-holding { animation: hollow-hold 1100ms linear forwards; }
 .cutscene-powering-off .hollow-messenger { animation: cutscene-crt-off var(--cutscene-power-off-duration) ease-in forwards; }
 .cutscene-powered-off .hollow-messenger { visibility: hidden; }
 @keyframes hollow-arrival { from { color: #fff; } to { color: #00ff66; } }
 @keyframes hollow-signal { 50% { opacity: .25; } }
 @keyframes hollow-interference { 15%, 55% { opacity: .9; transform: translateX(2px); } 35%, 80% { opacity: .2; transform: translateX(-2px); } }
-@keyframes hollow-hold { to { color: #c4ffd5; border-color: #00ff66; background: #123b25; } }
 @media (prefers-reduced-motion: reduce) {
   .hollow-message b, .hollow-compromised .hollow-status, .hollow-compromised::after,
   .cutscene-hollow-active .cutscene-television-screen::after { animation: none; }

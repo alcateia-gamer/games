@@ -14,8 +14,6 @@ import { ocultarHUDDuranteCena } from "../ui/HudCinematic.js";
 import { retanguloLivreDoMapa } from "../enemies/EnemyPathfinding.js";
 import { distanceToInteractionArea } from "../interactions/FactoryGenerator.js";
 import { HACKING_KEYS } from '../puzzles/HackingConfig.js';
-import { validarFabricaDev } from "../controls/DeveloperFactory.js";
-import { prepararBossDevFase2 } from '../controls/DeveloperBoss.js';
 import { atualizarRelogioCoop } from "../core/RelogioPartida.js";
 
 const hackingKey = key => Object.values(HACKING_KEYS).includes(key);
@@ -90,16 +88,11 @@ export class CoopWorld {
       if (action.kind === "collected") this.applyCollected(p);
       else if (action.kind === "pickupRejected") this.pending.delete(p.uid);
       else if (action.kind === "progressState") {
-        if (p.devLighting === null || typeof p.devLighting === "boolean") this.manager.room.coopDevLighting = p.devLighting;
         this.manager.room.coopProgress = mergeCoopProgress(this.manager.room.coopProgress, p.progress);
         this.restore();
         if (p.flags) this.applyFlags(p.flags);
       }
       else if (action.kind === "map") this.applyMap(p);
-      else if (action.kind === "devLightingState") {
-        this.manager.room.coopDevLighting = p.on;
-        this.applyDevLighting(p.on);
-      }
       return;
     }
     if (!r.host) return;
@@ -112,15 +105,7 @@ export class CoopWorld {
     const player = action.playerId === this.manager.playerId ? s.player : r.players.remotes.get(action.playerId)?.actor;
     if (!player?.active) return;
     const progress = this.manager.room.coopProgress;
-    const developer = action.playerId === this.manager.playerId ? s.developerMode :
-      r.players.remotes.get(action.playerId)?.data.coop?.developer;
-    if (action.kind === "devFactoryAccess" && developer && r.mapKey === "Level1Parte2") {
-      const context = action.playerId === this.manager.playerId ? s : r.players.remotes.get(action.playerId)?.context;
-      if (context) validarFabricaDev(s, context);
-    } else if (action.kind === 'devBossPhase2' && developer && r.mapKey === 'Level1Parte2') {
-      const context = action.playerId === this.manager.playerId ? s : r.players.remotes.get(action.playerId)?.context;
-      if (context) prepararBossDevFase2(s, context);
-    } else if (action.kind === "pickup") {
+    if (action.kind === "pickup") {
       const pickup = s.itensColetaveis.find(i => i.uniqueId === p.uid);
       if (!pickup || progress.collected[p.uid] || Math.hypot(player.x - pickup.x, player.y - pickup.y) > pickup.range + 32) {
         this.manager.sendCoopAction("pickupRejected", { uid: p.uid }, { authority: true, targetId: action.playerId }); return;
@@ -130,11 +115,6 @@ export class CoopWorld {
       progress.collected[p.uid] = grant;
       this.applyCollected(grant);
       this.manager.sendCoopAction("collected", grant, { authority: true });
-      this.manager.publishState();
-    } else if (action.kind === "devLighting" && developer && typeof p.on === "boolean" && r.mapKey === "Level1Parte2") {
-      this.manager.room.coopDevLighting = p.on;
-      this.applyDevLighting(p.on);
-      this.manager.sendCoopAction("devLightingState", { on: p.on }, { authority: true });
       this.manager.publishState();
     } else if (action.kind === "doorOpen" && r.mapKey === "Level1Parte2") {
       if (s.hackingTerminals && !s.hackingTerminals.permitePortas()) return;
@@ -150,19 +130,16 @@ export class CoopWorld {
       door.abrirPelaRede?.();
     } else if (action.kind === "progress" && sharedKey(p.key) && p.value === true) {
       if (hackingKey(p.key) && action.playerId !== this.manager.playerId) return;
-      // A partida normal exige o circuito compartilhado; atalhos DEV preservam a iluminação de teste.
-      if (p.key === "factoryGeneratorPowered" && !this.generator.ready() && !developer) return;
+      if (p.key === "factoryGeneratorPowered" && !this.generator.ready()) return;
       if (r.mapKey !== "Level1Parte2") return;
       if (["factoryDoorOpen:porta02", "factoryDoorOpen:porta03"].includes(p.key) && !this.bossLoading.current()) return;
       progress.flags[p.key] = true;
-      if (p.key === "factoryGeneratorPowered" && p.reactivate) this.manager.room.coopDevLighting = null;
       if (p.key === "factoryGeneratorPowered" && !progress.generatorStartedAt) {
         progress.generatorStartedAt = Number.isFinite(p.generatorStartedAt)
           ? Math.min(Date.now(), Math.max(Date.now() - 10000, p.generatorStartedAt)) : Date.now();
       }
       this.applyFlags(progress.flags);
-      this.manager.sendCoopAction("progressState", { progress,
-        devLighting: this.manager.room.coopDevLighting ?? null }, { authority: true });
+      this.manager.sendCoopAction("progressState", { progress }, { authority: true });
       this.manager.publishState();
     } else if (action.kind === "map" && !this.transitioning && p.from === r.mapKey &&
         COOP.maps.includes(p.key) && p.key !== r.mapKey) {
@@ -209,8 +186,7 @@ export class CoopWorld {
     try {
       for (const [key, value] of Object.entries(flags)) if (sharedKey(key) && value === true &&
         !(bloquearNovaEntrada && portasArena.includes(key))) s.game.registry.set(key, true);
-      if (flags.factoryGeneratorPowered && !s.luzFabricaAcesa && this.manager.room.coopDevLighting !== false) s.acenderLuzFabrica?.();
-      if (typeof this.manager.room.coopDevLighting === "boolean") this.applyDevLighting(this.manager.room.coopDevLighting);
+      if (flags.factoryGeneratorPowered && !s.luzFabricaAcesa) s.acenderLuzFabrica?.();
       for (const door of s.portasFabrica || []) {
         if (s.hackingTerminals && !s.hackingTerminals.permitePortas()) continue;
         const key = door.nome === "porta01" ? "factoryDoorOpen" : `factoryDoorOpen:${door.nome}`;
@@ -225,12 +201,6 @@ export class CoopWorld {
       this.missionGeneratorSlots = missionSlots;
       s.events.emit("missao:progresso-coop");
     }
-  }
-  applyDevLighting(on) {
-    const s = this.scene;
-    if (this.r.mapKey !== "Level1Parte2" || typeof on !== "boolean" || s.luzFabricaAcesa === on) return;
-    s.luzFabricaAcesa = on;
-    s.definirIluminacaoFabrica?.(on);
   }
   restore() {
     this.bossLoading.apply(this.manager.room.coopBossPreparation);
@@ -274,7 +244,6 @@ export class CoopWorld {
       if (data.key === "Level1Parte2") s.registry.set("fabricaVisitada", true);
       s.scene.start(data.key, {
         personagem: s.personagemSelecionada, multiplayer: true, spawnX: data.x, spawnY: data.y,
-        developerMode: !!s.developerMode,
         portaAberta: data.key === "Level1", transicao: true });
     });
     s.cameras.main.fadeEffect?.reset();
@@ -339,7 +308,6 @@ export class CoopWorld {
     return { progress: this.manager.room.coopProgress, map: this.manager.room.coopMap,
       hacking: s.hackingTerminals?.snapshot(),
       bossAssembly: this.bossAssembly, bossPreparation: this.bossLoading.state,
-      devLighting: this.manager.room.coopDevLighting ?? null,
 
       lightingZones: s.zonasLuzApagada?.snapshotRede(s.time.now),
       doors: (s.portasFabrica || []).map(d => ({ nome: d.nome, estado: d.estado,
@@ -350,8 +318,6 @@ export class CoopWorld {
   }
   receiveFrame(packet) {
     this.bossLoading.apply(packet.bossPreparation);
-    if (typeof packet.devLighting === "boolean" || packet.devLighting === null)
-      this.manager.room.coopDevLighting = packet.devLighting;
     if (packet.progress) this.manager.room.coopProgress = mergeCoopProgress(this.manager.room.coopProgress, packet.progress);
     this.receiveMap(packet.map);
     this.restore();

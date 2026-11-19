@@ -7,7 +7,6 @@ import { criarRoboOlhao, registrarAnimacoesRoboOlhao, atualizarFrameRoboOlhao,
   obterOlhoRoboOlhao, criarLaserRoboOlhao, QUADROS_OLHAO, FEIXE_OLHAO } from "./RoboOlhao.js";
 import { atualizarDepthAtores } from "../map/ProfundidadeMapa.js";
 import { laserAtingeRetangulo } from "./EnemyLaser.js";
-import { atualizarSpawnsDev } from "../controls/DeveloperSpawns.js";
 import { criarRoboBola, atualizarRoboBola, registrarAnimacoesRoboBola, ROBO_BOLA_CONFIG } from "./RoboBola.js";
 import { iniciarEmergenciaRoboBola, EMERGENCIA_ROBO_BOLA } from "./RoboBolaEmergencia.js";
 import { ROBO_BOLA_FLUTUACAO } from "./RoboBolaFlutuacao.js";
@@ -671,25 +670,6 @@ test("feixe diagonal só colide na faixa visível e preserva espessura e pontas"
 });
 
 
-test("tecla 7 cria o olhão localmente e encaminha o mesmo tipo no cooperativo", () => {
-  const { scene } = prepararOlhao();
-  const pressionadas = new Set();
-  Phaser.Input = { Keyboard: { JustDown: tecla => pressionadas.delete(tecla) } };
-  scene.teclaSpawnRoboOlhao = { keyCode: 55 };
-  pressionadas.add(scene.teclaSpawnRoboOlhao);
-  scene.inimigos = [];
-  atualizarSpawnsDev(scene);
-  assert.equal(scene.inimigos.length, 1);
-  assert.equal(scene.inimigos[0].tipoRobo, "olhao");
-  atualizarSpawnsDev(scene);
-  assert.equal(scene.inimigos.length, 1, "segurar tecla não repete o spawn");
-  const pedidos = [];
-  scene.coopRuntime = { manager: { sendCoopAction: (...args) => pedidos.push(args) } };
-  pressionadas.add(scene.teclaSpawnRoboOlhao);
-  atualizarSpawnsDev(scene);
-  assert.deepEqual(pedidos, [["devSpawn", { tipo: "olhao", quantidade: 1 }]]);
-  scene.events.emit("shutdown");
-});
 
 test("olhão reproduz a morte na direção visível e só desaparece ao terminar", () => {
   for (const [direcao, quadros, inicio] of [

@@ -18,12 +18,6 @@ export function bossNecessarioNaEntrada(scene) {
   const x = scene.respawnX ?? -1093, y = scene.respawnY ?? -5905;
   const arena = config.arena;
   if (jogadorNaArenaNovoBoss({ active: true, x, y }, arena)) return true;
-  if (!scene.developerMode) return false;
-  if (Array.isArray(arena.zonas)) return arena.zonas.some(zona => {
-    const dx = x - zona.x, dy = y - zona.y;
-    return distanceToInteractionArea(dx * zona.cos + dy * zona.sin, -dx * zona.sin + dy * zona.cos,
-      { x: 0, y: 0, width: zona.width, height: zona.height }) <= DISTANCIA_PREPARACAO;
-  });
   return distanceToInteractionArea(x, y, { x: arena.xMin, y: arena.yMin,
     width: arena.xMax - arena.xMin, height: arena.yMax - arena.yMin }) <= DISTANCIA_PREPARACAO;
 }
@@ -106,7 +100,6 @@ export function criarPreparacaoBoss(scene) {
     if (estado === "falhou" && scene.multiplayer) {
       const faltando = ASSETS_BOSS.filter(a => !recursoDisponivel(scene, a.tipo, a.chave));
       detalheFalha = `Recurso indisponível: ${faltando[0]?.chave ?? "boss"}.`;
-      if (scene.developerMode) console.info("[BOSS-LOADING] Recursos ausentes", faltando.map(a => a.chave));
     }
     tentarContinuar();
     atualizarAviso();
@@ -130,7 +123,6 @@ export function criarPreparacaoBoss(scene) {
     } catch (error) {
       removerListeners();
       estado = "falhou";
-      if (scene.developerMode) console.info("[BOSS-LOADING] Erro na fila", error);
       atualizarAviso();
     }
   }

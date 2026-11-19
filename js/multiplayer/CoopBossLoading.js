@@ -103,7 +103,7 @@ export class CoopBossLoading {
     const status = this.teamStatus();
     if (!status.alive) return this.denyTeam(playerId, status);
     const autorizacao = { player: context.player, inventory, morteEmAndamento: false,
-      generatorMenuOpen: false, devItemMenuOpen: false };
+      generatorMenuOpen: false };
     if (!this.scene.abrirPortasArenaAposCartao?.(autorizacao)) return false;
     return this.releaseAccess();
   }
@@ -288,7 +288,6 @@ export class CoopBossLoading {
     return true;
   }
   debug(message, detail) {
-    if (this.scene.developerMode) console.info(`[BOSS-LOADING] ${message}`, detail ?? "");
   }
   retry() {
     this.lastReport = null;

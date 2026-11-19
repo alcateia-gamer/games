@@ -94,7 +94,7 @@ export function criarSistemaCombustivel(scene) {
   ui.add([fundo, trilho, barra, label]);
 
   const permitido = () => !encerrado && !!scene.player?.active && !scene.player.morto &&
-    !scene.morteEmAndamento && !scene.generatorMenuOpen && !scene.devItemMenuOpen &&
+    !scene.morteEmAndamento && !scene.generatorMenuOpen &&
     !scene.cenaEntradaBossAtiva && !scene.movimentoBloqueado;
   const centroJogador = () => scene.player?.body?.center ?? scene.player;
   const incompleto = () => inventory.getSlots().find(slot => slot.itemId === "gasolina" && slot.fuel < 1);

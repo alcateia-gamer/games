@@ -10,7 +10,6 @@ import { novoBossConfig, configurarZonasNovoBoss, jogadorNaArenaNovoBoss } from 
 import { retanguloLivreDoMapa } from "../enemies/EnemyPathfinding.js";
 import { mergeBossPreparation } from "./CoopProtocol.js";
 import { iniciarRelogioCoop, tempoPartida } from "../core/RelogioPartida.js";
-import { executarSpawnDev } from "../controls/DeveloperSpawns.js";
 import { criarRoboBola } from "../enemies/RoboBola.js";
 import { VisualReceiver } from "./CoopVisuals.js";
 
@@ -481,7 +480,6 @@ for (const quantidade of [0, 18]) test(`limpeza em ambos os clientes ocorre ante
   h.nodes[0].world.confirmarCartao(); h.settle();
   for (const n of h.nodes) {
     assert.equal(n.scene.load.starts, 1);
-    assert.equal(executarSpawnDev(n.scene, "bola"), null);
     assert.equal(criarRoboBola(n.scene, { x: -1000, y: -5720 }), null);
     assert.equal(n.scene.player.active, true);
     assert.equal(n.scene.inimigoTeste, null);

@@ -199,7 +199,7 @@ export function prepararIntroducaoNovoBoss(scene, encontro) {
   function passagemLivre() {
     portas = (scene.portasFabrica ?? []).filter(porta => PORTAS_ENTRADA.has(porta.nome));
     const controle = scene.coopRuntime?.bossTarget() ?? scene;
-    return !controle.movimentoBloqueado && !controle.generatorMenuOpen && !controle.devItemMenuOpen && !controle.atacando &&
+    return !controle.movimentoBloqueado && !controle.generatorMenuOpen && !controle.atacando &&
       !portas.some(porta => porta.estado === "abrindo" || jogadorNaPorta(scene.player, porta));
   }
 

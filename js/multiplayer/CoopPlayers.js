@@ -44,7 +44,6 @@ export class CoopPlayers {
         sceneSession: r.streamId, accessCard: s.inventory?.getQuantity("card") > 0,
         fuelReady: s.inventory?.getQuantity("gasolina", { minFuel: 1 }) > 0,
         inventoryDrop: s.coopInventoryDrop ?? null,
-        developer: !!s.developerMode,
         flashlight: lanternaDisponivel ? { angle: round(this.flashlightPose.angulo, 10000) } : null,
         speech: [...(s.coopSpeechBubbles?.values() || [])].map(b => b.snapshot()).filter(b => b && b.falante !== "nova"),
         effects: this.sender.capture(playerVisualObjects(s), true),
@@ -149,7 +148,6 @@ export class CoopPlayers {
     const r = this.r, s = this.scene, actor = entry.actor;
     const fields = { player: actor, events: new Phaser.Events.EventEmitter(),
       personagemSelecionada: entry.data.character, direcaoAtual: entry.data.direction,
-      get developerMode() { return !!entry.data.coop?.developer; },
       estadoEspecial: null, companionPet: null, restricaoControleNovoBoss: null,
       limparSistemaEspeciais: null, executarHabilidadeEspecial: null,
       botaoEspecial: null, atacando: false, estadoDash: null, generatorMenuOpen: false, movimentoBloqueado: false,

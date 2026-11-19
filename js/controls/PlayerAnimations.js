@@ -43,14 +43,7 @@ function atualizarVelocidadeAnimacao(scene) {
   }
 
   const velocidadeBase = scene.speed ?? 200;
-  const velocidadeTurbo = scene.speedTurbo ?? 400;
-  const velocidadeAtual =
-    scene.developerMode && scene.teclaShift && scene.teclaShift.isDown
-      ? velocidadeTurbo
-      : velocidadeBase;
-
-  scene.player.anims.timeScale =
-    velocidadeAtual > velocidadeBase ? velocidadeAtual / velocidadeBase : 1;
+  scene.player.anims.timeScale = 1;
 }
 
 /**

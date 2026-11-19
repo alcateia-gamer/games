@@ -232,38 +232,6 @@ test("DEV do cliente permite destino do boss mesmo com DEV desligado no host", (
   world.destroy();
 });
 
-test("DEV pode apagar luz compartilhada mesmo depois do gerador confirmado", () => {
-  const { scene, manager, world } = worldFixture();
-  world.r.mapKey = "Level1Parte2";
-  scene.luzFabricaAcesa = true;
-  scene.definirIluminacaoFabrica = on => { scene.energy = on; };
-  manager.room.coopDevLighting = false;
-  world.applyFlags({ factoryGeneratorPowered: true });
-  assert.equal(scene.luzFabricaAcesa, false);
-  assert.equal(scene.energy, false);
-  world.applyFlags({ factoryGeneratorPowered: true });
-  assert.equal(scene.luzFabricaAcesa, false, "restauração não desfaz o comando DEV");
-  manager.room.coopDevLighting = true;
-  world.applyFlags();
-  assert.equal(scene.luzFabricaAcesa, true);
-  world.destroy();
-});
-
-test("acionar o gerador novamente encerra a iluminação DEV e recupera o estado normal", () => {
-  const { scene, manager, world, sent } = worldFixture();
-  world.r.mapKey = "Level1Parte2"; world.r.host = true;
-  manager.publishState = () => {};
-  manager.room.coopDevLighting = false;
-  scene.acenderLuzFabrica = () => { scene.luzFabricaAcesa = true; };
-  scene.developerMode = true;
-  world.generatorProgress();
-  assert.equal(sent[0][0], "progress");
-  world.receive({ kind: sent[0][0], playerId: manager.playerId, payload: sent[0][1] });
-  assert.equal(manager.room.coopDevLighting, null);
-  assert.equal(manager.room.coopProgress.flags.factoryGeneratorPowered, true);
-  assert.equal(scene.luzFabricaAcesa, true);
-  world.destroy();
-});
 
 test("transição registra o fade antes de começar e não repete uma viagem antiga", () => {
   const { scene, manager, world } = worldFixture();

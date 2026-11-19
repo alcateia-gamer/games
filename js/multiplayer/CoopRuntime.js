@@ -32,7 +32,6 @@ import { CoopWorld } from "./CoopWorld.js";
 import { isBossControl } from "./CoopBossLoading.js";
 import { prepararTexturaMunicaoRobo } from "../enemies/WarRobotProjectile.js";
 import { obterFilhosGrupoSeguro } from "../enemies/EnemyPathfinding.js";
-import { executarSpawnDev } from "../controls/DeveloperSpawns.js";
 import { playReplicatedHitEffects } from "../combat/CombatEffects.js";
 import { CoopMusic } from "./CoopMusic.js";
 import mostrarTelaMorte from "../scenes/DeathScreen.js";
@@ -298,9 +297,6 @@ export class CoopRuntime {
         this.manager.sendCoopAction("teleport", { x: context.player.x, y: context.player.y },
           { authority: true, targetId: action.playerId });
       }
-    } else if (action.kind === "devSpawn" && ["padrao", "serra", "bola", "olhao"].includes(p.tipo) &&
-        Number.isInteger(p.quantidade) && p.quantidade >= 1 && p.quantidade <= 3) {
-      executarSpawnDev(soloContext(s, { player: context.player }), p.tipo, p.quantidade);
     } else if (action.kind === "escape") {
       const data = this.manager.room.players.find(player => player.id === action.playerId);
       const capture = context.restricaoControleNovoBoss;

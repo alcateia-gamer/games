@@ -164,8 +164,6 @@ try {
   const devState = () => page.evaluate(() => {
     const s = window.__game.scene.getScene("Level1Parte2");
     return { powered: s.luzFabricaAcesa, saved: s.game.registry.get("factoryGeneratorPowered"),
-      label: s.textoBotaoLuzFabrica.text, visible: s.botaoLuzFabrica.visible,
-      interactive: s.botaoLuzFabrica.input.enabled,
       motor: s.sound.get("gerador-diesel")?.isPlaying ?? false,
       battery: s.inventory.getQuantity("bateria"), fuel: s.inventory.getQuantity("gasolina") };
   });
@@ -173,8 +171,6 @@ try {
     const p = await page.evaluate(() => {
       const s = window.__game.scene.getScene("Level1Parte2"), c = s.cameras.main;
       const ox = c.width * c.originX, oy = c.height * c.originY;
-      return { x: ox + (s.botaoLuzFabrica.x - ox) * c.zoomX,
-        y: oy + (s.botaoLuzFabrica.y - oy) * c.zoomY };
     });
     await click(p.x, p.y);
   };
@@ -196,8 +192,6 @@ try {
   assert.equal(dev.fuel, 1);
   await page.evaluate(() => {
     const s = window.__game.scene.getScene("Level1Parte2");
-    s.developerMode = false;
-    s.botaoLuzFabrica.emit("pointerdown");
   });
   await frame();
   assert.equal((await devState()).powered, true, "botão só altera a luz com DEV ativo");

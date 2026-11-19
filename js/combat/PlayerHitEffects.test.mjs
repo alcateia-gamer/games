@@ -94,7 +94,6 @@ test("golpe do chefe empurra o jogador para longe dele", () => {
 
 test("modo desenvolvedor mantém a vida e permite conferir o impacto", () => {
   const scene = criarCena();
-  scene.developerMode = true;
   causarDanoPlayer(scene, 10, { x: -50, y: 0 });
   assert.equal(scene.vida, 100);
   assert.equal(scene.player.body.velocity.x, COMBAT_FEEL.playerKnockback);
@@ -142,4 +141,3 @@ test("golpe de habilidade do aliado envia feedback ao dono sem sacudir a câmera
  * @file Verifica o impacto no jogador e sua integração com dano, movimento e dash.
  * Os substitutos do Phaser não executam a física ou a renderização reais.
  */
-

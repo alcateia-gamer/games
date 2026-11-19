@@ -13,7 +13,6 @@ import { criarInteracaoGeradorFabrica, findGeneratorInteraction } from "./Factor
 import { calcularDepthAtor } from "../map/ProfundidadeMapa.js";
 import DoorLightingZones from "../effects/DoorLightingZones.js";
 import { CoopWorld } from "../multiplayer/CoopWorld.js";
-import { prepararBossDevFase2 } from '../controls/DeveloperBoss.js';
 import { prepararFasesNovoBoss } from '../enemies/novoBoss/NovoBossFases.js';
 import { causarDanoNovoBoss } from '../enemies/novoBoss/NovoBossEstados.js';
 import { novoBossConfig } from '../enemies/novoBoss/NovoBossConfig.js';

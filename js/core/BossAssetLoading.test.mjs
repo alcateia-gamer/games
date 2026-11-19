@@ -181,16 +181,13 @@ test("fila já ativa conclui antes do boss; encerrar remove a espera e caches s�
   s.events.emit("shutdown");
 });
 
-test("entrada normal adia boss; DEV, save dentro da arena e portas já abertas antecipam sem exigir cartão", () => {
+test("entrada normal adia boss; save dentro da arena e portas já abertas antecipam sem exigir cartão", () => {
   const s = fixture();
   s.cache.tilemap.add("mapaParte2", { data: JSON.parse(readFileSync(new URL("../../assets/map/parte2-fase1.json", import.meta.url))) });
   Object.assign(s, { respawnX: 98, respawnY: -1040 });
   assert.equal(bossNecessarioNaEntrada(s), false);
   Object.assign(s, { respawnX: -1085, respawnY: -5169 });
   assert.equal(bossNecessarioNaEntrada(s), false, "proximidade sem cartão não antecipa carga numa entrada comum");
-  s.developerMode = true;
-  assert.equal(bossNecessarioNaEntrada(s), true);
-  s.developerMode = false;
   Object.assign(s, { respawnX: -1093, respawnY: -5905 });
   assert.equal(bossNecessarioNaEntrada(s), true);
   Object.assign(s, { respawnX: 98, respawnY: -1040 });

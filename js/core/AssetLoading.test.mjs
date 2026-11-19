@@ -219,14 +219,12 @@ test("encerrar o preloader remove conclusão pendente e uma falha síncrona perm
   s.events.emit("shutdown");
 });
 
-test("transição normal conserva fade/spawn e o atalho DEV usa a mesma barreira da fábrica", async t => {
+test("transição normal conserva fade/spawn e chega à entrada legítima da fábrica", async t => {
   await preloader();
   const anterior = globalThis.Phaser.Input, cenas = globalThis.Phaser.Scenes;
   t.after(() => { globalThis.Phaser.Input = anterior; globalThis.Phaser.Scenes = cenas; });
   globalThis.Phaser.Scenes = { Events: { SHUTDOWN: "shutdown" } };
-  globalThis.Phaser.Input = { Keyboard: { KeyCodes: { O: 79 } } };
   const { iniciarTransicao } = await import("./MapTransition.js");
-  const { criarTeleporteDevBoss } = await import("../controls/DeveloperTeleport.js");
   const scene = () => {
     const s = fixture(), camera = new EventEmitter();
     s.personagemSelecionada = "aria-kade";
@@ -246,16 +244,7 @@ test("transição normal conserva fade/spawn e o atalho DEV usa a mesma barreira
   normal.cameras.main.emit("camerafadeoutcomplete");
   assert.deepEqual(normal.destino, { key: "Level1Parte2", data: {
     spawnX: 98, spawnY: -1040, personagem: "aria-kade", multiplayer: false } });
-  const dev = scene();
-  dev.sys = { settings: { key: "Level1" } };
-  dev.developerMode = true;
-  dev.player = { active: true };
-  dev.input = { keyboard: { addKey: () => new EventEmitter() } };
-  criarTeleporteDevBoss(dev);
-  dev.teleportarDevBoss();
-  assert.deepEqual(dev.destino, { key: "Level1Parte2", data: {
-    spawnX: -1085, spawnY: -5169, personagem: "aria-kade", multiplayer: false, developerMode: true } });
-  assert.ok(!assetsFabricaProntos(normal) && !assetsFabricaProntos(dev), "ambas chegam ao preload, sem criar uma fábrica incompleta");
+  assert.ok(!assetsFabricaProntos(normal), "a fábrica incompleta não é marcada como pronta");
 });
 
 test("street e street2 mantêm chaves distintas e usam somente a imagem comprovadamente idêntica", async () => {

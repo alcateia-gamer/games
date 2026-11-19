@@ -26,7 +26,7 @@ export function criarEntradaLibertacaoAtaque(scene) {
       if (!scene.restricaoControleNovoBoss) return false;
       // Consome toda entrada do botão durante a contenção, sem atacar normalmente.
       if (!pointer || pressionado !== null || scene.morteEmAndamento || scene.vida <= 0 ||
-          scene.generatorMenuOpen || scene.upgradeMenuOpen || scene.devItemMenuOpen ||
+          scene.          generatorMenuOpen || scene.upgradeMenuOpen ||
           scene.movimentoBloqueado || pointer.id === scene.joystickPointerId ||
           pointer.leftButtonDown?.() === false && !pointer.wasTouch && !pointer.isTouch &&
           pointer.pointerType !== 'touch' && pointer.event?.pointerType !== 'touch') return true;

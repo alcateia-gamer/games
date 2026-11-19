@@ -161,7 +161,7 @@ export function criarHackingFabrica(scene) {
     const t = T.fabrica, p = progresso();
     if (destruido || registro || p.final || (api.temSessao() && view?.owner === meuId()) ||
         !scene.player?.active || scene.vida <= 0 || scene.morteEmAndamento || scene.cenaEntradaBossAtiva ||
-        scene.generatorMenuOpen || scene.devItemMenuOpen || scene.upgradeMenuOpen || scene.upgradeDialogueOpen || scene.atacando ||
+        scene.generatorMenuOpen || scene.upgradeMenuOpen || scene.upgradeDialogueOpen || scene.atacando ||
         scene.ariaAtaqueCarregando || scene.estadoDash?.ativo ||
         (!livre && Math.hypot(scene.player.x - t.x, scene.player.y - t.y) > t.alcance)) return false;
     registro = { movimento: scene.movimentoBloqueado, menu: scene.generatorMenuOpen, input: scene.input.enabled,
@@ -271,7 +271,7 @@ export function criarHackingFabrica(scene) {
       if (!t || engine.atual || p.final || (payload.tipo === 'fabrica' && (p.registro || !scene.luzFabricaAcesa)) ||
           (payload.tipo === 'bruteforce' && (p.bruteforce || !p.fabrica || !scene.luzFabricaAcesa)) ||
           (payload.tipo === 'matrix' && (!p.fabrica || !p.bruteforce || !p.cartao || !scene.novoBoss?.morto)) || scene.cenaEntradaBossAtiva ||
-          ctx.generatorMenuOpen || ctx.devItemMenuOpen || ctx.upgradeMenuOpen || ctx.upgradeDialogueOpen || ctx.atacando || ctx.ariaAtaqueCarregando ||
+          ctx.generatorMenuOpen || ctx.upgradeMenuOpen || ctx.upgradeDialogueOpen || ctx.atacando || ctx.ariaAtaqueCarregando ||
           ctx.estadoDash?.ativo || Math.hypot(ctx.player.x - t.x, ctx.player.y - t.y) > t.alcance + 32) return false;
       if (!engine.abrir(payload.tipo, owner)) return false;
       hostDock = prepararPetNoTerminal(scene, ctx, t);
@@ -288,24 +288,25 @@ export function criarHackingFabrica(scene) {
   }
   const databaseButton = document.createElement('button');
   databaseButton.textContent = 'NULLNET · ARQUIVOS'; databaseButton.className = 'nullnet-database-button';
-  databaseButton.style.cssText = 'position:fixed;left:0;top:0;transform:translate(-50%,-50%);z-index:10010;width:min(180px,calc(100vw - 24px));min-height:44px;padding:8px;background:#09271f;color:#9bffcb;border:1px solid #3c8966;font:12px monospace;cursor:pointer';
+  databaseButton.style.cssText = 'position:fixed;left:0;top:0;z-index:10010;min-height:44px;padding:8px;box-sizing:border-box;background:#09271f;color:#9bffcb;border:1px solid #3c8966;font:12px monospace;cursor:pointer';
   databaseButton.onclick = () => abrirRegistro(true); databaseButton.hidden = true; document.body.append(databaseButton);
   const posicionarDatabaseButton = () => {
     const camera = scene.cameras.main, canvas = scene.game.canvas;
     if (!camera || !canvas?.isConnected) return;
-    scene.minimap?.layout(camera);
     const bounds = canvas.getBoundingClientRect();
     if (!bounds.width || !bounds.height) return;
+    databaseButton.style.width = `${Math.min(180, Math.max(0, bounds.width - 24))}px`;
+    scene.minimap?.layout(camera);
+    const minimap = scene.minimap;
+    if (!minimap?.hudPosition || !minimap.hudSize) return;
     const scaleX = bounds.width / camera.width, scaleY = bounds.height / camera.height;
-    const devY = scene.minimap?.devScreenY ?? 24;
-    const devHeight = (scene.botaoDesenvolvedor?.height ?? 30) * scaleY / 2;
-    const devWidth = (scene.botaoDesenvolvedor?.width ?? 80) * scaleX;
-    const devCenterX = bounds.left + (camera.x + camera.width - 40) * scaleX;
-    const buttonHeight = databaseButton.getBoundingClientRect().height || 44;
-    const buttonWidth = databaseButton.getBoundingClientRect().width || 180;
-    databaseButton.style.left = `${devCenterX + devWidth / 2 - buttonWidth / 2}px`;
-    const atalhosDev = (scene.espacoAtalhosDev?.() ?? 0) * scaleY;
-    databaseButton.style.top = `${bounds.top + (camera.y + devY) * scaleY + devHeight + atalhosDev + 10 + buttonHeight / 2}px`;
+    const button = databaseButton.getBoundingClientRect();
+    const buttonWidth = button.width || 180;
+    const buttonHeight = button.height || 44;
+    const right = bounds.left + (minimap.hudPosition.x + minimap.hudSize.width) * scaleX;
+    const top = bounds.top + (minimap.hudPosition.y + minimap.hudSize.height) * scaleY + 6;
+    databaseButton.style.left = `${Math.max(bounds.left + 12, Math.min(right - buttonWidth, bounds.right - buttonWidth - 12))}px`;
+    databaseButton.style.top = `${Math.min(top, bounds.bottom - buttonHeight - 8)}px`;
   };
   scene.events.on(Phaser.Scenes.Events.PRE_RENDER, posicionarDatabaseButton);
   scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () =>

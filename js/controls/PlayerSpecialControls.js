@@ -249,9 +249,6 @@ function criarControlesEspecial(scene) {
       jogador: scene.player,
     });
 
-    if (scene.developerMode) {
-      console.log(`[Especial] Botão pressionado: ${personagem}`);
-    }
 
     return true;
   };

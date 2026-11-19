@@ -70,8 +70,11 @@ export class CutsceneLoading {
     this.skip = document.createElement("button");
     this.skip.className = "cutscene-skip";
     this.skip.type = "button";
-    this.skip.textContent = "[SEGURAR ESC] PULAR TRANSMISSÃO";
-    this.skip.addEventListener("click", () => this.transmission.skip());
+    this.skip.textContent = "PULAR TRANSMISSÃO";
+    this.skip.addEventListener("click", () => {
+      if (!this.gate.videoFinished) this.finishVideo();
+      else this.transmission.skip();
+    });
     this.advance = document.createElement("button");
     this.advance.className = "cutscene-advance";
     this.advance.type = "button";
@@ -140,7 +143,7 @@ export class CutsceneLoading {
         this.skipApproved = true;
         this.updateLoadingVisibility();
       },
-      onStatus: text => { this.skip.textContent = `[SEGURAR ESC] ${text}`; },
+      onStatus: text => { this.skip.textContent = text; },
       onCancel: () => {
         const scene = this.scene;
         this.destroy();
@@ -149,24 +152,12 @@ export class CutsceneLoading {
       },
     });
     this.onKeyDown = event => {
-      if (!["Escape", " ", "Enter"].includes(event.key) || event.repeat) return;
-      if (event.target instanceof HTMLButtonElement && event.key !== "Escape") return;
+      if (![" ", "Enter"].includes(event.key) || event.repeat) return;
+      if (event.target instanceof HTMLButtonElement) return;
       event.preventDefault(); event.stopImmediatePropagation();
-      if (event.key === "Escape") {
-        if (!this.holdTimer) {
-          this.skip.classList.add("hollow-holding");
-          this.holdTimer = window.setTimeout(() => { this.transmission.skip(); }, 1100);
-        }
-      } else this.transmission.advance();
+      this.transmission.advance();
     };
-    this.cancelHold = () => {
-      window.clearTimeout(this.holdTimer); this.holdTimer = null;
-      this.skip.classList.remove("hollow-holding");
-    };
-    this.onKeyUp = event => { if (event.key === "Escape") this.cancelHold(); };
     document.addEventListener("keydown", this.onKeyDown, true);
-    document.addEventListener("keyup", this.onKeyUp, true);
-    window.addEventListener("blur", this.cancelHold);
     this.onResize();
     this.onWaiting();
     this.game.musicaMenu?.stop();
@@ -332,11 +323,8 @@ export class CutsceneLoading {
     this.eye.removeEventListener('animationend', this.onEyeOpened);
     window.clearTimeout(this.mediaErrorTimer);
     window.clearTimeout(this.stallTimer);
-    this.cancelHold();
     this.transmission.destroy();
     document.removeEventListener("keydown", this.onKeyDown, true);
-    document.removeEventListener("keyup", this.onKeyUp, true);
-    window.removeEventListener("blur", this.cancelHold);
     this.release();
     this.observer?.disconnect();
     this.televisionRenderer.destroy();

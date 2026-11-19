@@ -55,8 +55,7 @@ export class CoopGenerator {
   publish() {
     this.restore();
     this.world.applyFlags(this.manager.room.coopProgress.flags);
-    this.manager.sendCoopAction('progressState', { progress: this.manager.room.coopProgress,
-      devLighting: this.manager.room.coopDevLighting ?? null }, { authority: true });
+    this.manager.sendCoopAction('progressState', { progress: this.manager.room.coopProgress }, { authority: true });
     this.manager.publishState();
   }
   receive(action) {
@@ -107,7 +106,6 @@ export class CoopGenerator {
         progress.flags.factoryGeneratorPowered = true;
         progress.generatorStartedAt = Date.now();
       }
-      this.manager.room.coopDevLighting = null;
     }
     this.publish(); return true;
   }

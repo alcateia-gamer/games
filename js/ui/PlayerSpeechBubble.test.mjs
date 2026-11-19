@@ -85,7 +85,6 @@ test("acentos combinados e emoji aparecem inteiros; ocultar e destruir interromp
   assert.equal(fala.texto.visible, false);
   assert.equal(fala.texto.text, "a\u0301👩‍🚀");
   fala.mostrar("Texto novo");
-  scene.devItemMenuOpen = true;
   avancar(30);
   assert.equal(fala.texto.visible, false);
   fala.destroy(); fala.destroy(); avancar(1000);

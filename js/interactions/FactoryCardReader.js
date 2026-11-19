@@ -43,7 +43,7 @@ export function criarInteracaoLeitorCartao(scene, { podeUsar, abrirPortas }) {
   return {
     get aberto() { return opened; },
     open() {
-      if (destroyed || opened || scene.generatorMenuOpen || scene.devItemMenuOpen || !podeUsar()) return false;
+      if (destroyed || opened || scene.generatorMenuOpen || !podeUsar()) return false;
       previousMovement = !!scene.movimentoBloqueado;
       opened = true;
       scene.cardReaderMenuOpen = true;
