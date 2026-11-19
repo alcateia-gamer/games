@@ -275,6 +275,10 @@ function atualizarCompanionPet(scene, _time, delta) {
   if (!pet?.active || !player?.active) {
     return;
   }
+  if (scene.reanimacaoSolo?.resgatando) {
+    atualizarDepthCompanionPet(scene);
+    return;
+  }
   if (pet.emHack) { pet.setVelocity(0, 0); return; }
 
   const distancia = Phaser.Math.Distance.Between(

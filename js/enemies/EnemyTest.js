@@ -143,7 +143,8 @@ function criarInimigoTeste(scene, config = {}) {
 
   scene.lasersInimigo = scene.lasersInimigo || scene.physics.add.group();
 
-  if (scene.player && scene.player.active) {
+  if (scene.player?.active && !scene.reanimacaoSolo?.resgatando &&
+      !scene.reanimacaoSolo?.protegendo) {
     scene.player.invulneravel = false;
   }
 

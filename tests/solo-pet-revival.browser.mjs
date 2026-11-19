@@ -82,12 +82,36 @@ try{
     const s=window.__game.scene.getScene('Level1');
     s.inventory.addItem('gasolina',1,{fuel:.6});
     window.__inventarioAntesResgate=s.inventory.getSlots();
+    if (!s.inimigos.some(r => r.active && !r.morto)) {
+      const gerente = s.enemySpawnManager;
+      const zona = gerente.regions.find(z => gerente.spawnRegion(z) > 0);
+      if (!zona) throw new Error('Nenhum robô de teste na cidade');
+    }
   });
   const origem1=await matar('Level1');
   let s=await estado('Level1');
   assert.equal(s.resgate.fase,'caindo');assert.equal(s.tela,false);assert.equal(s.body,false);
-  assert.ok(s.physics);assert.equal(s.textura,'coop-down-kai-mercer');
-  await page.waitForTimeout(420);
+  assert.equal(s.physics,false);assert.equal(s.textura,'coop-down-kai-mercer');
+  const mundo = await page.evaluate(async () => {
+    const { tempoPartida } = await import('/js/core/RelogioPartida.js');
+    const s = window.__game.scene.getScene('Level1');
+    window.__mundoAntesPet = {
+      robos: s.inimigos.filter(r => r.active && !r.morto).map(r => [r, r.x, r.y]),
+      tempo: tempoPartida(s),
+    };
+    return window.__mundoAntesPet.robos.length;
+  });
+  assert.ok(mundo > 0);
+  await page.waitForFunction(() => window.__game.scene.getScene('Level1').reanimacaoSolo.resgatando &&
+    window.__mundoAntesPet.robos.some(([r, x, y]) => r.active && Math.hypot(r.x - x, r.y - y) > 5));
+  assert.ok(await page.evaluate(async () => {
+    const { causarDanoPlayer } = await import('/js/enemies/EnemyLaser.js');
+    const { tempoPartida } = await import('/js/core/RelogioPartida.js');
+    const s = window.__game.scene.getScene('Level1');
+    causarDanoPlayer(s, 10);
+    return s.reanimacaoSolo.resgatando && s.vida === 0 && s.player.invulneravel &&
+      tempoPartida(s) > window.__mundoAntesPet.tempo;
+  }));
   await page.screenshot({path:`${pasta}/01-kai-caindo.png`});
   await page.waitForFunction(()=>window.__game.scene.getScene('Level1').reanimacaoSolo.snapshot().fase==='reanimando');
   await page.screenshot({path:`${pasta}/02-pet-reanimando.png`});
@@ -118,22 +142,30 @@ try{
   const origem2=await matar('Level1Parte2');
   const antesAtaque=await page.evaluate(()=>window.__game.scene.getScene('Level1Parte2').novoBoss.tempoAtaque);
   await page.waitForTimeout(1200);
-  assert.equal(await page.evaluate(()=>window.__game.scene.getScene('Level1Parte2').novoBoss.tempoAtaque),antesAtaque);
+  const durante = await page.evaluate(() => {
+    const s = window.__game.scene.getScene('Level1Parte2');
+    return { tempoAtaque: s.novoBoss.tempoAtaque, visivel: s.novoBoss.sprite.visible,
+      resgatando: s.reanimacaoSolo.resgatando, physics: s.physics.world.isPaused };
+  });
+  assert.ok(durante.resgatando && durante.visivel && !durante.physics && durante.tempoAtaque > antesAtaque);
   s=await esperarResgate('Level1Parte2');
   assert.equal(s.resgate.restantes,0);assert.equal(s.vida,s.max);assert.equal(s.tela,false);
   assert.ok(Math.hypot(s.x-origem2.x,s.y-origem2.y)<1);
   const boss=await page.evaluate(()=>{
     const s=window.__game.scene.getScene('Level1Parte2'),ant=window.__bossAntesPet;
-    return {mesmo:s.novoBoss===ant.b,vida:s.novoBoss.vida,ataque:s.novoBoss.ataqueAtual===ant.ataque,
+    return {mesmo:s.novoBoss===ant.b,vida:s.novoBoss.vida,suspenso:s.novoBoss.suspenso,
       antes:ant.vida};
   });
-  assert.ok(boss.mesmo&&boss.ataque,JSON.stringify(boss));assert.equal(boss.vida,boss.antes);
+  assert.ok(boss.mesmo&&!boss.suspenso,JSON.stringify(boss));assert.equal(boss.vida,boss.antes);
   relatorio.resgates.push({mapa:'Level1Parte2',...s,boss});
   console.log('PASS: segundo resgate mantém luta e contador entre mapas');
+  await page.waitForFunction(() => !window.__game.scene.getScene('Level1Parte2').player.invulneravel);
   await matar('Level1Parte2');
   assert.equal((await estado('Level1Parte2')).tela,false);
   await page.waitForFunction(()=>window.__game.scene.getScene('Level1Parte2').telaMorteMostrada===true);
-  assert.equal((await estado('Level1Parte2')).resgate.restantes,0);
+  const derrota = await estado('Level1Parte2');
+  assert.equal(derrota.resgate.restantes,0);
+  assert.equal(derrota.physics,true);
   await page.waitForFunction(()=>window.__game.scene.getScene('Level1Parte2').children.list.some(o=>
     o.type==='Container'&&o.list.some(i=>i.text==='GAME OVER')),{},{timeout:12000});
   await page.screenshot({path:`${pasta}/03-game-over-terceira-morte.png`});

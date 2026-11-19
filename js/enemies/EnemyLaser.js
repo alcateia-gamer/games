@@ -165,7 +165,7 @@ function verificarLasersNoMapa(scene) {
 // =====================================================
 
 function verificarLasersNoPlayer(scene) {
-  if (!scene.hitboxDanoPlayer || !scene.lasersInimigo) {
+  if (scene.reanimacaoSolo?.resgatando || !scene.hitboxDanoPlayer || !scene.lasersInimigo) {
     return;
   }
 
@@ -278,7 +278,7 @@ function causarDanoPlayer(scene, dano, atacante = null) {
   scene.player.setTintMode(Phaser.TintModes.MULTIPLY);
 
   scene.time.delayedCall(500, () => {
-    if (scene.player?.active) {
+    if (scene.player?.active && !scene.reanimacaoSolo?.resgatando && !scene.reanimacaoSolo?.protegendo) {
       scene.player.invulneravel = false;
       scene.player.clearTint();
     }

@@ -18,11 +18,11 @@ function alterarEstado(scene, encontro, estado) {
   scene.events?.emit("novo-boss:estado", { encontro, anterior, estado });
 }
 
-function podeAvancar(scene, encontro) {
+function podeAvancar(scene, encontro, resgatando = false) {
   return Boolean(scene && encontro?.sprite?.active && encontro.active !== false &&
     !encontro.encerrado && !encontro.morto && !encontro.suspenso &&
-    !scene.multiplayer && !scene.morteEmAndamento &&
-    !(Number.isFinite(scene.vida) && scene.vida <= 0) &&
+    !scene.multiplayer && (resgatando || (!scene.morteEmAndamento &&
+      !(Number.isFinite(scene.vida) && scene.vida <= 0))) &&
     encontro.jogadorNaArena !== false &&
     jogadorNaArenaNovoBoss(scene.player, encontro.config.arena));
 }
@@ -99,38 +99,40 @@ function avancarRelogio(encontro, delta) {
   encontro.avancarTentaculos?.(delta);
 }
 
-/** Deltas só avançam dentro da arena e com o jogador vivo; sair não cura a boss. */
+/** Mantém a execução do encontro dentro da arena. */
 export function atualizarCombateNovoBoss(scene, encontro, delta = 0) {
   if (encontro?.prologo?.bloqueiaCombatePrincipal) return encontro;
   if (!encontro?.combateInicializado || encontro.encerrado || encontro.morto) return encontro;
   if (encontro.vida <= 0) { derrotar(scene, encontro); return encontro; }
-  if (!podeAvancar(scene, encontro) || !Number.isFinite(delta) || delta < 0) return encontro;
+  const resgatando = scene.reanimacaoSolo?.resgatando;
+  if (!podeAvancar(scene, encontro, resgatando) || !Number.isFinite(delta) || delta < 0) return encontro;
   if (encontro.estado === "posicionada") alterarEstado(scene, encontro, "preparando");
   if (encontro.estado === "aguardando" || encontro.estado === "encerrada") return encontro;
+  if (!resgatando && encontro.ataquePendente && !encontro.teleporte) encontro.retomarAtaquePosicionado?.();
 
   let restante = delta;
   // Processa fronteiras de estado, sem perder o excedente de frames demorados.
   do {
     const intervaloPontas = encontro.config.teleporte.intervaloPontasMs;
-    if (encontro.estado === "preparando" && !encontro.ataqueAtual && !encontro.teleporte &&
+    if (!resgatando && encontro.estado === "preparando" && !encontro.ataqueAtual && !encontro.teleporte &&
         !encontro.teleportePendente && !encontro.transicaoFase2Pendente && !encontro.sistemaClones?.ativo &&
         encontro.geradores?.some(g => g.torre) && Number.isFinite(intervaloPontas) && intervaloPontas > 0 &&
         encontro.relogioCombate >= encontro.ultimoTeleportePontasEm + intervaloPontas) {
       encontro.teleportePendente = "pontas-geradores";
       encontro.proximaTentativaTeleporteEm = encontro.relogioCombate;
     }
-    if (!encontro.teleporte && aproximado(scene, encontro)) {
+    if (!resgatando && !encontro.teleporte && aproximado(scene, encontro)) {
       encontro.tempoSemAproximacao = 0;
       if (encontro.teleportePendente === "preventivo") encontro.teleportePendente = null;
     }
-    if (!encontro.teleporte && encontro.tempoSemAproximacao >= encontro.config.teleporte.preventivoMs &&
+    if (!resgatando && !encontro.teleporte && encontro.tempoSemAproximacao >= encontro.config.teleporte.preventivoMs &&
         !encontro.teleportePendente) encontro.teleportePendente = "preventivo";
-    tentarTeleportePendente(scene, encontro);
+    if (!resgatando) tentarTeleportePendente(scene, encontro);
 
     if (encontro.estado === "atacando" && encontro.ataqueAtual) {
       const resultado = encontro.avancarAtaque(restante);
       avancarRelogio(encontro, resultado.consumido);
-      if (!aproximado(scene, encontro)) encontro.tempoSemAproximacao += resultado.consumido;
+      if (!resgatando && !aproximado(scene, encontro)) encontro.tempoSemAproximacao += resultado.consumido;
       restante -= resultado.consumido;
       if (resultado.terminou) {
         // A tentativa pendente espera a abertura completa, sem apagar o tempo de afastamento.
@@ -161,6 +163,11 @@ export function atualizarCombateNovoBoss(scene, encontro, delta = 0) {
       continue;
     }
 
+    if (resgatando) {
+      avancarRelogio(encontro, restante);
+      break;
+    }
+
     const duracao = encontro.estado === "vulneravel"
       ? encontro.config.combate.janelaVulneravelMs : Math.max(encontro.config.combate.preparacaoMs,
         encontro.sistemaClones?.preparacaoMs ?? 0);
@@ -189,6 +196,7 @@ export function atualizarCombateNovoBoss(scene, encontro, delta = 0) {
     }
     if (restante <= 0) break;
   } while (restante > 0 || encontro.teleporte);
+  if (resgatando) return encontro;
   // Resolve também eventos exatamente na fronteira do último milissegundo.
   if (!encontro.teleporte && !aproximado(scene, encontro) &&
       encontro.tempoSemAproximacao >= encontro.config.teleporte.preventivoMs &&

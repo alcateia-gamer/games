@@ -44,7 +44,7 @@ function atualizarSomPassoRobo(
   scene = cenaSomCompartilhado(scene, inimigo, { range: DISTANCIA_SOM_PASSOS_ROBOS });
   const ehSerra = inimigo?.tipoRobo === "serra";
 
-  if (scene.morteEmAndamento) {
+  if (scene.morteEmAndamento && !scene.reanimacaoSolo?.resgatando) {
     if (inimigo.somPassoRobo?.isPlaying) {
       inimigo.somPassoRobo.stop();
     }
@@ -117,7 +117,7 @@ function configurarSomPassoRobo(scene, inimigo) {
  */
 function tocarSomTiroLaser(scene, inimigo = scene.player) {
   scene = cenaSomCompartilhado(scene, inimigo, { range: 900 });
-  if (scene.morteEmAndamento) {
+  if (scene.morteEmAndamento && !scene.reanimacaoSolo?.resgatando) {
     return;
   }
 
@@ -137,7 +137,7 @@ function tocarSomMorteRobo(scene, inimigo) {
   scene = cenaSomCompartilhado(scene, inimigo, { range: 900 });
   if (
     !scene?.sound ||
-    scene.morteEmAndamento ||
+    (scene.morteEmAndamento && !scene.reanimacaoSolo?.resgatando) ||
     !inimigo ||
     inimigo.somMorteTocado
   ) {

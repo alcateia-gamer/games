@@ -411,10 +411,12 @@ class Level1Parte2 extends Phaser.Scene {
     }
     this.preparacaoBoss?.atualizar();
     if (this.hackingTerminals?.atualizar(time, delta)) return;
-    if (atualizarReanimacaoSolo(this, delta)) return;
+    const atualizouQueda = atualizarReanimacaoSolo(this, delta);
+    const resgatando = this.reanimacaoSolo?.resgatando;
+    if (atualizouQueda && !resgatando) return;
     atualizarBoss(this, time, delta);
     this.minimap?.update(time);
-    if (this.morteEmAndamento) {
+    if (this.morteEmAndamento && !resgatando) {
       return;
     }
 
@@ -428,13 +430,15 @@ class Level1Parte2 extends Phaser.Scene {
       this.combatHitStopRemaining = 0;
     }
 
-    this.atualizarInteracaoGeradorFabrica?.();
-    this.atualizarInteracaoPortaFabrica?.();
-    atualizarControles(this);
-    atualizarSistemaInventario(this, delta);
-    atualizarStatusPlayer(this, delta);
+    if (!resgatando) {
+      this.atualizarInteracaoGeradorFabrica?.();
+      this.atualizarInteracaoPortaFabrica?.();
+      atualizarControles(this);
+      atualizarSistemaInventario(this, delta);
+      atualizarStatusPlayer(this, delta);
+    }
 
-    atualizarSpawnsDev(this);
+    if (!resgatando) atualizarSpawnsDev(this);
 
     if (!this.multiplayer) this.spawnAreasRoboBola?.atualizar(delta);
     atualizarInimigoTeste(this, time);
@@ -477,7 +481,7 @@ class Level1Parte2 extends Phaser.Scene {
     this.textoCoordenadas.setText("X: " + x + "  Y: " + y);
 
     if (
-      !this.teleporteRetornoLiberado &&
+      !resgatando && !this.teleporteRetornoLiberado &&
       Phaser.Math.Distance.Between(this.player.x, this.player.y, 95, -965) > 24
     ) {
       this.teleporteRetornoLiberado = true;

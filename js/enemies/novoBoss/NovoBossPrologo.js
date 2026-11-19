@@ -282,7 +282,8 @@ export function prepararPrologoNovoBoss(scene, encontro) {
     },
     atualizar(delta) {
       if (destruido || estado === "COMBATE_PRINCIPAL") return false;
-      if (!encontro.active || scene.multiplayer || scene.morteEmAndamento || scene.vida <= 0) {
+      if (!encontro.active || scene.multiplayer ||
+          (!scene.reanimacaoSolo?.resgatando && (scene.morteEmAndamento || scene.vida <= 0))) {
         sistema.suspender(); return true;
       }
       if (!iniciado) {

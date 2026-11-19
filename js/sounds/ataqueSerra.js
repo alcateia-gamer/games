@@ -25,7 +25,7 @@ export function configurarSomAtaqueSerra(scene, robo) {
   };
   const atualizar = () => {
     if (!ativo) return;
-    if (!robo.active || robo.morto || scene.morteEmAndamento) {
+    if (!robo.active || robo.morto || (scene.morteEmAndamento && !scene.reanimacaoSolo?.resgatando)) {
       parar(); return;
     }
     // Só distância e posição: preserva o timbre, a velocidade e a cauda original.
@@ -36,7 +36,7 @@ export function configurarSomAtaqueSerra(scene, robo) {
   const iniciar = animacao => {
     if (destruido || !animacao.key.startsWith(PREFIXO)) return;
     parar();
-    if (scene.morteEmAndamento || robo.morto || volumeLocal() === 0 ||
+    if ((scene.morteEmAndamento && !scene.reanimacaoSolo?.resgatando) || robo.morto || volumeLocal() === 0 ||
       !scene.cache?.audio?.exists(CHAVE) || !scene.sound?.add) return;
     if (!som) {
       som = scene.sound.add(CHAVE);

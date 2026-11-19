@@ -39,7 +39,7 @@ function fixture(personagem = 'kai-mercer', registry = new Map()) {
   };
   const sistema=prepararReanimacaoSolo(scene);
   let gameovers=0;
-  const morrer=()=>sistema.iniciar(()=>{gameovers++;scene.telaMorteMostrada=true;});
+  const morrer=()=>sistema.iniciar(()=>{gameovers++;scene.telaMorteMostrada=true;scene.physics.pause();});
   const avancar=ms=>{for(let t=0;t<ms;t+=50){scene.time.now+=Math.min(50,ms-t);atualizarReanimacaoSolo(scene,Math.min(50,ms-t));}};
   return {scene,sistema,morrer,avancar,objetos,timers,animacoes,get gameovers(){return gameovers;}};
 }
@@ -51,7 +51,9 @@ test('quatro personagens caem, pet se aproxima e reanima no local sem reiniciar 
     assert.ok(f.morrer());
     assert.equal(s.player.animacao,`coop-down-${personagem}`);
     assert.equal(sistemaEstado(f),'caindo');
-    assert.equal(s.player.body.enable,false);assert.equal(s.physics.world.isPaused,true);
+    assert.equal(s.player.body.enable,false);assert.equal(s.physics.world.isPaused,false);
+    assert.equal(s.companionPet.body.enable,false);assert.equal(f.sistema.resgatando,true);
+    assert.equal(s.player.invulneravel,true);
     assert.equal(s.input.enabled,false);assert.equal(s.estadoDash.ativo,false);
     assert.equal(s.restricaoControleNovoBoss,null);
     f.avancar(700);assert.equal(f.gameovers,0);assert.equal(s.vida,0);
@@ -63,6 +65,7 @@ test('quatro personagens caem, pet se aproxima e reanima no local sem reiniciar 
     assert.deepEqual([s.player.x,s.player.y],[210,-320]);
     assert.equal(s.vida,100);assert.equal(s.estamina,31);
     assert.equal(s.player.body.enable,true);assert.equal(s.physics.world.isPaused,false);
+    assert.equal(s.companionPet.body.enable,true);assert.equal(f.sistema.resgatando,false);
     assert.equal(s.input.enabled,true);assert.equal(s.input.keyboard.enabled,true);
     assert.equal(s.player.invulneravel,true);assert.equal(f.gameovers,0);
     assert.deepEqual(s.inventory.getSlots(),[{itemId:'fuel'}]);
@@ -80,7 +83,9 @@ test('exatamente duas revividas; a terceira queda abre game over uma única vez'
     f.avancar(4000);assert.equal(f.gameovers,0);assert.equal(f.sistema.restantes,1-i);
   }
   f.scene.vida=0;assert.ok(f.morrer());f.avancar(700);assert.equal(f.gameovers,0);
+  assert.equal(f.sistema.resgatando,false);
   f.avancar(50);assert.equal(f.gameovers,1);assert.equal(f.sistema.snapshot().fase,'derrotado');
+  assert.equal(f.scene.physics.world.isPaused,true);
   f.avancar(10000);assert.equal(f.gameovers,1);assert.equal(f.morrer(),false);
   assert.equal(resgatesSoloUsados(f.scene.registry),2);
 });
@@ -100,6 +105,8 @@ test('encerrar durante o resgate remove efeitos e callbacks sem consumir uso ou 
   f.scene.events.emit('shutdown');f.sistema.destruir();f.avancar(9000);
   assert.equal(f.gameovers,0);assert.equal(resgatesSoloUsados(f.scene.registry),0);
   assert.equal(f.scene.reanimacaoSolo,null);assert.equal(f.scene.input.enabled,true);
+  assert.equal(f.scene.companionPet.body.enable,true);
+  assert.equal(f.scene.events.listenerCount('shutdown'),0);
   assert.ok(f.objetos.filter(v=>v.name?.startsWith('solo-pet-revive')).every(v=>v.destruicoes===1));
   assert.equal(f.sistema.iniciar(()=>{}),false);
 });

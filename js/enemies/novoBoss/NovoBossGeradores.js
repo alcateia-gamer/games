@@ -33,11 +33,12 @@ function configuracaoValida(scene, encontro, config, torres = false) {
 function encontroVisivel(scene, encontro) {
   return !scene.multiplayer && !encontro.encerrado && !encontro.morto &&
     !encontro.suspenso && encontro.jogadorNaArena && Boolean(scene.player?.active) &&
-    !scene.player.morto && !scene.morteEmAndamento && (scene.vida ?? 1) > 0;
+    (scene.reanimacaoSolo?.resgatando ||
+      (!scene.player.morto && !scene.morteEmAndamento && (scene.vida ?? 1) > 0));
 }
 
 function podeInteragir(scene, encontro) {
-  return encontroVisivel(scene, encontro) && !scene.movimentoBloqueado &&
+  return !scene.reanimacaoSolo?.resgatando && encontroVisivel(scene, encontro) && !scene.movimentoBloqueado &&
     !scene.generatorMenuOpen && !jogadorPresoNovoBoss(scene);
 }
 

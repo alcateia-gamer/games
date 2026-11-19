@@ -221,6 +221,7 @@ export function prepararIntroducaoNovoBoss(scene, encontro) {
     get bloqueiaCombate() { return !destruida && !concluida && encontro.jogadorNaArena && !encontro.morto; },
     atualizar(delta = 0) {
       if (destruida) return false;
+      if (scene.reanimacaoSolo?.resgatando) return sistema.bloqueiaCombate;
       const valido = encontro.sprite?.active && encontro.jogadorNaArena && !encontro.morto &&
         !encontro.encerrado && !encontro.suspenso && !scene.multiplayer && !scene.morteEmAndamento &&
         scene.player?.active && !scene.player.morto && (scene.vida ?? 1) > 0;

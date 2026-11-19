@@ -10,8 +10,8 @@ import {
 } from "./NovoBossTeleporte.js";
 
 export function encontroIlusorioVisivel(scene, encontro) {
-  return Boolean(!scene.multiplayer && !scene.morteEmAndamento &&
-    (scene.vida ?? 1) > 0 && scene.player?.active && !scene.player.morto &&
+  return Boolean(!scene.multiplayer && scene.player?.active &&
+    (scene.reanimacaoSolo?.resgatando || (!scene.morteEmAndamento && (scene.vida ?? 1) > 0 && !scene.player.morto)) &&
     encontro.sprite?.active && !encontro.morto && !encontro.encerrado &&
     !encontro.suspenso && encontro.jogadorNaArena);
 }

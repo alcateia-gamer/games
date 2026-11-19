@@ -98,8 +98,8 @@ function tentarPosicionar(scene, encontro, preparandoCoop = false) {
 function atualizarSuspensao(scene, encontro) {
   const sprite = encontro.sprite;
   if (!sprite) return;
-  const suspender = Boolean(!encontro.jogadorNaArena || scene.multiplayer || scene.morteEmAndamento || !scene.player?.active ||
-    (Number.isFinite(scene.vida) && scene.vida <= 0));
+  const suspender = Boolean(!encontro.jogadorNaArena || scene.multiplayer || !scene.player?.active ||
+    (!scene.reanimacaoSolo?.resgatando && (scene.morteEmAndamento || (Number.isFinite(scene.vida) && scene.vida <= 0))));
   if (suspender === encontro.suspenso) return;
   if (suspender) {
     encontro.visibilidadeAnterior = sprite.visible;
@@ -208,8 +208,8 @@ export function atualizarBoss(scene, _time, _delta) {
     encontro.supercomputador?.atualizar(_delta);
     return;
   }
-  if (!encontro.jogadorNaArena || scene.multiplayer || scene.morteEmAndamento ||
-      (scene.vida ?? 1) <= 0 || encontro.morto) {
+  if (!encontro.jogadorNaArena || scene.multiplayer || encontro.morto ||
+      (!scene.reanimacaoSolo?.resgatando && (scene.morteEmAndamento || (scene.vida ?? 1) <= 0))) {
     encontro.prologo?.suspender();
     cancelarAtaqueNovoBoss(scene, encontro);
     if (!encontro.morto && encontro.fase === 2 && encontro.sistemaClones?.ativo) {

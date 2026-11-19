@@ -114,7 +114,7 @@ export function configurarSomPropulsaoRoboBola(scene, robo, { silencioInicialMs 
     // Silêncio real ao nascer, inclusive nas primeiras subidas e manobras.
     // Continua medindo o robô para não reproduzir esse jato com atraso.
     if (nascendo) return;
-    if (!ouvinte || scene.player?.active === false || scene.morteEmAndamento ||
+    if (!ouvinte || scene.player?.active === false || (scene.morteEmAndamento && !scene.reanimacaoSolo?.resgatando) ||
       robo.visible === false || robo.alpha === 0) { parar(); return; }
     // O emissor acompanha a imagem que levita; o ouvinte é sempre o jogador local.
     const dx = robo.x - ouvinte.x, dy = robo.y + deslocamento - ouvinte.y;

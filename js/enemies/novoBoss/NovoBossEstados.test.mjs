@@ -519,3 +519,31 @@ test('após a onda de clones o retorno também visita os geradores quando o inte
   assert.equal(ponto.regiao,'gerador');
   assert.ok(destinoValidoNovoBoss(c.scene,c.encontro,ponto));
 });
+
+test("resgate solo deixa o ataque em curso terminar sem iniciar outro", () => {
+  const { scene, encontro, atualizar } = criarEncontro();
+  scene.vida = 0;
+  scene.morteEmAndamento = true;
+  scene.reanimacaoSolo = { resgatando: true };
+  encontro.vida -= 123;
+  encontro.estado = "atacando";
+  encontro.ataqueAtual = { tipo: "lasers" };
+  let novosAtaques = 0;
+  encontro.iniciarAtaqueAutomatico = () => { novosAtaques++; return false; };
+  encontro.avancarAtaque = () => {
+    encontro.ataqueAtual = null;
+    return { consumido: 100, terminou: true };
+  };
+
+  atualizar(4000);
+  assert.equal(encontro.relogioCombate, 4000);
+  assert.equal(encontro.estado, "vulneravel");
+  assert.equal(encontro.vida, encontro.vidaMaxima - 123);
+  assert.equal(novosAtaques, 0);
+
+  scene.vida = 100;
+  scene.morteEmAndamento = false;
+  scene.reanimacaoSolo.resgatando = false;
+  atualizar(encontro.config.combate.janelaVulneravelMs + encontro.config.combate.preparacaoMs);
+  assert.equal(novosAtaques, 1);
+});

@@ -137,3 +137,24 @@ test("morte individual no cooperativo não interrompe a trilha compartilhada", (
   controle.destruir();
   assert.equal(sons[0].destruido, true);
 });
+
+test("resgate solo mantém a mesma música, reprodução e fade da fábrica", () => {
+  const { scene, sons, entradas } = fixture();
+  iniciarMusicaFabrica(scene);
+  const [som] = sons;
+  som.volume = 0.04;
+  scene.morteEmAndamento = true;
+  scene.reanimacaoSolo = { resgatando: true };
+  scene.events.emit("update");
+  assert.deepEqual(sons, [som]);
+  assert.equal(som.plays.length, 1);
+  assert.equal(som.volume, 0.04);
+  assert.equal(som.parado, false);
+  assert.equal(som.destruido, false);
+  assert.equal(entradas.length, 1);
+  assert.equal(entradas[0].removida, undefined);
+  scene.reanimacaoSolo.resgatando = false;
+  scene.events.emit("update");
+  assert.equal(som.destruido, true);
+  scene.events.emit("shutdown");
+});

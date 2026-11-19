@@ -926,15 +926,17 @@ function atualizarIAInimigo(scene, time, robo = scene.inimigoTeste, combaterPers
     return;
   }
 
-  const alvo = obterAlvo(scene, robo);
+  const resgatando = scene.reanimacaoSolo?.resgatando;
+  const alvo = resgatando ? null : obterAlvo(scene, robo);
+  if (resgatando) robo.alvoAtual = null;
 
-  if (
+  if (!resgatando && (
     !alvo ||
     (scene.morteEmAndamento && !scene.coopRuntime?.host) ||
     alvo.active === false ||
     !Number.isFinite(alvo.x) ||
     !Number.isFinite(alvo.y)
-  ) {
+  )) {
     parar(scene, robo);
     return;
   }
@@ -949,7 +951,8 @@ function atualizarIAInimigo(scene, time, robo = scene.inimigoTeste, combaterPers
 
   robo.alvoAtual = alvo;
 
-  const d = distancia(robo, alvo);
+  const d = distancia(robo, alvo ?? scene.player);
+  if (resgatando && robo.iaEstado === "combate") mudarEstado(robo, "retorno", time);
 
   const dOrigem = distancia(robo, origem(robo));
 
@@ -977,7 +980,7 @@ function atualizarIAInimigo(scene, time, robo = scene.inimigoTeste, combaterPers
   // VERIFICAR VISAO
   // ============================================
 
-  const vendo = temVisao(scene, robo, alvo, time);
+  const vendo = !!alvo && temVisao(scene, robo, alvo, time);
 
   const ferido = Boolean(robo.foiFerido && robo.vida < robo.vidaMaxima);
 

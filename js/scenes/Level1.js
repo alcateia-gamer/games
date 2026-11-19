@@ -414,22 +414,24 @@ class Level1 extends Phaser.Scene {
    * impacto no solo.
    */
   update(time, delta) {
-    if (atualizarReanimacaoSolo(this, delta)) return;
+    const atualizouQueda = atualizarReanimacaoSolo(this, delta);
+    const resgatando = this.reanimacaoSolo?.resgatando;
+    if (atualizouQueda && !resgatando) return;
     this.minimap?.update(time);
     this.weather?.update(time, delta);
 
-    if (this.weather && Phaser.Input.Keyboard.JustDown(this.teclaClima)) {
+    if (!resgatando && this.weather && Phaser.Input.Keyboard.JustDown(this.teclaClima)) {
       this.climaAtivo = !this.climaAtivo;
       this.weather.shader.setVisible(this.climaAtivo);
     }
 
-    if (this.weather && Phaser.Input.Keyboard.JustDown(this.teclaModoClima)) {
+    if (!resgatando && this.weather && Phaser.Input.Keyboard.JustDown(this.teclaModoClima)) {
       this.climaModo = this.climaModo === "rain" ? "snow" : "rain";
       this.weather.setMode(this.climaModo);
     }
 
     if (
-      this.weather &&
+      !resgatando && this.weather &&
       Phaser.Input.Keyboard.JustDown(this.teclaIntensidadeClima)
     ) {
       const intensidades = [100, 200, 300];
@@ -439,7 +441,7 @@ class Level1 extends Phaser.Scene {
       this.weather.setIntensity(this.climaIntensidade);
     }
 
-    if (this.morteEmAndamento) {
+    if (this.morteEmAndamento && !resgatando) {
       return;
     }
 
@@ -455,15 +457,12 @@ class Level1 extends Phaser.Scene {
     // CONTROLES
     // =====================================================
 
-    atualizarControles(this);
-    atualizarSistemaInventario(this, delta);
-
-    // =====================================================
-    // VIDA E ESTAMINA
-    // =====================================================
-
-    atualizarStatusPlayer(this, delta);
-    atualizarTransicaoParaParte2(this);
+    if (!resgatando) {
+      atualizarControles(this);
+      atualizarSistemaInventario(this, delta);
+      atualizarStatusPlayer(this, delta);
+      atualizarTransicaoParaParte2(this);
+    }
 
     this.atualizarProfundidadeCerca();
     this.atualizarProfundidadePostes();
@@ -472,7 +471,7 @@ class Level1 extends Phaser.Scene {
     // INIMIGO
     // =====================================================
 
-    atualizarSpawnsDev(this);
+    if (!resgatando) atualizarSpawnsDev(this);
 
     atualizarInimigoTeste(this, time);
     atualizarRoboBola(this, time, delta);
@@ -507,7 +506,7 @@ class Level1 extends Phaser.Scene {
     // RESPAWN
     // =====================================================
 
-    if (Phaser.Input.Keyboard.JustDown(this.teclaR)) {
+    if (!resgatando && Phaser.Input.Keyboard.JustDown(this.teclaR)) {
       respawnPlayer(this);
     }
 

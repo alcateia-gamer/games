@@ -29,17 +29,20 @@ export function prepararAtaquesNovoBoss(scene, encontro) {
   encontro.ataqueAtual = null;
   encontro.tentaculosAtivos = null;
   encontro.ataquePendente = null;
-  encontro.concluirPosicionamentoAtaque = (resultado, origemViagem) => {
-    if (resultado.motivo !== MOTIVO_CENTRAL) return false;
+  encontro.retomarAtaquePosicionado = () => {
     const pedido = encontro.ataquePendente;
+    if (!pedido || encontro.teleporte || scene.reanimacaoSolo?.resgatando) return;
     encontro.ataquePendente = null;
-    encontro.sistemaIlusoes?.trocarFalsaNoDestino(encontro.sprite, pedido?.origem ?? origemViagem);
-    if (!pedido) return true;
     // A recuperação do teleporte pode ter escolhido outro ponto por segurança.
     // Nesse caso abandona o ataque, sem disparar de um lugar diferente.
     if (noPonto(encontro.sprite, pedido.centro) && destinoValidoNovoBoss(scene, encontro, pedido.centro)) {
       encontro.executarAtaque(pedido.tipo);
     }
+  };
+  encontro.concluirPosicionamentoAtaque = (resultado, origemViagem) => {
+    if (resultado.motivo !== MOTIVO_CENTRAL) return false;
+    encontro.sistemaIlusoes?.trocarFalsaNoDestino(encontro.sprite, encontro.ataquePendente?.origem ?? origemViagem);
+    encontro.retomarAtaquePosicionado();
     return true;
   };
   encontro.executarAtaque = tipo => executarAtaqueNovoBoss(scene, encontro, tipo);

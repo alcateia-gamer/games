@@ -538,3 +538,27 @@ test("investigação que não alcança o destino tem limite de duração", () =>
   assert.equal(investigador.alerta, false);
   assert.notEqual(investigador.iaEstado, "investigar");
 });
+
+test("resgate solo permite o retorno à patrulha e reativa a mira depois do socorro", () => {
+  const robo = criarRobo({ patrolCenter: { x: -100, y: 0 } });
+  const scene = criarCena({ robos: [robo] });
+  atualizar(scene);
+  assert.equal(robo.iaEstado, "combate");
+  const tirosAnteriores = scene.lasersInimigo.getChildren().length;
+
+  scene.morteEmAndamento = true;
+  scene.reanimacaoSolo = { resgatando: true };
+  atualizar(scene, robo, 1300);
+  assert.equal(robo.iaEstado, "retorno");
+  assert.equal(robo.alvoAtual, null);
+  assert.ok(robo.body.velocity.x < 0);
+  assert.equal(scene.lasersInimigo.getChildren().length, tirosAnteriores);
+
+  scene.morteEmAndamento = false;
+  scene.reanimacaoSolo.resgatando = false;
+  robo.direcaoAtual = "right";
+  atualizar(scene, robo, 1600);
+  assert.equal(robo.iaEstado, "combate");
+  assert.equal(robo.alvoAtual, scene.player);
+  assert.ok(scene.lasersInimigo.getChildren().length > tirosAnteriores);
+});

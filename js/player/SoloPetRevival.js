@@ -31,9 +31,17 @@ export function prepararReanimacaoSolo(scene) {
     scene.joystick?.reset?.();
   }
 
+  function restaurarCorpoPet() {
+    const pet = anterior?.pet;
+    if (!pet) return;
+    if (pet.active && pet.body) pet.body.enable = anterior.corpoPetHabilitado;
+    anterior.pet = null;
+  }
+
   function derrota() {
     if (fase === "derrotado" || destruido) return;
     fase = "derrotado";
+    restaurarCorpoPet();
     limparVisual();
     // O overlay de derrota mantém o bloqueio e a física pausada.
     restaurarEntrada();
@@ -69,11 +77,11 @@ export function prepararReanimacaoSolo(scene) {
     pet.lastX = pet.x; pet.lastY = pet.y;
     pet.tempoParado = pet.tempoOlhar = 0; pet.olharAtivo = false;
     pet.setVelocity(0, 0);
+    restaurarCorpoPet();
     fase = "pronto";
     finalizarMorte = null;
     limparVisual();
     restaurarEntrada();
-    if (!anterior.fisicaPausada) scene.physics.resume();
     scene.events?.emit("solo-pet:reanimado", { usados: SOLO_PET_REVIVALS_MAX - restante(), restantes: restante() });
   }
 
@@ -90,6 +98,8 @@ export function prepararReanimacaoSolo(scene) {
 
   const sistema = {
     get ativo() { return ativo(); },
+    get resgatando() { return podeResgatar && ativo(); },
+    get protegendo() { return protecao !== null; },
     get destruido() { return destruido; },
     get restantes() { return restante(); },
     iniciar(aoDerrotar) {
@@ -99,7 +109,7 @@ export function prepararReanimacaoSolo(scene) {
       anterior = { movimento: !!scene.movimentoBloqueado,
         input: scene.input?.enabled ?? true, teclado: scene.input?.keyboard?.enabled ?? true,
         escalaX: player.baseScaleX ?? player.scaleX, escalaY: player.baseScaleY ?? player.scaleY,
-        estamina: scene.estamina, fisicaPausada: !!scene.physics.world?.isPaused };
+        estamina: scene.estamina };
       posicao = { x: player.x, y: player.y };
       podeResgatar = restante() > 0 && !!scene.companionPet?.active;
       finalizarMorte = aoDerrotar;
@@ -122,7 +132,14 @@ export function prepararReanimacaoSolo(scene) {
       if (scene.input?.keyboard) {
         scene.input.keyboard.resetKeys?.(); scene.input.keyboard.enabled = false;
       }
-      scene.physics.pause();
+      if (podeResgatar) {
+        const pet = scene.companionPet;
+        anterior.pet = pet;
+        anterior.corpoPetHabilitado = pet.body.enable;
+        pet.body.enable = false;
+      } else {
+        scene.physics.pause();
+      }
       animarQuedaCoop(scene);
       fase = "caindo"; tempo = 0;
       label = scene.add.text(posicao.x, posicao.y - 42, podeResgatar ? "OPERADOR CAÍDO" : "SEM RESGATES", {
@@ -161,7 +178,10 @@ export function prepararReanimacaoSolo(scene) {
       if (protecao && scene.player?.active && !scene.player.morto) scene.player.invulneravel = false;
       protecao?.remove(false); protecao = null;
       limparVisual();
-      if (ativo()) restaurarEntrada();
+      if (ativo()) {
+        restaurarCorpoPet();
+        restaurarEntrada();
+      }
       finalizarMorte = null; fase = "encerrado";
       scene.events?.off("shutdown", sistema.destruir);
       if (scene.reanimacaoSolo === sistema) scene.reanimacaoSolo = null;

@@ -151,6 +151,7 @@ export function criarChuvaRaios(scene, encontro, config = {}, servicos = {}) {
   }
 
   function mirarJogador(contexto = contextoMira()) {
+    if (scene.reanimacaoSolo?.resgatando) return null;
     const clone = cloneAtivo(contexto);
     const area = clone ? null : contexto.hitboxDanoPlayer ?? contexto.player?.body;
     const temArea = area && [area.x, area.y, area.width, area.height].every(Number.isFinite) &&

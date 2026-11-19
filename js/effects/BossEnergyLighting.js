@@ -59,8 +59,8 @@ export default class BossEnergyLighting {
       this.fontesVisiveis[quantidade++] = estado;
     };
     if (encontro && !encontro.encerrado && !encontro.morto && !encontro.suspenso &&
-        encontro.jogadorNaArena !== false && (!scene.multiplayer || scene.coopRuntime) && !scene.morteEmAndamento &&
-        (scene.vida ?? 1) > 0) {
+        encontro.jogadorNaArena !== false && (!scene.multiplayer || scene.coopRuntime) &&
+        (scene.reanimacaoSolo?.resgatando || (!scene.morteEmAndamento && (scene.vida ?? 1) > 0))) {
       const projetil = objeto => adicionar(objeto, objeto.x, objeto.y, 36,
         Math.max(0, Math.min(1, objeto.alpha ?? 1)) * 0.9);
       for (const objeto of encontro.projeteisBoss ?? []) projetil(objeto);

@@ -172,7 +172,7 @@ export function prepararApresentacaoNovoBoss(scene, encontro) {
       if (destruido || recuoRestante <= 0 || !Number.isFinite(delta) || delta < 0) return;
       if (!encontro.sprite?.active || encontro.morto || encontro.encerrado || encontro.suspenso ||
           !encontro.jogadorNaArena || encontro.teleporte || scene.multiplayer ||
-          scene.morteEmAndamento || (scene.vida ?? 1) <= 0) {
+          (!scene.reanimacaoSolo?.resgatando && (scene.morteEmAndamento || (scene.vida ?? 1) <= 0))) {
         recuoRestante = 0;
         return;
       }
@@ -196,7 +196,7 @@ export function prepararApresentacaoNovoBoss(scene, encontro) {
     },
     criarExplosaoPulso(origem, raio, inicio = encontro.relogioCombate) {
       if (destruido || encontro.morto || encontro.encerrado || encontro.suspenso ||
-          !encontro.jogadorNaArena || scene.multiplayer || scene.morteEmAndamento ||
+          !encontro.jogadorNaArena || scene.multiplayer || (scene.morteEmAndamento && !scene.reanimacaoSolo?.resgatando) ||
           !Number.isFinite(inicio)) return false;
       const efeito = criarExplosaoEnergia(scene, origem, raio,
         Math.max(0, encontro.relogioCombate - inicio));
@@ -209,7 +209,7 @@ export function prepararApresentacaoNovoBoss(scene, encontro) {
       if (destruido || !encontro.sprite?.active || !Number.isFinite(delta) || delta < 0) return;
       const sprite = encontro.sprite;
       const visivel = !scene.multiplayer && !encontro.encerrado && !encontro.suspenso &&
-        encontro.jogadorNaArena && !scene.morteEmAndamento && (scene.vida ?? 1) > 0;
+        encontro.jogadorNaArena && (scene.reanimacaoSolo?.resgatando || (!scene.morteEmAndamento && (scene.vida ?? 1) > 0));
       if (!visivel || encontro.morto) limparExplosoesPulso();
       else for (const item of explosoes) {
         if (item.efeito.atualizarIdade(encontro.relogioCombate - item.inicio)) explosoes.delete(item);

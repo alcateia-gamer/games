@@ -71,7 +71,8 @@ export function prepararSupercomputadorNovoBoss(scene, encontro) {
   ouvir("novo-boss:derrotada", () => { derrotaEm ??= tempo; aviso = null; });
 
   function escolherMensagem() {
-    if (scene.morteEmAndamento || scene.player?.morto || (scene.vida ?? 1) <= 0) return "gameOver";
+    if (!scene.reanimacaoSolo?.resgatando &&
+        (scene.morteEmAndamento || scene.player?.morto || (scene.vida ?? 1) <= 0)) return "gameOver";
     if (encontro.morto) {
       derrotaEm ??= tempo;
       const idade = tempo - derrotaEm;

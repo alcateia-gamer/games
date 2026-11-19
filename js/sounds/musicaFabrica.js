@@ -15,7 +15,8 @@ export function iniciarMusicaFabrica(scene) {
   const sincronizar = () => {
     if (scene.coopRuntime && !scene.coopRuntime.host) { musica?.destruir(); musica = null; return; }
     const boss = scene.sound.get?.("musica-novo-boss");
-    if ((scene.morteEmAndamento && !scene.coopRuntime) || boss?.isPlaying || boss?.isPaused) {
+    const morteDefinitiva = scene.morteEmAndamento && !scene.reanimacaoSolo?.resgatando && !scene.coopRuntime;
+    if (morteDefinitiva || boss?.isPlaying || boss?.isPaused) {
       musica?.destruir(); musica = null;
     } else if (!musica) {
       // Frases correspondentes, 32 compassos a 180 BPM; evita o fade final (~175 s).

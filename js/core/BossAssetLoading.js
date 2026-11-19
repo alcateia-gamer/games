@@ -78,7 +78,7 @@ export function criarPreparacaoBoss(scene) {
   }
 
   function tentarContinuar() {
-    if (espera && controle.pronto && (!espera.podeContinuar || espera.podeContinuar())) concluirEspera(true);
+    if (!scene.reanimacaoSolo?.resgatando && espera && controle.pronto && (!espera.podeContinuar || espera.podeContinuar())) concluirEspera(true);
   }
 
   function removerListeners() {
@@ -177,6 +177,7 @@ export function criarPreparacaoBoss(scene) {
       atualizarAviso();
     },
     atualizar() {
+      if (scene.reanimacaoSolo?.resgatando) return;
       if (scene.morteEmAndamento || (scene.vida ?? 1) <= 0) { concluirEspera(false); return; }
       if (espera) tentarContinuar();
       if (espera || diagnostico) atualizarAviso();
