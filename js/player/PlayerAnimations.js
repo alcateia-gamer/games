@@ -338,6 +338,17 @@ function criarAnimacoesPersonagensRemotos(scene) {
           repeat: -1,
         });
       }
+      if (personagem === "nyx") {
+        const idle = `remote-${personagem}-idle-${direcao}`;
+        if (!scene.anims.exists(idle)) {
+          scene.anims.create({
+            key: idle,
+            frames: [{ key: config.walk, frame: frames[0] }],
+            frameRate: 8,
+            repeat: -1,
+          });
+        }
+      }
     });
 
     // =================================================

@@ -41,8 +41,11 @@ try {
   const code = await host.evaluate(() => window.__manager.createRoom());
   await client.evaluate(code => window.__manager.joinRoom(code), code);
   await host.waitForFunction(() => window.__manager.room.players.length === 2);
-  await host.evaluate(() => window.__manager.selectCharacter('kai-mercer'));
-  await client.evaluate(() => window.__manager.selectCharacter('nyx'));
+  const hostCharacter = process.env.NULLNET_HOST_CHARACTER ?? 'kai-mercer';
+  const testarVisual = process.env.NULLNET_TEST_OPERATOR_VISUAL === '1';
+  const clientCharacter = process.env.NULLNET_CLIENT_CHARACTER ?? (testarVisual ? 'magnus-force' : 'nyx');
+  await host.evaluate(character => window.__manager.selectCharacter(character), hostCharacter);
+  await client.evaluate(character => window.__manager.selectCharacter(character), clientCharacter);
   for (const p of pages) { await p.waitForFunction(() => window.__manager.room.players.every(p => p.character)); await p.evaluate(() => window.__manager.setReady(true)); }
   await host.waitForFunction(() => window.__manager.canStart()); await host.evaluate(() => window.__manager.startGame());
   await client.waitForFunction(() => window.__manager.room.status === 'PLAYING');
@@ -59,6 +62,73 @@ try {
   assert.ok((await lerRelogio(host)).ms > cidade.ms);
   assert.ok((await lerRelogio(client)).ms >= cidade.ms);
   await host.waitForFunction(() => window.__game.scene.getScene('Level1Parte2').coopRuntime.players.remotes.size === 1);
+  if (testarVisual) {
+    // Prepara só os pré-requisitos. Rede, terminal, animações e puzzles são os do jogo.
+    await host.evaluate(async () => {
+      const s = window.__game.scene.getScene('Level1Parte2');
+      const { HACKING_KEYS } = await import('/js/puzzles/HackingConfig.js');
+      for (const key of ['fabrica', 'bruteforce', 'cartao']) s.registry.set(HACKING_KEYS[key], true);
+      s.novoBoss = { morto: true, encerrado: true, config: { arena: { zonas: [] } } };
+      const entry = s.coopRuntime.players.remotes.values().next().value;
+      window.__operatorTextures = new Set();
+      entry.actor.on('animationstart', (_anim, frame) => {
+        if (entry.context.hackingAtivo) window.__operatorTextures.add(frame.textureKey);
+      });
+    });
+    const texturas = { 'kai-mercer': 'walk', 'magnus-force': 'personagem2-walk',
+      'aria-kade': 'personagem3-walk', nyx: 'personagem4-walk' };
+    async function verificarVisual() {
+      const resultado = await host.evaluate(() => {
+        const s = window.__game.scene.getScene('Level1Parte2');
+        const { actor } = s.coopRuntime.players.remotes.values().next().value;
+        return { host: s.player.texture.key, operador: actor.texture.key, caminho: [...window.__operatorTextures] };
+      });
+      assert.equal(resultado.host, texturas[hostCharacter]);
+      assert.equal(resultado.operador, texturas[clientCharacter]);
+      assert.deepEqual(resultado.caminho, [texturas[clientCharacter]]);
+    }
+    async function abrirTerminal() {
+      await posicionar(client, -300, -5835);
+      await client.evaluate(() => window.__game.scene.getScene('Level1Parte2').hackingTerminals
+        .enviar({ op: 'abrir', tipo: 'matrix' }));
+      await client.locator('.memory-decryption').waitFor();
+    }
+    await abrirTerminal();
+    await verificarVisual();
+    const config = await host.evaluate(() => window.__game.registry.get('nullnetMission').config);
+    await resolverMemoria(client, config, 2);
+    await verificarVisual();
+    const atrasado = await host.evaluate(() => window.__game.scene.getScene('Level1Parte2').hackingTerminals.snapshot());
+    await client.keyboard.press('Escape');
+    await host.waitForFunction(() => !window.__game.scene.getScene('Level1Parte2').hackingTerminals.temSessao());
+    await client.locator('.memory-decryption').waitFor({ state: 'detached' });
+    await client.evaluate(state => window.__game.scene.getScene('Level1Parte2').hackingTerminals.receberSnapshot(state), atrasado);
+    assert.equal(await client.locator('.memory-decryption').count(), 0);
+    await verificarVisual();
+    await abrirTerminal();
+    await resolverMemoria(client, config);
+    // Usa o relógio autoritativo para enviar a seleção em uma janela válida.
+    const selecao = await (await host.waitForFunction(async () => {
+      const { sequenciaLinha, sequenciaVisivel } = await import('/js/puzzles/HostConnection.js');
+      const { model } = window.__game.scene.getScene('Level1Parte2').hackingTerminals.snapshot().session;
+      if (model.tempo % 1000 > 400) return false;
+      for (let linha = 0; linha < model.linhas.length; linha++) {
+        for (let inicio = 0; inicio < model.linhas[linha].numeros.length; inicio++) {
+          const valores = sequenciaLinha(model.linhas, linha, inicio);
+          if (valores.every((n, i) => n === model.alvo[i]) &&
+              sequenciaVisivel(model.linhas, linha, inicio, model.tempo)) return { linha, inicio, tempo: model.tempo };
+        }
+      }
+      return false;
+    }, null, { timeout: 40000 })).jsonValue();
+    await client.evaluate(valor => window.__game.scene.getScene('Level1Parte2').hackingTerminals
+      .enviar({ op: 'selecionarSequencia', valor }), selecao);
+    for (const p of pages) await p.locator('.hacking-victory').waitFor();
+    await verificarVisual();
+    assert.deepEqual(errors, []);
+    console.log(`PASS: ${clientCharacter} manteve a textura na tela de ${hostCharacter} até concluir o terminal.`);
+  } else {
+
   await host.evaluate(async () => {
     const s = window.__game.scene.getScene('Level1Parte2');
     const { findGeneratorInteraction } = await import('/js/interactions/FactoryGenerator.js');
@@ -172,6 +242,7 @@ try {
     for (const p of participantes) assert.equal(await p.evaluate(() => window.__game.registry.get('matrixZeroComplete')), true);
     report.sharedEnding = true;
     console.log(report.migration ? 'PASS: migração, checkpoint, HOST e encerramento no novo host.' : 'PASS: memória e HOST autoritativos, transferência de operador com checkpoint e encerramento em ambas as telas.');
+  }
   }
   assert.deepEqual(errors, []); writeFileSync(`${pasta}/nullnet-report.json`, JSON.stringify({ ...report, errors }, null, 2));
 } catch (error) {

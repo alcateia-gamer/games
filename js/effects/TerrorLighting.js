@@ -316,7 +316,7 @@ function criarIluminacaoTerror(scene, { ambienteBasico = false } = {}) {
   const fixasSomenteArena = luzesFixas.fontes.length > 0 &&
     luzesFixas.fontes.every(({ luz }) => salaBoss.contem(luz));
   const zonasFixas = [...new Set(luzesFixas.fontes.flatMap(({ luz }) => zonas.porLuz.get(luz) ?? []))];
-  let fixasSemAtoresAnterior = false;
+  let fixasEstaveisAnterior = false;
   let ultimaRevisaoFontesFixas;
   // Carimbo local reutilizado; não cria outra máscara do tamanho da tela.
   const lanternaOclusaoCanvas = document.createElement("canvas");
@@ -556,15 +556,14 @@ function criarIluminacaoTerror(scene, { ambienteBasico = false } = {}) {
         sprite.setVisible(somenteExterior);
       });
     }
-    // A abertura conserva exatamente o caminho original; o estado vem também
-    // do snapshot do host para clientes que chegam após a apresentação.
-    const fixasSemAtores = fixasSomenteArena && (luzesIntroducao
+    // Só congela os fatores do atlas depois da abertura, inclusive nas réplicas.
+    const fixasEstaveis = fixasSomenteArena && (luzesIntroducao
       ? luzesIntroducao.ativa === false : !!scene.novoBoss);
-    if (fixasSemAtoresAnterior !== fixasSemAtores) {
-      fixasSemAtoresAnterior = fixasSemAtores;
+    if (fixasEstaveisAnterior !== fixasEstaveis) {
+      fixasEstaveisAnterior = fixasEstaveis;
       invalidada = true;
     }
-    zonasCena.revisaoEstatica = fixasSemAtores && zonasFixas.every(zona =>
+    zonasCena.revisaoEstatica = fixasEstaveis && zonasFixas.every(zona =>
       zona.restaurada || !zona.liberada || (zona.inicioRevelacao !== null &&
         scene.time.now - zona.inicioRevelacao >= DURACAO_PARTIDA_ZONA +
           Math.max(0, zona.indices.size - 1) * ATRASO_ENTRE_LAMPADAS))
@@ -592,11 +591,21 @@ function criarIluminacaoTerror(scene, { ambienteBasico = false } = {}) {
     if ((fontesNeon.length || fontesParede.length) && oclusaoEstatuas.atualizar()) invalidada = true;
     const player = scene.player;
     const temBrilho = fontesEnergiaBoss.length || fontes.some(fonte => fonte.luz.pulsando) ||
-      (!fixasSemAtores && (fontesNeon.length || fontesParede.length || (bossVisivel && luzesFixas.fontes.length)));
+      fontesNeon.length || fontesParede.length ||
+      (!fixasEstaveis && bossVisivel && luzesFixas.fontes.length);
     atoresSobreBrilho.clear();
     if (temBrilho) {
       registrarAtorSobreBrilho(scene.companionPet);
-      for (const inimigo of scene.inimigos ?? []) if (inimigo?.tipoRobo === "bola") registrarAtorSobreBrilho(inimigo);
+      for (const inimigo of scene.inimigos ?? []) {
+        if (bossVisivel || inimigo?.tipoRobo === "bola") registrarAtorSobreBrilho(inimigo);
+      }
+      if (bossVisivel) {
+        const boss = scene.novoBoss?.sprite;
+        registrarAtorSobreBrilho(boss);
+        for (const fonte of fontesEnergiaBoss) {
+          if (fonte.vermelha && fonte.emissor !== boss) registrarAtorSobreBrilho(fonte.emissor);
+        }
+      }
       for (const ator of scene.remotePlayers?.values?.() ?? []) registrarAtorSobreBrilho(ator);
     }
     for (const ator of brilhoAtoresAnteriores.keys()) {
@@ -606,8 +615,7 @@ function criarIluminacaoTerror(scene, { ambienteBasico = false } = {}) {
     }
     const personagemSobreBrilho = !!(temBrilho && player?.active !== false && player?.visible !== false &&
       (player?.alpha ?? 1) > 0 && player?.frame?.source?.image && Number.isFinite(player.x) && Number.isFinite(player.y));
-    const bossSobreBrilho = fontesEnergiaBoss.some(fonte => fonte.vermelha && fonte.emissor?.frame?.source?.image);
-    const separarBrilho = personagemSobreBrilho || bossSobreBrilho || atoresSobreBrilho.size > 0;
+    const separarBrilho = personagemSobreBrilho || atoresSobreBrilho.size > 0;
     const frameBrilho = personagemSobreBrilho ? player.frame : null;
     if (brilhoAnterior.frame !== frameBrilho) { brilhoAnterior.frame = frameBrilho; invalidada = true; }
     if (personagemSobreBrilho) {
@@ -770,15 +778,6 @@ function criarIluminacaoTerror(scene, { ambienteBasico = false } = {}) {
     context.globalCompositeOperation = "source-atop";
     desenharCorLampadas(context, fontes, false);
     context.restore();
-    // Compõe a cor fixa antes do buffer dinâmico: só ataques/aura continuam
-    // recortados pelos sprites. A máscara, o blend e o depth permanecem os mesmos.
-    if (fixasSemAtores && bossVisivel) {
-      context.save();
-      transformarMascara(context, m.a, m.b, m.c, m.d, m.e, m.f);
-      context.globalCompositeOperation = "source-over";
-      luzesFixas.desenhar(context, true, camera);
-      context.restore();
-    }
     const corContext = separarBrilho ? brilhoContext : context;
     if (separarBrilho) {
       transformarMascara(corContext);
@@ -790,7 +789,8 @@ function criarIluminacaoTerror(scene, { ambienteBasico = false } = {}) {
     // claro dominar o pulso. O mesmo gradiente mantém as bordas suaves.
     corContext.globalCompositeOperation = "source-over";
     desenharCorLampadas(corContext, fontes, true);
-    if (bossVisivel && !fixasSemAtores) luzesFixas.desenhar(corContext, true, camera);
+    // O atlas continua estático. O recorte das silhuetas é aplicado na composição da câmera.
+    if (bossVisivel) luzesFixas.desenhar(corContext, true, camera);
     if (energiaReduzida) campoEnergiaBoss.desenhar(corContext, true, larguraMascara, alturaMascara);
     else for (const fonte of fontesEnergiaBoss) {
       corContext.globalAlpha = fonte.intensidade * 0.45;
@@ -798,11 +798,6 @@ function criarIluminacaoTerror(scene, { ambienteBasico = false } = {}) {
     }
     if (personagemSobreBrilho) ocultarBrilhoAtrasPersonagem(corContext, player);
     for (const ator of atoresSobreBrilho) ocultarBrilhoAtrasPersonagem(corContext, ator);
-    // Recorta também neons, arandelas e luzes de outras cópias, antes de juntar a cor à sombra.
-    // O clareamento do sprite continua separado, sem deixar as faixas do piso atravessarem o corpo.
-    if (bossSobreBrilho) for (const fonte of fontesEnergiaBoss) {
-      if (fonte.vermelha) ocultarBrilhoAtrasPersonagem(corContext, fonte.emissor);
-    }
     corContext.restore();
     if (separarBrilho) {
       context.save();

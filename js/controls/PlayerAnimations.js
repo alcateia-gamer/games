@@ -18,14 +18,13 @@ function tocarAnimacaoSeNecessario(scene, chave) {
     return;
   }
 
-  if (
-    !scene.player?.anims ||
-    (scene.atacando && !chave.startsWith("attack-")) ||
-    (scene.player.anims.currentAnim?.key === chave &&
-      scene.player.anims.isPlaying)
-  ) {
-    return;
+  if (!scene.player?.anims || (scene.atacando && !chave.startsWith("attack-"))) return;
+
+  // As chaves locais da cena pertencem ao personagem escolhido nesta instância.
+  if (scene.player.coopPlayer && scene.player.mapCharacter) {
+    chave = `remote-${scene.player.mapCharacter}-${chave}`;
   }
+  if (scene.player.anims.currentAnim?.key === chave && scene.player.anims.isPlaying) return;
 
   scene.player.anims.play(chave);
 }

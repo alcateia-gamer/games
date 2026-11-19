@@ -131,7 +131,7 @@ export class CoopPlayers {
         actor.displayOriginY + 11 / Math.abs(actor.scaleY));
       actor.body.updateFromGameObject(); actor.body.enable = !data.dead;
       if (entry.context) {
-        entry.context.direcaoAtual = data.direction;
+        if (!entry.context.hackingAtivo) entry.context.direcaoAtual = data.direction;
         entry.context.morteEmAndamento = data.dead;
       }
       this.effects.get(data.id).receive(data.coop?.effects);

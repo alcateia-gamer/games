@@ -85,10 +85,16 @@ test("host atualiza sua entrada local sem viagem ao broker e ignora estado parad
 
 test("quadros atrasados e remetentes sem autoridade não substituem o mundo", () => {
   const { host, client } = pair();
+  const operador = host.room.players[1];
+  operador.coop = { visual: { k: "personagem4-walk", f: 18 } };
   host.publishCoopFrame({ mapKey: "Level1", value: 1 });
+  const anterior = client.coopWorld;
+  operador.coop = { visual: { k: "personagem4-walk", f: 27 } };
   host.publishCoopFrame({ mapKey: "Level1", value: 2 });
-  client.receiveCoopFrame({ ...client.coopWorld, sequence: 1, value: 0 });
+  client.receiveCoopFrame(anterior);
   assert.equal(client.coopWorld.value, 2);
+  assert.equal(client.room.players[1].character, "nyx");
+  assert.deepEqual(client.room.players[1].coop.visual, { k: "personagem4-walk", f: 27 });
   client.receiveCoopFrame({ ...client.coopWorld, clientId: "client", sequence: 9, value: 99 });
   assert.equal(client.coopWorld.value, 2);
 });

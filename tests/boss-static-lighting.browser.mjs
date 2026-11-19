@@ -95,7 +95,8 @@ try {
     Buffer.from(data.split(",")[1], "base64")));
   console.log(JSON.stringify(metrics, null, 2));
   if (label === "after") {
-    assert.ok(metrics.rows.every(r => r.factors === 0 && r.uploads === 0));
+    assert.ok(metrics.rows.every(r => r.factors === 0), "movimento não recalcula a intensidade das fontes fixas");
+    assert.equal(metrics.rows[0].uploads, 0, "sem mudança de câmera ou silhueta, reutiliza o overlay");
     assert.equal(metrics.memory.individual, false);
   }
   assert.deepEqual(session.errors, []);

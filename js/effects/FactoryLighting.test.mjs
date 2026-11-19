@@ -1859,7 +1859,7 @@ test("ambiente básico preserva os pixels e transições originais exclusivament
   }
 });
 
-test("arena estática deixa de acompanhar sprites após a abertura e mantém energia de combate dinâmica", t => {
+test("atlas fixo fica atrás dos atores após a abertura e mantém energia de combate dinâmica", t => {
   const objects = {
     ZonaBoss: [{ x: 250, y: 50, width: 400, height: 350 }],
     Luzedeemergencia: [ponto({ Neon: true, Cor: "#FF101C" }, 400, 225)],
@@ -1888,15 +1888,26 @@ test("arena estática deixa de acompanhar sprites após a abertura e mantém ene
   luzes.ativa = false; luzes.revisao++;
   render();
   const rgba = texture.canvas.rgbaEm(406, 224);
+  const piso = texture.canvas.rgbaEm(430, 224);
+  assert.equal(rgba[0], 0, "a cor fixa não é desenhada sobre a silhueta");
+  player.visible = aliado.visible = false;
+  render();
+  assert.ok(texture.canvas.rgbaEm(406, 224)[0] > 0, "o mesmo ponto recebe a cor sem os atores");
+  assert.deepEqual(texture.canvas.rgbaEm(430, 224), piso, "a presença de atores não muda o piso ao redor");
+  player.visible = aliado.visible = true;
+  render();
   uploads = texture.refreshes;
   const alocacoes = canvases.length;
   player.x++; player.frame = { ...player.frame }; aliado.x++;
   render();
-  assert.equal(texture.refreshes, uploads, "luzes fixas não seguem poses locais ou remotas");
+  assert.equal(texture.refreshes, uploads + 1, "somente a composição acompanha a pose dos atores");
+  render();
+  assert.equal(texture.refreshes, uploads + 1, "silhuetas paradas reutilizam a textura");
   assert.equal(consultasVisibilidade, 1, "a lista de neons visíveis só é recalculada ao sair da introdução");
   assert.deepEqual(texture.canvas.rgbaEm(406, 224), rgba);
-  novoBoss.projeteisBoss.push({ active: true, visible: true, x: 400, y: 225 });
+  novoBoss.projeteisBoss.push({ active: true, visible: true, x: 470, y: 225 });
   render();
+  assert.ok(texture.canvas.rgbaEm(480, 225)[2] > 0.01, "o indicador azul do projétil continua visível no piso");
   uploads = texture.refreshes;
   player.x++;
   render();

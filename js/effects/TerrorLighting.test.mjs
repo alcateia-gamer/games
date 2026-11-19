@@ -141,7 +141,7 @@ test("neon fica atrás do boss, cópias, Robô Bola e NOVA, acompanhando suas po
     scaleX: 0.55, scaleY: 0.55, displayOriginX: 144, displayOriginY: 144,
     frame: { source: { image: imagem }, cutX: 0, cutY: 0, cutWidth: 288, cutHeight: 288 } });
   const boss = sprite(imagemBoss), copia = sprite(imagemCopia);
-  const imagemRobo = {}, imagemNova = {}, imagemAliado = {};
+  const imagemRobo = {}, imagemNova = {}, imagemAliado = {}, imagemPlayer = {};
   const robo = { ...sprite(imagemRobo), tipoRobo: "bola" };
   const nova = sprite(imagemNova);
   const aliado = sprite(imagemAliado);
@@ -150,7 +150,7 @@ test("neon fica atrás do boss, cópias, Robô Bola e NOVA, acompanhando suas po
     map: { getObjectLayer: name => ({ objects: name === "Luzedeemergencia" ? [{
       id: 1, point: true, x: 100, y: 100, name: "neon vermelho vertical",
       properties: { Raio: 48, Intensidade: 1 },
-    }] : [] }) },
+    }] : name === "ZonaBoss" ? [{ x: 0, y: 0, width: 250, height: 250 }] : [] }) },
     cameras: { main: { width: 800, height: 450, zoom: 1, scrollX: 0, scrollY: 0,
       matrix: { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 } } },
     textures: { exists: () => false, createCanvas: () => texture },
@@ -200,7 +200,20 @@ test("neon fica atrás do boss, cópias, Robô Bola e NOVA, acompanhando suas po
   nova.displayOriginY += 5;
   render();
   assert.equal(uploads, antes + 5, "o recorte acompanha mudanças de origem e flutuação");
-  // Mesmo com apenas os neons fixos, os dois sprites permanecem sobre o brilho.
+  // Durante o combate, o atlas fixo usa o mesmo recorte mesmo sem aura ativa.
+  scene.novoBoss.encerrado = true;
+  scene.player = sprite(imagemPlayer);
+  chamadas.length = 0;
+  render();
+  const atlasColorido = chamadas.findIndex(ch => ch.context === corContext &&
+    ch.op === "source-over" && ch.args.length === 3);
+  assert.ok(atlasColorido >= 0, "a cor fixa entra no buffer de brilho");
+  for (const imagem of [imagemBoss, imagemAliado, imagemPlayer]) {
+    assert.ok(chamadas.findIndex(ch => ch.context === corContext && ch.args[0] === imagem &&
+      ch.op === "destination-out") > atlasColorido, "o recorte vem depois da cor fixa");
+  }
+  // O brilho fixo continua recortado depois de retirar o encontro.
+  scene.player.visible = false;
   scene.novoBoss = null;
   chamadas.length = 0;
   render();
