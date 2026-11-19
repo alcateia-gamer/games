@@ -57,6 +57,11 @@ test("cliente segue as mesmas fileiras do host e invalida limiares calculados an
   host.restaurar();
   cliente.aplicarEstadoRede(snapshot());
   assert.equal(cliente.ambiente, 1);
+  const entradaTardia = new BossIntroLighting(arena);
+  entradaTardia.aplicarEstadoRede(snapshot());
+  assert.equal(entradaTardia.ativa, false);
+  assert.deepEqual([...luzes, vermelha].map(luz => entradaTardia.fatorLuz(luz)), [1, 1, 1, 1],
+    "entrar após a abertura já restaura todas as fontes, sem repetir a sequência");
   host.iniciar(luzes);
   cliente.aplicarEstadoRede(snapshot());
   assert.ok(luzes.every(luz => cliente.fatorLuz(luz) === 0));

@@ -24,7 +24,6 @@ import { configurarTrocaCamada } from "../map/TrocaCamada.js";
 import {
   atualizarDepthAtores,
   atualizarDepthGarras,
-  atualizarDepthObjetosProducaoEArmazem,
   atualizarDepthComputadoresPcAdm,
   atualizarDepthObjetosSuperPC,
   atualizarDepthObjetosDepthPerso,
@@ -63,7 +62,6 @@ import {
 import {
   criarCompanionPet,
   atualizarCompanionPet,
-  atualizarDepthCompanionPet,
 } from "../player/CompanionPet.js";
 
 import {
@@ -147,6 +145,7 @@ class Level1Parte2 extends Phaser.Scene {
     this.inimigoTeste = null;
     this.cidadeDescarregada = false;
     this.fabricaDescarregada = false;
+    this.robosFabricaDescarregados = false;
     this.limiteFabricaDescarregadaY = null;
     this.teleporteRetornoLiberado = false;
     this.transicaoRetornoEmAndamento = false;
@@ -291,15 +290,11 @@ class Level1Parte2 extends Phaser.Scene {
     const atualizarPosFisica = () => {
       atualizarHitboxDanoPlayer(this);
       this.atualizarTrocaCamada();
-      atualizarDepthGarras(this);
-      atualizarDepthComputadoresPcAdm(this);
-      atualizarDepthObjetosSuperPC(this);
-      atualizarDepthObjetosDepthPerso(this);
-      atualizarDepthParedePortaBoss(this);
     };
     this.events.on(Phaser.Scenes.Events.POST_UPDATE, atualizarPosFisica);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.events.off(Phaser.Scenes.Events.POST_UPDATE, atualizarPosFisica);
+      this.objetosPorCamada?.clear();
     });
 
     criarStatusPlayer(this);
@@ -426,12 +421,6 @@ class Level1Parte2 extends Phaser.Scene {
     atualizarSistemaInventario(this, delta);
     atualizarStatusPlayer(this, delta);
 
-    this.definirProfundidadePersonagem(this.profundidadePersonagemParte2);
-
-    atualizarDepthObjetosProducaoEArmazem(this);
-    atualizarDepthGarras(this);
-    atualizarDepthComputadoresPcAdm(this);
-
     atualizarSpawnsDev(this);
 
     this.spawnAreasRoboBola?.atualizar(delta);
@@ -439,11 +428,7 @@ class Level1Parte2 extends Phaser.Scene {
     atualizarRoboBola(this, time, delta);
     atualizarProjeteis(this, delta);
 
-    if (!this.multiplayer) {
-      atualizarCompanionPet(this, time, delta);
-
-      atualizarDepthCompanionPet(this);
-    }
+    if (!this.multiplayer) atualizarCompanionPet(this, time, delta);
 
     this.atualizarInterpolacaoRemota(delta);
 
@@ -929,6 +914,8 @@ class Level1Parte2 extends Phaser.Scene {
     this.profundidadePersonagemParte2 = valor;
 
     atualizarDepthPlayer(this);
+    atualizarDepthGarras(this);
+    atualizarDepthComputadoresPcAdm(this);
     atualizarDepthObjetosSuperPC(this);
     atualizarDepthObjetosDepthPerso(this);
     atualizarDepthParedePortaBoss(this);

@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { obterRegiaoFrenteLanterna, ocultarLanternaAtrasCamada } from "./FlashlightTileOcclusion.js";
+import { obterRegiaoFrenteLanterna, ocultarLanternaAtrasCamada, ocultarLanternaAtrasSala } from "./FlashlightTileOcclusion.js";
 
 test("a fachada do gerador fica diante da lanterna dentro e acima do gatilho real", () => {
   const map = JSON.parse(readFileSync(new URL("../../assets/map/parte2-fase1.json", import.meta.url)));
@@ -20,6 +20,39 @@ test("a fachada do gerador fica diante da lanterna dentro e acima do gatilho rea
   assert.equal(obterRegiaoFrenteLanterna(scene, actor), regiao, "a entrada parcial segue a hitbox da troca de camada");
   actor.body.y = regiao.bottom;
   assert.equal(obterRegiaoFrenteLanterna(scene, actor), null);
+  const remote = { x, y: regiao.bottom, coopBody: { ...actor.body, y: regiao.bottom - 1 } };
+  assert.equal(obterRegiaoFrenteLanterna(scene, remote), regiao, "a réplica usa sua hitbox interpolada");
+});
+
+test("fachada restringe o culling e ainda lê a geometria e o quadro atuais", t => {
+  const anterior = globalThis.Phaser;
+  t.after(() => { globalThis.Phaser = anterior; });
+  const tile = { index: 1, pixelX: 100, pixelY: 100, rotation: Math.PI / 4, flipX: true };
+  const tileset = { tileWidth: 48, tileHeight: 48, tileOffset: { x: 10, y: 0 },
+    getAnimatedTileId: (id, time) => id + time, getTileTextureCoordinates: x => ({ x, y: 0 }),
+    image: { getSourceImage: () => ({}) } };
+  const view = { x: 0, y: 0, right: 1200, bottom: 900 };
+  const regiao = { left: 100, top: 100, right: 145, bottom: 145 };
+  const layer = { scrollFactorX: 1, scrollFactorY: 1, scaleX: 1, scaleY: 1,
+    gidMap: { 1: tileset }, timeElapsed: 0,
+    cull() { assert.fail("a fachada usa o culling com área reduzida"); } };
+  layer.cullCallback = (_, camera, saida) => {
+    assert.ok(camera.worldView.right < 250 && camera.worldView.bottom < 250);
+    assert.equal(saida.length, 0);
+    saida.push(tile);
+    return saida;
+  };
+  globalThis.Phaser = { Tilemaps: { Components: { CullTiles: layer.cullCallback } } };
+  const scene = { map: { tilesets: [tileset] }, camadasMapaParte2: [layer] };
+  const quadros = [];
+  const context = { save() {}, restore() {}, transform() {}, drawImage(_, x) { quadros.push(x); } };
+  ocultarLanternaAtrasSala(context, scene, { worldView: view }, regiao);
+  layer.timeElapsed = 1;
+  ocultarLanternaAtrasSala(context, scene, { worldView: view }, regiao);
+  tile.index = -1;
+  ocultarLanternaAtrasSala(context, scene, { worldView: view }, regiao);
+  assert.deepEqual(quadros, [1, 2]);
+  assert.deepEqual(view, { x: 0, y: 0, right: 1200, bottom: 900 });
 });
 
 test("sem gatilho ou personagem não aplica a sobreposição da sala", () => {

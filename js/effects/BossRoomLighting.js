@@ -45,9 +45,8 @@ export default class BossRoomLighting {
     return !!this.canvas && luzAfetaCamera(this.area, camera);
   }
 
-  /** Substitui só o exterior da união de ZonaBoss, preservando os pixels originais da sala. */
-  preencherExterior(context, camera, width, height, alpha) {
-    context.save();
+  /** Recorta o exterior da união de ZonaBoss, preservando os pixels originais da sala. */
+  recortarExterior(context, camera, width, height) {
     const m = camera.matrix;
     // Interseção dos exteriores: funciona também com zonas sobrepostas e rotacionadas.
     for (const zona of this.zonas) {
@@ -59,13 +58,6 @@ export default class BossRoomLighting {
       context.rect(0, 0, zona.width, zona.height);
       context.clip("evenodd");
     }
-    context.setTransform(1, 0, 0, 1, 0, 0);
-    context.globalAlpha = 1;
-    context.globalCompositeOperation = "source-over";
-    context.clearRect(0, 0, width, height);
-    context.fillStyle = `rgba(0,0,0,${alpha})`;
-    context.fillRect(0, 0, width, height);
-    context.restore();
   }
 
   desenhar(context, camera, fator = 1) {

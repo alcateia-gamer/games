@@ -273,7 +273,8 @@ export function criarHackingFabrica(scene) {
     const buttonHeight = databaseButton.getBoundingClientRect().height || 44;
     const buttonWidth = databaseButton.getBoundingClientRect().width || 180;
     databaseButton.style.left = `${devCenterX + devWidth / 2 - buttonWidth / 2}px`;
-    databaseButton.style.top = `${bounds.top + (camera.y + devY) * scaleY + devHeight + 10 + buttonHeight / 2}px`;
+    const atalhosDev = (scene.espacoAtalhosDev?.() ?? 0) * scaleY;
+    databaseButton.style.top = `${bounds.top + (camera.y + devY) * scaleY + devHeight + atalhosDev + 10 + buttonHeight / 2}px`;
   };
   scene.events.on(Phaser.Scenes.Events.PRE_RENDER, posicionarDatabaseButton);
   scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () =>

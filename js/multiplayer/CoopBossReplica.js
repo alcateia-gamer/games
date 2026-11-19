@@ -15,7 +15,7 @@ export function describeCombatTarget(target, id, sender) {
     morto: !!target.morto, torre: !!target.torre, tipoRobo: target.tipoRobo,
     direcaoAtual: target.direcaoAtual, estado: target.estado,
     spawnAreaRoboBolaId: target.spawnAreaRoboBolaId, prologoPortal: target.prologoPortal,
-    portalBossOrigem: target.portalBossOrigem };
+    portalBossOrigem: target.portalBossOrigem, prologoEncontroId: target.prologoEncontroId };
 }
 
 export function describeBoss(scene, sender) {

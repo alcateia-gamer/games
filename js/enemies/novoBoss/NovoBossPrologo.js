@@ -116,9 +116,8 @@ export function prepararPrologoNovoBoss(scene, encontro) {
     const portal = portais.pontos[proximoPortal % 2];
     // Aguarda o centro ficar livre em vez de materializar o robô fora do portal.
     if (!pontoSeguroPortal(scene, encontro, portal, 22)) { proximoSpawn = tempo + 250; return; }
-    const robo = criarRoboBola(scene, portal);
+    const robo = criarRoboBola(scene, portal, null, id);
     if (!robo) { proximoSpawn = tempo + 250; return; }
-    robo.prologoEncontroId = id;
     robo.prologoOndaId = ondaId;
     robo.prologoPortal = proximoPortal % 2;
     robo.portalBossOrigem = { x: portal.x, y: portal.y, depth: portal.sprite.depth + 0.1, raio: 72 };

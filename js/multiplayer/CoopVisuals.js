@@ -28,6 +28,7 @@ export function describeVisual(o) {
     blend: o.blendMode || 0, tint: o.tintTopLeft ?? 0xffffff, tf: !!o.tintFill };
   if (o.aboveBossTowers) state.aboveBossTowers = true;
   if (o.novoBossDisparoEnergia) state.bossProjectile = true;
+  if (o.coopFactoryRobot) state.factoryRobot = true;
   if (o.coopAnchor?.active) {
     const p = o.coopAnchor;
     state.anchor = { id: p.id || o.scene?.multiplayerManager?.playerId,
@@ -145,7 +146,7 @@ export class VisualSender {
 
 export class VisualReceiver {
   constructor(scene) { this.scene = scene; this.entries = new Map(); }
-  receive(packet) {
+  receive(packet, ignoreFactoryRobots = false) {
     if (!packet || !Array.isArray(packet.changed) || packet.changed.length > COOP.maxNodes) return;
     const keep = new Set(packet.changed.map(n => n.id));
     if (packet.full) for (const id of this.entries.keys()) if (!keep.has(id)) this.remove(id);
@@ -154,6 +155,7 @@ export class VisualReceiver {
       if (typeof node.id !== "string" || !node.s || this.entries.size >= COOP.maxNodes && !this.entries.has(node.id)) continue;
       const before = this.entries.get(node.id);
       const s = packet.full ? { ...node.s } : { ...before?.state, ...node.s };
+      if (ignoreFactoryRobots && s.factoryRobot) { this.remove(node.id); continue; }
       if (Array.isArray(s.g) && s.g.length > COOP.maxCommands) continue;
       let object = before?.object;
       // Um delta sem a criação anterior só pode ser reconstruído pelo keyframe.

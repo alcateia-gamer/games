@@ -133,19 +133,37 @@ export class CoopRuntime {
     if (this.bossAssetsPrepared) return true;
     const scene = this.scene;
     if (!assetsBossProntos(scene)) return false;
+    this.bossPreparationError = null;
     try {
-      if (!criarAnimacoesNovoBoss(scene) || ![assetsNovoBoss.idle, assetsNovoBoss.ataque].every(a => scene.anims.exists(a.animacao))) return false;
+      if (!criarAnimacoesNovoBoss(scene) || ![assetsNovoBoss.idle, assetsNovoBoss.ataque].every(a => scene.anims.exists(a.animacao)))
+        throw new Error("Animações principais do boss indisponíveis");
       const poses = { summon: assetsNovoBoss.torreSummon, idle: assetsNovoBoss.torreIdle,
         attacked: assetsNovoBoss.torreAttacked, death: assetsNovoBoss.torreDeath };
       for (const p of pontosTorresNovoBoss(scene) || []) prepararPisoTorre(scene, p, poses);
       this.bossAssetsPrepared = true;
       if (!this.host) { this.awaitingKeyframe = true; this.manager.sendCoopAction("keyframe", {}); }
       return true;
-    } catch { return false; }
+    } catch (error) { this.bossPreparationError = error; return false; }
   }
   prepareBossEncounter() {
-    try { return prepararVisuaisBossCoop(this.bossContext); }
-    catch { return false; }
+    this.bossPreparationError = null;
+    try {
+      if (this.bossEncounterPartial) {
+        destruirBoss(this.bossContext);
+        prepararBoss(this.bossContext, this.scene.novoBossConfig || novoBossConfig);
+        this.bossEncounterPartial = false;
+      }
+      return prepararVisuaisBossCoop(this.bossContext);
+    } catch (error) {
+      this.bossEncounterPartial = true;
+      this.bossPreparationError = error;
+      return false;
+    }
+  }
+  clearFactoryRobotReplicas() {
+    for (const [id, entry] of this.receiver.entries) {
+      if (entry.state.factoryRobot) this.receiver.remove(id);
+    }
   }
   bossVisualsReady() {
     const boss = this.host ? this.scene.novoBoss : this.replica.encounter;
@@ -329,6 +347,8 @@ export class CoopRuntime {
     if (this.host || this.teamDefeated) return;
     if (Object.prototype.hasOwnProperty.call(packet, "music")) this.music.receive(packet.music, packet.streamId);
     if (packet.mapKey !== this.mapKey) return;
+    const loading = this.world?.bossLoading;
+    if (loading?.cleanedSession && packet.bossPreparation?.id !== loading.cleanedSession) return;
     if (packet.upgradeEconomy) this.scene.scrapSystem?.restore(packet.upgradeEconomy);
     this.revival.receive(packet.revivals);
     if (this.receivedStream !== packet.streamId) {
@@ -341,6 +361,7 @@ export class CoopRuntime {
       this.awaitingKeyframe = true;
     this.receivedSequence = packet.sequence;
     this.latestFrame = packet;
+    loading?.apply(packet.bossPreparation);
     if (this.awaitingKeyframe && !packet.visuals?.full) {
       if (!this.keyframeRequestedAt || Date.now() - this.keyframeRequestedAt > 500) {
         this.manager.sendCoopAction("keyframe", {}); this.keyframeRequestedAt = Date.now();
@@ -349,15 +370,16 @@ export class CoopRuntime {
       return;
     }
     this.awaitingKeyframe = false; this.keyframeRequestedAt = 0;
-    this.receiver.receive(packet.visuals);
+    this.receiver.receive(packet.visuals, this.scene.robosFabricaDescarregados);
     const s = this.scene;
     s.inimigos = (packet.targets || []).map(data => {
+      if (s.robosFabricaDescarregados && !data.prologoEncontroId) return null;
       const actor = this.receiver.get(data.visual);
       if (!actor) return null;
       Object.assign(actor, { remoteOnly: true, networkId: data.id, tipoRobo: data.tipoRobo,
         vida: data.vida, vidaMaxima: data.vidaMaxima, morto: data.morto, origemSpawn: data.origemSpawn,
         direcaoAtual: data.direcaoAtual,
-        portalBossOrigem: data.portalBossOrigem,
+        portalBossOrigem: data.portalBossOrigem, prologoEncontroId: data.prologoEncontroId,
         hitboxDano: data.hitbox && (actor.hitboxDano instanceof Phaser.Geom.Rectangle ? actor.hitboxDano : new Phaser.Geom.Rectangle()).setTo(
           data.hitbox.x, data.hitbox.y, data.hitbox.width, data.hitbox.height),
         // A réplica não simula física. GameObject.body é reservado a corpos
@@ -368,7 +390,14 @@ export class CoopRuntime {
       return actor;
     }).filter(Boolean);
     s.inimigoTeste = s.inimigos[0] || null;
-    this.replica.receive(packet.boss);
+    try {
+      this.replica.receive(packet.boss);
+    } catch (error) {
+      if (!s.preparacaoBoss || loading?.released) throw error;
+      this.replica.destroy();
+      s.preparacaoBoss.falhar(error.message);
+      loading?.debug("Falha ao preparar réplica do boss", error);
+    }
     const self = packet.players.find(p => p.id === this.manager.playerId);
     const state = self?.coop?.special;
     if (state && s.estadoEspecial) {
@@ -381,15 +410,26 @@ export class CoopRuntime {
   }
   worldObjects() {
     const s = this.scene, excluded = new Set([s.player, ...this.players.objects(), ...playerVisualObjects(s)]);
+    for (const robo of s.inimigos ?? []) {
+      if (!robo?.active || robo.prologoEncontroId) continue;
+      for (const visual of [robo, robo.fundoVida, robo.barraVida, robo.bordaVida, robo.debugHitboxDano]) {
+        if (visual) visual.coopFactoryRobot = true;
+      }
+    }
+    for (const laser of obterFilhosGrupoSeguro(s.lasersInimigo)) {
+      if (!laser.especialAtirador?.prologoEncontroId) laser.coopFactoryRobot = true;
+    }
     for (const effects of this.players.effects.values()) for (const { object } of effects.entries.values()) excluded.add(object);
     const objects = [];
+    const prioritarios = new Set([s.novoBoss?.sprite, ...(s.novoBoss?.geradores ?? []).map(torre => torre.visual ?? torre.sprite)]);
     function visit(o) {
       if (!o?.active || o.coopReplica || o.coopLocalVisual || excluded.has(o) || o.scrollFactorX === 0 || o.scrollFactorY === 0) return;
       if (!o.visible && !o.body && o.type === "Graphics") return;
       objects.push(o);
       if (o.type === "Container") for (const child of o.list) visit(child);
     }
-    for (const o of s.children.list) if (!this.baseline.has(o)) visit(o);
+    for (const o of prioritarios) visit(o);
+    for (const o of s.children.list) if (!prioritarios.has(o) && !this.baseline.has(o)) visit(o);
     return objects;
   }
   update(time, delta) {

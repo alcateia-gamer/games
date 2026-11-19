@@ -1858,3 +1858,90 @@ test("ambiente básico preserva os pixels e transições originais exclusivament
     });
   }
 });
+
+test("arena estática deixa de acompanhar sprites após a abertura e mantém energia de combate dinâmica", t => {
+  const objects = {
+    ZonaBoss: [{ x: 250, y: 50, width: 400, height: 350 }],
+    Luzedeemergencia: [ponto({ Neon: true, Cor: "#FF101C" }, 400, 225)],
+  };
+  const map = { getObjectLayer: name => ({ objects: objects[name] ?? [] }) };
+  const luzes = { ativa: true, ambiente: 1, revisao: 0, fatorLuz: () => 1 };
+  const novoBoss = { jogadorNaArena: true, introducao: { iluminacao: luzes }, projeteisBoss: [] };
+  const { scene, render, texture, cleanup, canvases } = cenaComMascara(t, [], true, { map, novoBoss });
+  const sheet = document.createElement("canvas");
+  sheet.width = sheet.height = 48;
+  sheet.getContext("2d").fillRect(0, 0, 48, 48);
+  const player = scene.player = { active: true, visible: true, alpha: 1, x: 400, y: 225,
+    displayOriginX: 24, displayOriginY: 24,
+    frame: { source: { image: sheet }, cutX: 0, cutY: 0, cutWidth: 48, cutHeight: 48 } };
+  const aliado = { ...player };
+  scene.remotePlayers = new Map([["aliado", aliado]]);
+  render();
+  let uploads = texture.refreshes;
+  player.x++; aliado.x++;
+  render();
+  assert.ok(texture.refreshes > uploads, "a abertura mantém o recorte original por pose");
+  const emergencia = scene.iluminacaoEmergencia;
+  const atualizar = emergencia.atualizar.bind(emergencia);
+  let consultasVisibilidade = 0;
+  emergencia.atualizar = (...args) => { consultasVisibilidade++; return atualizar(...args); };
+  luzes.ativa = false; luzes.revisao++;
+  render();
+  const rgba = texture.canvas.rgbaEm(406, 224);
+  uploads = texture.refreshes;
+  const alocacoes = canvases.length;
+  player.x++; player.frame = { ...player.frame }; aliado.x++;
+  render();
+  assert.equal(texture.refreshes, uploads, "luzes fixas não seguem poses locais ou remotas");
+  assert.equal(consultasVisibilidade, 1, "a lista de neons visíveis só é recalculada ao sair da introdução");
+  assert.deepEqual(texture.canvas.rgbaEm(406, 224), rgba);
+  novoBoss.projeteisBoss.push({ active: true, visible: true, x: 400, y: 225 });
+  render();
+  uploads = texture.refreshes;
+  player.x++;
+  render();
+  assert.ok(texture.refreshes > uploads, "ataques continuam respondendo aos personagens");
+  assert.equal(canvases.length, alocacoes, "combate reutiliza buffers");
+  novoBoss.projeteisBoss.length = 0;
+  luzes.ativa = true; luzes.revisao++;
+  const consultasAntes = consultasVisibilidade;
+  render();
+  uploads = texture.refreshes;
+  player.x++;
+  render();
+  assert.equal(consultasVisibilidade, consultasAntes + 2, "a abertura reavalia as fontes mesmo com câmera parada");
+  assert.ok(texture.refreshes > uploads, "recomeçar a introdução restaura seu comportamento");
+  cleanup();
+  assert.equal(scene.game.renderer.listenerCount("render"), 0);
+  assert.ok(canvases.filter(c => c !== sheet && c !== texture.canvas)
+    .every(c => c.width === 0 && c.height === 0));
+});
+
+test("o compositor da fase desenha as luzes externas do Tiled e reutiliza a máscara estável", t => {
+  const { scene, render, texture } = cenaComMascara(t, [
+    ponto({ Raio: 25, Cor: "#00FF00" }, 160, 150),
+    { ...ponto({ Raio: 25, Ligada: false }, 300, 150), id: 2 },
+    { ...ponto({ Raio: 25, Piscando: true }, -1200, -1900), id: 3 },
+  ], true, { ambienteBasico: true });
+  render();
+  assert.ok(texture.canvas.rgbaEm(160, 150)[3] < 0.4);
+  assert.ok(texture.canvas.rgbaEm(160, 150)[1] > 0);
+  assertSombraBasica(300, 150);
+  assertSombraBasica(720, 400);
+  function assertSombraBasica(x, y) {
+    assert.deepEqual(texture.canvas.rgbaEm(x, y), [0, 0, 0, 0.4]);
+  }
+  const uploads = texture.refreshes;
+  const zona = scene.zonasLuzApagada;
+  let consultas = 0;
+  const fator = zona.fatorLuz.bind(zona);
+  zona.fatorLuz = (...args) => { consultas++; return fator(...args); };
+  for (let i = 0; i < 30; i++) { scene.time.now += 16; render(); }
+  assert.equal(texture.refreshes, uploads);
+  assert.equal(consultas, 0, "fontes estáveis reutilizam intensidades e fontes distantes não consultam zonas");
+  scene.cameras.main.setZoom(1.25).setRotation(0.12);
+  render();
+  const m = scene.cameras.main.matrix;
+  assert.ok(texture.canvas.rgbaEm(m.a * 160 + m.c * 150 + m.e, m.b * 160 + m.d * 150 + m.f)[1] > 0);
+  assert.equal(texture.refreshes, uploads + 1);
+});

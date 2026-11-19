@@ -11,6 +11,7 @@ function suavizarTexturasRoboBola(scene) {
 /** Cada efeito acompanha a física e é removido com seu dono ou ao sair da cena. */
 function acompanhar(scene, dono, desenhar) {
   const grafico = scene.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
+  grafico.coopFactoryRobot = !(dono.prologoEncontroId || dono.especialAtirador?.prologoEncontroId);
   let removido = false;
   let desenhado = false;
   const atualizar = () => {

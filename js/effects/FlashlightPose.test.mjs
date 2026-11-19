@@ -28,6 +28,20 @@ test("lanterna do aliado usa mira transmitida, posição visual e some com energ
   assert.equal(lanternas.size, 0);
 });
 
+test("mudar o quadro de um aliado só invalida a lanterna quando a silhueta recorta o feixe", () => {
+  const { player } = cena();
+  const source = { image: {} };
+  const scene = { remotePlayers: new Map([["ally", player]]) }, lanternas = new Map();
+  Object.assign(player, { active: true, coopFlashlightAngle: 0 });
+  assert.equal(atualizarLanternasAliadas(scene, lanternas), true);
+  player.frame = { source, name: 20 };
+  assert.equal(atualizarLanternasAliadas(scene, lanternas), false);
+  player.coopFlashlightAngle = -Math.PI / 2;
+  assert.equal(atualizarLanternasAliadas(scene, lanternas), true);
+  player.frame = { source, name: 1 };
+  assert.equal(atualizarLanternasAliadas(scene, lanternas), true);
+});
+
 test("barriga permanece centralizada em cada pose cardinal e mantém o feixe nas oito direções ao parar", () => {
   for (const [direcao, frame, barriga] of [
     ["up", 0, [0, 10]], ["left", 9, [0, 10]],

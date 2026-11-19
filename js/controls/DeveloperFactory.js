@@ -9,7 +9,7 @@ const FLAGS_ACESSO_FABRICA = {
   [H.cartao]: true,
 };
 
-function podeValidar(scene, context) {
+export function podeValidarFabricaDev(scene, context = scene) {
   return context.developerMode && scene.sys?.settings?.key === "Level1Parte2" &&
     context.player?.active && !context.morteEmAndamento && !(context.vida <= 0) &&
     !context.generatorMenuOpen && !context.upgradeMenuOpen && !context.devItemMenuOpen &&
@@ -18,7 +18,7 @@ function podeValidar(scene, context) {
 }
 
 export function validarFabricaDev(scene, context = scene) {
-  if (!podeValidar(scene, context)) return false;
+  if (!podeValidarFabricaDev(scene, context)) return false;
   const runtime = scene.coopRuntime;
   if (runtime && !runtime.host) return false;
   if (runtime) {
@@ -37,14 +37,17 @@ export function validarFabricaDev(scene, context = scene) {
   return true;
 }
 
+export function solicitarValidacaoFabricaDev(scene) {
+  if (!podeValidarFabricaDev(scene)) return false;
+  if (scene.coopRuntime) return scene.coopRuntime.manager.sendCoopAction("devFactoryAccess");
+  return validarFabricaDev(scene);
+}
+
 export function criarAtalhoDevFabrica(scene) {
   if (scene.sys?.settings?.key !== "Level1Parte2") return;
-  const tecla = scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.H);
-  const validar = () => {
-    if (!podeValidar(scene, scene)) return;
-    if (scene.coopRuntime) return scene.coopRuntime.manager.sendCoopAction("devFactoryAccess");
-    return validarFabricaDev(scene);
-  };
+  const tecla = scene.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.H);
+  if (!tecla) return;
+  const validar = () => solicitarValidacaoFabricaDev(scene);
   tecla.on("down", validar);
   scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => tecla.off("down", validar));
 }

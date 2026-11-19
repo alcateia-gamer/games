@@ -210,6 +210,7 @@ function criarObjetosCidade(scene, map, textureKeyByTilesetName) {
  */
 function criarObjetosFabrica(scene, map, textureKeyByTilesetName) {
   scene.objetosMapaParte2 = [];
+  scene.objetosPorCamada = new Map();
   scene.mesasRefeitorio = [];
   const ordemCamadasTiled = map.data?.layers || map.layers;
   const camadasObjetos =
@@ -299,6 +300,10 @@ function criarObjetosFabrica(scene, map, textureKeyByTilesetName) {
         visual.setData("tiledObjectId", object.id);
         visual.setData("depthBase", profundidadeTiled + 0.25);
         scene.objetosMapaParte2.push(visual);
+        let camada = scene.objetosPorCamada.get(layerData.name);
+        if (!camada) scene.objetosPorCamada.set(layerData.name, camada = new Set());
+        camada.add(visual);
+        visual.once("destroy", () => camada.delete(visual));
         // Os dois conjuntos de tiles da mesa ficam na camada DepthPerso do refeitório.
         if (layerData.name === "DepthPerso" && object.id >= 887 && object.id <= 892) {
           scene.mesasRefeitorio.push({

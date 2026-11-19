@@ -2,10 +2,12 @@
 import { mergeBossPreparation } from "./CoopProtocol.js";
 import { planejarEntradaBoss } from "./CoopBossEntrance.js";
 import { distanceToInteractionArea } from "../interactions/FactoryGenerator.js";
+import { limparGrupoRobos } from "../enemies/EnemyTest.js";
 
 const entradas = scene => (scene.portasFabrica ?? []).filter(p => ["porta02", "porta03"].includes(p.nome));
 const vivo = p => !p.dead && (p.health ?? 1) > 0;
 const CONTROLES_BOSS = new Set(["bossAccess", "bossPrepared", "bossPreparation", "bossIntro"]);
+const ESPERA_SEM_PROGRESSO_MS = 15000;
 export const isBossControl = action => CONTROLES_BOSS.has(action.kind);
 
 export class CoopBossLoading {
@@ -13,6 +15,7 @@ export class CoopBossLoading {
     this.world = world; this.r = world.r; this.scene = world.scene; this.manager = world.manager;
     this.state = null; this.lastReport = null; this.lastReportAt = -Infinity;
     this.destroyed = false; this.remoteLocks = new Map();
+    this.acceptedSequences = new Map();
   }
   get local() { return this.scene.preparacaoBoss; }
   now() {
@@ -84,6 +87,20 @@ export class CoopBossLoading {
     this.state = accepted;
     this.accessRequested = false;
     this.manager.room.coopBossPreparation = accepted;
+    if (this.cleanedSession !== accepted.id) {
+      const s = this.scene;
+      s.robosFabricaDescarregados = true;
+      s.spawnAreasRoboBola?.destruir();
+      s.enemySpawnManager?.destroy();
+      s.spawnAreasRoboBola = s.enemySpawnManager = null;
+      const quantidade = (s.inimigos ?? []).filter(robo => robo && !robo.prologoEncontroId).length;
+      limparGrupoRobos(s, (s.inimigos ?? []).some(robo => robo?.prologoEncontroId));
+      this.r.clearFactoryRobotReplicas?.();
+      this.r.audio?.clearFactoryRobotSounds?.();
+      this.r.forceKeyframe = true;
+      this.cleanedSession = accepted.id;
+      this.debug(`Limpeza da fábrica concluída (${quantidade} robôs removidos)`);
+    }
     if (!this.local) return;
     if (changed || this.local.estado === "ocioso") this.local.iniciar();
     if (accepted.entrada) {
@@ -103,6 +120,7 @@ export class CoopBossLoading {
       if (!this.r.host) this.world.update(0);
     }, { podeContinuar: () => this.canStart() || this.state?.phase === "loading" &&
         this.local.pronto && this.r.bossAssetsPrepared, cancelavel: false,
+      aoTentarNovamente: () => this.retry(),
       cancelar: () => { this.scene.coopBossWaiting = false; this.restoreRemoteLocks(); } });
   }
   acceptStatus(playerId, report) {
@@ -114,12 +132,20 @@ export class CoopBossLoading {
     if (!session || report.session !== session) return;
     if (!Number.isSafeInteger(report.sequence) || report.sequence < 1) return;
     const previous = this.state.clients[playerId];
-    if (previous?.session === session && previous.sequence >= report.sequence) return;
-    const next = { session, status: report.status, placed: report.placed === true,
+    const ultimo = this.acceptedSequences.get(playerId);
+    if (Math.max(previous?.session === session ? previous.sequence : 0,
+      ultimo?.session === session ? ultimo.sequence : 0) >= report.sequence) return;
+    this.acceptedSequences.set(playerId, { session, sequence: report.sequence });
+    const next = { session, status: report.status,
+      placed: report.placed === true && (report.placement ?? 0) === (this.state.entrada?.revision ?? 0),
       sequence: report.sequence,
       systems: report.systems === true && report.systemsEpoch === this.state.systemsEpoch,
       systemsEpoch: typeof report.systemsEpoch === "string" && report.systemsEpoch.length <= 160 ? report.systemsEpoch : null };
-    if (JSON.stringify(this.state.clients[playerId]) === JSON.stringify(next)) return;
+    if (previous?.session === next.session && previous.status === next.status && previous.placed === next.placed &&
+        previous.systems === next.systems && previous.systemsEpoch === next.systemsEpoch) {
+      // Protege contra relatórios antigos sem avançar a revisão para um mero reenvio.
+      return;
+    }
     this.state = { ...this.state, clients: { ...this.state.clients, [playerId]: next } };
     this.publish();
   }
@@ -129,19 +155,23 @@ export class CoopBossLoading {
       entradas(this.scene).every(p => p.estado === "fechada"));
   }
   report() {
-    if (!this.current() || !this.local || !this.state.participants.includes(this.manager.playerId)) return;
+    if (!this.current() || this.cleanedSession !== this.state.id || !this.local) return;
     let status = this.local.pronto ? "ready" : this.local.estado === "falhou" ? "failed" : "loading";
     if (status === "ready" && !this.r.prepareBossAssets()) {
-      this.local.falhar(); status = "failed";
+      this.local.falhar(this.r.bossPreparationError?.message ?? "Animações do boss indisponíveis.");
+      this.debug("Falha ao preparar assets", this.r.bossPreparationError);
+      status = "failed";
     }
+    if (!this.state.participants.includes(this.manager.playerId)) return;
     const report = { id: this.state.id, roomCode: this.state.roomCode, mapId: this.state.mapId,
       session: this.r.streamId, status, placed: this.placed(), systemsEpoch: this.state.systemsEpoch ?? null,
+      placement: this.state.entrada?.revision ?? 0,
       systems: this.state.systemsPrepared === true && this.r.bossVisualsReady() };
     const json = JSON.stringify(report), stored = this.state.clients[this.manager.playerId];
     if (json !== this.lastReport || (stored?.session !== report.session || stored?.status !== status || stored?.placed !== report.placed ||
         stored?.systems !== report.systems || stored?.systemsEpoch !== report.systemsEpoch) &&
-        Date.now() - this.lastReportAt > 1000) {
-      this.lastReport = json; this.lastReportAt = Date.now();
+        (this.now() < this.lastReportAt || this.now() - this.lastReportAt > 1000)) {
+      this.lastReport = json; this.lastReportAt = this.now();
       this.reportSequence = (this.reportSequence || 0) + 1;
       const packet = { ...report, sequence: this.reportSequence };
       if (this.r.host) this.acceptStatus(this.manager.playerId, packet);
@@ -150,7 +180,10 @@ export class CoopBossLoading {
     if (status === "failed" && !this.local.aguardando) this.wait();
   }
   assemble() {
-    if (this.state.phase !== "loading" || this.r.revival?.participants().some(p => p.dead)) return;
+    const entrada = this.state.entrada;
+    const reunindoNovoJogador = this.state.phase === "assembling" &&
+      this.state.participants.some(id => !entrada?.jogadores[id]);
+    if (this.state.phase !== "loading" && !reunindoNovoJogador || this.r.revival?.participants().some(p => p.dead)) return;
     const people = this.r.playerContexts().filter(c => c.player?.active && c.vida > 0 && !c.morteEmAndamento)
       .map(c => ({ id: c.coopRemotePlayerId ?? this.manager.playerId, player: c.player, context: c }));
     if (this.state.participants.some(id => !people.some(p => p.id === id))) return;
@@ -160,7 +193,9 @@ export class CoopBossLoading {
     if (!encontro) return;
     const destinos = planejarEntradaBoss(this.scene, encontro, origem, people);
     if (!destinos) return;
-    this.state = { ...this.state, phase: "assembling", entrada: { id: this.state.id, jogadores: destinos } };
+    const clients = Object.fromEntries(Object.entries(this.state.clients).map(([id, client]) => [id, { ...client, placed: false }]));
+    this.state = { ...this.state, clients, phase: "assembling", entrada: { id: this.state.id,
+      revision: entrada ? (entrada.revision ?? 0) + 1 : 0, jogadores: destinos } };
     this.publish(); this.apply(this.state);
   }
   overlap(player, area) {
@@ -185,7 +220,7 @@ export class CoopBossLoading {
     return this.state.participants.every(id => {
       const player = this.manager.room.players.find(p => p.id === id), c = this.state.clients[id];
       const session = id === this.manager.playerId ? this.r.streamId : player?.coop?.sceneSession;
-      return player && vivo(player) && c?.session === session && c.status === "ready" && c.placed &&
+      return player && vivo(player) && session && c?.session === session && c.status === "ready" && c.placed &&
         (!systems || c.systems && c.systemsEpoch === this.state.systemsEpoch);
     });
   }
@@ -195,9 +230,65 @@ export class CoopBossLoading {
       this.local?.pronto && this.r.bossAssetsPrepared === true &&
       (this.released || !this.state.systemsPrepared || this.r.bossVisualsReady()) &&
       (this.state.phase === "complete" || entradas(this.scene).every(p => p.estado === "fechada"));
-    if (!allowed || this.state.phase === "intro" && !this.released && !this.ready(true)) return false;
+    // 'intro' é o compromisso do host, publicado somente depois de ready(true).
+    // O cliente verifica os próprios recursos, sem bloquear por uma cópia antiga das sessões alheias.
+    if (!allowed || this.state.phase === "intro" && !this.state.participants.includes(this.manager.playerId)) return false;
     this.released = true;
     return true;
+  }
+  debug(message, detail) {
+    if (this.scene.developerMode) console.info(`[BOSS-LOADING] ${message}`, detail ?? "");
+  }
+  retry() {
+    this.lastReport = null;
+    this.lastProgressAt = this.now();
+    this.report();
+    if (this.r.host) this.r.forceKeyframe = true;
+    else this.manager.sendCoopAction("keyframe", {});
+  }
+  updateWatchdog() {
+    const state = this.state, local = this.local;
+    if (!local || this.released) { local?.informarEspera?.(null); return; }
+    const clients = state.participants.map(id => {
+      const c = state.clients[id];
+      return [id, c?.session, c?.status, c?.placed, c?.systems, c?.systemsEpoch];
+    });
+    const progress = JSON.stringify([state.phase, state.entrada?.revision, state.systemsEpoch,
+      local.estado, local.progresso, entradas(this.scene).map(p => p.estado), clients]);
+    const agora = this.now();
+    if (state.phase !== this.lastPhase) {
+      this.lastPhase = state.phase;
+      this.phaseStartedAt = agora;
+      this.debug(`Fase ${state.phase}`, { sessao: state.id, desde: agora });
+    }
+    if (progress !== this.lastProgress || agora < this.lastProgressAt) {
+      this.lastProgress = progress; this.lastProgressAt = agora;
+      this.watchdogLogged = false;
+    }
+    if (agora - this.lastProgressAt < ESPERA_SEM_PROGRESSO_MS) { local.informarEspera?.(null); return; }
+    let pendencia;
+    if (!local.pronto) pendencia = local.estado === "carregando"
+      ? `Download local sem avanço (${Math.round((local.progresso ?? 0) * 100)}%).`
+      : "Recursos locais do boss indisponíveis.";
+    else if (!state.entrada) pendencia = this.r.revival?.participants().some(p => p.dead)
+      ? "Aguardando o resgate de um jogador." : "Aguardando um posicionamento seguro para a equipe.";
+    else if (entradas(this.scene).some(p => p.estado !== "fechada")) pendencia = "Aguardando o fechamento das portas.";
+    else if (state.systemsPrepared && !this.r.bossVisualsReady()) pendencia = "Aguardando os visuais do boss.";
+    else {
+      const i = state.participants.findIndex(id => {
+        const c = state.clients[id];
+        const session = id === this.manager.playerId ? this.r.streamId : this.manager.room.players.find(p => p.id === id)?.coop?.sceneSession;
+        return !session || c?.session !== session || c.status !== "ready" || !c.placed ||
+          (state.systemsPrepared && (!c.systems || c.systemsEpoch !== state.systemsEpoch));
+      });
+      pendencia = i < 0 ? "Aguardando autorização do host." : `Aguardando a confirmação do jogador ${i + 1}.`;
+    }
+    if (!this.watchdogLogged) {
+      this.watchdogLogged = true;
+      this.debug(pendencia, { fase: state.phase, desde: this.phaseStartedAt, sessao: state.id });
+    }
+    if (state.entrada || local.aguardando || this.r.inArena(this.scene.player))
+      local.informarEspera?.(pendencia, () => this.retry());
   }
   update() {
     if (this.destroyed || this.r.mapKey !== "Level1Parte2") return;
@@ -212,24 +303,32 @@ export class CoopBossLoading {
       }
       // Entrada DEV/save é exceção explícita ao leitor, sem antecipar a exploração normal.
       if (this.r.host && (this.manager.room.coopMap?.boss ||
-          this.r.inArena(this.scene.player) || this.manager.room.coopProgress?.flags?.["factoryDoorOpen:porta02"])) this.begin();
+          this.r.playerContexts().some(c => c.player?.active && c.vida > 0 && !c.morteEmAndamento && this.r.inArena(c.player)) ||
+          this.manager.room.coopProgress?.flags?.["factoryDoorOpen:porta02"])) this.begin();
       return;
     }
     this.report();
     this.local?.informarFalhaRemota(this.state.participants.some(id => id !== this.manager.playerId &&
       this.state.clients[id]?.status === "failed"));
     if (this.state.entrada && !this.canStart()) { this.scene.coopBossWaiting = true; this.wait(); this.lockRemotes(); }
+    this.updateWatchdog();
     if (!this.r.host) return;
     const active = this.manager.room.players.map(p => p.id);
     const required = active;
-    if (required.length !== this.state.participants.length || required.some(id => !this.state.participants.includes(id))) {
+    if (["loading", "assembling"].includes(this.state.phase) &&
+        (required.length !== this.state.participants.length || required.some(id => !this.state.participants.includes(id)))) {
       this.state = { ...this.state, participants: required,
         clients: Object.fromEntries(Object.entries(this.state.clients).filter(([id]) => required.includes(id))) };
       this.publish();
     }
     this.assemble();
-    if (["assembling", "intro"].includes(this.state.phase) && this.ready() && !this.r.bossVisualsReady() &&
-        !this.r.prepareBossEncounter()) { this.local.falhar(); return; }
+    if (this.state.phase === "assembling" && this.ready() && !this.r.bossVisualsReady() &&
+        (!this.r.prepareBossEncounter() || !this.r.bossVisualsReady())) {
+      const detalhe = this.r.bossPreparationError?.message ?? this.scene.novoBoss?.pendencia ?? "Visuais do boss incompletos.";
+      this.local.falhar(detalhe);
+      this.debug("Falha na preparação visual", this.r.bossPreparationError ?? detalhe);
+      return;
+    }
     if (this.state.phase === "assembling" && this.ready() &&
         (!this.state.systemsPrepared || this.state.systemsEpoch !== this.r.streamId)) {
       this.state = { ...this.state, systemsPrepared: true, systemsEpoch: this.r.streamId };
@@ -240,11 +339,16 @@ export class CoopBossLoading {
         entradas(this.scene).every(p => p.estado === "fechada") &&
         !this.r.revival?.participants().some(p => p.dead) && this.r.bossVisualsReady()) {
       const camera = this.scene.cameras.main;
-      this.state = { ...this.state, phase: "intro", startAt: this.now() + 350,
+      const retomada = this.recommitAt !== undefined;
+      this.state = { ...this.state, phase: "intro", startAt: retomada ? Math.max(this.now(), this.recommitAt) : this.now() + 350,
         camera: { x: camera.midPoint?.x ?? this.scene.player.x, y: camera.midPoint?.y ?? this.scene.player.y, zoom: camera.zoom } };
-      this.publish(true);
+      this.recommitAt = undefined;
+      this.publish(!retomada);
+      this.debug("Equipe pronta. Introdução autorizada");
     }
-    if (this.state.phase === "intro" && this.scene.novoBoss?.introducao?.snapshot().concluida) {
+    const encontro = this.scene.novoBoss;
+    if (this.state.phase === "intro" && this.released && encontro &&
+        (!encontro.introducao || encontro.introducao.snapshot().concluida)) {
       this.state = { ...this.state, phase: "complete" }; this.publish();
     }
   }
@@ -252,9 +356,10 @@ export class CoopBossLoading {
 
   retimeAfterMigration(previousNow) {
     if (!this.current() || this.state.phase !== "intro" || this.released) return;
-    this.state = { ...this.state, startAt: this.now() + Math.max(0, this.state.startAt - previousNow),
-      systemsPrepared: true, systemsEpoch: this.r.streamId };
+    this.recommitAt = this.now() + Math.max(0, this.state.startAt - previousNow);
+    this.state = { ...this.state, phase: "assembling", startAt: null, camera: null,
+      systemsPrepared: false, systemsEpoch: null };
     this.r.forceKeyframe = true;
-    this.publish(); // Mesmo evento/identificador; só converte o prazo para o relógio do novo host.
+    this.publish(); // Mesma entrada. A confirmação visual passa a apontar para o novo stream.
   }
 }

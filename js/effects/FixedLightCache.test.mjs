@@ -117,3 +117,38 @@ test("invalidar sombras reutiliza carimbos, apaga pixels antigos e libera buffer
   cache.destroy();
   assert.ok(canvases.every(c => c.width === 0 && c.height === 0));
 });
+
+test("revisão estática evita avaliar fontes e responde a zonas, recortes e retomada da introdução", t => {
+  const anterior = globalThis.document;
+  const context = { setTransform() {}, clearRect() {}, save() {}, restore() {}, drawImage() {} };
+  globalThis.document = { createElement: () => ({ getContext: () => context }) };
+  t.after(() => { globalThis.document = anterior; });
+  const cache = new FixedLightCache(() => {});
+  t.after(() => cache.destroy());
+  let leituras = 0;
+  const zonas = { revisaoEstatica: 0, fatorLuz() { leituras++; return 1; } };
+  const paredes = { revisao: 0 }, estatuas = { revisao: 0 }, emissor = { revisao: 0 };
+  cache.adicionar({ x: 0, y: 0, raio: 10, ligada: true, intensidade: 1 }, [0, 1, 2]);
+  cache.atualizar(0, zonas, paredes, estatuas, emissor);
+  cache.atualizarArea();
+  for (let i = 0; i < 120; i++) cache.atualizar(i, zonas, paredes, estatuas, emissor);
+  assert.equal(leituras, 1, "fontes estáveis não consultam os fatores por quadro");
+  for (const obstaculo of [paredes, estatuas, emissor]) {
+    obstaculo.revisao++;
+    cache.atualizar(200, zonas, paredes, estatuas, emissor);
+  }
+  assert.equal(leituras, 4);
+  zonas.revisaoEstatica++;
+  cache.atualizar(201, zonas, paredes, estatuas, emissor);
+  assert.equal(leituras, 5);
+  zonas.revisaoEstatica = undefined;
+  cache.atualizar(202, zonas, paredes, estatuas, emissor);
+  cache.atualizar(203, zonas, paredes, estatuas, emissor);
+  assert.equal(leituras, 7, "animações retomam a avaliação sem reaproveitar um estado obsoleto");
+  zonas.revisaoEstatica = 1;
+  cache.atualizar(204, zonas, paredes, estatuas, emissor);
+  assert.equal(leituras, 8);
+  cache.adicionar({ x: 50, y: 0, raio: 10, ligada: true, intensidade: 1 }, [0, 1, 2]);
+  cache.atualizar(205, zonas, paredes, estatuas, emissor);
+  assert.equal(leituras, 10, "mudança estrutural invalida mesmo sem mudar a revisão externa");
+});

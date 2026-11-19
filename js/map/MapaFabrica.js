@@ -219,6 +219,7 @@ function criarLevel1Parte2Map(scene) {
   // ===================================================
 
   scene.camadasMapaParte2 = camadas.camadasTiles;
+  scene.camadaObjetos1 = camadas.camadaObjetos1;
 
   return map;
 }

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
+import { EventEmitter } from "node:events";
 
 import { criarObjetosCidade, criarObjetosFabrica } from "./ObjetosMapa.js";
 
@@ -85,7 +86,7 @@ function fabricaComObjetos(t, objects) {
     add(name, sourceIndex, x, y, width, height) { this.frames[name] = { sourceIndex, x, y, width, height }; } };
   const scene = { textures: { exists: () => true, get: () => texture },
     add: { image(x, y, key, frame) {
-      return { x, y, key, frame, data: new Map(),
+      return Object.assign(new EventEmitter(), { x, y, key, frame, data: new Map(),
         setOrigin(x, y) { this.originX = x; this.originY = y; return this; },
         setVertexRoundMode() { return this; },
         setScale(x, y) { this.scaleX = x; this.scaleY = y; return this; },
@@ -96,9 +97,14 @@ function fabricaComObjetos(t, objects) {
         setAlpha(value) { this.alpha = value; return this; },
         setData(name, value) { this.data.set(name, value); return this; },
         getData(name) { return this.data.get(name); },
-      };
+      });
     } } };
-  return criarObjetosFabrica(scene, map, new Map([[tileset.name, "teste"]]));
+  const visuais = criarObjetosFabrica(scene, map, new Map([[tileset.name, "teste"]]));
+  const camada = scene.objetosPorCamada.get(layer.name);
+  assert.deepEqual([...camada], visuais);
+  visuais[0].emit("destroy");
+  assert.equal(camada.has(visuais[0]), false);
+  return visuais;
 }
 
 function cantosVisual(visual) {

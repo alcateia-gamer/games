@@ -5,8 +5,8 @@ import { HollowMessenger } from '../ui/HollowMessenger.js';
 
 /** Sequência local, coordenada pela barreira de prontidão já armazenada na sala. */
 export class HollowTransmission {
-  constructor({ screen, game, character, multiplayer, onComplete, onCancel, onSkipVideo, onStatus }) {
-    Object.assign(this, { screen, game, character, multiplayer, onComplete, onCancel, onSkipVideo, onStatus });
+  constructor({ screen, game, character, multiplayer, onComplete, onCancel, onSkipVideo, onSkipApproved, onStatus }) {
+    Object.assign(this, { screen, game, character, multiplayer, onComplete, onCancel, onSkipVideo, onSkipApproved, onStatus });
     this.audio = new HollowDialogueAudio(game);
     this.manager = multiplayer ? game.registry.get('multiplayer') : null;
     this.onRoom = () => this.sync();
@@ -43,6 +43,10 @@ export class HollowTransmission {
     const offset = room.hostId === m.playerId ? 0 : (m.hollowClockOffset || 0);
     this.releaseLocalAt = state.releaseAt ? state.releaseAt - offset : null;
     this.onStatus?.(`PULAR TRANSMISSÃO · ${room.players.filter(p => state.skipped.includes(p.id)).length}/${room.players.length} VOTOS`);
+    if (state.skipApproved && !this.skipApproved) {
+      this.skipApproved = true;
+      this.onSkipApproved?.();
+    }
     if (state.skipApproved && !this.prepared) this.onSkipVideo();
     if (this.prepared && this.assetsReady && !state.ready.includes(m.playerId) && Date.now() >= (this.nextReady || 0)) {
       this.nextReady = Date.now() + 2500;

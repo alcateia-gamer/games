@@ -123,6 +123,13 @@ export async function abrirSessaoNovoBoss(config, opcoes = {}, opcoesContexto = 
     });
     await page.waitForFunction(() => window.__novoBossBootReady === true);
     await page.keyboard.press("k");
+    // O boot atual aguarda a transmissão mesmo com o atalho de partida rápida.
+    // Usa a ação pública para alcançar a fábrica sem depender da duração do vídeo.
+    await page.waitForFunction(() => window.__game?.scene.getScene("preloader")?.scene.isActive(),
+      null, { timeout: 60000 });
+    await page.keyboard.down("Escape");
+    await page.waitForTimeout(2500);
+    await page.keyboard.up("Escape");
     await page.waitForFunction(() => window.__game?.scene.getScene("Level1")?.player?.active,
       null, { timeout: 60000, polling: 100 });
     await page.evaluate(({ config, opcoes }) => {

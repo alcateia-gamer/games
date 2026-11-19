@@ -43,6 +43,10 @@ async function pageBoot(name) {
   await page.goto(process.env.BASE_URL || "http://127.0.0.1:8765/", { waitUntil: "networkidle" });
   await page.waitForFunction(() => window.__coopBootReady);
   await page.keyboard.press("k");
+  await page.waitForFunction(() => window.__game?.scene.getScene("preloader")?.scene.isActive(), null, { timeout: 60000 });
+  await page.keyboard.down("Escape");
+  await page.waitForTimeout(2500);
+  await page.keyboard.up("Escape");
   await page.waitForFunction(() => window.__game?.scene.getScene("Level1")?.player?.active, null, { timeout: 60000 });
   await page.addScriptTag({ path: `${toolsRoot}/node_modules/mqtt/dist/mqtt.min.js` });
   await page.evaluate(async () => {
@@ -78,7 +82,23 @@ async function get(page, fn, arg) { return page.evaluate(fn, arg); }
 try {
   console.log("BOOT: dois navegadores e broker MQTT/WebSocket real.");
   const [host, client] = await Promise.all([pageBoot("host"), pageBoot("client")]);
+  const clientIdHost = await get(host, () => window.__manager.mqtt.clientId);
+  const hostSubscribed = new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      aedes.off("subscribe", registrar);
+      reject(new Error("O broker não confirmou a inscrição do host"));
+    }, 15000);
+    function registrar(subscriptions, connection) {
+      if (connection?.id === clientIdHost && subscriptions.some(s => /\/room\/[^/]+\/action$/.test(s.topic))) {
+        clearTimeout(timer);
+        aedes.off("subscribe", registrar);
+        resolve();
+      }
+    }
+    aedes.on("subscribe", registrar);
+  });
   const code = await get(host, () => window.__manager.createRoom());
+  await hostSubscribed;
   await get(client, code => window.__manager.joinRoom(code), code);
   await host.waitForFunction(() => window.__manager.room.players.length === 2);
   await client.waitForFunction(() => window.__manager.room?.players.length === 2);
@@ -104,7 +124,7 @@ try {
       remotes: [...r.players.remotes.values()].map(e => ({ id: e.data.id, ctx: !!e.context, pet: !!e.context?.companionPet?.active })) };
   });
   console.log("CONTEXTS", report.contexts);
-  check("host mantém pet e contexto independente do aliado", await get(host, () => {
+  if (phase !== "boss") check("host mantém pet e contexto independente do aliado", await get(host, () => {
     const r = window.__game.scene.getScene("Level1").coopRuntime;
     return r.scene.companionPet?.active && r.players.contexts()[0]?.companionPet?.active;
   }));
@@ -507,12 +527,65 @@ try {
         voltaMs: 300, velocidadeTorres: 10 }, geradores: { ...config.geradores, ativo: true } };
   });
   await Promise.all([gotoMap(host, "Level1Parte2", -1093, -5000, "kai-mercer"),
-    gotoMap(client, "Level1Parte2", -1093, -5520, "aria-kade")]);
+    gotoMap(client, "Level1Parte2", -1093, phase === "boss" ? -5000 : -5520, "aria-kade")]);
+  if (phase === "boss") {
+    const total = await get(host, async () => {
+      const s = window.__game.scene.getScene("Level1Parte2");
+      const { lerAreasRoboBola, candidatosAreaRoboBola, pontoLivreAreaRoboBola } = await import("/js/enemies/RoboBolaSpawnAreas.js");
+      const { criarRoboBola } = await import("/js/enemies/RoboBola.js");
+      const { criarRoboOlhao, criarLaserRoboOlhao } = await import("/js/enemies/RoboOlhao.js");
+      const robos = [];
+      for (const area of lerAreasRoboBola(s.map)) {
+        for (const ponto of candidatosAreaRoboBola(area, 0)) {
+          if (!pontoLivreAreaRoboBola(s, ponto)) continue;
+          const robo = (robos.length ? criarRoboBola : criarRoboOlhao)(s, ponto);
+          if (robo) { robos.push(robo); robo.spawnProtegidoAte = s.time.now + 10000; }
+          if (robos.length >= 8) break;
+        }
+        if (robos.length >= 8) break;
+      }
+      window.__robosAntesBoss = robos;
+      window.__dispararAntesBoss = () => { window.__laserAntesBoss = criarLaserRoboOlhao(s, robos[0], s.player); };
+      const start = s.load.start.bind(s.load);
+      s.load.start = () => {
+        window.__limpezaAntesDownloads = !!window.__laserAntesBoss && !window.__laserAntesBoss.scene &&
+          robos.every(robo => !robo.scene && !robo.body) && !s.inimigos.length && !s.spawnAreasRoboBola;
+        s.load.start = start;
+        return start();
+      };
+      return robos.length;
+    });
+    check("host começa com oito robôs comuns", total === 8);
+    await client.waitForFunction(total => window.__game.scene.getScene("Level1Parte2").inimigos.length >= total, total);
+    await get(client, () => {
+      const manager = window.__manager, send = manager.sendCoopAction.bind(manager);
+      manager.sendCoopAction = (kind, payload, options) => {
+        if (kind === "bossPrepared" && payload.status === "ready" && !window.__perdeuBossReady) {
+          window.__perdeuBossReady = true;
+          return true;
+        }
+        return send(kind, payload, options);
+      };
+    });
+    await get(host, () => window.__dispararAntesBoss());
+    await get(client, () => window.__game.scene.getScene("Level1Parte2").coopRuntime.teleport(-1093, -5520));
+  }
   await client.waitForFunction(() => {
     const s = window.__game.scene.getScene("Level1Parte2");
     return s.coopRuntime.world.introLock && !s.input.enabled && s.cenaEntradaBossAtiva;
   });
   check("entrada do cliente na arena inicia cutscene e bloqueia controles", true);
+  if (phase === "boss") {
+    check("host libera robôs, feixe e spawns antes da cutscene", await get(host, () => {
+      const s = window.__game.scene.getScene("Level1Parte2");
+      return s.robosFabricaDescarregados && !s.inimigos.length && window.__limpezaAntesDownloads;
+    }));
+    check("cliente remove as réplicas antigas e recupera a confirmação perdida", await get(client, () => {
+      const s = window.__game.scene.getScene("Level1Parte2");
+      return window.__perdeuBossReady && !s.inimigos.length &&
+        [...s.coopRuntime.receiver.entries.values()].every(e => !e.state.factoryRobot);
+    }));
+  }
   await client.screenshot({ path: `${artifacts}/boss-cutscene-cliente.png` });
   await client.waitForFunction(() => {
     const s = window.__game.scene.getScene("Level1Parte2");
@@ -523,6 +596,13 @@ try {
     const s = window.__game.scene.getScene("Level1Parte2");
     return s.cameras.main._follow === s.player && s.hudStatus?.elemento.style.visibility !== "hidden";
   }));
+  if (phase === "boss") {
+    for (const page of pages) await page.waitForFunction(() => {
+      const s = window.__game.scene.getScene("Level1Parte2");
+      return s.coopRuntime.world.bossLoading.state?.phase === "complete" && s.novoBoss?.relogioCombate > 0;
+    });
+    check("relógio de combate avança no host e no cliente", true);
+  }
   check("introdução replica o estado das luzes da arena", await get(client, () =>
     window.__game.scene.getScene("Level1Parte2").novoBoss.introducao.iluminacao.ativa === false));
   check("sala permanece revelada no cliente após as portas do boss fecharem", await get(client, () => {

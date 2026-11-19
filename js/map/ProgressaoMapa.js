@@ -1,6 +1,7 @@
 /** Libera as áreas anteriores quando a progressão fecha o caminho de volta. */
 import { limparGrupoRobos } from "../enemies/EnemyTest.js";
 import { jogadorNaArenaNovoBoss } from "../enemies/novoBoss/NovoBossConfig.js";
+import { atualizarDepthParedePortaBoss } from "./ProfundidadeMapa.js";
 
 export function descarregarCidade(scene) {
   if (scene.cidadeDescarregada) return;
@@ -56,6 +57,7 @@ export function descarregarFabricaParaBoss(scene) {
     objeto.destroy();
     return false;
   });
+  atualizarDepthParedePortaBoss(scene);
   for (const obstaculo of [...(scene.collisionGroup?.getChildren() ?? [])]) {
     if (obstaculo.body?.top > limiteY) obstaculo.destroy();
   }

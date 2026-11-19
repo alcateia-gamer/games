@@ -33,13 +33,16 @@ class Preloader extends Phaser.Scene {
   // =====================================================
 
   /**
-   * A fila carrega em paralelo à introdução, sem barra ou porcentagem na tela.
+   * A fila carrega em paralelo à introdução; a TV mostra o progresso quando necessário.
    */
   iniciarCarregamento() {
     this.carregandoAtivos = true;
+    this.cutscene.setLoadProgress(null);
+    const atualizarProgresso = valor => this.cutscene.setLoadProgress(valor);
 
     const aoConcluir = () => {
       this.events.off("shutdown", cancelar);
+      this.load.off("progress", atualizarProgresso);
       if (this.falhasCarregamento.length) {
         this.cutscene.showLoadError("Não foi possível carregar todos os recursos.", () => {
           this.cutscene.clearMessage();
@@ -53,8 +56,12 @@ class Preloader extends Phaser.Scene {
       this.prepararRenderizacaoPersonagens();
       this.finalizarCarregamento();
     };
-    const cancelar = () => this.load.off("complete", aoConcluir);
+    const cancelar = () => {
+      this.load.off("progress", atualizarProgresso);
+      this.load.off("complete", aoConcluir);
+    };
     this.events.once("shutdown", cancelar);
+    this.load.on("progress", atualizarProgresso);
     this.load.once("complete", aoConcluir);
 
     this.carregarAssets();

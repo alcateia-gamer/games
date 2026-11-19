@@ -281,8 +281,11 @@ export class CoopWorld {
   }
   aplicarEntradaBoss(entrada) {
     if (!entrada || this.r.mapKey !== "Level1Parte2") return;
-    if (this.scene.preparacaoBoss && entrada.id !== this.bossLoading.state?.entrada?.id) return;
-    if (!this.bossAssembly || entrada.id !== this.bossAssembly.id) {
+    const autorizada = this.bossLoading.state?.entrada;
+    if (this.scene.preparacaoBoss && (entrada.id !== autorizada?.id ||
+        (entrada.revision ?? 0) !== (autorizada.revision ?? 0))) return;
+    if (!this.bossAssembly || entrada.id !== this.bossAssembly.id ||
+        (entrada.revision ?? 0) > (this.bossAssembly.revision ?? 0)) {
       this.bossAssembly = entrada;
       this.scene.coopBossWaiting = true;
       const retomada = this.bossLoading.state?.phase === "complete";

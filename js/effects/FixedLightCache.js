@@ -74,6 +74,14 @@ export default class FixedLightCache {
   }
 
   atualizar(agora, zonas, paredes, estatuas, oclusao) {
+    // Só o chamador que conhece o ciclo das fontes pode declarar sua estabilidade.
+    // Sem revisão explícita, conserva a avaliação por frame (introdução/fábrica).
+    const revisaoEstatica = zonas.revisaoEstatica;
+    if (!this.areaSuja && revisaoEstatica !== undefined &&
+        this.ultimaRevisaoEstatica === revisaoEstatica &&
+        this.versoes[0] === paredes.revisao && this.versoes[1] === estatuas.revisao &&
+        this.versoes[2] === oclusao.revisao) return;
+    this.ultimaRevisaoEstatica = revisaoEstatica;
     let mudou = false;
     const recortesAlterados = this.versoes[0] !== paredes.revisao || this.versoes[1] !== estatuas.revisao;
     const versoes = [paredes.revisao, estatuas.revisao, oclusao.revisao];

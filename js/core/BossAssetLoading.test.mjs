@@ -197,3 +197,21 @@ test("falha de uma visita não compartilha flags ou callbacks com outra", () => 
   assert.equal(ca.estado, "falhou"); assert.ok(cb.pronto);
   a.events.emit("shutdown"); b.events.emit("shutdown");
 });
+
+test("fila do boss cooperativo tem timeout, informa progresso e restaura o loader ao sair", () => {
+  const s = fixture();
+  s.multiplayer = true;
+  s.load.xhr = { timeout: 0 };
+  const controle = criarPreparacaoBoss(s);
+  controle.aguardar(() => assert.fail("shutdown não libera a batalha"));
+  assert.equal(s.load.xhr.timeout, 20000);
+  s.load.emit("progress", 0.42);
+  controle.atualizar();
+  assert.equal(s.texts[0].text, "CARREGANDO... 42%");
+  s.events.emit("shutdown");
+  assert.equal(s.load.xhr.timeout, 0);
+  assert.equal(s.load.maxParallelDownloads, 2);
+  assert.equal(s.load.listenerCount("progress"), 0);
+  assert.equal(s.load.listenerCount("complete"), 0);
+  assert.equal(s.preparacaoBoss, null);
+});

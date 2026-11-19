@@ -128,7 +128,7 @@ function lerLuzesFabrica(map, avisar = console.warn) {
 }
 
 /** Usa a matriz já atualizada da câmera, inclusive scroll negativo, zoom e viewport. */
-function luzAfetaCamera(luz, camera) {
+function luzAfetaCamera(luz, camera, escalaX, escalaY) {
   const matriz = camera.matrix;
   if (luz.area) {
     const cos = Math.cos(luz.rotacao), sin = Math.sin(luz.rotacao);
@@ -145,8 +145,8 @@ function luzAfetaCamera(luz, camera) {
   const x = matriz.a * luz.x + matriz.c * luz.y + matriz.e;
   const y = matriz.b * luz.x + matriz.d * luz.y + matriz.f;
   const alcance = luz.raio * MULTIPLICADOR_ALCANCE_FABRICA;
-  const raioX = alcance * Math.hypot(matriz.a, matriz.c);
-  const raioY = alcance * Math.hypot(matriz.b, matriz.d);
+  const raioX = alcance * (escalaX ?? Math.hypot(matriz.a, matriz.c));
+  const raioY = alcance * (escalaY ?? Math.hypot(matriz.b, matriz.d));
   return x + raioX > 0 && x - raioX < camera.width &&
     y + raioY > 0 && y - raioY < camera.height;
 }
@@ -168,6 +168,8 @@ class FactoryLighting {
     this.partida = null;
     this.progressoPartida = null;
     this.fontesVisiveis = [];
+    this.candidatas = [];
+    this.ultimaCamera = {};
     this.revisao = 0;
     this.falhasIniciadas = [];
     this.estadoEmFalha = null;
@@ -175,11 +177,14 @@ class FactoryLighting {
     // Estados separados dos dados do mapa: nada é escrito nos objetos do Tiled.
     this.estados = this.lampadas.map((luz, indice) => ({
       luz, indice, intensidade: 0, falha: null, proximaFalha: null,
+      intensidadeBase: limitar(luz.intensidade * luz.cor.alpha),
     }));
+    this.estadosRenderizaveis = this.estados.filter(({ luz, intensidadeBase }) => luz.ligada && intensidadeBase > 0);
   }
 
   definirEnergia(ligada, obterProgresso = null, agora = 0) {
     this.energia = ligada === true;
+    this.revisaoEstaticaAnterior = undefined;
     this.progressoPartida = null;
     this.partida = this.energia && typeof obterProgresso === "function"
       ? { obterProgresso, inicio: agora } : null;
@@ -276,6 +281,8 @@ class FactoryLighting {
   aplicarEstadoRede(dados, agora) {
     if (!dados || !Array.isArray(dados.falhas) || !Number.isFinite(dados.agora)) return;
     this.coopReplica = true;
+    this.revisaoEstaticaAnterior = undefined;
+    this.falhasRedeAtivas = dados.falhas.length > 0;
     this.estadoEmFalha = null;
     const ativos = new Set();
     for (const f of dados.falhas) {
@@ -303,10 +310,31 @@ class FactoryLighting {
     return progresso;
   }
 
+  candidatasNaCamera(camera) {
+    const { a, b, c, d, e, f } = camera.matrix;
+    const { width, height } = camera;
+    const ultima = this.ultimaCamera;
+    if (ultima.a === a && ultima.b === b && ultima.c === c && ultima.d === d &&
+        ultima.e === e && ultima.f === f && ultima.width === width && ultima.height === height) return this.candidatas;
+    ultima.a = a; ultima.b = b; ultima.c = c; ultima.d = d;
+    ultima.e = e; ultima.f = f; ultima.width = width; ultima.height = height;
+    this.revisaoEstaticaAnterior = undefined;
+    const escalaX = Math.hypot(a, c), escalaY = Math.hypot(b, d);
+    this.candidatas.length = 0;
+    this.cameraTemLuzDinamica = false;
+    for (const estado of this.estadosRenderizaveis) {
+      const luz = estado.luz;
+      if (!luzAfetaCamera(luz, camera, escalaX, escalaY)) continue;
+      this.candidatas.push(estado);
+      this.cameraTemLuzDinamica ||= luz.piscando || luz.pulsando;
+    }
+    return this.candidatas;
+  }
+
   atualizar(agora, camera, zonas = null) {
     this.falhasIniciadas.length = 0;
     const progresso = this.atualizarPartida(agora);
-    const energia = this.energia ? intensidadeLuzPartida(progresso) : 0;
+    const energia = this.energia ? (progresso === 1 ? 1 : intensidadeLuzPartida(progresso)) : 0;
     // Só a falha ativa avança fora da câmera, para liberar seu horário sem acumular eventos.
     if (this.estadoEmFalha && !this.partida) {
       const visivelNaZona = (zonas?.fatorLuz(this.estadoEmFalha.luz, agora) ?? 1) === 1;
@@ -314,21 +342,25 @@ class FactoryLighting {
     }
     let quantidade = 0;
     let alteradas = false;
-    for (const estado of this.estados) {
+    const candidatas = energia ? this.candidatasNaCamera(camera) : null;
+    const revisaoEstatica = energia === 1 && progresso === 1 && !this.cameraTemLuzDinamica &&
+      !this.estadoEmFalha && !this.falhasRedeAtivas ? zonas?.revisaoEstaticaLampadas : undefined;
+    if (revisaoEstatica !== undefined && this.revisaoEstaticaAnterior === revisaoEstatica) return this.fontesVisiveis;
+    this.revisaoEstaticaAnterior = revisaoEstatica;
+    let pulso;
+    for (let i = 0; i < (candidatas?.length ?? 0); i++) {
+      const estado = candidatas[i];
       const luz = estado.luz;
       const fatorZona = zonas?.fatorLuz(luz, agora) ?? 1;
-      if (!energia || !luz.ligada || !luz.intensidade || !luz.cor.alpha || !fatorZona) {
-        continue;
-      }
-      if (!luzAfetaCamera(luz, camera)) continue;
+      if (!fatorZona) continue;
       if (!this.partida && fatorZona === 1 && estado !== this.estadoEmFalha &&
           (this.coopReplica ? estado.falha : luz.piscando)) this.atualizarFalha(estado, agora, camera);
       const oscilacao = this.partida
         ? 1 - (1 - progresso) * 0.12 * Math.sin(progresso * 15 + estado.indice) ** 2
         : fatorZona < 1 ? 1 : this.calcularFalha(estado, agora);
       // Limita e quantiza em passos de alpha: evita saturação e uploads sem mudança visível.
-      const pulso = luz.pulsando ? intensidadePulso(agora) : 1;
-      const intensidade = Math.round(limitar(luz.intensidade * luz.cor.alpha) * energia * oscilacao * pulso * fatorZona * 255) / 255;
+      const fatorPulso = luz.pulsando ? (pulso ??= intensidadePulso(agora)) : 1;
+      const intensidade = Math.round(estado.intensidadeBase * energia * oscilacao * fatorPulso * fatorZona * 255) / 255;
       if (this.fontesVisiveis[quantidade] !== estado || estado.intensidade !== intensidade) alteradas = true;
       estado.intensidade = intensidade;
       this.fontesVisiveis[quantidade++] = estado;
@@ -346,6 +378,7 @@ class FactoryLighting {
     this.energia = false;
     this.fontesVisiveis.length = 0;
     this.estados.length = 0;
+    this.estadosRenderizaveis.length = this.candidatas.length = 0;
     this.falhasIniciadas.length = 0;
     this.lampadas.length = 0;
   }

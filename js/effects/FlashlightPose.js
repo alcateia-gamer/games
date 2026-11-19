@@ -7,6 +7,7 @@ const ORIGENS_BARRIGA = {
 };
 
 const ANGULOS = { right: 0, down: Math.PI / 2, left: Math.PI, up: -Math.PI / 2 };
+const CAMPOS_SILHUETA = ["scaleX", "scaleY", "flipX", "flipY", "rotation", "displayOriginX", "displayOriginY", "alpha"];
 
 /** Reutiliza a pose e conserva a mira diagonal quando a caminhada para. */
 export function atualizarPoseLanterna(scene, pose) {
@@ -55,12 +56,15 @@ export function atualizarLanternasAliadas(scene, lanternas, energia = false) {
     const { pose } = entrada, x = pose.x, y = pose.y, angulo = pose.angulo;
     atualizarPoseLanterna({ player, direcaoAtual: player.direcaoAtual }, pose);
     pose.angulo = player.coopFlashlightAngle;
-    if (x !== pose.x || y !== pose.y || angulo !== pose.angulo || entrada.frame !== player.frame) alteradas = true;
-    for (const key of ["scaleX", "scaleY", "flipX", "flipY", "rotation", "originX", "originY", "alpha"]) {
-      if (entrada[key] !== player[key]) alteradas = true;
-      entrada[key] = player[key];
+    const frame = Math.sin(pose.angulo) < -0.001 && player.frame?.source?.image ? player.frame : null;
+    if (x !== pose.x || y !== pose.y || angulo !== pose.angulo || entrada.frame !== frame) alteradas = true;
+    if (frame) {
+      for (const key of CAMPOS_SILHUETA) {
+        if (entrada[key] !== player[key]) alteradas = true;
+        entrada[key] = player[key];
+      }
     }
-    entrada.frame = player.frame;
+    entrada.frame = frame;
   }
   for (const player of lanternas.keys()) if (!presentes.has(player)) { lanternas.delete(player); alteradas = true; }
   return alteradas;

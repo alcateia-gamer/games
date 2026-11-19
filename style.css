@@ -352,6 +352,25 @@ body {
   background: #000;
   isolation: isolate;
 }
+.cutscene-progress {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: .65cqw;
+  background: #050a07;
+  color: #a3ffc2;
+  font: 600 clamp(10px, 1.55cqw, 23px)/1.2 monospace;
+}
+.cutscene-progress progress {
+  width: 70%;
+  height: clamp(6px, 1cqw, 14px);
+  accent-color: #00cc66;
+  color-scheme: dark;
+}
 .cutscene-television-screen::after {
   content: "";
   position: absolute;

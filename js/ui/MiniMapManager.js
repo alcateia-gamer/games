@@ -122,7 +122,7 @@ export default class MiniMapManager {
     const buttonHeight = databaseButton?.getBoundingClientRect().height || 44;
     const databaseReservation = databaseButton && !databaseButton.hidden ? (10 + buttonHeight) / scaleY : 0;
     const result = miniMapLayout(camera, this.scene.botaoDesenvolvedor,
-      this.scene.botaoAtaque, this.scene.botaoColetarItem, databaseReservation);
+      this.scene.botaoAtaque, this.scene.botaoColetarItem, databaseReservation + (this.scene.espacoAtalhosDev?.() ?? 0));
     this.devScreenY = result.devScreenY;
     const zoomX = camera.zoomX || camera.zoom || 1;
     const zoomY = camera.zoomY || camera.zoom || 1;

@@ -98,11 +98,12 @@ function dispararLaser(scene, inimigo = scene.inimigoTeste) {
   );
 
   // Tempo máximo de vida do projétil.
-  scene.time.delayedCall(2000, () => {
+  const expiracao = scene.time.delayedCall(2000, () => {
     if (laser.active) {
       laser.destroy();
     }
   });
+  laser.once?.("destroy", () => expiracao?.remove?.(false));
 
   // Preservar sincronização original do multiplayer.
   if (scene.multiplayer && !scene.coopRuntime && scene.isMultiplayerHost && alvo.id) {

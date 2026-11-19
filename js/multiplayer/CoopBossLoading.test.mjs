@@ -10,6 +10,9 @@ import { novoBossConfig, configurarZonasNovoBoss, jogadorNaArenaNovoBoss } from 
 import { retanguloLivreDoMapa } from "../enemies/EnemyPathfinding.js";
 import { mergeBossPreparation } from "./CoopProtocol.js";
 import { iniciarRelogioCoop, tempoPartida } from "../core/RelogioPartida.js";
+import { executarSpawnDev } from "../controls/DeveloperSpawns.js";
+import { criarRoboBola } from "../enemies/RoboBola.js";
+import { VisualReceiver } from "./CoopVisuals.js";
 
 const clone = value => structuredClone(value);
 const raw = JSON.parse(readFileSync(new URL("../../assets/map/parte2-fase1.json", import.meta.url)));
@@ -443,4 +446,119 @@ test('migração após vitória preserva SENTINEL derrotado sem repetir combate 
   CoopRuntime.prototype.changeAuthority.call(r, true);
   assert.equal(scene.novoBoss.morto, true); assert.equal(scene.novoBoss.encerrado, true); assert.equal(scene.novoBoss.vida, 0);
   assert.equal(limpezas, 1); assert.equal(preparacoes, 0); assert.equal(restores, 1);
+});
+
+for (const quantidade of [0, 18]) test(`limpeza em ambos os clientes ocorre antes do download (${quantidade} robôs)`, t => {
+  const h = room(2); t.after(() => h.dispose());
+  for (const n of h.nodes) {
+    const s = n.scene;
+    let removidos = 0, lasers = 0, grupos = 0, spawns = 0, efeitos = 0, sons = 0;
+    s.spawnAreasRoboBola = { destruir() { spawns++; } };
+    s.inimigos = Array.from({ length: quantidade }, (_, i) => {
+      const robo = Object.assign(new EventEmitter(), { active: true, tipoRobo: ["bola", "olhao", "serra", "padrao"][i % 4],
+        body: { enable: true }, setActive(active) { this.active = active; }, setVisible() {},
+        destroy() { removidos++; this.emit("destroy"); },
+        somPassoRobo: { stop() { sons++; }, destroy() { sons++; } } });
+      robo.once("destroy", () => efeitos++);
+      return robo;
+    });
+    if (quantidade) s.lasersInimigo = { clear(destruir, remover) { assert.ok(destruir && remover); lasers++; }, destroy() { grupos++; } };
+    const start = s.load.start;
+    s.load.start = () => {
+      assert.equal(s.robosFabricaDescarregados, true);
+      assert.equal(s.inimigos.length, 0);
+      assert.equal(removidos, quantidade);
+      assert.equal(efeitos, quantidade);
+      assert.equal(sons, quantidade * 2);
+      assert.equal(lasers, Number(quantidade > 0));
+      assert.equal(grupos, lasers);
+      assert.equal(spawns, 1);
+      start();
+    };
+  }
+  h.nodes[0].world.confirmarCartao(); h.settle();
+  for (const n of h.nodes) {
+    assert.equal(n.scene.load.starts, 1);
+    assert.equal(executarSpawnDev(n.scene, "bola"), null);
+    assert.equal(criarRoboBola(n.scene, { x: -1000, y: -5720 }), null);
+    assert.equal(n.scene.player.active, true);
+    assert.equal(n.scene.inimigoTeste, null);
+  }
+});
+
+test("entrada do cliente primeiro é autorizada pelo host mesmo sem o host na arena", t => {
+  const h = room(2); t.after(() => h.dispose());
+  const [host, client] = h.nodes;
+  host.r.players.remotes.get("p1").actor.setPosition(-1100, -5500);
+  assert.equal(host.r.inArena(host.scene.player), false);
+  h.settle();
+  assert.equal(host.world.bossLoading.state.phase, "assembling");
+  assert.equal(client.r.teleports, 1);
+  h.close();
+  client.finish(); h.settle();
+  assert.ok(!h.sent.some(a => a.kind === "bossIntro"), "host lento ainda bloqueia a apresentação");
+  host.finish(); h.settle();
+  assert.equal(h.sent.filter(a => a.kind === "bossIntro").length, 1);
+  // Uma cópia atrasada da sessão de outro jogador não desfaz o compromisso do host.
+  const c = client.world.bossLoading;
+  client.manager.room.players.find(p => p.id === "p0").coop.sceneSession = "atrasado";
+  h.advance(350);
+  assert.equal(c.canStart(), true);
+});
+
+test("confirmação perdida é reenviada e download travado tem diagnóstico e recuperação", t => {
+  const h = room(2); t.after(() => h.dispose());
+  const [host, client] = h.nodes;
+  host.world.confirmarCartao(); h.flush(); h.open(); h.enter(); h.close();
+  host.finish(); h.settle();
+  client.scene.load.emit("progress", 0.4);
+  h.settle(); h.advance(16000); h.tick();
+  assert.match(client.texts[0].text, /Download local sem avanço \(40%\)/);
+  assert.equal(client.texts[1].visible, true);
+  client.texts[1].emit("pointerdown");
+  assert.ok(h.sent.some(a => a.kind === "keyframe" && a.playerId === "p1"));
+  assert.equal(client.scene.load.starts, 1, "retry não abre outra fila durante download ativo");
+  client.finish(); client.world.bossLoading.report();
+  h.messages.splice(h.messages.findIndex(a => a.kind === "bossPrepared" && a.payload.status === "ready"), 1);
+  h.settle();
+  assert.ok(!h.sent.some(a => a.kind === "bossIntro"));
+  h.advance(1200); h.settle();
+  assert.equal(h.sent.filter(a => a.kind === "bossIntro").length, 1);
+});
+
+test("snapshot atrasado não recria visuais dos robôs e preserva o prólogo", () => {
+  let destruicoes = 0;
+  const receiver = new VisualReceiver({ add: { graphics() { return { setVisible() { return this; },
+    setPosition() {}, setDepth() {}, setScale() { return this; }, setRotation() { return this; }, setAlpha() { return this; },
+    setScrollFactor() { return this; }, setBlendMode() { return this; }, clear() {}, active: true,
+    type: "Graphics", destroy() { destruicoes++; } }; } } });
+  const antigo = { active: true, destroy() { destruicoes++; } };
+  const prologo = { active: true, destroy() { assert.fail("visual do prólogo não deve ser removido"); } };
+  receiver.entries.set("v1", { object: antigo, state: { t: "Graphics", factoryRobot: true } });
+  receiver.entries.set("v2", { object: prologo, state: { t: "Graphics" } });
+  receiver.receive({ changed: [{ id: "v1", s: { x: 4 } }, { id: "v3", s: { t: "Graphics", factoryRobot: true } }] }, true);
+  assert.equal(destruicoes, 1);
+  assert.equal(receiver.get("v1"), undefined);
+  assert.equal(receiver.get("v3"), undefined);
+  assert.equal(receiver.get("v2"), prologo);
+});
+
+test("participante novo durante a reunião recebe destino e invalida a confirmação de posicionamento antiga", t => {
+  const h = room(2); t.after(() => h.dispose());
+  const host = h.nodes[0];
+  host.world.confirmarCartao(); h.flush(); h.open(); h.enter(); h.close();
+  const loading = host.world.bossLoading;
+  const antes = loading.state.entrada;
+  assert.equal(antes.revision, 0);
+  for (const n of h.nodes) n.manager.room.players.push({ id: "p2", health: 100, coop: { sceneSession: "session2" } });
+  const player = actor(-1100, -5250);
+  host.r.players.remotes.set("p2", { actor: player, context: { player, vida: 100, coopRemotePlayerId: "p2" } });
+  h.settle();
+  const atual = loading.state;
+  assert.equal(atual.entrada.revision, 1);
+  assert.ok(atual.entrada.jogadores.p2);
+  loading.acceptStatus("p2", { id: atual.id, roomCode: atual.roomCode, mapId: atual.mapId,
+    session: "session2", sequence: 1, placement: 0, status: "ready", placed: true });
+  assert.equal(loading.state.clients.p2.placed, false);
+  assert.equal(loading.ready(), false);
 });

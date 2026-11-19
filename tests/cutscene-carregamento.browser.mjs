@@ -143,13 +143,23 @@ try {
   let release;
   const held = new Promise(resolve => { release = resolve; });
   let requested = false;
-  await slow.page.route("**/assets/map/parte2-fase1.json", async route => {
+  await slow.page.route(/\/assets\/map\/InicioFase1[^/]*\.json(?:\?|$)/, async route => {
     requested = true; await held; await route.continue();
   });
   await quickStart(slow.page);
   await slow.page.waitForFunction(() => !!window.__game.scene.getScene("preloader")?.cutscene);
   await slow.page.waitForFunction(() => window.__game.scene.getScene("preloader").load.isLoading());
+  const progress = slow.page.getByRole("progressbar", { name: "Carregamento do jogo" });
+  check("barra fica oculta enquanto a transmissão está em andamento", !await progress.isVisible());
   await slow.page.locator(".cutscene-skip").click();
+  await progress.waitFor({ state: "visible" });
+  await slow.page.waitForFunction(() => {
+    const s = window.__game.scene.getScene("preloader");
+    const bar = s.cutscene.display.querySelector("progress");
+    return bar.value > 0 && bar.value < 100 && bar.value === Math.floor(s.load.progress * 100) &&
+      bar.parentElement.textContent.includes(`${bar.value}%`);
+  });
+  check("TV mostra a barra e o percentual real do Phaser durante a espera", true);
   check("pular conclui a narrativa e aguarda os recursos sem animação extra", await slow.page.evaluate(() => {
     const s = window.__game.scene.getScene("preloader");
     return s.scene.isActive() && s.cutscene.narrativeFinished && !s.cutscene.finishing;

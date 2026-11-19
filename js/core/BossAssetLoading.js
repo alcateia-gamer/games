@@ -1,5 +1,6 @@
 /** Preparação local, por visita à fábrica. A fila e os caches continuam sendo do Phaser. */
-import { assetsBossProntos, enfileirarAssetsBoss } from "./FactoryAssetPack.js";
+import { ASSETS_BOSS, assetsBossProntos, enfileirarAssetsBoss } from "./FactoryAssetPack.js";
+import { recursoDisponivel } from "./AssetLoading.js";
 import { novoBossConfig, configurarZonasNovoBoss, jogadorNaArenaNovoBoss } from "../enemies/novoBoss/NovoBossConfig.js";
 import { distanceToInteractionArea } from "../interactions/FactoryGenerator.js";
 
@@ -31,18 +32,22 @@ export function criarPreparacaoBoss(scene) {
   let estado = assetsBossProntos(scene) ? "pronto" : "ocioso";
   let encerrado = false, espera = null, textos = null, falhaRemota = false;
   let paraleloAnterior = null;
+  let timeoutAnterior, progresso = 0, detalheFalha = null, diagnostico = null, recuperar = null;
   const loader = scene.load;
 
   function atualizarAviso() {
-    if (!espera) return;
+    if (!espera && !diagnostico) { textos?.forEach(texto => texto.setVisible(false)); return; }
     if (!textos) {
       const estilo = { fontFamily: "monospace", fontSize: "18px", color: "#ffffff",
         backgroundColor: "#182026", padding: { x: 14, y: 10 }, align: "center" };
       textos = ["", "TENTAR NOVAMENTE", "VOLTAR"].map(texto => scene.add.text(0, 0, texto, estilo)
         .setOrigin(0.5).setScrollFactor(0).setDepth(100000));
-      textos[1].setInteractive({ useHandCursor: true }).on("pointerdown", () => iniciar(true));
+      textos[1].setInteractive({ useHandCursor: true }).on("pointerdown", () => {
+        iniciar(true);
+        (espera?.aoTentarNovamente ?? recuperar)?.();
+      });
       textos[2].setInteractive({ useHandCursor: true }).on("pointerdown", () => {
-        if (espera?.cancelavel !== false) concluirEspera(false);
+        if (espera && espera.cancelavel !== false) concluirEspera(false);
       });
     }
     const camera = scene.cameras.main;
@@ -50,9 +55,12 @@ export function criarPreparacaoBoss(scene) {
     const cx = camera.width * camera.originX, cy = camera.height * camera.originY;
     textos.forEach((texto, i) => texto.setPosition(cx + (camera.width / 2 - cx) / zoomX,
       cy + (camera.height / 2 + i * 55 - cy) / zoomY).setScale(1 / zoomX, 1 / zoomY)
-      .setVisible(i === 0 || estado === "falhou" && (i === 1 || espera.cancelavel !== false)));
-    textos[0].setText(estado === "falhou" ? "Falha ao carregar.\nVerifique a conexão."
-      : falhaRemota ? "Falha ao carregar.\nAguardando jogador." : "CARREGANDO...");
+      .setVisible(i === 0 || i === 1 && (estado === "falhou" || !!diagnostico) ||
+        i === 2 && estado === "falhou" && espera && espera.cancelavel !== false));
+    textos[0].setText(estado === "falhou" ? `Falha ao carregar.\n${detalheFalha ?? "Verifique a conexão."}`
+      : falhaRemota ? "Falha ao carregar.\nAguardando jogador tentar novamente."
+      : diagnostico ?? (scene.multiplayer && estado === "carregando" && progresso > 0
+        ? `CARREGANDO... ${Math.floor(progresso * 100)}%` : "CARREGANDO..."));
   }
 
   function concluirEspera(continuar) {
@@ -76,32 +84,53 @@ export function criarPreparacaoBoss(scene) {
   function removerListeners() {
     loader.off("complete", carregar);
     loader.off("complete", terminar);
+    loader.off("progress", atualizarProgresso);
+    if (timeoutAnterior !== undefined) {
+      loader.xhr.timeout = timeoutAnterior;
+      timeoutAnterior = undefined;
+    }
     if (paraleloAnterior !== null) {
       loader.maxParallelDownloads = paraleloAnterior;
       paraleloAnterior = null;
     }
   }
 
+  function atualizarProgresso(valor) {
+    if (Number.isFinite(valor)) progresso = Math.max(progresso, Math.min(1, valor));
+  }
+
   function terminar() {
     removerListeners();
     if (encerrado) return;
     estado = assetsBossProntos(scene) ? "pronto" : "falhou";
+    if (estado === "falhou" && scene.multiplayer) {
+      const faltando = ASSETS_BOSS.filter(a => !recursoDisponivel(scene, a.tipo, a.chave));
+      detalheFalha = `Recurso indisponível: ${faltando[0]?.chave ?? "boss"}.`;
+      if (scene.developerMode) console.info("[BOSS-LOADING] Recursos ausentes", faltando.map(a => a.chave));
+    }
     tentarContinuar();
     atualizarAviso();
   }
 
   function carregar() {
     if (encerrado) return;
+    if (assetsBossProntos(scene)) { terminar(); return; }
     paraleloAnterior = loader.maxParallelDownloads;
     loader.maxParallelDownloads = 1;
+    if (scene.multiplayer && loader.xhr && Number.isFinite(loader.xhr.timeout)) {
+      timeoutAnterior = loader.xhr.timeout;
+      if (timeoutAnterior <= 0) loader.xhr.timeout = 20000;
+    }
     try {
       enfileirarAssetsBoss(scene);
       if (assetsBossProntos(scene)) { terminar(); return; }
       loader.once("complete", terminar);
+      loader.on("progress", atualizarProgresso);
       loader.start();
-    } catch {
+    } catch (error) {
       removerListeners();
       estado = "falhou";
+      if (scene.developerMode) console.info("[BOSS-LOADING] Erro na fila", error);
       atualizarAviso();
     }
   }
@@ -109,6 +138,8 @@ export function criarPreparacaoBoss(scene) {
   function iniciar(tentarNovamente = false) {
     if (encerrado || estado === "pronto" || estado === "carregando" || estado === "falhou" && !tentarNovamente) return;
     estado = "carregando";
+    progresso = 0;
+    detalheFalha = null;
     atualizarAviso();
     if (loader.isLoading()) {
       loader.once("complete", carregar);
@@ -119,17 +150,24 @@ export function criarPreparacaoBoss(scene) {
     get pronto() { return estado === "pronto"; },
     get aguardando() { return espera !== null; },
     get estado() { return estado; },
+    get progresso() { return progresso; },
     iniciar,
-    falhar() { estado = "falhou"; atualizarAviso(); },
+    falhar(motivo) { estado = "falhou"; detalheFalha = motivo; atualizarAviso(); },
+    informarEspera(mensagem, tentar = null) {
+      if (mensagem) recuperar = tentar;
+      if (diagnostico === mensagem) return;
+      diagnostico = mensagem;
+      atualizarAviso();
+    },
     informarFalhaRemota(valor) {
       if (falhaRemota === (valor === true)) return;
       falhaRemota = valor === true; atualizarAviso();
     },
-    aguardar(continuar, { podeContinuar = null, cancelar = null, cancelavel = true } = {}) {
+    aguardar(continuar, { podeContinuar = null, cancelar = null, cancelavel = true, aoTentarNovamente = null } = {}) {
       if (encerrado) return;
       if (controle.pronto && (!podeContinuar || podeContinuar())) { continuar(); return; }
       if (espera) return;
-      espera = { continuar, podeContinuar, cancelar, cancelavel,
+      espera = { continuar, podeContinuar, cancelar, cancelavel, aoTentarNovamente,
         movimento: scene.movimentoBloqueado, menu: scene.generatorMenuOpen };
       scene.movimentoBloqueado = true;
       scene.generatorMenuOpen = true;
@@ -139,7 +177,8 @@ export function criarPreparacaoBoss(scene) {
     },
     atualizar() {
       if (scene.morteEmAndamento || (scene.vida ?? 1) <= 0) { concluirEspera(false); return; }
-      if (espera) { tentarContinuar(); atualizarAviso(); }
+      if (espera) tentarContinuar();
+      if (espera || diagnostico) atualizarAviso();
       if (scene.multiplayer || estado !== "ocioso" || !scene.player?.active || !(scene.inventory?.getQuantity("card") > 0)) return;
       const perto = area => distanceToInteractionArea(scene.player.x, scene.player.y, area) <= DISTANCIA_PREPARACAO;
       if ((scene.portasFabrica ?? []).some(porta => portasArena(porta) && perto(porta.area)) ||

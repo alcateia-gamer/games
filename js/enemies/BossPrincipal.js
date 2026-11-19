@@ -176,7 +176,7 @@ export function prepararBoss(scene, config = scene?.novoBossConfig ?? novoBossCo
   encontro.limpar = () => destruirBoss(scene);
   scene.events.once("shutdown", encontro.limpar);
   scene.events.once("destroy", encontro.limpar);
-  tentarPosicionar(scene, encontro);
+  if (!scene.coopRuntime?.world?.bossLoading) tentarPosicionar(scene, encontro);
   return encontro;
 }
 

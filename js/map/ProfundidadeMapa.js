@@ -39,7 +39,13 @@ function depthFromWorldY(y) {
  */
 function calcularDepthAtor(scene, footY, ator = null) {
   let depth = calcularDepthPelosPes(scene, footY, ator);
-  if (ator?.tipoRobo === "bola") depth = depthSobreMesasRefeitorio(scene, ator, footY, depth);
+  if (ator?.tipoRobo === "bola") {
+    depth = depthSobreMesasRefeitorio(scene, ator, footY, depth);
+    const depthObjetos1 = scene.camadaObjetos1?.depth;
+    if (Number.isFinite(depthObjetos1) && depth <= depthObjetos1 + MARGEM_MAXIMA_OBSTACULO) {
+      depth = Math.max(depth, depthObjetos1 + margemDepthAtor(footY, ator));
+    }
+  }
   const portal = ator?.portalBossOrigem;
   if (portal && !ator.morto && Number.isFinite(portal.depth) &&
       (ator.emergenciaPortal || Math.hypot(ator.x - portal.x, ator.y - portal.y) < portal.raio)) {
@@ -200,32 +206,9 @@ const PROFUNDIDADES_OBJETOS_PARTE2 = {
   EstátuaRobos: 15,
 };
 
-/**
- * Reaplica a profundidade dos objetos de produção e armazém a partir da camada e do Y
- * armazenados.
- */
-function atualizarDepthObjetosProducaoEArmazem(scene) {
-  if (!Array.isArray(scene.objetosMapaParte2)) {
-    return;
-  }
-
-  scene.objetosMapaParte2.forEach((visual) => {
-    if (
-      !visual?.active ||
-      !["ObjetosProdução", "ObjetosArmazem"].includes(
-        visual.getData("objectLayerName"),
-      )
-    ) {
-      return;
-    }
-
-    aplicarDepth(visual,
-      calcularDepthObjeto(
-        visual.getData("depthBase"),
-        visual.getData("worldY"),
-      ),
-    );
-  });
+function objetosDaCamada(scene, nome) {
+  if (scene.objetosPorCamada) return scene.objetosPorCamada.get(nome) ?? [];
+  return (scene.objetosMapaParte2 ?? []).filter(visual => visual?.getData?.("objectLayerName") === nome);
 }
 
 /**
@@ -239,15 +222,11 @@ function atualizarDepthGarras(scene) {
  * Intercala cada objeto com os atores pela base, sem escolher um personagem como alvo.
  */
 function atualizarDepthObjetosPelaBase(scene, nomeCamada) {
-  if (!Array.isArray(scene.objetosMapaParte2)) return;
-  scene.objetosMapaParte2.forEach((visual) => {
-    if (!visual?.active || visual.getData("objectLayerName") !== nomeCamada) {
-      return;
-    }
-
+  for (const visual of objetosDaCamada(scene, nomeCamada)) {
+    if (!visual.active) continue;
     const baseY = visual.getData("worldY") ?? visual.getBounds?.().bottom ?? visual.y;
     if (Number.isFinite(baseY)) aplicarDepth(visual, depthCenario(scene, baseY));
-  });
+  }
 }
 
 /**
@@ -263,9 +242,8 @@ function atualizarDepthComputadoresPcAdm(scene) {
  * Compara o Y assinado: -5800 fica abaixo (à frente) de -5900, mesmo no mapa negativo.
  */
 function atualizarDepthObjetosSuperPC(scene) {
-  if (!Array.isArray(scene.objetosMapaParte2)) return;
-  for (const visual of scene.objetosMapaParte2) {
-    if (!visual?.active || visual.getData("objectLayerName") !== "ObjetosSuperPC") continue;
+  for (const visual of objetosDaCamada(scene, "ObjetosSuperPC")) {
+    if (!visual.active) continue;
     const referenciaY = SUPER_PC_REFERENCIA_SUPERIOR.has(visual.getData("tiledObjectId"))
       ? visual.getBounds?.().top
       : visual.getData("worldY") ?? visual.getBounds?.().bottom ?? visual.y;
@@ -282,23 +260,16 @@ function atualizarDepthObjetosDepthPerso(scene) {
 
 /** Ordena a parede entre as portas como um conjunto pela base, sem separar seus blocos. */
 function atualizarDepthParedePortaBoss(scene) {
-  const objetos = scene.objetosMapaParte2;
-  if (!Array.isArray(objetos)) return;
-
+  const parede = objetosDaCamada(scene, "ParedePortaBoss");
   let baseY = -Infinity;
-  for (const visual of objetos) {
-    if (visual?.active && visual.getData("objectLayerName") === "ParedePortaBoss") {
-      baseY = Math.max(baseY, visual.getData("worldY"));
-    }
+  for (const visual of parede) {
+    if (visual.active) baseY = Math.max(baseY, visual.getData("worldY"));
   }
   if (!Number.isFinite(baseY)) return;
   const depth = depthCenario(scene, baseY);
-  for (const visual of objetos) {
-    if (visual?.active && visual.getData("objectLayerName") === "ParedePortaBoss") {
-      aplicarDepth(visual, depth);
-    } else if (visual?.active && visual.getData("objectLayerName") === "Leitordecartão") {
-      aplicarDepth(visual, depth + 1e-10);
-    }
+  for (const visual of parede) if (visual.active) aplicarDepth(visual, depth);
+  for (const leitor of objetosDaCamada(scene, "Leitordecartão")) {
+    if (leitor.active) aplicarDepth(leitor, depth + 1e-10);
   }
 }
 
@@ -313,7 +284,6 @@ export {
   atualizarDepthCercaFabrica2,
   calcularDepthObjeto,
   PROFUNDIDADES_OBJETOS_PARTE2,
-  atualizarDepthObjetosProducaoEArmazem,
   atualizarDepthGarras,
   atualizarDepthComputadoresPcAdm,
   atualizarDepthObjetosSuperPC,

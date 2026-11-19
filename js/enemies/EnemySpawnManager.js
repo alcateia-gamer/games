@@ -340,6 +340,7 @@ class EnemySpawnManager {
    * e serra.
    */
   checkSpawnZones(time = this.scene.time?.now ?? 0) {
+    if (this.destroyed || this.scene.robosFabricaDescarregados) return;
     const player = this.scene.player;
     const players = this.scene.coopRuntime?.playerContexts().filter(c => c.vida > 0 && !c.morteEmAndamento).map(c => c.player) || [player];
 
@@ -719,6 +720,7 @@ class EnemySpawnManager {
     if (this.destroyed) return;
 
     this.destroyed = true;
+    this.scene.events.off?.(Phaser.Scenes.Events.SHUTDOWN, this.destroy, this);
 
     for (const c of this.colliders) {
       c?.destroy?.();

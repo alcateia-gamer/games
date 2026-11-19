@@ -51,6 +51,9 @@ export class CoopAudio {
   }
   sourceScene(scene, source, profile) {
     const point = () => typeof source === "function" ? source() : source;
+    if (this.mapKey === "Level1Parte2" && source?.tipoRobo && !source.prologoEncontroId) {
+      profile = { ...profile, factoryRobot: true };
+    }
     const sound = this.soundManager(point, profile);
     return new Proxy(scene, { get: (target, key) => {
       if (key === "sound") return sound;
@@ -170,6 +173,7 @@ export class CoopAudio {
       this.received.set(state.id, state.revision);
       if (this.received.size > 2048) this.received.delete(this.received.keys().next().value);
       if (state.status === "stopped") { this.remove(state.id); continue; }
+      if (this.scene.robosFabricaDescarregados && state.profile?.factoryRobot === true) continue;
       const entry = this.remote.get(state.id) ?? { sound: null };
       entry.state = state; entry.owner = owner; entry.receivedAt = time(); this.remote.set(state.id, entry);
     }
@@ -255,6 +259,10 @@ export class CoopAudio {
     this.renderRemote();
   }
   remove(id) { const entry = this.remote.get(id); entry?.sound?.stop(); entry?.sound?.destroy(); this.remote.delete(id); }
+  clearFactoryRobotSounds() {
+    for (const r of this.local.values()) if (r.profile?.factoryRobot === true) r.proxy.destroy();
+    for (const [id, entry] of this.remote) if (entry.state.profile?.factoryRobot === true) this.remove(id);
+  }
   destroy() {
     if (this.disposed) return;
     // Comunica encerramento de loops antes de remover a cena.

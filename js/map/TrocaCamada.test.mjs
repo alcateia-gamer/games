@@ -42,3 +42,25 @@ test("sem gatilho preserva a profundidade normal", () => {
   assert.equal(scene.profundidadeRegiaoTroca, null);
   assert.equal(atorNaRegiaoTroca(scene, { x: 0, y: 0 }), false);
 });
+
+test("robôs bola locais e remotos ficam sobre Objetos1 dentro da região de troca", () => {
+  const criarRobo = (tipoRobo, y, remoteOnly = false) => ({
+    active: true, tipoRobo, x: 50, y, remoteOnly,
+    setDepth(depth) { this.depth = depth; },
+  });
+  const local = criarRobo("bola", 40);
+  const remoto = criarRobo("bola", 60, true);
+  const serra = criarRobo("serra", 50);
+  const scene = {
+    inimigos: [local, remoto, serra],
+    camadaObjetos1: { depth: 16 },
+    profundidadePersonagemParte2: 16.5,
+    profundidadeRegiaoTroca: 5.5,
+    regiaoTrocaCamada: { left: 0, top: 0, right: 100, bottom: 100 },
+  };
+
+  atualizarDepthAtores(scene);
+  assert.ok(local.depth > scene.camadaObjetos1.depth);
+  assert.ok(remoto.depth > local.depth && remoto.depth < 17);
+  assert.ok(serra.depth < 6);
+});

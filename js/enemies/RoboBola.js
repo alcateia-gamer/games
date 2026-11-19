@@ -186,8 +186,9 @@ function criarProjetil(scene, robo, alvo) {
   tocarSomTiroLaser(scene, robo);
 }
 
-function criarRoboBola(scene, posicao = null, perfil = null) {
+function criarRoboBola(scene, posicao = null, perfil = null, prologoEncontroId = null) {
   if (!scene?.player?.active || (scene.multiplayer && !scene.isMultiplayerHost)) return null;
+  if (scene.robosFabricaDescarregados && !prologoEncontroId) return null;
   const spawn = posicao ?? escolherSpawn(scene, perfil);
   if (!spawn) return null;
   if (posicao) {
@@ -211,6 +212,7 @@ function criarRoboBola(scene, posicao = null, perfil = null) {
     0,
   );
   robo.origemSpawn = { x: spawn.x, y: spawn.y };
+  if (prologoEncontroId) robo.prologoEncontroId = prologoEncontroId;
   robo.playableArea = obterPisoSpawnRobos(scene);
   robo.perfilVoador = perfil;
   robo.tipoRobo = perfil?.tipo ?? "bola";

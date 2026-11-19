@@ -180,7 +180,7 @@ export async function verificarPosicaoBotaoNullnet(page) {
         (scene.botaoDesenvolvedor?.width ?? 80) * scaleX / 2,
       centerY: bounds.top + bounds.height / 2,
       expectedY: canvas.top + (camera.y + (scene.minimap?.devScreenY ?? 24)) * scaleY +
-        (scene.botaoDesenvolvedor?.height ?? 30) * scaleY / 2 + 10 + bounds.height / 2 };
+        ((scene.botaoDesenvolvedor?.height ?? 30) / 2 + (scene.espacoAtalhosDev?.() ?? 0)) * scaleY + 10 + bounds.height / 2 };
     if (Math.abs(layout.right - layout.expectedRight) <= 2 && Math.abs(layout.centerY - layout.expectedY) <= 2) return layout;
   }, page.viewportSize());
   const layout = await posicao.jsonValue();

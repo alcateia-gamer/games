@@ -43,7 +43,17 @@ export class CutsceneLoading {
     const display = this.display = document.createElement("div");
     display.className = "crt-display";
     display.style.clipPath = layout.screen.clipPath;
-    display.append(video);
+    const loading = this.loading = document.createElement("div");
+    loading.className = "cutscene-progress";
+    loading.hidden = true;
+    const label = this.loadingLabel = document.createElement("span");
+    label.setAttribute("aria-hidden", "true");
+    label.textContent = "Carregando…";
+    const progress = this.progress = document.createElement("progress");
+    progress.max = 100;
+    progress.setAttribute("aria-label", "Carregamento do jogo");
+    loading.append(label, progress);
+    display.append(video, loading);
     screen.append(display);
     stage.append(television, screen);
     this.televisionRenderer = new CutsceneTelevision(television, screen, backdrop);
@@ -108,6 +118,10 @@ export class CutsceneLoading {
       multiplayer: data.multiplayer === true,
       onComplete: () => this.finishTransmission(),
       onSkipVideo: () => this.finishVideo(),
+      onSkipApproved: () => {
+        this.skipApproved = true;
+        this.updateLoadingVisibility();
+      },
       onStatus: text => { this.skip.textContent = `[SEGURAR ESC] ${text}`; },
       onCancel: () => {
         const scene = this.scene;
@@ -185,16 +199,36 @@ export class CutsceneLoading {
     if (this.destroyed || this.narrativeFinished) return;
     this.narrativeFinished = true;
     this.gate.videoFinished = true;
+    window.clearTimeout(this.mediaErrorTimer);
+    window.clearTimeout(this.stallTimer);
     this.video.pause();
     this.skip.hidden = this.advance.hidden = true;
     if (!this.loadFailed) this.clearMessage();
     this.video.hidden = true;
+    this.updateLoadingVisibility();
     this.tryFinish();
+  }
+
+  setLoadProgress(value) {
+    if (value === null) {
+      this.progress.removeAttribute("value");
+      this.loadingLabel.textContent = "Carregando…";
+      return;
+    }
+    const percent = Math.floor(value * 100);
+    this.progress.value = percent;
+    this.loadingLabel.textContent = `Carregando… ${percent}%`;
+  }
+
+  updateLoadingVisibility() {
+    this.loading.hidden = !(this.narrativeFinished || this.skipApproved) ||
+      this.gate.assetsReady || this.loadFailed === true;
   }
 
   setAssetsReady(callback) {
     this.onComplete = callback;
     this.gate.assetsReady = true;
+    this.updateLoadingVisibility();
     this.transmission.ready();
     this.tryFinish();
   }
@@ -227,6 +261,7 @@ export class CutsceneLoading {
   showLoadError(message, retry) {
     if (this.destroyed) return;
     this.loadFailed = true;
+    this.updateLoadingVisibility();
     this.message.textContent = message;
     this.message.hidden = false;
     this.setAction("Tentar novamente", retry);
@@ -234,6 +269,7 @@ export class CutsceneLoading {
 
   clearMessage() {
     this.loadFailed = false;
+    this.updateLoadingVisibility();
     this.message.hidden = true;
     this.action.hidden = true;
     this.action.onclick = null;

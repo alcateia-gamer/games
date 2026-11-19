@@ -4,6 +4,7 @@ import { criarRoboOlhao } from "../enemies/RoboOlhao.js";
 import { criarRoboBola } from "../enemies/RoboBola.js";
 
 export function executarSpawnDev(scene, tipo, quantidade = 1) {
+  if (scene.robosFabricaDescarregados) return null;
   if (scene.sys?.settings?.key === "Level1" && !["padrao", "serra"].includes(tipo)) return null;
   if (tipo === "padrao") return criarRobos(scene, quantidade);
   if (tipo === "serra") return criarRoboSerra(scene);
@@ -12,6 +13,7 @@ export function executarSpawnDev(scene, tipo, quantidade = 1) {
 }
 
 export function atualizarSpawnsDev(scene) {
+  if (scene.robosFabricaDescarregados) return;
   const pressionada = tecla => Phaser.Input.Keyboard.JustDown(tecla);
   const criar = (tipo, quantidade = 1) => scene.coopRuntime
     ? scene.coopRuntime.manager.sendCoopAction("devSpawn", { tipo, quantidade })

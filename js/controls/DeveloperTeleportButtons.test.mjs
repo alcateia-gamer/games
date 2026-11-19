@@ -17,7 +17,8 @@ function fixture(touch = true, key = "Level1") {
   const scene = { sys: { settings: { key }, game: { device: { input: { touch }, os: { desktop: !touch } } } },
     add: { rectangle: criar, text: criar }, events: new EventEmitter(), developerMode: true,
     player: { active: true }, cameras: { main: { width: 800, height: 400, originX: 0.5, originY: 0.5, zoom: 1 } },
-    coopRuntime: { world: { requestMap: key => requests.push(key) } }, teleportarDevBoss: () => requests.push("boss") };
+    coopRuntime: { world: { requestMap: key => requests.push(key) },
+      manager: { sendCoopAction: action => requests.push(action) } }, teleportarDevBoss: () => requests.push("boss") };
   criarBotoesTeleporteDev(scene); return { scene, objects, requests };
 }
 test("no celular, botões DEV usam os destinos de fábrica e boss e respeitam menus", () => {
@@ -32,8 +33,18 @@ test("no celular, botões DEV usam os destinos de fábrica e boss e respeitam me
   assert.ok(objects.every(o => !o.visible));
   scene.events.emit("shutdown"); assert.equal(scene.events.listenerCount("prerender"), 0);
 });
-test("PC mantém os atalhos de teclado; fábrica só oferece boss", () => {
+test("PC mantém os atalhos de teclado; na fábrica o toque oferece a mesma validação de H", () => {
   assert.equal(fixture(false).objects.length, 0);
-  const { objects } = fixture(true, "Level1Parte2");
-  assert.equal(objects[0].visible, false); assert.equal(objects[2].visible, true);
+  const { scene, objects, requests } = fixture(true, "Level1Parte2");
+  assert.equal(objects[1].args[2], "VALIDAR HACKS");
+  assert.equal(objects[0].visible, true); assert.equal(objects[2].visible, true);
+  assert.ok(24 + 15 + scene.espacoAtalhosDev() > objects[0].y + 17);
+  objects[0].emit("pointerdown");
+  scene.hackingTerminals = { temSessao: () => true };
+  scene.events.emit("prerender");
+  objects[0].emit("pointerdown");
+  assert.equal(objects[0].visible, false);
+  assert.deepEqual(requests, ["devFactoryAccess"]);
+  scene.developerMode = false;
+  assert.equal(scene.espacoAtalhosDev(), 0);
 });

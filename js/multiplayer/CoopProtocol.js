@@ -19,6 +19,7 @@ export function mergeBossPreparation(room, previous, next) {
   if (previous?.roomCode === next.roomCode && previous.mapId === next.mapId &&
       (previous.id !== next.id || previous.revision >= next.revision)) return previous;
   if (next.entrada && (next.entrada.id !== next.id || !next.entrada.jogadores ||
+      (next.entrada.revision != null && (!Number.isSafeInteger(next.entrada.revision) || next.entrada.revision < 0)) ||
       Object.keys(next.entrada.jogadores).length > 4 || Object.values(next.entrada.jogadores)
         .some(p => ![p?.x, p?.y].every(n => Number.isFinite(n) && Math.abs(n) < 100000)))) return previous;
   if (next.phase === "intro" && (!next.entrada || !Number.isFinite(next.startAt) ||

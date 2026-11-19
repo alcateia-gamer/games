@@ -169,6 +169,7 @@ function criarCamadasFabrica(map, tilesets, scene, registrosTilesets) {
 
   return {
     camadasTiles,
+    camadaObjetos1,
     camadaParedeAbaixoPerso,
     camadaParedeAcimaPerso,
   };

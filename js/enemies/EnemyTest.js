@@ -25,6 +25,7 @@ import {
  * barra de vida.
  */
 function criarInimigoTeste(scene, config = {}) {
+  if (scene.robosFabricaDescarregados) return null;
   if (scene.sys?.settings?.key === "Level1" && !config.remoteOnly &&
       !scene.enemySpawnManager?.autorizarCriacao(config)) return null;
   if (![config.x, config.y].every(Number.isFinite)) return null;
@@ -177,12 +178,16 @@ function criarRoboSerra(scene) {
 /**
  * Destrói robôs, lasers, sons e elementos auxiliares antes de sair da cena ou limpar o grupo.
  */
-function limparGrupoRobos(scene) {
+function limparGrupoRobos(scene, preservarPrologo = false) {
   if (!scene) {
     return;
   }
 
-  if (scene.lasersInimigo) {
+  if (preservarPrologo) {
+    for (const laser of [...(scene.lasersInimigo?.getChildren?.() ?? [])]) {
+      if (!laser.especialAtirador?.prologoEncontroId) laser.destroy();
+    }
+  } else if (scene.lasersInimigo) {
     if (scene.lasersInimigo.clear) {
       scene.lasersInimigo.clear(true, true);
     }
@@ -197,9 +202,10 @@ function limparGrupoRobos(scene) {
   }
 
   scene.inimigos.forEach((robo) => {
-    if (!robo) {
+    if (!robo || preservarPrologo && robo.prologoEncontroId) {
       return;
     }
+    scene.tweens?.killTweensOf?.(robo);
 
     if (robo.debugHitboxDano) {
       robo.debugHitboxDano.destroy();
@@ -241,8 +247,8 @@ function limparGrupoRobos(scene) {
     }
   });
 
-  scene.inimigos = [];
-  scene.inimigoTeste = null;
+  scene.inimigos = preservarPrologo ? scene.inimigos.filter(robo => robo?.prologoEncontroId) : [];
+  scene.inimigoTeste = scene.inimigos[0] ?? null;
   scene.grupoRobosAtivado = false;
 }
 
