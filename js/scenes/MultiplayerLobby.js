@@ -31,9 +31,6 @@ class MultiplayerLobby extends Phaser.Scene {
     });
     document.body.append(view.root);
     view.root.focus();
-    void view.showArt().catch(() => {
-      if (this.view === view) this.showFeedback("FALHA AO CARREGAR OPERADORES.");
-    });
 
     this.manager.on("roomUpdated", this.renderRoom, this);
     this.manager.on("gameStarted", this.startGame, this);

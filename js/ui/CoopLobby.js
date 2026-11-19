@@ -1,4 +1,4 @@
-import { createOperatorSelection, decodeSelectionArt, operatorCallsign } from "./OperatorSelection.js";
+import { createOperatorSelection, operatorCallsign } from "./OperatorSelection.js";
 
 export function createCoopLobby({ onSelect, onLeave, onReady, onStart }) {
   const root = document.createElement("section");
@@ -36,15 +36,10 @@ export function createCoopLobby({ onSelect, onLeave, onReady, onStart }) {
   start.addEventListener("click", onStart);
 
   const operators = createOperatorSelection({ onSelect, detailPrefix: "coop", showNames: true });
-  operators.root.classList.add("coop-lobby-loading");
   root.querySelector("footer").before(operators.root);
 
   return {
     root,
-    async showArt() {
-      await decodeSelectionArt(operators.root);
-      operators.root.classList.remove("coop-lobby-loading");
-    },
     setStatus(message) {
       if (status.textContent !== message) status.textContent = message;
     },

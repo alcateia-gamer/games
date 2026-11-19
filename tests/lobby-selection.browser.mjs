@@ -33,12 +33,18 @@ async function phaserClick(page, label, touch = false) {
   else await page.mouse.click(x + width / 2, y + height / 2);
 }
 
-async function openMenu(mobile = false) {
+async function openMenu(mobile = false, delayedPortrait) {
   const context = await browser.newContext(mobile
     ? { viewport: { width: 844, height: 320 }, isMobile: true, hasTouch: true }
     : { viewport: { width: 1280, height: 720 } });
   const page = await context.newPage();
   page.on("pageerror", error => errors.push(error.message));
+  if (delayedPortrait) {
+    await page.route("**/assets/solo-selection/magnus.webp", async route => {
+      await delayedPortrait;
+      await route.continue();
+    });
+  }
   await page.route("**/js/core/game.js*", async route => {
     const response = await route.fetch();
     const body = (await response.text()).replace("const game = new Game(jogoRapido);",
@@ -86,7 +92,8 @@ async function selection(page, selected, owners = {}) {
       const image = button.querySelector(".operator-selection-crop img");
       const marker = button.querySelector(".operator-selection-owner");
       const info = button.parentElement.querySelector(".operator-selection-info img");
-      return image.complete && button.getAttribute("aria-pressed") === String(active)
+      return image.complete && image.naturalWidth > 0 && info.complete && info.naturalWidth > 0
+        && button.getAttribute("aria-pressed") === String(active)
         && getComputedStyle(image).filter.includes("grayscale") === (!active && Boolean(selected || owner))
         && marker.textContent === owner && marker.hidden === !owner
         && getComputedStyle(marker).filter === "none"
@@ -136,10 +143,25 @@ async function scrollMobileSheet(page, panel) {
 }
 
 try {
-  const [host, guest] = await Promise.all([openMenu(), openMenu(true)]);
-  await phaserClick(host, "CRIAR SALA");
+  const delayedPortrait = Promise.withResolvers();
+  const host = await openMenu(true, delayedPortrait.promise);
+  await phaserClick(host, "CRIAR SALA", true);
   const code = await host.locator(".coop-lobby h1 strong").innerText();
   assert.match(code, /^[A-Z0-9]{4}$/);
+  try {
+    await portrait(host, "kai-mercer").waitFor({ state: "visible" });
+    await host.waitForFunction(() => {
+      const image = id => document.querySelector(`.coop-lobby [data-operator="${id}"] .operator-selection-crop img`);
+      return image("kai-mercer")?.naturalWidth > 0 && image("magnus-force")?.complete === false;
+    });
+  } finally {
+    delayedPortrait.resolve();
+  }
+  // O restante do teste redimensiona a janela do host.
+  await host.evaluate(async () => {
+    if (document.fullscreenElement) await document.exitFullscreen();
+  });
+  const guest = await openMenu(true);
   await join(guest, code, true);
   const hostStart = host.getByRole("button", { name: "INICIAR PARTIDA" });
   assert.equal(await hostStart.isDisabled(), true);

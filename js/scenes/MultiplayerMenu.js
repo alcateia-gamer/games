@@ -35,14 +35,24 @@ class MultiplayerMenu extends Phaser.Scene {
     }
     this.manager = this.registry.get("multiplayer");
     this.cameras.main.setBackgroundColor("#020805");
-    criarTextoMenu(this, 400, 62, "MULTIJOGADOR", {
+    const menu = this.add.container(0, 0);
+    const centralizarMenu = ({ width, height }) => {
+      menu.setPosition((width - 800) / 2, (height - 450) / 2);
+    };
+    centralizarMenu(this.scale.gameSize);
+    this.scale.on(Phaser.Scale.Events.RESIZE, centralizarMenu);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.scale.off(Phaser.Scale.Events.RESIZE, centralizarMenu);
+    });
+
+    const titulo = criarTextoMenu(this, 400, 62, "MULTIJOGADOR", {
       color: "#c9ffda",
       fontFamily: "monospace",
       fontSize: "25px",
       fontStyle: "bold",
     })
       .setOrigin(0.5);
-    criarTextoMenu(this, 400, 96, "SALA DE INCURSÃO // ATÉ 4 OPERADORES", {
+    const subtitulo = criarTextoMenu(this, 400, 96, "SALA DE INCURSÃO // ATÉ 4 OPERADORES", {
       color: "#54d879",
       fontFamily: "monospace",
       fontSize: "11px",
@@ -61,16 +71,18 @@ class MultiplayerMenu extends Phaser.Scene {
       fontSize: "12px",
     })
       .setOrigin(0.5);
-    this.criarCampoCodigoMobile();
-    this.createButton(310, 300, "CRIAR SALA", 190).on("buttondown", () =>
+    menu.add([titulo, subtitulo, this.codeText, this.status]);
+    this.criarCampoCodigoMobile(menu);
+    const criarSala = this.createButton(310, 300, "CRIAR SALA", 190).on("buttondown", () =>
       this.manager.createRoom(),
     );
-    this.createButton(490, 300, "ENTRAR", 150).on("buttondown", () =>
+    const entrar = this.createButton(490, 300, "ENTRAR", 150).on("buttondown", () =>
       this.manager.joinRoom(this.code),
     );
-    this.createButton(400, 375, "VOLTAR", 130).on("buttondown", () =>
+    const voltar = this.createButton(400, 375, "VOLTAR", 130).on("buttondown", () =>
       this.scene.start("Start", { abrirMenu: true }),
     );
+    menu.add([criarSala, entrar, voltar]);
     /**
      * Mostra o status de busca enquanto o gerenciador aguarda uma resposta da sala.
      */
@@ -111,7 +123,7 @@ class MultiplayerMenu extends Phaser.Scene {
   /**
    * Cria um campo DOM em dispositivos com toque ou conecta a entrada ao teclado do Phaser.
    */
-  criarCampoCodigoMobile() {
+  criarCampoCodigoMobile(menu) {
     const touchDevice =
       typeof window !== "undefined" &&
       ("ontouchstart" in window || navigator.maxTouchPoints > 0);
@@ -128,6 +140,7 @@ class MultiplayerMenu extends Phaser.Scene {
         '<input class="multiplayer-code-input" type="text" maxlength="6" inputmode="text" autocapitalize="characters" autocomplete="off" spellcheck="false" aria-label="Código da sala">',
       )
       .setOrigin(0.5);
+    menu.add(this.codeInput);
     this.codeInputNode = this.codeInput.node;
     this.codeInputNode.value = this.code;
     /**

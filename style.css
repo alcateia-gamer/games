@@ -882,8 +882,6 @@ html:has(.solo-selection, .coop-lobby), body:has(.solo-selection, .coop-lobby) {
   background: #1d1714;
 }
 
-.coop-lobby .coop-lobby-loading { visibility: hidden; }
-
 .coop-lobby .operator-selection-info { top: 4px; }
 
 .coop-lobby .operator-selection-details {
