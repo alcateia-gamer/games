@@ -309,6 +309,21 @@ body {
 }
 
 .cutscene-loading.cutscene-leaving { opacity: 0; pointer-events: none; }
+.cutscene-eye { position:absolute; inset:0; z-index:100; pointer-events:none; }
+.cutscene-eye svg { display:block; width:100%; height:100%; }
+.cutscene-eye-opening ellipse {
+  animation:cutscene-eye-open 2600ms ease-in-out forwards;
+}
+@keyframes cutscene-eye-open {
+  0% { rx:320; ry:0; }
+  30%, 38% { rx:460; ry:110; }
+  50%, 56% { rx:460; ry:0; }
+  100% { rx:750; ry:850; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .cutscene-eye-opening ellipse { animation:cutscene-eye-reveal 180ms ease-out forwards; }
+}
+@keyframes cutscene-eye-reveal { from { rx:460; ry:0; } to { rx:750; ry:850; } }
 .cutscene-backdrop {
   /* A própria arte já inclui o cenário industrial completo. */
   display: none;

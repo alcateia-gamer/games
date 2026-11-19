@@ -188,3 +188,15 @@ export async function verificarPosicaoBotaoNullnet(page) {
   assert.ok(layout.left >= 0 && layout.right <= page.viewportSize().width, JSON.stringify(layout));
   assert.ok(layout.top >= 0 && layout.bottom <= page.viewportSize().height, JSON.stringify(layout));
 }
+/** Lê todas as páginas da categoria atual, inclusive no layout compacto. */
+export async function lerArquivosNullnet(page) {
+  const overlay = page.locator('.axiom-record-overlay');
+  const textos = [];
+  const proxima = overlay.getByRole('button', { name: 'Próxima', exact: true });
+  do {
+    textos.push(await overlay.innerText());
+    if (!await proxima.isVisible() || await proxima.isDisabled()) break;
+    await proxima.click();
+  } while (true);
+  return textos.join('\n');
+}

@@ -2,6 +2,7 @@ import { CrtLighting } from "./CrtLighting.js";
 import { HollowTransmission } from "../narrative/HollowTransmission.js";
 import { CUTSCENE_LAYOUT, CutsceneGate, fitCutscene } from "./CutsceneLayout.js";
 import { CutsceneTelevision } from "./CutsceneTelevision.js";
+let openingSerial = 0;
 
 /** DOM nativo mantém a TV e o MP4 decodificado enquanto o Phaser carrega. */
 export class CutsceneLoading {
@@ -78,10 +79,27 @@ export class CutsceneLoading {
     this.advance.textContent = data.multiplayer ? "[ESPAÇO / TOQUE] REVELAR MENSAGEM" : "[ESPAÇO / TOQUE] AVANÇAR";
     this.advance.onclick = () => this.transmission.advance();
     this.root.append(backdrop, stage, this.message, this.action, this.advance, this.skip);
+    // A máscara já nasce fechada, antes de anexar a TV ao documento.
+    this.eye = document.createElement('div');
+    this.eye.className = 'cutscene-eye';
+    this.eye.setAttribute('aria-hidden', 'true');
+    const maskId = `cutscene-eye-${++openingSerial}`;
+    this.eye.innerHTML = `<svg viewBox="0 0 1000 1000" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"><defs><mask id="${maskId}" maskUnits="userSpaceOnUse" x="0" y="0" width="1000" height="1000"><rect width="1000" height="1000" fill="white"/><ellipse cx="500" cy="500" rx="750" ry="0" fill="black"/></mask></defs><rect width="1000" height="1000" fill="black" mask="url(#${maskId})"/></svg>`;
+    this.root.append(this.eye);
+    this.onEyeOpened = event => {
+      if (['cutscene-eye-open', 'cutscene-eye-reveal'].includes(event.animationName)) this.eye.remove();
+    };
+    this.eye.addEventListener('animationend', this.onEyeOpened);
     (document.getElementById("game-container") || document.body).append(this.root);
     this.onPlaying = () => {
       window.clearTimeout(this.stallTimer);
       if (!this.gate.videoFinished) this.video.hidden = false;
+      if (this.video.requestVideoFrameCallback) {
+        this.openingVideoFrame ??= this.video.requestVideoFrameCallback(() => {
+          this.openingVideoFrame = null;
+          this.revealOpening();
+        });
+      } else this.revealOpening();
     };
     this.onWaiting = () => {
       if (this.awaitingPlaybackGesture) return;
@@ -162,6 +180,20 @@ export class CutsceneLoading {
     scene.events.once("shutdown", this.onSceneShutdown);
   }
 
+  revealOpening() {
+    if (this.destroyed || this.openingStarted) return;
+    this.openingStarted = true;
+    void this.televisionRenderer.ready.then(() => {
+      if (this.destroyed) return;
+      this.onResize();
+      this.openingFrame = requestAnimationFrame(() => {
+        this.openingFrame = requestAnimationFrame(() => {
+          if (!this.destroyed) this.eye.classList.add('cutscene-eye-opening');
+        });
+      });
+    });
+  }
+
   /** Transfere a mesma apresentação entre BootPartida e preloader sem reiniciá-la. */
   release() {
     this.scene?.events.off("shutdown", this.onSceneShutdown);
@@ -193,6 +225,7 @@ export class CutsceneLoading {
     this.root.classList.add("cutscene-hollow-active");
     this.advance.hidden = false;
     this.transmission.prepare();
+    this.revealOpening();
   }
 
   finishTransmission() {
@@ -245,6 +278,7 @@ export class CutsceneLoading {
     this.action.hidden = false;
     this.action.textContent = label;
     this.action.onclick = callback;
+    this.revealOpening();
   }
 
   showMediaError() {
@@ -290,6 +324,9 @@ export class CutsceneLoading {
   destroy() {
     if (this.destroyed) return;
     this.destroyed = true;
+    cancelAnimationFrame(this.openingFrame);
+    if (this.openingVideoFrame != null) this.video.cancelVideoFrameCallback?.(this.openingVideoFrame);
+    this.eye.removeEventListener('animationend', this.onEyeOpened);
     window.clearTimeout(this.mediaErrorTimer);
     window.clearTimeout(this.stallTimer);
     this.cancelHold();

@@ -149,6 +149,7 @@ export function criarPreparacaoBoss(scene) {
   const controle = {
     get pronto() { return estado === "pronto"; },
     get aguardando() { return espera !== null; },
+    get menuAbertoAntesDaEspera() { return espera?.menu === true; },
     get estado() { return estado; },
     get progresso() { return progresso; },
     iniciar,

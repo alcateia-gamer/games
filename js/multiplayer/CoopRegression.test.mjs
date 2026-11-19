@@ -8,6 +8,7 @@ import { Inventory } from "../inventory/Inventory.js";
 import { CoopWorld } from "./CoopWorld.js";
 import FactoryLighting from "../effects/FactoryLighting.js";
 import { BossReplica } from "./CoopBossReplica.js";
+import { calcularDepthAtor } from '../map/ProfundidadeMapa.js';
 
 globalThis.Phaser = { Scene: class {}, Events: { EventEmitter } };
 const { CoopRuntime } = await import("./CoopRuntime.js");
@@ -25,6 +26,33 @@ function visualScene() {
     multiplayerManager: { playerId: "client" }, player: { active: true, x: 70, y: 80 } };
 }
 const pose = { t: "Sprite", k: "nyx", f: 0, x: 10, y: 20, sx: 1, sy: 1, a: 1, v: true };
+
+test('réplica conserva a ordem dos pés entre jogador e torre, inclusive no empate', () => {
+  const scene = visualScene(); scene.profundidadePersonagemParte2 = 16.5;
+  const source = scene.add.sprite(-1000, -5800);
+  Object.assign(source, { scaleX: 1, scaleY: 1, rotation: 0, alpha: 1,
+    texture: { key: 'torre' }, frame: { name: 0, cutX: 0, cutY: 0, cutWidth: 32, cutHeight: 32 } });
+  const sender = new VisualSender(), receiver = new VisualReceiver(scene);
+  const add = scene.add.sprite;
+  scene.add.sprite = (...args) => {
+    const visual = add(...args);
+    visual.setDepth = depth => { visual.depth = depth; return visual; };
+    return visual;
+  };
+  for (const towerY of [-6000, -5800, -5500]) {
+    source.depth = calcularDepthAtor(scene, towerY, source) - 1e-9;
+    for (const full of [true, false]) {
+      receiver.receive(JSON.parse(JSON.stringify(sender.capture([source], full))));
+      const replica = receiver.get(sender.id(source));
+      for (const offset of [-10, 0, 10]) {
+        const playerDepth = calcularDepthAtor(scene, towerY + offset, scene.player);
+        assert.equal(playerDepth > replica.depth, playerDepth > source.depth,
+          `torre ${towerY}, pés ${offset}, full=${full}`);
+      }
+      assert.equal(replica.depth, source.depth);
+    }
+  }
+});
 
 test("borda sem preenchimento não cobre a barra vermelha na réplica", () => {
   const scene = visualScene(), border = scene.add.sprite(10, 20);

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { BruteforcePuzzle, BRUTEFORCE_WORDS, lerColuna, deslocamentoLetra } from './BruteforcePuzzle.js';
-import { HostConnection, sequenciaLinha, sequenciaVisivel, posicaoNumero } from './HostConnection.js';
+import { HostConnection, sequenciaLinha, sequenciaVisivel, posicaoNumero, origemNumero, indicesSequencia, HACKCONNECT_STEP_MS } from './HostConnection.js';
 import { gerarMissao, documentosMissao, autenticacaoNumerica } from './MissionIntelligence.js';
 import { HackingSession } from './HackingSession.js';
 const match = p => {
@@ -58,7 +58,7 @@ test('200 partidas sempre contêm sequência completa; números permanecem em or
   for (let seed = 1; seed <= 200; seed++) {
     const p = new HostConnection(gerarMissao(seed)), found = match(p); assert.ok(found);
     if (found.linha === 0) wraps++;
-    const numbers = p.linhas.map(l => [...l.numeros]), positions = p.linhas.map((l, i) => posicaoNumero(i, 0, p.tempo)); p.atualizar(530);
+    const numbers = p.linhas.map(l => [...l.numeros]), positions = p.linhas.map((l, i) => posicaoNumero(i, 0, p.tempo)); p.atualizar(HACKCONNECT_STEP_MS);
     assert.deepEqual(p.linhas.map(l => l.numeros), numbers);
     p.linhas.forEach((l, i) => assert.notDeepEqual(posicaoNumero(i, 0, p.tempo), positions[i]));
     assert.deepEqual(sequenciaLinha(p.linhas, found.linha, found.inicio), p.alvo); assert.ok(p.alvo.every(n => /^\d{2}$/.test(n)));
@@ -103,18 +103,39 @@ test('acerto do HackConnect é salvo no comando, mesmo se cancelar antes do pró
 });
 
 
-test('HOST fica parado entre passos de 1000 ms, sobe no fim da linha e volta pela base', () => {
-  assert.deepEqual(posicaoNumero(3, 0, 0), { linha: 3, coluna: 0 });
-  assert.deepEqual(posicaoNumero(3, 0, 999), { linha: 3, coluna: 0 });
-  assert.deepEqual(posicaoNumero(3, 0, 1000), { linha: 3, coluna: 1 });
-  assert.deepEqual(posicaoNumero(3, 7, 1000), { linha: 2, coluna: 0 });
-  assert.deepEqual(posicaoNumero(0, 7, 1000), { linha: 3, coluna: 0 });
-  for (let tempo = 0; tempo <= 32000; tempo += 250) {
+test('HOST percorre as 32 posições em ordem de leitura, com passos fixos de 1000 ms', () => {
+  assert.equal(HACKCONNECT_STEP_MS, 1000);
+  for (let step = 0; step <= 64; step++) {
+    const expected = { linha: Math.floor((step % 32) / 8), coluna: step % 8 };
+    assert.deepEqual(posicaoNumero(0, 0, step * HACKCONNECT_STEP_MS), expected);
+    assert.deepEqual(posicaoNumero(0, 0, (step + 1) * HACKCONNECT_STEP_MS - 1), expected);
     const occupied = new Set();
     for (let row = 0; row < 4; row++) for (let col = 0; col < 8; col++) {
-      const p = posicaoNumero(row, col, tempo); occupied.add(`${p.linha}:${p.coluna}`);
+      const p = posicaoNumero(row, col, step * HACKCONNECT_STEP_MS);
+      occupied.add(`${p.linha}:${p.coluna}`);
+      assert.deepEqual(origemNumero(p.linha, p.coluna, step * HACKCONNECT_STEP_MS), { linha: row, inicio: col });
     }
     assert.equal(occupied.size, 32);
   }
-  assert.deepEqual(posicaoNumero(3, 0, 32000), { linha: 3, coluna: 0 });
+  // Inclui índices negativos e o retorno imediato de 32 para 01.
+  assert.deepEqual(posicaoNumero(0, 0, -1000), { linha: 3, coluna: 7 });
+  for (const from of [0, 6, 7, 14, 15, 22, 23, 30, 31]) {
+    const to = (from + 1) % 32;
+    assert.deepEqual(posicaoNumero(Math.floor(from / 8), from % 8, 1000),
+      { linha: Math.floor(to / 8), coluna: to % 8 });
+  }
+});
+
+test('grupo marcado e visibilidade acompanham a mesma cadeia linear nas mudanças de linha', () => {
+  assert.deepEqual(indicesSequencia(0, 7), [
+    { linha: 0, inicio: 7 }, { linha: 1, inicio: 0 }, { linha: 1, inicio: 1 }, { linha: 1, inicio: 2 },
+  ]);
+  assert.deepEqual(indicesSequencia(3, 7), [
+    { linha: 3, inicio: 7 }, { linha: 0, inicio: 0 }, { linha: 0, inicio: 1 }, { linha: 0, inicio: 2 },
+  ]);
+  for (let step = 0; step < 32; step++) for (let row = 0; row < 4; row++) for (let col = 0; col < 8; col++) {
+    const positions = indicesSequencia(row, col).map(n => posicaoNumero(n.linha, n.inicio, step * 1000));
+    const complete = positions.every((p, i) => p.linha === positions[0].linha && p.coluna === positions[0].coluna + i);
+    assert.equal(sequenciaVisivel([], row, col, step * 1000), complete);
+  }
 });

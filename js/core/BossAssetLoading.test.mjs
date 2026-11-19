@@ -95,6 +95,20 @@ test("cartão e proximidade iniciam uma fila por visita, sem cancelar ao se afas
   s.events.emit("shutdown");
 });
 
+test("espera distingue seu bloqueio de um menu já aberto e restaura o estado", () => {
+  for (const menu of [false, true]) {
+    const s = fixture(); s.generatorMenuOpen = menu;
+    const c = criarPreparacaoBoss(s);
+    c.aguardar(() => {});
+    assert.equal(c.aguardando, true);
+    assert.equal(c.menuAbertoAntesDaEspera, menu);
+    assert.equal(s.generatorMenuOpen, true);
+    s.concluir();
+    assert.equal(c.aguardando, false);
+    assert.equal(s.generatorMenuOpen, menu);
+  }
+});
+
 test("entrada espera texturas E sons; falha permite retry parcial e continuação automática única", () => {
   const s = fixture(), c = criarPreparacaoBoss(s);
   let abriu = 0;

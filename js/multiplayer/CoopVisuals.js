@@ -21,7 +21,9 @@ export function mergePendingFrame(previous, next) {
 }
 export function describeVisual(o) {
   if (!o?.active || !TYPES.has(o.type)) return null;
-  const state = { t: o.type, x: round(o.x), y: round(o.y), d: round(o.depth, 1000),
+  // A fábrica intercala atores e torres com margens de até 1e-9.
+  // Quantizar depth em 0,001 inverte essa ordem no cliente.
+  const state = { t: o.type, x: round(o.x), y: round(o.y), d: Number.isFinite(o.depth) ? o.depth : 0,
     sx: round(o.scaleX, 10000), sy: round(o.scaleY, 10000), r: round(o.rotation, 10000),
     a: round(o.alpha, 100), v: o.visible !== false, ox: round(o.originX ?? 0.5, 10000),
     oy: round(o.originY ?? 0.5, 10000), fx: !!o.flipX, fy: !!o.flipY,

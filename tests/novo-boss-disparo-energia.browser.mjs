@@ -4,6 +4,8 @@ import { novoBossConfig } from "../js/enemies/novoBoss/NovoBossConfig.js";
 import { abrirSessaoNovoBoss } from "./novo-boss-browser-helpers.mjs";
 
 const config = { ...novoBossConfig,
+  cenaEntrada: { ...novoBossConfig.cenaEntrada, ativo: false },
+  prologo: { ...novoBossConfig.prologo, ativo: false },
   geradores: { ...novoBossConfig.geradores, ativo: false },
   ataques: { ...novoBossConfig.ataques, automatico: false },
   fase2: { ...novoBossConfig.fase2, ativo: false },
@@ -13,6 +15,12 @@ const { page, avancar, posicionar } = sessao;
 
 async function iniciar() {
   assert.ok(await page.evaluate(() => window.__game.scene.getScene("Level1Parte2").novoBoss.executarAtaque("lasers")));
+  // A centralização acontece antes do aviso e não faz parte do relógio do disparo.
+  for (let ms = 0; ms < 10000; ms += 20) {
+    if (await page.evaluate(() => Boolean(window.__game.scene.getScene("Level1Parte2").novoBoss.ataqueAtual))) return;
+    await avancar(20);
+  }
+  assert.fail("O boss não concluiu a centralização para iniciar os lasers.");
 }
 
 try {
@@ -86,28 +94,34 @@ try {
   console.log("PASS: nove clones reproduzem os mesmos quadros, sem corpos, dano ou parry; cancelar limpa todos os sprites.");
 
   await sessao.reiniciar(); await posicionar(-910, -5810); await iniciar();
-  await page.evaluate(() => {
+  await page.evaluate(async () => {
     const scene = window.__game.scene.getScene("Level1Parte2");
-    window.__reflexoesEnergiaBrowser = [];
+    window.__absorcoesEnergiaBrowser = [];
     const original = scene.tentarInterceptarLaserEspecial.bind(scene);
     scene.tentarInterceptarLaserEspecial = laser => {
-      const refletiu = original(laser);
-      if (refletiu && laser.novoBossDisparoEnergia) window.__reflexoesEnergiaBrowser.push(laser);
-      return refletiu;
+      const absorveu = original(laser);
+      if (absorveu && laser.novoBossDisparoEnergia) window.__absorcoesEnergiaBrowser.push(laser);
+      return absorveu;
     };
-    scene.events.emit("player:especial");
+    if (!scene.executarHabilidadeEspecial()) throw new Error("Especial do Kai indisponível");
+    // A cena está pausada: abre o domo pelo relógio e atualizador reais.
+    scene.time.now += 350;
+    const { atualizarSistemaEspeciais } = await import('/js/combat/PlayerSpecialAbilities.js');
+    atualizarSistemaEspeciais(scene, 350);
   });
   await avancar(2400);
   const parry = await page.evaluate(() => {
     const scene = window.__game.scene.getScene("Level1Parte2");
-    return { vida: scene.vida, reflexoes: window.__reflexoesEnergiaBrowser.length,
-      equipe: window.__reflexoesEnergiaBrowser.every(l => l.especialRefletido && l.danoEspecial === 30) };
+    return { vida: scene.vida, absorcoes: window.__absorcoesEnergiaBrowser.length,
+      removidos: window.__absorcoesEnergiaBrowser.every(l => !l.active && !l.especialRefletido) };
   });
-  assert.equal(parry.vida, 100); assert.ok(parry.reflexoes > 0 && parry.equipe);
-  console.log("PASS: parry real do Kai reflete os sprites de energia e mantém o jogador sem dano.");
+  assert.equal(parry.vida, 100); assert.ok(parry.absorcoes > 0 && parry.removidos);
+  console.log("PASS: domo real do Kai absorve os sprites de energia e mantém o jogador sem dano.");
 
   await sessao.reiniciar(); await posicionar(-590, -5520); await iniciar(); await avancar(900);
-  await posicionar(-1093, -5350); await avancar(0);
+  // Sai também da ZonaBoss do Tiled, que pode ultrapassar os limites físicos.
+  await posicionar(1000, -1896); await avancar(0);
+  assert.equal(await page.evaluate(() => window.__game.scene.getScene("Level1Parte2").novoBoss.jogadorNaArena), false);
   assert.equal(await page.evaluate(() => window.__game.scene.getScene("Level1Parte2").children.list
     .filter(o => o.active && o.novoBossDisparoEnergia).length), 0);
   console.log("PASS: sair da arena remove a animação e os projéteis sem efeitos residuais.");

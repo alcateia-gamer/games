@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { iniciarJogoHacking, entrarFabricaHacking, resolverBreach, tocarInteracaoHacking } from './hacking-browser-helpers.mjs';
-import { sceneState, dispensarTutorial, resolverBruteforce, resolverMemoria, capturarHost, lerRelogio, observarConfirmacaoFinal, simularCredito, verificarConclusao } from './nullnet-browser-helpers.mjs';
+import { lerArquivosNullnet, sceneState, dispensarTutorial, resolverBruteforce, resolverMemoria, capturarHost, lerRelogio, observarConfirmacaoFinal, simularCredito, verificarConclusao } from './nullnet-browser-helpers.mjs';
 const tools = process.env.HACKING_TEST_TOOLS ?? '/tmp/hacking-browser-tools', require = createRequire(import.meta.url);
 const brokerPort = Number(process.env.NULLNET_BROKER_PORT ?? 18884);
 const broker = require(`${tools}/node_modules/aedes`)();
@@ -62,7 +62,76 @@ try {
   assert.ok((await lerRelogio(host)).ms > cidade.ms);
   assert.ok((await lerRelogio(client)).ms >= cidade.ms);
   await host.waitForFunction(() => window.__game.scene.getScene('Level1Parte2').coopRuntime.players.remotes.size === 1);
-  if (testarVisual) {
+  if (process.env.NULLNET_TEST_TOWER_DEPTH === '1') {
+    for (const p of pages) await posicionar(p, 1000, -1896);
+    await host.evaluate(async () => {
+      const s = window.__game.scene.getScene('Level1Parte2');
+      const { novoBossConfig } = await import('/js/enemies/novoBoss/NovoBossConfig.js');
+      s.novoBoss.config = { ...s.novoBoss.config, geradores: { ...novoBossConfig.geradores } };
+      s.developerMode = true;
+    });
+    await host.keyboard.press('h');
+    await posicionar(host, -1093, -5520);
+    await host.waitForFunction(() => window.__game.scene.getScene('Level1Parte2').novoBoss?.geradores?.some(t => t.torre),
+      null, { timeout: 90000 });
+    const tower = await host.evaluate(async () => {
+      const s = window.__game.scene.getScene('Level1Parte2'), t = s.novoBoss.geradores.find(t => t.torre);
+      const { pontosTorresNovoBoss } = await import('/js/enemies/novoBoss/NovoBossTorres.js');
+      t.invocar(); t.atualizar(2000, true, true);
+      s.coopRuntime.forceKeyframe = true;
+      const p = pontosTorresNovoBoss(s).find(p => p.id === t.id);
+      return { id: t.id, footY: p.referenciaDepthY, depth: t.visual.depth };
+    });
+    await client.waitForFunction(({ id, depth }) => {
+      const t = window.__game.scene.getScene('Level1Parte2').novoBoss?.geradores?.find(t => t.id === id);
+      return t?.visual?.visible && t.visual.depth === depth;
+    }, tower, { timeout: 90000 });
+    for (const p of pages) {
+      const results = await p.evaluate(async tower => {
+        const { atualizarDepthAtores } = await import('/js/map/ProfundidadeMapa.js');
+        const s = window.__game.scene.getScene('Level1Parte2'), t = s.novoBoss.geradores.find(t => t.id === tower.id);
+        const actor = s.player;
+        // Uma amostra síncrona conserva a rede ativa e impede a física de
+        // interferir nas três posições de teste, sem provocar eleição de host.
+        return [-10, 0, 10].map(offset => {
+          actor.body.reset(t.x + 30, tower.footY); actor.body.updateFromGameObject();
+          actor.body.reset(actor.x, actor.y + tower.footY + offset - actor.body.bottom);
+          actor.body.updateFromGameObject(); atualizarDepthAtores(s); s.children.depthSort();
+          return { offset, front: actor.depth > t.visual.depth, player: actor.depth, tower: t.visual.depth,
+            order: s.children.list.indexOf(actor) > s.children.list.indexOf(t.visual) };
+        });
+      }, tower);
+      for (const result of results) {
+        assert.equal(result.front, result.offset >= 0, JSON.stringify(result));
+        assert.equal(result.order, result.offset >= 0, JSON.stringify(result));
+      }
+    }
+    report.towerDepth = true;
+    console.log('PASS: host e cliente intercalam o jogador com a torre pelos pés, inclusive no empate.');
+  } else if (process.env.NULLNET_TEST_DEV_H === '1') {
+    const operador = process.env.NULLNET_DEV_H_HOST === '1' ? host : client;
+    await operador.evaluate(() => { window.__game.scene.getScene('Level1Parte2').developerMode = true; });
+    await host.waitForFunction(() => {
+      const s = window.__game.scene.getScene('Level1Parte2');
+      return s.developerMode || [...s.coopRuntime.players.remotes.values()].some(e => e.data.coop?.developer);
+    });
+    if (process.env.NULLNET_DEV_H_WAITING === '1') {
+      await operador.evaluate(() => {
+        const s = window.__game.scene.getScene('Level1Parte2');
+        s.preparacaoBoss.aguardar(() => {}, { podeContinuar: () => s.registry.get('bossAccessCardAuthenticated') === true });
+      });
+      assert.equal(await operador.evaluate(() => window.__game.scene.getScene('Level1Parte2').generatorMenuOpen), true);
+    }
+    await operador.keyboard.press('h');
+    for (const p of pages) await p.waitForFunction(() => {
+      const s = window.__game.scene.getScene('Level1Parte2');
+      return s.luzFabricaAcesa && s.registry.get('factoryHackingComplete') === true &&
+        s.registry.get('factoryBruteforceComplete') === true && s.registry.get('bossAccessCardAuthenticated') === true &&
+        s.portasFabrica.filter(d => ['porta02', 'porta03'].includes(d.nome)).every(d => d.estado === 'aberta' && !d.colisao);
+    });
+    report.devH = operador === host ? 'host' : 'client';
+    console.log(`PASS: H no ${report.devH} validou a fábrica e sincronizou luz, hacks e portas.`);
+  } else if (testarVisual) {
     // Prepara só os pré-requisitos. Rede, terminal, animações e puzzles são os do jogo.
     await host.evaluate(async () => {
       const s = window.__game.scene.getScene('Level1Parte2');
@@ -166,7 +235,7 @@ try {
     await client.getByRole('dialog', { name: 'AXIOM // BRUTEFORCE', exact: true }).waitFor();
     await host.getByRole('button', { name: 'NULLNET · ARQUIVOS', exact: true }).click();
     await host.getByRole('dialog', { name: 'NULLNET // INTELLIGENCE DATABASE', exact: true }).waitFor();
-    const firstFiles = await host.locator('.axiom-record-overlay').innerText();
+    const firstFiles = await lerArquivosNullnet(host);
     assert.ok(firstFiles.includes('EV041_EDEN_NETWORK_ARCHIVE.LOG'));
     assert.ok(firstFiles.includes('ACESSO BLOQUEADO · TERMINAL 02'));
     assert.ok(!firstFiles.includes('EV041_ESCAPE_PROTOCOL.DAT'));
@@ -184,7 +253,7 @@ try {
     for (const p of pages) {
       await p.getByRole('button', { name: 'NULLNET · ARQUIVOS', exact: true }).click();
       await p.getByRole('button', { name: 'REGISTROS', exact: true }).click();
-      const files = await p.locator('.axiom-record-overlay').innerText();
+      const files = await lerArquivosNullnet(p);
       assert.ok(files.includes('EV041_EDEN_NETWORK_ARCHIVE.LOG') && files.includes('EV041_ESCAPE_PROTOCOL.DAT'));
       await p.keyboard.press('Escape');
     }

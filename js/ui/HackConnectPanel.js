@@ -1,5 +1,5 @@
 import { criarAnimacaoHacking } from './HackingAnimation.js';
-import { posicaoNumero, origemNumero, indicesSequencia, sequenciaLinha } from '../puzzles/HostConnection.js';
+import { posicaoNumero, origemNumero, indicesSequencia, sequenciaLinha, HACKCONNECT_ROWS, HACKCONNECT_VISIBLE } from '../puzzles/HostConnection.js';
 import { modulo } from '../puzzles/HackingMotion.js';
 
 /** Células estáveis avançam pela matriz em passos, inclusive entre linhas. */
@@ -66,8 +66,8 @@ export function criarHackConnectPanel(parent, command, bloqueado = () => false) 
     if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
       e.preventDefault();
       const current = selected ? posicaoNumero(selected.linha, selected.inicio, animation.tempo()) : { linha: 0, coluna: 0 };
-      const r = Math.max(0, Math.min(3, current.linha + (e.key === 'ArrowDown' ? 1 : e.key === 'ArrowUp' ? -1 : 0)));
-      const col = modulo(current.coluna + (e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0), 8);
+      const r = Math.max(0, Math.min(HACKCONNECT_ROWS - 1, current.linha + (e.key === 'ArrowDown' ? 1 : e.key === 'ArrowUp' ? -1 : 0)));
+      const col = modulo(current.coluna + (e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0), HACKCONNECT_VISIBLE);
       const origin = origemNumero(r, col, animation.tempo()); marcar(origin.linha, origin.inicio);
     } else if ((e.key === 'Enter' || e.code === 'Space') && document.activeElement?.tagName !== 'BUTTON') { e.preventDefault(); confirmar(); }
   };

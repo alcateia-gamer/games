@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { gerarMissao, documentosMissao, podeEntrarBoss, feedbackAcesso } from './MissionIntelligence.js';
 import { MemoryDecryption } from './MemoryDecryption.js';
 import { normalizarCheckpoint } from './HackingProgress.js';
-import { HostConnection, sequenciaLinha, sequenciaVisivel } from './HostConnection.js';
+import { HostConnection, sequenciaLinha, sequenciaVisivel, posicaoNumero, origemNumero } from './HostConnection.js';
 import { CoreInvasion } from './CoreInvasion.js';
 import { BruteforcePuzzle, lerColuna } from './BruteforcePuzzle.js';
 import { HackingSession } from './HackingSession.js';
@@ -127,6 +127,32 @@ test('transição curta libera HOST somente depois dos três arquivos', () => {
   const p = new CoreInvasion(gerarMissao(10)); completar(p); assert.equal(p.snapshot().estado, 'transicao');
   for (let i = 0; i < 8; i++) p.atualizar(100); assert.equal(p.snapshot().etapaTipo, 'memory');
   p.atualizar(100); assert.equal(p.snapshot().etapaTipo, 'host');
+});
+test('HOST mantém alvo, seleção e checkpoint sincronizados após cada mudança de linha e volta completa', () => {
+  const config = gerarMissao(74);
+  for (const step of [8, 16, 24, 32]) {
+    let saved;
+    const core = new CoreInvasion(config, { memoryModules: 3 }, checkpoint => { saved = checkpoint; });
+    const p = core.model, initial = p.snapshot();
+    let candidate;
+    for (let row = 0; row < 4; row++) for (let col = 0; col <= 4; col++) {
+      if (sequenciaLinha(p.linhas, row, col).join('.') === p.alvo.join('.')) candidate = { linha: row, inicio: col };
+    }
+    assert.ok(candidate);
+    // Espera até o grupo completo reaparecer, conservando o deslocamento de linha.
+    core.atualizar(step * 1000);
+    const visual = posicaoNumero(candidate.linha, candidate.inicio, p.tempo);
+    assert.equal(visual.linha, (candidate.linha + step / 8) % 4);
+    assert.equal(visual.coluna, candidate.inicio);
+    const origin = origemNumero(visual.linha, visual.coluna, core.snapshot().tempo);
+    assert.deepEqual(origin, candidate);
+    assert.deepEqual(p.snapshot().linhas, initial.linhas);
+    assert.deepEqual(p.alvo, initial.alvo);
+    assert.ok(core.acao('selecionarSequencia', { ...origin, tempo: p.tempo }));
+    assert.deepEqual(saved, { memoryModules: 3, hostConnected: true });
+    core.atualizar(6500);
+    assert.equal(core.estado, 'sucesso');
+  }
 });
 test('bruteforce tem operador único; comandos inválidos/repetidos não concedem recompensa', () => {
   let done = 0; const s = new HackingSession(() => done++); s.abrir('bruteforce', 'a'); const id = s.atual.id;

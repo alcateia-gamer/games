@@ -4,19 +4,19 @@ export const HACKCONNECT_VISIBLE = 8;
 export const HACKCONNECT_ROWS = 4;
 export const HACKCONNECT_STEP_MS = 1000;
 const total = HACKCONNECT_VISIBLE * HACKCONNECT_ROWS;
-const indice = (linha, inicio) => (HACKCONNECT_ROWS - 1 - linha) * HACKCONNECT_VISIBLE + inicio;
+const indice = (linha, inicio) => linha * HACKCONNECT_VISIBLE + inicio;
 export function posicaoNumero(linha, inicio, tempo) {
   const position = modulo(indice(linha, inicio) + Math.floor(tempo / HACKCONNECT_STEP_MS), total);
-  return { linha: HACKCONNECT_ROWS - 1 - Math.floor(position / HACKCONNECT_VISIBLE), coluna: position % HACKCONNECT_VISIBLE };
+  return { linha: Math.floor(position / HACKCONNECT_VISIBLE), coluna: position % HACKCONNECT_VISIBLE };
 }
 export function origemNumero(linha, coluna, tempo) {
   const position = modulo(indice(linha, coluna) - Math.floor(tempo / HACKCONNECT_STEP_MS), total);
-  return { linha: HACKCONNECT_ROWS - 1 - Math.floor(position / HACKCONNECT_VISIBLE), inicio: position % HACKCONNECT_VISIBLE };
+  return { linha: Math.floor(position / HACKCONNECT_VISIBLE), inicio: position % HACKCONNECT_VISIBLE };
 }
 export function indicesSequencia(linha, inicio) {
   return Array.from({ length: 4 }, (_, i) => {
     const position = modulo(indice(linha, inicio) + i, total);
-    return { linha: HACKCONNECT_ROWS - 1 - Math.floor(position / HACKCONNECT_VISIBLE), inicio: position % HACKCONNECT_VISIBLE };
+    return { linha: Math.floor(position / HACKCONNECT_VISIBLE), inicio: position % HACKCONNECT_VISIBLE };
   });
 }
 export function sequenciaLinha(linhas, linha, inicio) {
@@ -26,7 +26,7 @@ export function sequenciaVisivel(linhas, linha, inicio, tempo) {
   return posicaoNumero(linha, inicio, tempo).coluna <= HACKCONNECT_VISIBLE - 4;
 }
 
-/** Uma cadeia percorre a matriz para a direita, sobe de linha e retorna pela base a cada 1000 ms. */
+/** Uma cadeia percorre a matriz da esquerda para a direita, desce de linha e retorna ao início a cada 1000 ms. */
 export class HostConnection {
   constructor(config, conectado = false) {
     this.config = config; this.estado = 'ativo'; this.passo = conectado === true ? 1 : 0;

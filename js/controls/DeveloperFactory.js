@@ -10,9 +10,13 @@ const FLAGS_ACESSO_FABRICA = {
 };
 
 export function podeValidarFabricaDev(scene, context = scene) {
+  // A espera usa generatorMenuOpen para imobilizar o jogador. H precisa poder
+  // liberar os pré-requisitos que permitem concluir essa mesma espera.
+  const esperandoBoss = context === scene && scene.preparacaoBoss?.aguardando &&
+    scene.preparacaoBoss.menuAbertoAntesDaEspera === false;
   return context.developerMode && scene.sys?.settings?.key === "Level1Parte2" &&
     context.player?.active && !context.morteEmAndamento && !(context.vida <= 0) &&
-    !context.generatorMenuOpen && !context.upgradeMenuOpen && !context.devItemMenuOpen &&
+    (!context.generatorMenuOpen || esperandoBoss) && !context.upgradeMenuOpen && !context.devItemMenuOpen &&
     !scene.transicaoEmAndamento && !scene.transicaoRetornoEmAndamento && !scene.cenaEntradaBossAtiva &&
     !scene.hackingTerminals?.temSessao?.();
 }
