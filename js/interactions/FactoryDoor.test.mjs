@@ -986,8 +986,8 @@ test("leitor cooperativo pede autorização depois da confirmação sem abrir a 
   scene.finishActivation();
   assert.equal(pedidos, 1);
   assert.ok(scene.portasFabrica.every(p => p.estado === "fechada"));
-  assert.equal(scene.abrirPortasArenaAposCartao(scene), true);
-  assert.ok(scene.portasFabrica.filter(p => ["porta02", "porta03"].includes(p.nome)).every(p => p.estado === "abrindo"));
+  assert.equal(scene.abrirPortasArenaAposCartao(scene), false, "cliente não autoriza a abertura diretamente");
+  assert.ok(scene.portasFabrica.every(p => p.estado === "fechada"));
   scene.events.emit("shutdown");
 });
 
@@ -1660,7 +1660,7 @@ function criarParCoopPortas() {
       set(key, value); registry.events.emit("changedata", registry, key, value); return registry;
     };
     const manager = { playerId: index ? "client" : "host", room: { roomCode: 'PORTA1', hostId: 'host',
-      players: [{ id: 'host' }, { id: 'client', coop: {} }], coopProgress: { flags: {}, collected: {} } },
+      players: [{ id: 'host', character:'kai-mercer', health:100, dead:false }, { id: 'client', character:'aria-kade', health:100, dead:false, coop: {sceneSession:'client-factory'} }], coopProgress: { flags: {}, collected: {} } },
       publishState() {}, sendCoopAction(kind, payload, options = {}) {
         enviados.push({ kind, payload, ...options });
         const action = { kind, payload: structuredClone(payload), playerId: this.playerId, ...options };
@@ -1668,6 +1668,7 @@ function criarParCoopPortas() {
         else host.coopRuntime.world.receive(action);
         return true;
       } };
+    scene.vida = 100;
     const runtime = scene.coopRuntime = { scene, host: index === 0, manager, mapKey: "Level1Parte2",
       localContext: scene, streamId: index ? 'client-factory' : 'host-factory',
       players: { remotes: new Map() } };
@@ -1842,4 +1843,83 @@ test('cartão autenticado primeiro persiste; concluir bruteforce depois libera s
   scene.atualizarInteracaoPortaFabrica();
   assert.ok(scene.portasFabrica.filter(p => ['porta02', 'porta03'].includes(p.nome)).every(p => p.estado === 'abrindo'));
   scene.events.emit('shutdown');
+});
+
+
+function cairClientePortas(f) {
+ const {host,client}=f;
+ for(const scene of [host,client]) {
+  const data=scene.coopRuntime.manager.room.players.find(p=>p.id==='client');
+  data.dead=true;data.health=0;data.coop.downId='client-down';
+ }
+ client.vida=0;client.morteEmAndamento=true;
+}
+function reviverClientePortas(f) {
+ for(const scene of [f.host,f.client]) {
+  const data=scene.coopRuntime.manager.room.players.find(p=>p.id==='client');
+  data.dead=false;data.health=100;data.coop.downId=null;
+ }
+ f.client.vida=100;f.client.morteEmAndamento=false;
+}
+function assertArenaFechada(scene) {
+ assert.ok(scene.portasFabrica.filter(p=>['porta02','porta03'].includes(p.nome))
+  .every(p=>p.estado==='fechada' && p.progresso===0 && p.colisao));
+}
+test('companheiro morto bloqueia leitor com fala, cartão intacto e sem autenticação ou preparo',()=>{
+ const f=criarParCoopPortas(),{host}=f;
+ try {
+  liberarAcesso(host);cairClientePortas(f);aproximarLeitor(host);abrirComE(host);
+  assert.equal(host.leitorCartaoFabrica.terminal.aberto,false);assertArenaFechada(host);
+  assert.equal(host.inventory.getQuantity('card'),1);
+  assert.notEqual(host.game.registry.get('bossAccessCardAuthenticated'),true);
+  assert.equal(host.coopRuntime.world.bossLoading.state,null);
+  assert.ok(host.leitorCartaoFabrica.fala.snapshot().frase.includes('Aria'));
+  const versao=host.leitorCartaoFabrica.fala.snapshot().versao;
+  for(let i=0;i<20;i++)host.atualizarInteracaoPortaFabrica();
+  assert.equal(host.leitorCartaoFabrica.fala.snapshot().versao,versao,'atualização não repete falas');
+ }finally{f.limpar();}
+});
+test('morte durante a confirmação assíncrona cancela autorização; revivida libera nova leitura',()=>{
+ const f=criarParCoopPortas(),{host}=f;
+ try {
+  liberarAcesso(host);aproximarLeitor(host);abrirComE(host);animarCartao(host);
+  cairClientePortas(f);host.finishActivation();assertArenaFechada(host);
+  assert.notEqual(host.game.registry.get('bossAccessCardAuthenticated'),true);
+  assert.equal(host.coopRuntime.world.bossLoading.state,null);
+  assert.equal(host.inventory.getQuantity('card'),1);
+  assert.equal(host.generatorMenuOpen,false);assert.equal(host.cardReaderMenuOpen,false);
+  assert.ok(host.leitorCartaoFabrica.fala.snapshot().frase.includes('Aria'));
+  reviverClientePortas(f);host.time.now+=1000;aproximarLeitor(host);abrirComE(host);lerCartao(host);
+  assert.equal(host.game.registry.get('bossAccessCardAuthenticated'),true);
+  assert.ok(host.portasFabrica.filter(p=>['porta02','porta03'].includes(p.nome)).every(p=>p.estado==='abrindo'));
+ }finally{f.limpar();}
+});
+test('abertura automática, helpers, doorOpen e flags atrasadas não contornam equipe morta',()=>{
+ const f=criarParCoopPortas(),{host,client}=f;
+ try {
+  liberarAcesso(host);host.game.registry.set('bossAccessCardAuthenticated',true);cairClientePortas(f);
+  host.atualizarInteracaoPortaFabrica();assertArenaFechada(host);
+  assert.equal(host.coopRuntime.world.bossLoading.releaseAccess(),false);
+  assert.equal(host.liberarPortasArenaAutorizadas(),false);
+  assert.equal(host.abrirPortasArenaAposCartao(host),false);
+  for(const p of host.portasFabrica.filter(p=>['porta02','porta03'].includes(p.nome))) {
+   assert.equal(p.abrirPelaRede(),false);
+   p.aplicarEstadoRede({estado:'aberta',progresso:1});
+   client.coopRuntime.world.requestDoorOpen(p.nome);
+  }
+  host.coopRuntime.world.applyFlags({'factoryDoorOpen:porta02':true,'factoryDoorOpen:porta03':true});
+  assertArenaFechada(host);
+  assert.notEqual(host.game.registry.get('factoryDoorOpen:porta02'),true);
+  assert.equal(host.coopRuntime.world.bossLoading.state,null);
+ }finally{f.limpar();}
+});
+test('multiplayer ainda sem runtime não inicia abertura automática; restauração salva não fecha passagem',()=>{
+ const {scene}=createScene();scene.multiplayer=true;
+ scene.game.registry.set('bossAccessCardAuthenticated',true);scene.luzFabricaAcesa=true;
+ scene.atualizarInteracaoPortaFabrica();assertArenaFechada(scene);
+ assert.equal(scene.liberarPortasArenaAutorizadas(),false);scene.events.emit('shutdown');
+ const saved=new Map([['bossAccessCardAuthenticated',true],['factoryDoorOpen:porta02',true]]);
+ const retorno=createScene(saved).scene;
+ assert.equal(retorno.portasFabrica.find(p=>p.nome==='porta02').estado,'aberta');
+ retorno.events.emit('shutdown');
 });

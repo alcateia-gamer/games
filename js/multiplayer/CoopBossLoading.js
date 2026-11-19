@@ -1,4 +1,6 @@
 /** Barreira coletiva do boss. Recursos são locais; decisões e revisões pertencem ao host. */
+import { verificarEquipeViva } from "./CoopRevival.js";
+import { CHARACTER_NAMES } from "../systems/UpgradeDefinitions.js";
 import { mergeBossPreparation } from "./CoopProtocol.js";
 import { planejarEntradaBoss } from "./CoopBossEntrance.js";
 import { distanceToInteractionArea } from "../interactions/FactoryGenerator.js";
@@ -43,14 +45,49 @@ export class CoopBossLoading {
     this.publish(); this.apply(this.state);
     return true;
   }
+  teamStatus() { return verificarEquipeViva(this.r); }
+  rescueLines(unavailable) {
+    if (unavailable.some(p => !p.dead)) return ["Preciso aguardar a confirmação da equipe antes de entrar."];
+    if (unavailable.length >= 3) return ["Não podemos entrar agora. Precisamos reviver toda a equipe!",
+      "Não podemos deixar ninguém para trás!"];
+    const nomes = unavailable.map(p => CHARACTER_NAMES[p.character]).filter(Boolean);
+    if (nomes.length !== unavailable.length || !nomes.length) return ["Não podemos deixar ninguém para trás!"];
+    const aliados = nomes.join(" e ");
+    if (nomes.length === 2) return [`Precisamos salvar ${aliados} antes de entrar!`,
+      `Primeiro precisamos reviver ${aliados}.`];
+    return [`Não podemos entrar ainda. Precisamos salvar ${aliados}!`,
+      `${aliados} ficou para trás. Tenho que ajudar!`,
+      `Não vou enfrentar essa máquina sem ${aliados}!`,
+      `Primeiro precisamos reviver ${aliados}.`,
+      `Ainda falta alguém. Vamos buscar ${aliados}!`, "Não podemos deixar ninguém para trás!"];
+  }
+  denyTeam(playerId, status = this.teamStatus()) {
+    if (playerId === this.manager.playerId) {
+      this.accessRequested = false;
+      this.scene.leitorCartaoFabrica?.fala?.mostrar(this.rescueLines(status.unavailable));
+    } else if (this.r.host) {
+      this.manager.sendCoopAction("bossAccess", { denied: true, unavailable: status.unavailable,
+        roomCode: this.manager.room.roomCode, mapId: this.manager.room.coopMap?.id ?? 0,
+        session: this.manager.room.players.find(p => p.id === playerId)?.coop?.sceneSession },
+        { authority: true, targetId: playerId });
+    }
+    return false;
+  }
+  checkReaderTeam() {
+    const status = this.teamStatus();
+    return status.alive || this.denyTeam(this.manager.playerId, status);
+  }
   releaseAccess() {
-    if (!this.r.host || this.current() || !this.scene.liberarPortasArenaAutorizadas?.()) return false;
+    if (this.destroyed || this.r.teamDefeated || !this.r.host || this.current() ||
+        !this.teamStatus().alive || !this.scene.liberarPortasArenaAutorizadas?.()) return false;
     return this.begin();
   }
   confirmCard(playerId = this.manager.playerId) {
+    if (this.destroyed || this.r.teamDefeated || this.r.mapKey !== "Level1Parte2") return false;
     if (!this.r.host) {
       this.accessRequested = true; this.accessRequestedAt = Date.now();
-      return this.manager.sendCoopAction("bossAccess", {});
+      return this.manager.sendCoopAction("bossAccess", { roomCode: this.manager.room.roomCode,
+        mapId: this.manager.room.coopMap?.id ?? 0, session: this.r.streamId });
     }
     if (this.current()) return false;
     const context = playerId === this.manager.playerId ? this.r.localContext : this.r.players.remotes.get(playerId)?.context;
@@ -63,6 +100,8 @@ export class CoopBossLoading {
       getQuantity: key => key === "card" && data.coop?.accessCard === true ? 1 : 0,
     };
     if (!(inventory?.getQuantity("card") > 0)) return false;
+    const status = this.teamStatus();
+    if (!status.alive) return this.denyTeam(playerId, status);
     const autorizacao = { player: context.player, inventory, morteEmAndamento: false,
       generatorMenuOpen: false, devItemMenuOpen: false };
     if (!this.scene.abrirPortasArenaAposCartao?.(autorizacao)) return false;
@@ -73,9 +112,21 @@ export class CoopBossLoading {
     if (this.destroyed || this.r.teamDefeated) return true;
     if (action.authority) {
       if (action.playerId && action.playerId !== this.manager.room.hostId) return true;
+      if (action.kind === "bossAccess" && action.payload?.denied &&
+          action.targetId === this.manager.playerId && !this.current() &&
+          action.payload.roomCode === this.manager.room.roomCode &&
+          action.payload.mapId === (this.manager.room.coopMap?.id ?? 0) && action.payload.session === this.r.streamId) {
+        this.accessRequested = false;
+        this.scene.leitorCartaoFabrica?.fala?.mostrar(this.rescueLines(action.payload.unavailable ?? []));
+      }
       if (["bossPreparation", "bossIntro"].includes(action.kind)) this.apply(action.payload?.preparation);
     } else if (this.r.host && this.manager.room.players.some(p => p.id === action.playerId)) {
-      if (action.kind === "bossAccess") this.confirmCard(action.playerId);
+      if (action.kind === "bossAccess") {
+        const p = action.payload, data = this.manager.room.players.find(p => p.id === action.playerId);
+        const session = action.playerId === this.manager.playerId ? this.r.streamId : data?.coop?.sceneSession;
+        if (p?.roomCode === this.manager.room.roomCode && p.mapId === (this.manager.room.coopMap?.id ?? 0) &&
+            p.session === session) this.confirmCard(action.playerId);
+      }
       if (action.kind === "bossPrepared") this.acceptStatus(action.playerId, action.payload);
     }
     return true;

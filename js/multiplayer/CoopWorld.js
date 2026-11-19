@@ -200,14 +200,19 @@ export class CoopWorld {
   }
   applyFlags(flags = {}) {
     const s = this.scene;
+    const portasArena = ["factoryDoorOpen:porta02", "factoryDoorOpen:porta03"];
+    const bloquearNovaEntrada = this.r.host && !this.bossLoading.current() &&
+      portasArena.some(key => flags[key]) && !this.bossLoading.teamStatus().alive;
     this.applying = true;
     try {
-      for (const [key, value] of Object.entries(flags)) if (sharedKey(key) && value === true) s.game.registry.set(key, true);
+      for (const [key, value] of Object.entries(flags)) if (sharedKey(key) && value === true &&
+        !(bloquearNovaEntrada && portasArena.includes(key))) s.game.registry.set(key, true);
       if (flags.factoryGeneratorPowered && !s.luzFabricaAcesa && this.manager.room.coopDevLighting !== false) s.acenderLuzFabrica?.();
       if (typeof this.manager.room.coopDevLighting === "boolean") this.applyDevLighting(this.manager.room.coopDevLighting);
       for (const door of s.portasFabrica || []) {
         if (s.hackingTerminals && !s.hackingTerminals.permitePortas()) continue;
         const key = door.nome === "porta01" ? "factoryDoorOpen" : `factoryDoorOpen:${door.nome}`;
+        if (bloquearNovaEntrada && portasArena.includes(key)) continue;
         if (flags[key] && !door.bloqueadaPorBoss && door.estado === "fechada" &&
             (door.nome !== "porta05" || s.novoBoss?.morto === true)) door.aplicarEstadoRede?.({ estado: "aberta", progresso: 1 });
       }

@@ -220,12 +220,17 @@ function applySquash(enemy) {
     if (!fisica || !enemy.active || enemy.body !== fisica.body) return;
     const fatorX = Math.abs(baseScaleX / enemy.scaleX);
     const fatorY = Math.abs(baseScaleY / enemy.scaleY);
+    // Durante um callback de colisão, o sprite ainda espera o postUpdate.
+    // Recalcular a escala não pode apagar o deslocamento/separação do corpo.
+    const x = body.x, y = body.y;
     body.setSize(fisica.largura * fatorX, fisica.altura * fatorY, false);
     body.setOffset(
       enemy.displayOriginX + (fisica.offsetX - enemy.displayOriginX) * fatorX,
       enemy.displayOriginY + (fisica.offsetY - enemy.displayOriginY) * fatorY,
     );
     body.updateFromGameObject();
+    body.x = x; body.y = y;
+    body.updateCenter?.();
   };
   enemy.scene.tweens.killTweensOf(enemy);
   enemy.setScale(

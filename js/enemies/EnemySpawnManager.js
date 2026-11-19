@@ -6,7 +6,7 @@
 import { criarInimigoTeste } from "./EnemyTest.js";
 import { areaContemCorpo } from "./EnemySpawnArea.js";
 import { PERFIS_ROBOS as PERFIS } from "./RobotBody.js";
-import { retanguloSpawnLivre, FOLGA_SPAWN_ROBOS, ampliarAreaNascimento,
+import { retanguloSpawnLivre, FOLGA_SPAWN_ROBOS,
   separacaoSpawnRobos, notaDistribuicaoSpawn } from "./EnemySpawnValidation.js";
 import { criarAreaRobosCidade } from "../map/AreaMapa.js";
 
@@ -55,7 +55,6 @@ const SPAWN_CONFIG = {
 
   wallMargin: FOLGA_SPAWN_ROBOS.objetos,
   enemyGap: FOLGA_SPAWN_ROBOS.entreRobos,
-  nearbyMargin: FOLGA_SPAWN_ROBOS.proximidadeArea,
   maxAttemptsPerEnemy: 65,
 
   checkInterval: 400,
@@ -108,7 +107,7 @@ function footprint(x, y, tipo, margem) {
   );
 }
 
-/** Inclui o sprite inteiro e a margem dos pés nos limites da zona de nascimento. */
+/** Ocupação visual e física usada contra obstáculos e limites do mapa. */
 function areaSpawn(x, y, tipo, margem) {
   const perfil = PERFIS[tipo] || PERFIS.padrao;
   const pes = footprint(x, y, tipo, margem);
@@ -525,9 +524,8 @@ class EnemySpawnManager {
       if (!enemy) continue;
 
       enemy.upgradeZoneId = region.id;
-      enemy.spawnArea = ampliarAreaNascimento(region.area, this.config.nearbyMargin);
+      // A região limita somente o nascimento; a patrulha usa o chão navegável.
       enemy.playableArea = this.playableArea;
-      enemy.spawnWallMargin = this.config.wallMargin;
 
       this.prepararColisoes();
 
@@ -556,8 +554,8 @@ class EnemySpawnManager {
     const rejeitados = [];
     if (!region.area) return null;
 
-    const areas = [region.area, ampliarAreaNascimento(region.area, this.config.nearbyMargin)];
-    const ocupacao = areaSpawn(0, 0, tipoRobo, this.config.wallMargin);
+    const areas = [region.area];
+    const ocupacao = footprint(0, 0, tipoRobo, 0);
     for (const area of areas) {
       const cos = Math.cos(area.rotation), sin = Math.sin(area.rotation);
       const cantos = [[ocupacao.left, ocupacao.top], [ocupacao.right, ocupacao.top],
@@ -572,7 +570,7 @@ class EnemySpawnManager {
 
       let escolhido = null, melhorNota = -Infinity;
       const avaliar = ponto => {
-        if (!areaContemCorpo(area, areaSpawn(ponto.x, ponto.y, tipoRobo, this.config.wallMargin)) ||
+        if (!areaContemCorpo(area, footprint(ponto.x, ponto.y, tipoRobo, 0)) ||
             !this.isValidPosition(ponto, tipoRobo, positions)) {
           if (rejeitados.length < this.config.debugRejectedLimit) rejeitados.push(ponto);
           return;
@@ -648,8 +646,8 @@ class EnemySpawnManager {
         (region && region.enemies.filter(e => e.active && !e.morto).length >=
           (region.targetCount ?? this.config.maxEnemies))) return false;
     return !!region && [config.x, config.y].every(Number.isFinite) &&
-      areaContemCorpo(ampliarAreaNascimento(region.area, this.config.nearbyMargin),
-        areaSpawn(config.x, config.y, config.tipoRobo, this.config.wallMargin)) &&
+      areaContemCorpo(region.area,
+        footprint(config.x, config.y, config.tipoRobo, 0)) &&
       this.isValidPosition(config, config.tipoRobo, []);
   }
 

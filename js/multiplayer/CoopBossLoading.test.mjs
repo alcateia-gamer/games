@@ -44,7 +44,9 @@ function room(count = 2, roomCode = "TEST") {
         midPoint: { x: -1100, y: -5250 },
         centerOn(x, y) { this.midPoint = { x, y }; return this; }, stopFollow() {}, startFollow() {},
         setZoom(value) { this.zoom = value; return this; } } },
-      leitorCartaoFabrica: { area: { x: -1120, y: -5270, width: 64, height: 64 } },
+      deniedSpeeches: [],
+      leitorCartaoFabrica: { area: { x: -1120, y: -5270, width: 64, height: 64 },
+        fala: { mostrar(frases) { scene.deniedSpeeches.push(frases); } } },
     };
     const texts = [];
     scene.add = { text(x, y, value) {
@@ -89,7 +91,7 @@ function room(count = 2, roomCode = "TEST") {
     const r = { scene, manager, mapKey: "Level1Parte2", streamId: `session${index}`, host: manager.room.hostId === id,
       localContext: scene, players: { remotes, contexts: () => [...remotes.values()].map(p => p.context) },
       playerContexts: () => [scene, ...r.players.contexts()], inArena: p => jogadorNaArenaNovoBoss(p, config.arena),
-      revival: { participants: () => manager.room.players.map(p => ({ dead: p.dead })) },
+      revival: { participants: () => manager.room.players.map(p => ({ id: p.id, dead: p.dead, health: p.health, downId: p.coop?.downId })) },
       teleports: 0, teleport(x, y) { r.teleports++; scene.player.body.reset(x, y); },
       prepareBossAssets: () => CoopRuntime.prototype.prepareBossAssets.call(r),
       prepareBossEncounter() { r.encounterPreparations = (r.encounterPreparations || 0) + 1;
@@ -561,4 +563,96 @@ test("participante novo durante a reunião recebe destino e invalida a confirma�
     session: "session2", sequence: 1, placement: 0, status: "ready", placed: true });
   assert.equal(loading.state.clients.p2.placed, false);
   assert.equal(loading.ready(), false);
+});
+
+
+function estadoEquipe(h, id, dead) {
+ for(const n of h.nodes) {
+  const data=n.manager.room.players.find(p=>p.id===id);
+  Object.assign(data,{dead,health:dead?0:100});data.coop.downId=dead?`down-${id}`:null;
+  const local=n.manager.playerId===id;
+  const entry=local?null:n.r.players.remotes.get(id);
+  const ctx=local?n.scene:entry.context;
+  ctx.vida=dead?0:100;ctx.morteEmAndamento=dead;
+  ctx.player.morto=dead;
+  if(local)ctx.coopDownId=dead?`down-${id}`:null;
+  else entry.health=dead?0:100;
+ }
+}
+function assertSemAutorizacao(h) {
+ for(const n of h.nodes) {
+  assert.equal(n.world.bossLoading.state,null);
+  assert.ok(n.scene.portasFabrica.every(p=>p.estado==='fechada'));
+  assert.equal(n.scene.registry.get('bossAccessCardAuthenticated'),undefined);
+  assert.equal(n.scene.robosFabricaDescarregados,undefined);
+  assert.equal(n.scene.movimentoBloqueado,false);
+  assert.equal(n.r.teleports,0);
+ }
+}
+for(const count of [2,3,4])test(`${count} jogadores: host recusa cartão e abertura automática com companheiro caído`,t=>{
+ const h=room(count);t.after(()=>h.dispose());const host=h.nodes[0];
+ host.manager.room.players[1].character='magnus-force';estadoEquipe(h,'p1',true);
+ let liberacoes=0;host.scene.liberarPortasArenaAutorizadas=()=>{liberacoes++;return true;};
+ assert.equal(host.world.confirmarCartao(),false);
+ assert.equal(host.world.bossLoading.releaseAccess(),false);
+ assert.equal(liberacoes,0);assertSemAutorizacao(h);
+ assert.equal(host.scene.inventory.getQuantity('card'),1);
+ assert.ok(host.scene.deniedSpeeches[0][0].includes('Magnus'));
+});
+test('host morto: negativa chega ao cliente solicitante e não fala sobre o host vivo errado',t=>{
+ const h=room(2);t.after(()=>h.dispose());const [host,client]=h.nodes;
+ estadoEquipe(h,'p0',true);
+ host.manager.room.players[1].coop.accessCard=true;
+ host.r.players.remotes.get('p1').actor.setPosition(-1100,-5250);
+ client.world.confirmarCartao();h.flush();assertSemAutorizacao(h);
+ assert.equal(host.scene.deniedSpeeches.length,0);
+ assert.equal(client.scene.deniedSpeeches.length,1);
+ assert.ok(client.scene.deniedSpeeches[0][0].includes('Kai Mercer'));
+ assert.ok(h.sent.some(a=>a.kind==='bossAccess' && a.authority && a.targetId==='p1'));
+ assert.equal(client.world.bossLoading.accessRequested,false);
+ const antes=h.sent.length;h.advance(2000);h.tick();assert.equal(h.sent.length,antes,'negativa não gera retentativas por frame');
+});
+test('dois ou três mortos têm falas curtas com nomes reais e recusas simultâneas sem efeitos parciais',t=>{
+ for(const count of [3,4]) {
+  const h=room(count);t.after(()=>h.dispose());const host=h.nodes[0];
+  const nomes=['kai-mercer','nyx','magnus-force','aria-kade'];
+  for(const n of h.nodes)for(const [i,p] of n.manager.room.players.entries())p.character=nomes[i];
+  for(let i=1;i<count;i++)estadoEquipe(h,`p${i}`,true);
+  host.world.confirmarCartao();host.world.confirmarCartao();assertSemAutorizacao(h);
+  const frase=host.scene.deniedSpeeches[0][0];
+  if(count===3)assert.ok(frase.includes('Nyx') && frase.includes('Magnus'));
+  else assert.ok(frase.includes('toda a equipe'));
+ }
+ const h=room(3);t.after(()=>h.dispose());const [host,client]=h.nodes;
+ estadoEquipe(h,'p2',true);host.manager.room.players[1].coop.accessCard=true;
+ host.r.players.remotes.get('p1').actor.setPosition(-1100,-5250);
+ host.world.confirmarCartao();client.world.confirmarCartao();h.flush();assertSemAutorizacao(h);
+});
+test('revivida confirmada libera nova tentativa e toda a preparação original',t=>{
+ const h=room(2);t.after(()=>h.dispose());const host=h.nodes[0];
+ estadoEquipe(h,'p1',true);assert.equal(host.world.confirmarCartao(),false);assertSemAutorizacao(h);
+ estadoEquipe(h,'p1',false);assert.equal(host.world.confirmarCartao(),true);h.flush();
+ h.open();h.enter();h.close();h.nodes.forEach(n=>n.finish());h.settle();h.advance(350);h.tick();
+ assert.equal(h.sent.filter(a=>a.kind==='bossIntro').length,1);
+ assert.ok(h.nodes.every(n=>n.world.bossLoading.canStart()));
+});
+test('vida autoritativa, queda ou transição negam mesmo com sprite ativo e sala aparentemente viva',t=>{
+ for(const alterar of [e=>e.context.vida=0,e=>e.context.morteEmAndamento=true,
+   e=>e.data.coop.downId='queda',e=>e.actor.morto=true]) {
+  const h=room(2);t.after(()=>h.dispose());const host=h.nodes[0];
+  alterar(host.r.players.remotes.get('p1'));
+  assert.equal(host.world.confirmarCartao(),false);assertSemAutorizacao(h);
+ }
+});
+test('estado sem confirmação e sessão antiga negam; participante desconectado não é inventado',t=>{
+ const h=room(3);t.after(()=>h.dispose());const host=h.nodes[0];
+ const entry=host.r.players.remotes.get('p2');entry.context.vida=undefined;
+ assert.equal(host.world.confirmarCartao(),false);assertSemAutorizacao(h);
+ h.disconnect('p2');
+ const request={kind:'bossAccess',playerId:'p1',payload:{roomCode:'TEST',mapId:1,session:'session1'}};
+ host.manager.room.players[1].coop.accessCard=true;host.r.players.remotes.get('p1').actor.setPosition(-1100,-5250);
+ for(const change of [{mapId:0},{session:'antiga'},{roomCode:'OUTRA'}]) {
+  host.world.bossLoading.receive({...request,payload:{...request.payload,...change}});assertSemAutorizacao(h);
+ }
+ host.world.bossLoading.receive(request);assert.ok(host.world.bossLoading.state);
 });

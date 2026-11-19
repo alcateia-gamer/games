@@ -42,11 +42,11 @@ try {
           throw new Error(`Zona ${region.id} sem par após retentativas: ${JSON.stringify(region.enemies.map(r => ({ tipo:r.tipoRobo,x:r.x,y:r.y })))}`);
         for (const r of region.enemies) {
           const visual = new Phaser.Geom.Rectangle(r.x - r.displayWidth / 2, r.y - r.displayHeight / 2, r.displayWidth, r.displayHeight);
-          const area = ampliarAreaNascimento(region.area), margem = m.config.wallMargin;
+          const area = region.area, margem = m.config.wallMargin;
           const buffer = { x: Math.min(visual.x, r.body.x) - margem, y: Math.min(visual.y, r.body.y) - margem,
             width: Math.max(visual.right, r.body.right) - Math.min(visual.x, r.body.x) + margem * 2,
             height: Math.max(visual.bottom, r.body.bottom) - Math.min(visual.y, r.body.y) + margem * 2 };
-          if (!areaContemCorpo(area, r.body) || !areaContemCorpo(area, visual) ||
+          if (!areaContemCorpo(area, r.body) ||
               !retanguloSpawnLivre(s, buffer) || !separacaoSpawnRobos({ inimigos: s.inimigos.filter(o => o !== r) }, r, visual))
             throw new Error(`Spawn inválido ${region.id}/${r.tipoRobo}: ${r.x},${r.y}`);
         }
@@ -109,7 +109,7 @@ try {
     return { portais, areas: s.spawnAreasRoboBola.snapshot(), origens };
   });
   assert.equal(report.fabrica.areas.length, 18);
-  assert.ok(report.fabrica.areas.every(a => a.invocados > 0 && a.invocados <= a.total && a.total <= 7));
+  assert.ok(report.fabrica.areas.every(a => a.invocados > 0 && a.invocados <= a.total && a.total <= 7), JSON.stringify(report.fabrica.areas));
   assert.equal(report.fabrica.areas.filter(a => [1625, 1629, 1630].includes(a.id)).reduce((s, a) => s + a.invocados, 0), 7);
   // Avança a IA e o Arcade reais sem reativar iluminação e interface de toda a
   // fábrica no headless. Valida também os primeiros passos e a flutuação.

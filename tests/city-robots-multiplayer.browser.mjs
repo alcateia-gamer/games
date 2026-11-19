@@ -6,7 +6,7 @@ const root=process.env.ROBOT_TEST_TOOLS || '/tmp/nullborns-test-tools',require=c
 const {chromium}=await import(process.env.PLAYWRIGHT_MODULE || `${root}/node_modules/playwright/index.mjs`);
 const broker=require(`${root}/node_modules/aedes`)(),{WebSocketServer,createWebSocketStream}=require(`${root}/node_modules/ws`);
 const socket=new WebSocketServer({host:'127.0.0.1',port:18884});socket.on('connection',ws=>broker.handle(createWebSocketStream(ws)));
-const browser=await chromium.launch({headless:true,args:['--no-sandbox','--disable-dev-shm-usage','--enable-unsafe-swiftshader','--disable-features=LocalNetworkAccessChecks']});
+const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH,headless:true,args:['--no-sandbox','--disable-dev-shm-usage','--enable-unsafe-swiftshader','--disable-features=LocalNetworkAccessChecks']});
 const errors=[],report=[];const artifacts=process.env.ARTIFACT_DIR || '/tmp/city-robots';mkdirSync(artifacts,{recursive:true});
 try{
  for(const count of [2,3,4]){
@@ -56,10 +56,36 @@ try{
     assert.deepEqual(result,{spawn:0,before:spawn.ids.length,after:spawn.ids.length,remote:true});
    }
    console.log('SPAWN COMPARTILHADO',count,spawn.ids.length);
+   await pages[0].evaluate(async id=>{
+    const s=__game.scene.getScene('Level1'),e=s.inimigos.find(e=>e.networkId===id),b=e.body;
+    const wall=(x,y,w,h)=>s.collisionGroup.create(x,y).setDisplaySize(w,h).setVisible(false).refreshBody();
+    window.robotWalls=[wall(b.right+15,b.center.y,2,200),wall(b.x-15,b.center.y,2,200),
+     wall(b.center.x,b.y-15,200,2),wall(b.center.x,b.bottom+15,200,2)];
+    (await import('/js/enemies/EnemyPathfinding.js')).invalidarCacheNavegacao(s);
+   },spawn.target);
    for(const p of pages)await p.evaluate(id=>__game.scene.getScene('Level1').coopRuntime.requestDamage(id,1),spawn.target);
    await pages[0].waitForFunction(({id,vida,count})=>__game.scene.getScene('Level1').inimigos.find(e=>e.networkId===id)?.vida===vida-count,{id:spawn.target,vida:spawn.vida,count});
    await publish();
    for(const p of pages.slice(1))await p.waitForFunction(({id,vida})=>__game.scene.getScene('Level1').inimigos.find(e=>e.networkId===id)?.vida===vida,{id:spawn.target,vida:spawn.vida-count});
+   const position=await pages[0].evaluate(async id=>{
+    const s=__game.scene.getScene('Level1'),e=s.inimigos.find(e=>e.networkId===id);
+    const {retanguloLivreDoMapa}=await import('/js/enemies/EnemyPathfinding.js');
+    for(const delta of [16,34,250,1000]){
+     s.physics.world.update(s.time.now+delta,delta);s.physics.world.postUpdate();
+     if(!retanguloLivreDoMapa(s,e.body) || !e.playableArea.contem(e.body))throw Error('dano multiplayer atravessou parede');
+    }
+    testClock+=100;s.coopRuntime.forceKeyframe=true;s.coopRuntime.update(testClock,16);
+    return {id,x:e.body.x,y:e.body.y,spriteX:e.x,spriteY:e.y};
+   },spawn.target);
+   for(const p of pages.slice(1))await p.waitForFunction(expected=>{
+    const s=__game.scene.getScene('Level1'),e=s.inimigos.find(e=>e.networkId===expected.id);
+    return e?.remoteOnly && !e.body && e.coopBody && Math.abs(e.coopBody.x-expected.x)<.001 &&
+     Math.abs(e.coopBody.y-expected.y)<.001 && Math.abs(e.x-expected.spriteX)<1 && Math.abs(e.y-expected.spriteY)<1;
+   },position);
+   await pages[0].evaluate(async()=>{
+    const s=__game.scene.getScene('Level1');for(const w of robotWalls)w.destroy();
+    (await import('/js/enemies/EnemyPathfinding.js')).invalidarCacheNavegacao(s);
+   });
    console.log('DANO DOS',count,'PERSONAGENS SINCRONIZADO');
    const cleanup=await pages[0].evaluate(()=>{
     const s=__game.scene.getScene('Level1');let rewards=0;window.oldDeath=s.scrapSystem.onRobotDeath;s.scrapSystem.onRobotDeath=()=>rewards++;
@@ -76,7 +102,7 @@ try{
    for(const p of pages.slice(1))await p.waitForFunction(ids=>JSON.stringify(__game.scene.getScene('Level1').inimigos.map(e=>e.networkId).sort())===JSON.stringify(ids),replacement);
    await publish();
    for(const p of pages.slice(1))assert.ok(await p.evaluate(ids=>__game.scene.getScene('Level1').inimigos.every(e=>!ids.includes(e.networkId)),spawn.ids));
-   report.push({players:count,spawn:spawn.ids.length,damageFromPlayers:count,removedWithoutRewards:true,respawn:replacement.length,duplicateIds:false});console.log('PASSOU',count,'jogadores');
+   report.push({players:count,spawn:spawn.ids.length,damageFromPlayers:count,wallsAfterDamage:true,replicatedPosition:true,removedWithoutRewards:true,respawn:replacement.length,duplicateIds:false});console.log('PASSOU',count,'jogadores');
   }catch(e){for(let i=0;i<pages.length;i++)console.error('DIAG',count,i,await pages[i].evaluate(()=>({room:manager.room?.status,active:__game.scene.getScenes(true).map(s=>s.sys.settings.key),enemies:__game.scene.getScene('Level1')?.inimigos?.map(e=>({id:e.networkId,vida:e.vida})),contexts:__game.scene.getScene('Level1')?.coopRuntime?.playerContexts().map(c=>({x:c.player.x,y:c.player.y}))})).catch(()=>null));throw e;}
   finally{await Promise.allSettled(pages.map(async p=>{await p.evaluate(()=>manager.destroy());await p.close();}));}
  }

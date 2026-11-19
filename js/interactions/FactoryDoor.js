@@ -2,6 +2,7 @@
  * @file Portas da fábrica abertas por interação, com persianas animadas e portas instantâneas.
  */
 
+import { verificarEquipeViva } from "../multiplayer/CoopRevival.js";
 import { podeEntrarBoss, feedbackAcesso } from "../puzzles/MissionIntelligence.js";
 import { calcularDepthAtor } from "../map/ProfundidadeMapa.js";
 import { distanceToInteractionArea, findFactoryInteraction } from "./FactoryGenerator.js";
@@ -15,6 +16,11 @@ const INTERACTION_RANGE = 64;
 const CLOSE_DURATION = 850;
 const PORTAS_COM_ACESSO = new Set(["porta02", "porta03"]);
 const PORTAS_COM_ENERGIA = new Set(["porta01", "porta04"]);
+// Só o host decide uma nova abertura; snapshots de uma transição já autorizada
+// continuam sendo aplicados nos clientes, mesmo se alguém cair depois.
+const equipeAutorizaAcesso = scene => scene.coopRuntime
+  ? scene.coopRuntime.host === true && verificarEquipeViva(scene.coopRuntime).alive
+  : scene.multiplayer !== true;
 const hackingLiberado = scene => !scene.hackingTerminals || scene.hackingTerminals.permitePortas();
 const FALAS_SEM_ENERGIA = Object.freeze([
   "Preciso ligar a energia antes.",
@@ -209,6 +215,9 @@ function criarPorta(scene, layer, area, fala) {
   // O host transmite também o progresso das persianas e seu bloqueio temporário.
   porta.aplicarEstadoRede = estado => {
     if (PORTAS_COM_ACESSO.has(area.name) && ["abrindo", "aberta"].includes(estado.estado) && !podeEntrarBoss(scene.game.registry)) return;
+    if (PORTAS_COM_ACESSO.has(area.name) && porta.estado === "fechada" &&
+        ["abrindo", "aberta"].includes(estado.estado) && scene.coopRuntime?.host &&
+        !equipeAutorizaAcesso(scene)) return;
     if (estado.estado === "abrindo" && porta.estado !== "abrindo" && !scene.coopAudio) som.tocar(estado.progresso);
     else if (estado.estado === "fechada" || estado.estado === "fechando") som.parar();
     porta.estado = estado.estado;
@@ -222,7 +231,8 @@ function criarPorta(scene, layer, area, fala) {
   /** O host executa a mesma abertura para interações locais e pedidos dos clientes. */
   const iniciarAbertura = () => {
     if (encerrada || !hackingLiberado(scene) || porta.bloqueadaPorBoss || scene.cenaEntradaBossAtiva || porta.estado !== "fechada") return false;
-    if (PORTAS_COM_ACESSO.has(area.name) && !podeEntrarBoss(scene.game.registry)) return false;
+    if (PORTAS_COM_ACESSO.has(area.name) &&
+        (!podeEntrarBoss(scene.game.registry) || !equipeAutorizaAcesso(scene))) return false;
     porta.estado = "abrindo";
     scene.interacaoMundoProxima = null;
     prompt?.setVisible(false);
@@ -382,6 +392,7 @@ function criarInteracaoPortaFabrica(scene) {
   }) : null;
   scene.leitorCartaoFabrica = marcadorLeitor ? { area: areaLeitor, marcador: marcadorLeitor, terminal, fala } : null;
   scene.liberarPortasArenaAutorizadas = () => {
+    if (!equipeAutorizaAcesso(scene)) return false;
     if (!podeEntrarBoss(scene.game.registry) || !hackingLiberado(scene) || !scene.luzFabricaAcesa ||
         scene.hackingTerminals?.temSessao?.() || scene.cenaEntradaBossAtiva ||
         portasLeitor.some(c => c.porta.bloqueadaPorBoss)) return false;
@@ -389,6 +400,7 @@ function criarInteracaoPortaFabrica(scene) {
     return true;
   };
   scene.abrirPortasArenaAposCartao = contexto => {
+    if (!equipeAutorizaAcesso(scene)) return false;
     if (scene.hackingTerminals?.temSessao?.() || !scene.luzFabricaAcesa ||
         !(contexto.inventory?.getQuantity('card') > 0) || !portasLeitor.length ||
         portasLeitor.some(c => !c.podeInteragir(areaLeitor, contexto))) return false;
@@ -402,6 +414,7 @@ function criarInteracaoPortaFabrica(scene) {
     if (!(scene.inventory?.getQuantity("card") > 0)) {
       fala.mostrar(feedbackAcesso(scene.game.registry)); return true;
     }
+    if (scene.coopRuntime?.world.bossLoading?.checkReaderTeam() === false) return true;
     if (scene.game.registry.get('bossAccessCardAuthenticated') === true) {
       fala.mostrar(feedbackAcesso(scene.game.registry)); return true;
     }

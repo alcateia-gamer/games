@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { mkdirSync,writeFileSync } from 'node:fs';
 const {chromium}=await import(process.env.PLAYWRIGHT_MODULE || '/tmp/nullborns-test-tools/node_modules/playwright/index.mjs');
-const browser=await chromium.launch({headless:true,args:['--no-sandbox','--disable-dev-shm-usage','--enable-unsafe-swiftshader']});
+const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH,headless:true,args:['--no-sandbox','--disable-dev-shm-usage','--enable-unsafe-swiftshader']});
 const artifacts=process.env.ARTIFACT_DIR || '/tmp/city-robots';mkdirSync(artifacts,{recursive:true});
 const page=await browser.newPage({viewport:{width:1280,height:720}}),errors=[];
 page.on('pageerror',e=>errors.push(e.stack));
@@ -44,7 +44,7 @@ try {
   check(criarInimigoTeste(s,{x:s.player.x,y:s.player.y})===null,'construtor rejeita criação sem zona');
   check(criarInimigoTeste(s,{})===null,'construtor não usa respawn como fallback');
   const z=m.regions[0];s.player.body.reset(z.center.x,z.center.y+450);s.player.body.updateFromGameObject();
-  const bloco=s.collisionGroup.create(z.center.x,z.center.y);bloco.body.setSize(z.area.width,z.area.height);bloco.body.reset(z.center.x,z.center.y);
+  const bloco=s.collisionGroup.create(z.center.x,z.center.y);bloco.setDisplaySize(z.area.width,z.area.height).refreshBody();
   invalidarCacheNavegacao(s);check(m.spawnRegion(z)===0,'retângulo totalmente bloqueado não cria robô');
   bloco.destroy();invalidarCacheNavegacao(s);
   const oldWidth=z.area.width;z.area.width=20;check(m.spawnRegion(z)===0,'retângulo pequeno não tem fallback');z.area.width=oldWidth;
@@ -58,16 +58,36 @@ try {
   check(e.depth<s.player.depth,'robô atrás do personagem');
   // Uma parede de dois pixels testa o passo inteiro, além da separação discreta do Arcade.
   const wall=s.collisionGroup.create(e.body.x+e.body.width+15,e.body.center.y);
-  wall.body.setSize(2,180);wall.body.reset(e.body.x+e.body.width+15,e.body.center.y);invalidarCacheNavegacao(s);
+  wall.setDisplaySize(2,180).refreshBody();invalidarCacheNavegacao(s);
   const start={x:e.x,y:e.y};
   for(let i=0;i<15;i++){
    applyKnockback(s,{x:e.x-100,y:e.y},e,10000,10000);
+   s.physics.world.once('worldstep',()=>{
+    const before={x:e.body.x,y:e.body.y,width:e.body.width,height:e.body.height};
+    causarDanoInimigo(s,e,1,{attacker:s.player,particles:0,hitStop:0});
+    check(Math.abs(e.body.x-before.x)<1e-7 && Math.abs(e.body.y-before.y)<1e-7,
+      'dano antes do postUpdate preserva a posição física');
+    check(Math.abs(e.body.width-before.width)<1e-7 && Math.abs(e.body.height-before.height)<1e-7,
+      'deformação de impacto preserva as dimensões dos pés');
+   });
    s.physics.world.update(s.time.now+i*34,34);s.physics.world.postUpdate();
+   check(Math.abs(e.body.x-(e.x+e.scaleX*(e.body.offset.x-e.displayOriginX)))<1e-6 &&
+    Math.abs(e.body.y-(e.y+e.scaleY*(e.body.offset.y-e.displayOriginY)))<1e-6,
+    'sprite e corpo sincronizados após dano durante a física');
    check(e.body.right<=wall.body.x+.01,'impactos consecutivos param na parede fina');
    check(m.playableArea.contem(e.body),'impactos mantêm corpo no mapa');
   }
   check(e.x>start.x,'impacto preserva deslocamento visível');
-  wall.destroy();invalidarCacheNavegacao(s);
+  const corner=s.collisionGroup.create(e.body.center.x,e.body.bottom+15);
+  corner.setDisplaySize(200,2).refreshBody();invalidarCacheNavegacao(s);
+  for(const delta of [16,34,250,1000])for(let i=0;i<5;i++){
+   applyKnockback(s,{x:e.x-100,y:e.y-100},e,320,250);
+   s.physics.world.update(s.time.now+2000+i*delta,delta);s.physics.world.postUpdate();
+   check(e.body.right<=wall.body.x+1e-6 && e.body.bottom<=corner.body.y+1e-6,
+     'knockback diagonal em canto respeita paredes durante frames longos');
+   check(retanguloLivreDoMapa(s,e.body),'pés não terminam dentro de obstáculo no canto');
+  }
+  wall.destroy();corner.destroy();invalidarCacheNavegacao(s);
   // Encontra uma borda externa real em linha reta a partir da zona.
   e.setVelocity(0,0);e.body.reset(start.x,start.y);e.body.updateFromGameObject();
   for(let i=0;i<250;i++){
@@ -101,6 +121,46 @@ try {
   const auxiliares=[replica.debugHitboxDano,replica.fundoVida,replica.barraVida,replica.bordaVida];
   replica.destroy();s.inimigos=s.inimigos.filter(enemy=>enemy!==replica);
   check(auxiliares.every(obj=>!obj.scene),'descarte de réplica também limpa visuais auxiliares');
+  // Dois corpos Arcade reais exercitam o collider compartilhado sob pressão no canto.
+  clear();
+  const {PERFIS_ROBOS}=await import('/js/enemies/RobotBody.js');
+  const {protegerColisaoInimigo}=await import('/js/enemies/EnemyCollision.js');
+  let base;
+  for(let i=0;i<100 && !base;i++){
+   const p=m.findPosition(z,'serra',[]);if(!p)continue;
+   const f=PERFIS_ROBOS.serra;
+   const x=p.x+(f.offsetX-f.frameWidth/2)*f.scale;
+   const y=p.y+(f.offsetY-f.frameHeight/2)*f.scale;
+   const area={x:x-70,y,width:160,height:85};
+   if(m.playableArea.contem(area) && retanguloLivreDoMapa(s,area))base={x,y};
+  }
+  check(!!base,'corredor livre para testar dois corpos reais');
+  const criarCorpo=(tipo,x,y)=>{
+   const f=PERFIS_ROBOS[tipo];
+   const r=s.physics.add.sprite(x-(f.offsetX-f.frameWidth/2)*f.scale,
+    y-(f.offsetY-f.frameHeight/2)*f.scale,tipo==='serra'?'robo-serra':'robo-teste-normal');
+   r.tipoRobo=tipo;r.setScale(f.scale);r.body.setSize(f.width,f.height);r.body.setOffset(f.offsetX,f.offsetY);
+   r.body.updateFromGameObject();r.playableArea=m.playableArea;m.enemyGroup.add(r);
+   protegerColisaoInimigo(s,r);return r;
+  };
+  const frente=criarCorpo('serra',base.x,base.y),tras=criarCorpo('padrao',base.x-56.4,base.y);
+  const paredePar=s.collisionGroup.create(frente.body.right+15,base.y+20).setDisplaySize(2,150).refreshBody();
+  const cantoPar=s.collisionGroup.create(base.x,base.y+65).setDisplaySize(300,2).refreshBody();
+  invalidarCacheNavegacao(s);
+  const collider=m.colliders[0],callback=collider.collideCallback;let contatos=0;
+  collider.collideCallback=()=>contatos++;
+  for(let i=0;i<45;i++){
+   const delta=[16,34,250][i%3];
+   for(const r of [frente,tras])applyKnockback(s,{x:r.x-100,y:r.y-(i>15?100:0)},r,320,250);
+   s.physics.world.update(s.time.now+50000+i*delta,delta);s.physics.world.postUpdate();
+   for(const r of [frente,tras])check(retanguloLivreDoMapa(s,r.body) && m.playableArea.contem(r.body),
+    'empurrão entre robôs e canto mantém corpo fora de obstáculos');
+   check(tras.body.center.x<frente.body.center.x,`robôs sob pressão não atravessam um ao outro: passo ${i}, frente=${frente.body.x},${frente.body.y}, tras=${tras.body.x},${tras.body.y}`);
+  }
+  check(contatos>0,'collider real resolveu contato entre os dois robôs');
+  collider.collideCallback=callback;
+  for(const r of [frente,tras]){m.enemyGroup.remove(r,false,false);r.destroy();}
+  paredePar.destroy();cantoPar.destroy();invalidarCacheNavegacao(s);
   const total=s.inimigos.length;s.multiplayer=true;s.isMultiplayerHost=false;
   check(criarRobos(s,3).length===0 && m.spawnRegion(z)===0 && s.inimigos.length===total,'cliente não cria inimigos adicionais');s.multiplayer=false;
   return {checks:checks.length,zones,bounds:m.playableArea.bounds};

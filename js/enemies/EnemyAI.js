@@ -942,7 +942,7 @@ function atualizarIAInimigo(scene, time, robo = scene.inimigoTeste, combaterPers
   }
 
   // Preserva o knockback.
-  if (!scene.multiplayer && robo.combatKnockbackUntil > time) {
+  if (robo.combatKnockbackUntil > time) {
     return;
   }
 

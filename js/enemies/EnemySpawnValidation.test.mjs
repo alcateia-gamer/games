@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { carregarMapaSpawns, geometriaSpawnPhaser, parseObjectLayers } from '../../tests/spawn-map-fixture.mjs';
 import EnemySpawnManager from './EnemySpawnManager.js';
+import { PERFIS_ROBOS } from './RobotBody.js';
 import { areaContemCorpo } from './EnemySpawnArea.js';
 import { obterPisoSpawnRobos, retanguloSpawnLivre, ampliarAreaNascimento, FOLGA_SPAWN_ROBOS,
   separacaoSpawnRobos } from './EnemySpawnValidation.js';
@@ -25,7 +26,11 @@ test('sete zonas da cidade usam o piso real e os corpos estáticos corrigidos', 
       const w = tipo === 'serra' ? 278 * .36 : 311 * .23;
       const h = tipo === 'serra' ? 270 * .36 : 421 * .23;
       const rect = new Phaser.Geom.Rectangle(p.x - w / 2, p.y - h / 2, w, h);
-      assert.ok(areaContemCorpo(ampliarAreaNascimento(r.area), rect)); assert.ok(piso.contem(rect));
+      const perfil = PERFIS_ROBOS[tipo];
+      const pes = new Phaser.Geom.Rectangle(p.x + (perfil.offsetX - perfil.frameWidth / 2) * perfil.scale,
+        p.y + (perfil.offsetY - perfil.frameHeight / 2) * perfil.scale,
+        perfil.width * perfil.scale, perfil.height * perfil.scale);
+      assert.ok(areaContemCorpo(r.area, pes)); assert.ok(piso.contem(rect));
       assert.ok(retanguloLivreDoMapa(scene, rect)); aceitos++;
     }
     resultados.push({ id: r.id, tipo, aceitos });

@@ -88,3 +88,29 @@ export class CoopRevival {
     this.labels.clear(); this.progress.clear(); this.pending.clear();
   }
 }
+
+/** Consulta sem efeitos colaterais: a lista vigente da sala define quem precisa confirmar vida. */
+export function verificarEquipeViva(runtime) {
+  const players = runtime.manager.room?.players ?? [];
+  const participants = new Map((runtime.revival?.participants() ?? []).map(p => [p.id, p]));
+  const unavailable = [];
+  for (const data of players) {
+    const local = data.id === runtime.manager.playerId;
+    const entry = local ? null : runtime.players.remotes.get(data.id);
+    const context = local ? runtime.localContext ?? runtime.scene : entry?.context;
+    const participant = participants.get(data.id);
+    const actor = local ? runtime.scene.player : entry?.actor;
+    const dead = !!(data.dead || data.health <= 0 || data.coop?.downId ||
+      participant?.dead || participant?.health <= 0 || participant?.downId ||
+      entry?.data?.dead || entry?.health <= 0 || entry?.data?.coop?.downId ||
+      context?.morteEmAndamento || context?.vida <= 0 || actor?.morto ||
+      local && runtime.scene.coopDownId);
+    // No host, o contexto de combate precisa concordar com o estado publicado.
+    // Uma réplica ausente ou um estado ainda sem vida confirmada nunca autoriza acesso.
+    const confirmed = Number.isFinite(data.health) && actor?.active === true &&
+      (runtime.host || local ? Number.isFinite(context?.vida) : Number.isFinite(entry?.health)) &&
+      (!runtime.revival || Number.isFinite(participant?.health));
+    if (dead || !confirmed) unavailable.push({ id: data.id, character: data.character, dead, confirmed });
+  }
+  return { alive: players.length > 0 && unavailable.length === 0, unavailable };
+}

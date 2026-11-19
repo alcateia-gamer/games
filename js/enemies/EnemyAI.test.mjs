@@ -562,3 +562,15 @@ test("resgate solo permite o retorno à patrulha e reativa a mira depois do soco
   assert.equal(robo.alvoAtual, scene.player);
   assert.ok(scene.lasersInimigo.getChildren().length > tirosAnteriores);
 });
+
+test("IA preserva a duração do knockback no solo e na simulação do host", () => {
+ for(const multiplayer of [false,true]) {
+  const robo=criarRobo({combatKnockbackUntil:2000});
+  const scene=criarCena({robos:[robo]});scene.multiplayer=multiplayer;scene.isMultiplayerHost=multiplayer;
+  robo.setVelocity(230,-170);
+  atualizar(scene,robo,1000);
+  assert.deepEqual(robo.body.velocity,{x:230,y:-170});
+  atualizar(scene,robo,2001);
+  assert.notDeepEqual(robo.body.velocity,{x:230,y:-170},"IA retoma movimento depois do impulso");
+ }
+});
