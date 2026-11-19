@@ -257,9 +257,9 @@ function movimentoBloqueado(scene, inimigo, origem, destino, cache, geometria, d
 }
 
 /** Passagem física: considera dimensões e deslocamento do corpo, ao contrário da visão. */
-function caminhoMovimentoBloqueado(scene, inimigo, destino) {
-  if (!scene || !coordenadasValidas(inimigo, destino)) return true;
-  return movimentoBloqueado(scene, inimigo, inimigo, destino, criarIndice(scene),
+function caminhoMovimentoBloqueado(scene, inimigo, destino, origem = inimigo) {
+  if (!scene || !coordenadasValidas(origem, destino)) return true;
+  return movimentoBloqueado(scene, inimigo, origem, destino, criarIndice(scene),
     geometriaInimigo(inimigo), [], true);
 }
 

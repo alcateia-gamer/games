@@ -1,3 +1,4 @@
+import { CONFIG_AGLOMERACAO, movimentoFilaRobo } from "./RoboBolaAglomeracao.js";
 /**
  * @file Máquina de estados dos robôs: patrulha, combate, investigação e retorno. Usa visão
  * frontal, memória do alvo e navegação compartilhada.
@@ -507,6 +508,21 @@ function irAte(scene, robo, destino, agora, velocidade, viu, d, foco = null) {
   if (!destino || !Number.isFinite(destino.x) || !Number.isFinite(destino.y)) {
     parar(scene, robo, viu, d);
     return false;
+  }
+
+  const trecho = robo.rotaAtual?.[robo.indiceRota || 0] ?? destino;
+  const { fator: fila, recuo } = movimentoFilaRobo(scene, robo, trecho, agora, robo.alvoAtual ?? foco ?? destino);
+  if (fila < 1) {
+    // Ceder passagem não torna a rota inválida nem conta como ficar preso.
+    robo.tempoPreso = agora;
+    robo.iaMonitorMovimento = { x: robo.x, y: robo.y, tempo: agora };
+    if (recuo) {
+      mover(scene, robo, recuo, Math.min(CONFIG_AGLOMERACAO.velocidadeCessao, distancia(robo, recuo) * 8),
+        viu, d, foco);
+    } else if (fila > 0 && !caminhoMovimentoBloqueado(scene, robo, trecho)) {
+      mover(scene, robo, trecho, velocidade * fila, viu, d, foco);
+    } else parar(scene, robo, viu, d);
+    return true;
   }
 
   if (distancia(robo, destino) <= IA.distanciaChegada) {

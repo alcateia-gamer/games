@@ -6,6 +6,7 @@ import { maximumHealth, modifiers } from '../systems/UpgradeSystem.js';
  * ações, presença e atualizações de movimento.
  */
 
+import { describeVisual } from "./CoopVisuals.js";
 import { obterBalanceamento } from "../combat/CharacterBalance.js";
 
 import { COOP, RecentActions, validPlayerState, mergeCoopProgress, mergeBossPreparation } from "./CoopProtocol.js";
@@ -15,6 +16,17 @@ const CHARACTER_IDS = ["kai-mercer", "magnus-force", "aria-kade", "nyx"];
 const MAX_PLAYERS = 4;
 const HEARTBEAT_MS = 3000;
 const PLAYER_TIMEOUT_MS = 10000;
+
+// O identificador da transição separa visitas. Dentro da visita, nascimentos só aumentam.
+function mergeFactoryWaves(previous, next) {
+  if (!next || (previous && next.visit < previous.visit)) return previous;
+  if (!previous || next.visit > previous.visit) return next;
+  const counts = { ...previous.counts };
+  for (const [id, count] of Object.entries(next.counts ?? {})) {
+    if (Number.isSafeInteger(count) && count >= 0) counts[id] = Math.max(counts[id] ?? 0, count);
+  }
+  return { visit: next.visit, counts };
+}
 
 /**
  * Gera um código de sala de quatro caracteres sem símbolos visualmente ambíguos.
@@ -48,6 +60,7 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
     this.roomTopic = null;
     this.heartbeatTimer = null;
     this.coopActions = new RecentActions();
+    this.retiredHosts = new Set();
     this.coopSequence = 0;
     this.coopStreamSequence = 0;
     this.coopReceivedSequence = -1;
@@ -58,8 +71,14 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
      */
     this.boundMessage = (topic, data) => this.receive(topic, data);
     mqtt.on("message", this.boundMessage);
-    mqtt.on("connect", () => this.emit("connectionChanged", true));
-    mqtt.on("close", () => this.emit("connectionChanged", false));
+    mqtt.on("connect", () => {
+      this.lastSentPlayerState = null;
+      this.emit("connectionChanged", true);
+    });
+    mqtt.on("close", () => {
+      for (const player of this.room?.players ?? []) delete player.positionReceivedAt;
+      this.emit("connectionChanged", false);
+    });
     mqtt.on("error", (error) => this.emit("error", error));
     mqtt.connect();
   }
@@ -85,6 +104,7 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
       ready: Boolean(player.ready),
       x: Number.isFinite(player.x) ? player.x : -490,
       y: Number.isFinite(player.y) ? player.y : 8823,
+      positionKnown: player.positionKnown === true && Number.isFinite(player.x) && Number.isFinite(player.y),
       direction: player.direction || "down",
       moving: Boolean(player.moving),
       attacking: Boolean(player.attacking),
@@ -142,6 +162,7 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
     this.coopReceivedSequence = -1;
     this.coopSequence = 0;
     this.coopActions.clear();
+    this.retiredHosts.clear();
     this.coopWorld = null;
     this.roomTopic = `room/${code}`;
     this.coopMapAppliedId = 0;
@@ -190,6 +211,8 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
     if (
       data.roomCode !== this.roomTopic.split("/")[1] ||
       !Array.isArray(data.players) ||
+      this.retiredHosts.has(data.hostId) ||
+      (data.clientId && data.clientId !== data.hostId) ||
       (data.hollow && !validHollowSession(data.hollow))
     )
       return;
@@ -200,8 +223,14 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
         this.coopTransitionUntil = Date.now() + COOP.transitionGraceMs;
       const upgradeEconomy = (this.room?.upgradeEconomy?.revision ?? -1) > (data.upgradeEconomy?.revision ?? -1)
         ? this.room.upgradeEconomy : data.upgradeEconomy;
+      const authorityChanged = this.room?.hostId !== data.hostId;
+      if (authorityChanged) {
+        if (this.room?.hostId) this.retiredHosts.add(this.room.hostId);
+        this.coopReceivedSequence = -1;
+      }
       this.room = {
         ...data,
+        factoryWaves: mergeFactoryWaves(this.room?.factoryWaves, data.factoryWaves),
         upgradeEconomy,
         coopProgress: mergeCoopProgress(this.room?.coopProgress, data.coopProgress),
         coopBossPreparation: mergeBossPreparation(data, this.room?.coopBossPreparation, data.coopBossPreparation),
@@ -277,7 +306,18 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
         (item) => item.id === action.playerId,
       );
       if (player) player.lastSeen = Date.now();
-      if (this.room?.hostId === this.playerId) this.publishState();
+      if (this.room?.hostId === this.playerId) {
+        const pos = action.mapPosition;
+        if (player && (!action.clientId || action.clientId === player.id) &&
+            pos?.mapKey && validPlayerState(pos)) {
+          player.positionKnown = true;
+          player.positionReceivedAt = Date.now();
+          player.mapKey = pos.mapKey;
+          player.x = pos.x;
+          player.y = pos.y;
+        }
+        this.publishState();
+      }
       return;
     }
     if (action.type === "enemy_damage" && this.room?.hostId === this.playerId) {
@@ -360,6 +400,9 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
     } else if (action.type === "game_state" && player) {
       if (this.coopEnabled && (!validPlayerState(action) ||
           (action.clientId && action.clientId !== action.playerId))) return;
+      player.positionKnown = Number.isFinite(action.x) && Number.isFinite(action.y);
+      player.positionReceivedAt = Date.now();
+      if (COOP.maps.includes(action.mapKey)) player.mapKey = action.mapKey;
       const previousAttackId = player.attackId;
       player.x = Number.isFinite(action.x) ? action.x : player.x;
       player.y = Number.isFinite(action.y) ? action.y : player.y;
@@ -490,6 +533,9 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
       return;
     }
     if (wasHost) {
+      this.retiredHosts.add(playerId);
+      this.room.enemies = (this.room.enemies ?? []).filter(enemy => !enemy.factoryPose);
+      this.coopReceivedSequence = -1;
       const nextHost = [...this.room.players].sort((left, right) =>
         left.id.localeCompare(right.id),
       )[0];
@@ -521,7 +567,9 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
     this.stopHeartbeat();
     this.heartbeatTimer = setInterval(() => {
       if (!this.roomTopic) return;
-      this.publishAction({ type: "heartbeat", playerId: this.playerId });
+      const pos = this.lastSentPlayerState;
+      this.publishAction({ type: "heartbeat", playerId: this.playerId,
+        ...(COOP.maps.includes(pos?.mapKey) && { mapPosition: { x: pos.x, y: pos.y, mapKey: pos.mapKey } }) });
       this.mqtt.publish(`${this.roomTopic}/presence`, {
         type: "heartbeat",
         playerId: this.playerId,
@@ -648,6 +696,12 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
     return true;
   }
 
+  saveFactoryWaves(counts) {
+    if (this.room?.hostId !== this.playerId || !counts) return;
+    this.room.factoryWaves = mergeFactoryWaves(this.room.factoryWaves,
+      { visit: this.room.coopMap?.id ?? 0, counts });
+  }
+
   /**
    * Publica os inimigos ativos e seus alvos; somente o host pode atualizar esse estado
    * compartilhado.
@@ -659,6 +713,11 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
       .map((enemy) => ({
         id: enemy.networkId,
         tipoRobo: enemy.tipoRobo,
+        ...(enemy.spawnAreaRoboBolaId != null && !enemy.prologoEncontroId && {
+          factoryPose: describeVisual(enemy),
+          hitbox: enemy.hitboxDano && { x: enemy.hitboxDano.x - enemy.x, y: enemy.hitboxDano.y - enemy.y,
+            width: enemy.hitboxDano.width, height: enemy.hitboxDano.height },
+        }),
         x: enemy.x,
         y: enemy.y,
         direction: enemy.direcaoAtual,
@@ -693,7 +752,7 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
     if (!this.coopEnabled || this.room?.hostId !== this.playerId) return false;
     const packet = { roomCode: this.room.roomCode, hostId: this.playerId,
       sequence: ++this.coopSequence, serverTime: Date.now(),
-      players: this.room.players, enemies: this.room.enemies || [], ...world };
+      factoryWaves: this.room.factoryWaves, players: this.room.players, enemies: this.room.enemies || [], ...world };
     this.mqtt.publish(`${this.roomTopic}/frame`, packet, { qos: 0, retain: false,
       compress: this.room.players.every(p => p.coop?.compression) });
     return true;
@@ -709,6 +768,7 @@ class MultiplayerManager extends Phaser.Events.EventEmitter {
       this.room.upgradeEconomy = packet.upgradeEconomy;
     this.coopReceivedSequence = packet.sequence;
     this.coopWorld = packet;
+    this.room.factoryWaves = mergeFactoryWaves(this.room.factoryWaves, packet.factoryWaves);
     const seen = new Map(this.room.players.map(p => [p.id, p.lastSeen]));
     this.room.players = packet.players.map(p => {
       const player = this.normalizePlayer(p);

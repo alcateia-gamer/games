@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { EventEmitter } from "node:events";
-import { limitarPassoRoboBola, protegerColisaoRoboBola } from "./RoboBolaColisao.js";
+import { agruparColisaoOndas, limitarPassoRoboBola, protegerColisaoRoboBola } from "./RoboBolaColisao.js";
 import { limitarCorpoNaBarreira, criarColisaoBarreiraNovoBoss } from "./novoBoss/NovoBossBarreiraColisao.js";
 
 function preparar(paredes = []) {
@@ -86,4 +86,34 @@ test("escudo acompanha listas substituídas, novos robôs e companheiro; limpeza
   assert.equal(collider.object1.includes(robo), false);
   controle.destruir(); controle.destruir();
   assert.ok(collider.destruido); assert.equal(world.listenerCount("worldstep"), 0);
+});
+
+test("ondas compartilham um colisor Arcade e reinicializam o grupo no shutdown", () => {
+  const { scene } = preparar();
+  const grupos = [];
+  const colliders = [];
+  scene.physics.add = {
+    group(config) {
+      assert.equal(config.allowGravity, false);
+      const grupo = { scene, membros: [], add(r) { this.membros.push(r); },
+        destroy(destruirMembros) { assert.equal(destruirMembros, false); this.scene = null; } };
+      grupos.push(grupo);
+      return grupo;
+    },
+    collider(a, b) {
+      assert.equal(a, b);
+      const collider = { world: {}, destroy() { this.world = null; } };
+      colliders.push(collider);
+      return collider;
+    },
+  };
+  agruparColisaoOndas(scene, {});
+  agruparColisaoOndas(scene, {});
+  assert.equal(colliders.length, 1);
+  assert.equal(grupos[0].membros.length, 2);
+  scene.events.emit("shutdown");
+  assert.equal(colliders[0].world, null);
+  agruparColisaoOndas(scene, {});
+  assert.equal(colliders.length, 2);
+  assert.equal(grupos[1].membros.length, 1);
 });

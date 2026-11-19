@@ -1,3 +1,4 @@
+import { applyVisual, createVisual } from "../multiplayer/CoopVisuals.js";
 import { criarRastreadorMissoes } from "../ui/MissionTracker.js";
 import { enfileirarAssetsFabrica, verificarEntradaFabrica, assetsFabricaProntos } from "../core/FactoryAssetPack.js";
 import { bossNecessarioNaEntrada, criarPreparacaoBoss } from "../core/BossAssetLoading.js";
@@ -18,6 +19,7 @@ import { iniciarMusicaFabrica } from "../sounds/musicaFabrica.js";
 import { desvanecerMusicaAmbiente, DURACAO_SAIDA_MUSICA_MS } from "../sounds/musicaAmbiente.js";
 import criarLevel1Parte2Map from "../map/MapaFabrica.js";
 import MiniMapManager from "../ui/MiniMapManager.js";
+import { criarFugaRoboBola, removerRoboExploracao } from "../enemies/RoboBolaFuga.js";
 import { criarSpawnAreasRoboBola } from "../enemies/RoboBolaSpawnAreas.js";
 import { configurarTrocaCamada } from "../map/TrocaCamada.js";
 
@@ -339,6 +341,8 @@ class Level1Parte2 extends Phaser.Scene {
     this.grupoRobosAtivado = false;
     this.inimigoTeste = null;
     this.spawnAreasRoboBola = criarSpawnAreasRoboBola(this);
+    this.atualizarFugaRoboBola = criarFugaRoboBola(this);
+    this.restaurarOndasFabrica(this.multiplayerManager?.room);
     createUpgradeNPC(this);
     this.scrapSystem = new ScrapSystem(this);
     criarRuntimeCoop(this);
@@ -396,6 +400,15 @@ class Level1Parte2 extends Phaser.Scene {
    */
   update(time, delta) {
     if (this.aguardandoAssetsFabrica) return;
+    if (!this.coopRuntime) {
+      this.atualizarFugaRoboBola?.(time);
+      if (this.multiplayer) this.spawnAreasRoboBola?.atualizar(delta);
+      if (this.multiplayer && this.isMultiplayerHost && time - this.lastEnemyNetworkUpdate >= 1000 / 30) {
+        this.lastEnemyNetworkUpdate = time;
+        this.multiplayerManager?.saveFactoryWaves(this.spawnAreasRoboBola?.progresso());
+        this.multiplayerManager?.publishEnemyState(this.inimigos);
+      }
+    }
     this.preparacaoBoss?.atualizar();
     if (this.hackingTerminals?.atualizar(time, delta)) return;
     if (atualizarReanimacaoSolo(this, delta)) return;
@@ -423,7 +436,7 @@ class Level1Parte2 extends Phaser.Scene {
 
     atualizarSpawnsDev(this);
 
-    this.spawnAreasRoboBola?.atualizar(delta);
+    if (!this.multiplayer) this.spawnAreasRoboBola?.atualizar(delta);
     atualizarInimigoTeste(this, time);
     atualizarRoboBola(this, time, delta);
     atualizarProjeteis(this, delta);
@@ -431,17 +444,6 @@ class Level1Parte2 extends Phaser.Scene {
     if (!this.multiplayer) atualizarCompanionPet(this, time, delta);
 
     this.atualizarInterpolacaoRemota(delta);
-
-    if (
-      this.multiplayer &&
-      !this.coopRuntime &&
-      this.isMultiplayerHost &&
-      time - this.lastEnemyNetworkUpdate >= 1000 / 30
-    ) {
-      this.lastEnemyNetworkUpdate = time;
-
-      this.multiplayerManager?.publishEnemyState(this.inimigos);
-    }
 
     if (this.multiplayer && !this.coopRuntime && time - this.lastNetworkUpdate >= 1000 / 30) {
       this.lastNetworkUpdate = time;
@@ -465,6 +467,7 @@ class Level1Parte2 extends Phaser.Scene {
             frame: projetil.frameProjetil,
             rotation: projetil.rotation,
           })) ?? [],
+        { mapKey: "Level1Parte2" },
       );
     }
 
@@ -489,6 +492,12 @@ class Level1Parte2 extends Phaser.Scene {
    * Conecta os eventos multiplayer e prepara a limpeza dos objetos e listeners remotos da
    * fábrica.
    */
+  restaurarOndasFabrica(room) {
+    if (room?.factoryWaves?.visit === (room?.coopMap?.id ?? 0)) {
+      this.spawnAreasRoboBola?.restaurar(room.factoryWaves.counts);
+    }
+  }
+
   iniciarMultiplayer() {
     const manager = this.multiplayerManager;
 
@@ -521,7 +530,20 @@ class Level1Parte2 extends Phaser.Scene {
      * Reavalia quem é host e sincroniza os objetos remotos após uma atualização de sala.
      */
     this.onMultiplayerRoomUpdated = (room) => {
-      this.isMultiplayerHost = room.hostId === manager.playerId;
+      const host = room.hostId === manager.playerId;
+      if (host && !this.isMultiplayerHost && !this.coopRuntime) {
+        this.atualizarInimigosRemotos({ enemies: [] });
+      }
+      if (!host && this.isMultiplayerHost) {
+        this.spawnAreasRoboBola?.cancelarBuscas();
+        for (const robo of this.inimigos) {
+          if (!robo.remoteOnly && robo.spawnAreaRoboBolaId != null && !robo.prologoEncontroId) {
+            removerRoboExploracao(this, robo);
+          }
+        }
+      }
+      this.isMultiplayerHost = host;
+      this.restaurarOndasFabrica(room);
 
       this.atualizarJogadoresRemotos(room);
       this.atualizarInimigosRemotos(room);
@@ -768,11 +790,28 @@ class Level1Parte2 extends Phaser.Scene {
     const activeIds = new Set();
 
     (room.enemies || []).forEach((data) => {
-      if (!data?.id) return;
+      if (!data?.id || (data.factoryPose && this.robosFabricaDescarregados)) return;
 
       activeIds.add(data.id);
 
       let enemy = this.inimigos.find((item) => item.networkId === data.id);
+
+      if (data.factoryPose) {
+        if (!enemy) {
+          enemy = createVisual(this, data.factoryPose);
+          if (!enemy) return;
+          this.inimigos.push(enemy);
+          Object.assign(enemy, { networkId: data.id, remoteOnly: true, tipoRobo: "bola" });
+        } else applyVisual(this, enemy, data.factoryPose);
+        Object.assign(enemy, { targetX: data.x, targetY: data.y, vida: data.vida, vidaMaxima: data.vidaMaxima });
+        if (data.hitbox) {
+          enemy.hitboxDano ??= new Phaser.Geom.Rectangle();
+          enemy.hitboxDano.setTo(enemy.x + data.hitbox.x, enemy.y + data.hitbox.y,
+            data.hitbox.width, data.hitbox.height);
+          enemy.offsetHitboxRemota = data.hitbox;
+        }
+        return;
+      }
 
       if (!enemy) {
         enemy = criarInimigoTeste(this, {
@@ -874,6 +913,10 @@ class Level1Parte2 extends Phaser.Scene {
 
         enemy.y = Phaser.Math.Linear(enemy.y, enemy.targetY ?? enemy.y, alpha);
         enemy.body?.updateFromGameObject();
+        if (enemy.offsetHitboxRemota) {
+          enemy.hitboxDano.x = enemy.x + enemy.offsetHitboxRemota.x;
+          enemy.hitboxDano.y = enemy.y + enemy.offsetHitboxRemota.y;
+        }
       });
   }
 

@@ -40,6 +40,7 @@ function causarDanoInimigo(
     return;
   }
 
+  if (alvo.spawnAreaRoboBolaId != null) alvo.ultimoCombateOnda = scene.time?.now;
   alvo.vida -= quantidade;
   alvo.vida = Phaser.Math.Clamp(alvo.vida, 0, alvo.vidaMaxima);
   alvo.foiFerido = true;

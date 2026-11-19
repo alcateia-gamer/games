@@ -1,3 +1,4 @@
+import { CONFIG_AGLOMERACAO, roboDeOnda, pontoAtaqueOnda, movimentoFilaRobo } from "./RoboBolaAglomeracao.js";
 import { obterBalanceamentoInimigos } from "./EnemyBalance.js";
 import { atorRelevante, atualizarDecisaoAtor, atualizarBarrasDistantes } from "../core/ActorActivity.js";
 /**
@@ -10,10 +11,10 @@ import { tocarSomTiroLaser } from "../sounds/inimigos.js";
 import { caminhoDiretoBloqueado, caminhoMovimentoBloqueado } from "./EnemyPathfinding.js";
 import { atualizarIAInimigo, moverInimigoAte } from "./EnemyAI.js";
 import { suavizarTexturasRoboBola, criarBrilhoOlho, criarRastroPlasma } from "./RoboBolaEffects.js";
-import { protegerColisaoRoboBola } from "./RoboBolaColisao.js";
+import { agruparColisaoOndas, protegerColisaoRoboBola } from "./RoboBolaColisao.js";
 import { ROBO_BOLA_FLUTUACAO } from "./RoboBolaFlutuacao.js";
 import { atualizarEmergenciaRoboBola, EMERGENCIA_ROBO_BOLA } from "./RoboBolaEmergencia.js";
-import { obterPisoSpawnRobos, retanguloSpawnLivre } from "./EnemySpawnValidation.js";
+import { CORPO_ROBO_BOLA, FOLGA_SPAWN_ROBOS, obterPisoSpawnRobos, retanguloCorpoSpawnRoboBola, retanguloSpawnLivre } from "./EnemySpawnValidation.js";
 
 // Grade viva 2×3: frente, disparo frontal, costas, esquerda, direita, vazio.
 // A morte usa as mesmas poses, cada uma em uma linha de quatro quadros.
@@ -38,7 +39,7 @@ const CONFIG = Object.freeze({
   dano: 10,
 });
 
-const TAMANHO_HITBOX = 60; // Pixels da folha, antes da escala visual de 0,56.
+const TAMANHO_HITBOX = CORPO_ROBO_BOLA.tamanho; // Pixels da folha, antes da escala visual de 0,56.
 const ALTURA_BARRA_VIDA = 36; // Mantém uma pequena folga acima da antena.
 
 function atualizarHitboxRoboBola(robo) {
@@ -168,6 +169,7 @@ function criarProjetil(scene, robo, alvo) {
   projetil.setRotation(angulo).setDepth(56).setStrokeStyle(0.5, 0xa9e5ff, 1);
   projetil.especialLaserInimigo = true;
   projetil.especialAtirador = robo;
+  if (robo.spawnAreaRoboBolaId != null) robo.ultimoCombateOnda = scene.time.now;
   projetil.danoEspecial = 0;
   projetil.danoLaser = robo.danoLaser;
   scene.physics.add.existing(projetil);
@@ -186,7 +188,8 @@ function criarProjetil(scene, robo, alvo) {
   tocarSomTiroLaser(scene, robo);
 }
 
-function criarRoboBola(scene, posicao = null, perfil = null, prologoEncontroId = null) {
+function criarRoboBola(scene, posicao = null, perfil = null, prologoEncontroId = null,
+  spawnAreaRoboBolaId = null, validarCentroSpawn = null, consultarSpawn = undefined) {
   if (!scene?.player?.active || (scene.multiplayer && !scene.isMultiplayerHost)) return null;
   if (scene.robosFabricaDescarregados && !prologoEncontroId) return null;
   const spawn = posicao ?? escolherSpawn(scene, perfil);
@@ -195,7 +198,7 @@ function criarRoboBola(scene, posicao = null, perfil = null, prologoEncontroId =
     const tamanho = (perfil?.hitbox ?? TAMANHO_HITBOX) * (perfil?.escala ?? 0.56);
     if (![spawn.x, spawn.y].every(Number.isFinite) ||
         !retanguloSpawnLivre(scene, { x: spawn.x - tamanho / 2 - 2, y: spawn.y - tamanho / 2 - 2,
-          width: tamanho + 4, height: tamanho + 4 }) ||
+          width: tamanho + 4, height: tamanho + 4 }, consultarSpawn) ||
         jogadorOcupaSpawn(scene, spawn) ||
         (scene.inimigos ?? []).some(outro => outro?.active && !outro.morto &&
           Math.hypot(outro.x - spawn.x, outro.y - spawn.y) < 50)) return null;
@@ -213,15 +216,16 @@ function criarRoboBola(scene, posicao = null, perfil = null, prologoEncontroId =
   );
   robo.origemSpawn = { x: spawn.x, y: spawn.y };
   if (prologoEncontroId) robo.prologoEncontroId = prologoEncontroId;
+  else if (spawnAreaRoboBolaId != null) robo.spawnAreaRoboBolaId = spawnAreaRoboBolaId;
   robo.playableArea = obterPisoSpawnRobos(scene);
   robo.perfilVoador = perfil;
   robo.tipoRobo = perfil?.tipo ?? "bola";
   robo.morto = false;
   // Cada perfil conserva o porte pequeno com sua própria resolução de folha.
-  robo.setScale(perfil?.escala ?? 0.56);
+  robo.setScale(perfil?.escala ?? CORPO_ROBO_BOLA.escala);
   robo.body.setAllowGravity(false);
   const hitbox = perfil?.hitbox ?? TAMANHO_HITBOX;
-  const offsetHitbox = ((perfil?.tamanho ?? 127) - hitbox) / 2;
+  const offsetHitbox = ((perfil?.tamanho ?? CORPO_ROBO_BOLA.quadro) - hitbox) / 2;
   robo.body.setSize(hitbox, hitbox).setOffset(offsetHitbox, offsetHitbox);
   robo.configBola = { ...CONFIG, ...perfil?.config };
   robo.velocidade = robo.configBola.velocidade;
@@ -231,6 +235,12 @@ function criarRoboBola(scene, posicao = null, perfil = null, prologoEncontroId =
   robo.formacaoIndex = scene.inimigos?.length || 0;
   robo.faseFlutuacao = Math.random() * Math.PI * 2;
   robo.body.updateFromGameObject();
+  if (roboDeOnda(robo) && (!retanguloSpawnLivre(scene,
+    retanguloCorpoSpawnRoboBola(spawn, FOLGA_SPAWN_ROBOS.objetos, robo.body), consultarSpawn) ||
+    (validarCentroSpawn && !validarCentroSpawn(robo.body.center)))) {
+    robo.destroy();
+    return null;
+  }
   robo.tempoOnda = Math.random() * Math.PI * 2;
   robo.ultimoTiro = scene.time.now;
   robo.sentidoOrbita = Math.random() < 0.5 ? -1 : 1;
@@ -257,14 +267,36 @@ function criarRoboBola(scene, posicao = null, perfil = null, prologoEncontroId =
     scene.lasersInimigo = scene.physics.add.group();
   }
   scene.inimigos ||= [];
-  const colliders = [];
+  const onda = roboDeOnda(robo);
+  if (onda) agruparColisaoOndas(scene, robo);
   for (const aliado of scene.inimigos) {
-    if (aliado?.active && !aliado.morto) colliders.push(scene.physics.add.collider(robo, aliado));
+    if (!aliado?.active || aliado.morto || (onda && roboDeOnda(aliado))) continue;
+    const collider = scene.physics.add.collider(robo, aliado);
+    const limpar = () => {
+      robo.off("destroy", limpar);
+      aliado.off("destroy", limpar);
+      collider.destroy();
+    };
+    robo.once("destroy", limpar);
+    aliado.once("destroy", limpar);
   }
   scene.inimigos.push(robo);
   scene.inimigoTeste ||= robo;
-  if (scene.collisionGroup) colliders.push(scene.physics.add.collider(robo, scene.collisionGroup));
-  robo.once("destroy", () => colliders.forEach(collider => collider.destroy()));
+  if (scene.collisionGroup) {
+    const collider = scene.physics.add.collider(robo, scene.collisionGroup);
+    robo.once("destroy", () => collider.destroy());
+  }
+  robo.once("destroy", () => {
+    robo.tempoFlashDano?.remove?.(false);
+    robo.combatFlashTimer?.remove?.(false);
+    robo.tempoFlashDano = robo.combatFlashTimer = null;
+    scene.tweens?.killTweensOf(robo);
+    for (const key of ["fundoVida", "barraVida", "bordaVida", "debugHitboxDano"]) {
+      robo[key]?.destroy();
+      robo[key] = null;
+    }
+    robo.alvoAtual = robo.alvoPlayerId = robo.hitboxDano = null;
+  });
   protegerColisaoRoboBola(scene, robo);
   return robo;
 }
@@ -308,6 +340,7 @@ function atualizarCombateRoboBola(scene, robo, alvo, time, delta) {
     if (!temMira) robo.inicioCarga = null;
     else if (robo.inicioCarga == null && time >= robo.ultimoTiro + robo.configBola.intervaloTiro) {
       robo.inicioCarga = time;
+      if (robo.spawnAreaRoboBolaId != null) robo.ultimoCombateOnda = time;
     }
     robo.cargaTiro = robo.inicioCarga == null ? 0 :
       Math.min(1, (time - robo.inicioCarga) / robo.configBola.tempoCarga);
@@ -319,6 +352,12 @@ function atualizarCombateRoboBola(scene, robo, alvo, time, delta) {
       (robo.recuando ? 0.25 : robo.estadoBola === "mirando" ? 0.25 : 1);
     let vx = dx * radial + dy * orbita;
     let vy = dy * radial - dx * orbita + Math.cos(robo.tempoOnda) * 14;
+    const onda = roboDeOnda(robo);
+    const pontoAtaque = !robo.recuando && onda ? pontoAtaqueOnda(scene, robo, alvo, time) : null;
+    if (pontoAtaque) {
+      vx = (pontoAtaque.x - robo.x) * 2.5;
+      vy = (pontoAtaque.y - robo.y) * 2.5;
+    }
     const velocidadeMaxima = robo.recuando ? robo.configBola.velocidadeRecuo : robo.configBola.velocidade;
     const limite = Math.min(1, velocidadeMaxima / Math.max(Math.hypot(vx, vy), 1));
     vx *= limite;
@@ -333,7 +372,7 @@ function atualizarCombateRoboBola(scene, robo, alvo, time, delta) {
       vy -= dy * avancando;
     }
     // Separa aliados sem usar sua posição para revelar o jogador escondido.
-    for (const aliado of scene.inimigos || []) {
+    if (!onda) for (const aliado of scene.inimigos || []) {
       if (aliado === robo || !aliado?.active || aliado.morto) continue;
       const ax = robo.x - aliado.x;
       const ay = robo.y - aliado.y;
@@ -347,7 +386,18 @@ function atualizarCombateRoboBola(scene, robo, alvo, time, delta) {
     vx *= escala;
     vy *= escala;
     const destino = { x: robo.x + vx * 0.4, y: robo.y + vy * 0.4 };
-    if (!caminhoMovimentoBloqueado(scene, robo, destino)) {
+    const { fator: fila, recuo } = movimentoFilaRobo(scene, robo, destino, time, alvo);
+    const bloqueiaMovimento = caminhoMovimentoBloqueado(scene, robo, destino);
+    if (fila < 1) {
+      robo.tempoPreso = time;
+      robo.iaMonitorMovimento = { x: robo.x, y: robo.y, tempo: time };
+      const fator = bloqueiaMovimento ? 0 : fila;
+      if (recuo) {
+        const x = recuo.x - robo.x, y = recuo.y - robo.y;
+        const escalaRecuo = Math.min(8, CONFIG_AGLOMERACAO.velocidadeCessao / Math.max(1, Math.hypot(x, y)));
+        robo.setVelocity(x * escalaRecuo, y * escalaRecuo);
+      } else robo.setVelocity(vx * fator, vy * fator);
+    } else if (!bloqueiaMovimento) {
       robo.setVelocity(vx, vy);
     } else if (distancia > robo.configBola.distanciaMaxima) {
       moverInimigoAte(scene, robo, alvo, time, robo.velocidade, true, distancia, alvo);
@@ -400,6 +450,7 @@ function atualizarRoboBola(scene, time, delta) {
       robo.inicioCarga = null;
       robo.cargaTiro = 0;
       robo.recuando = false;
+      if (robo.ladoOnda) robo.ladoOnda = null;
       robo.estadoBola = robo.iaEstado || "patrulha";
     }
     atualizarHitboxRoboBola(robo);

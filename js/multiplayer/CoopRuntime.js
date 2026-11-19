@@ -379,6 +379,7 @@ export class CoopRuntime {
       Object.assign(actor, { remoteOnly: true, networkId: data.id, tipoRobo: data.tipoRobo,
         vida: data.vida, vidaMaxima: data.vidaMaxima, morto: data.morto, origemSpawn: data.origemSpawn,
         direcaoAtual: data.direcaoAtual,
+        spawnAreaRoboBolaId: data.spawnAreaRoboBolaId,
         portalBossOrigem: data.portalBossOrigem, prologoEncontroId: data.prologoEncontroId,
         hitboxDano: data.hitbox && (actor.hitboxDano instanceof Phaser.Geom.Rectangle ? actor.hitboxDano : new Phaser.Geom.Rectangle()).setTo(
           data.hitbox.x, data.hitbox.y, data.hitbox.width, data.hitbox.height),
@@ -443,9 +444,11 @@ export class CoopRuntime {
     this.revival.update(delta);
     this.world.bossLoading.update();
     if (this.host) {
+      s.spawnAreasRoboBola?.atualizar(delta);
       atualizarRestricaoNovoBoss(this.localContext, delta);
       if (s.morteEmAndamento) { atualizarInimigoTeste(s, time); atualizarRoboBola(s, time, delta); }
       this.checkRemoteProjectiles();
+      s.atualizarFugaRoboBola?.(time);
     } else { this.receiver.update(delta); this.replica.update(delta); this.world.update(delta); }
     if (time - this.lastInput >= 1000 / COOP.inputHz) {
       this.lastInput = time;
@@ -470,6 +473,7 @@ export class CoopRuntime {
         visuals: this.sender.capture(this.worldObjects(), full),
         targets: (s.inimigos || []).filter(e => e.active && !e.morto).map(e => describeCombatTarget(e, e.networkId, this.sender)),
         boss: describeBoss(s, this.sender), ...this.world.snapshot() };
+      this.manager.saveFactoryWaves?.(s.spawnAreasRoboBola?.progresso());
       this.manager.publishCoopFrame(packet);
       const bytes = JSON.stringify(packet).length;
       Object.assign(this.metrics, { frames: this.metrics.frames + 1, bytes: this.metrics.bytes + bytes,
@@ -490,6 +494,8 @@ export class CoopRuntime {
           const velocity = laser.body?.velocity;
           const origin = velocity && (velocity.x || velocity.y)
             ? { x: c.player.x - velocity.x, y: c.player.y - velocity.y } : laser;
+          const robo = laser.especialAtirador;
+          if (robo?.spawnAreaRoboBolaId != null) robo.ultimoCombateOnda = s.time.now;
           this.damage(c, laser.danoLaser || laser.especialAtirador?.danoLaser || 5, origin);
           laser.destroy(); break;
         }
@@ -513,6 +519,7 @@ export class CoopRuntime {
   finishTeamGame() {
     if (this.teamDefeated) return;
     this.teamDefeated = true;
+    this.scene.spawnAreasRoboBola?.cancelarBuscas();
     this.scene.ariaAttackJoystick?.cancelar();
     this.scene.atacando = false;
     this.scene.attackBufferedUntil = 0;

@@ -427,7 +427,12 @@ test("cada spawn cria outro robô sem sobrepor aliados nem obstáculos", (t) => 
     }
   }
   assert.equal(colliders.length, 10, "seis pares e quatro colisores de cenário");
-  for (const robo of robos) robo.emit("destroy");
+  const [primeiro, ...restantes] = robos;
+  const barras = [primeiro.fundoVida, primeiro.barraVida, primeiro.bordaVida];
+  primeiro.emit("destroy");
+  assert.equal(colliders.filter(c => c.active).length, 6, "remove pares do robô mesmo quando criados depois dele");
+  assert.ok(barras.every(barra => !barra.active));
+  for (const robo of restantes) robo.emit("destroy");
   assert.ok(colliders.every(c => !c.active));
   scene.events.emit("shutdown");
 });

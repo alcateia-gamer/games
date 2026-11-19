@@ -232,6 +232,8 @@ function acertarPlayerComLaser(scene, laser) {
           y: laser.y,
         };
 
+  const robo = laser.especialAtirador;
+  if (robo?.spawnAreaRoboBolaId != null) robo.ultimoCombateOnda = scene.time.now;
   laser.destroy();
 
   const danoLaser = laser.danoLaser ?? laser.especialAtirador?.danoLaser ?? 5;

@@ -462,6 +462,13 @@ test("host atualiza repetidamente com CoopWorld real sem erros e continua public
   Object.assign(scene, { vida: 100, time: { now: 0 }, direcaoAtual: "down", personagemSelecionada: "kai-mercer" });
   manager.room.players = [{ id: manager.playerId, health: 100 }];
   let inputs = 0, frames = 0;
+  scene.add = { text: () => ({
+    setOrigin() { return this; }, setDepth() { return this; },
+    setPosition() { return this; }, setText() {}, destroy() {},
+  }) };
+  const passosOndas = [];
+  scene.spawnAreasRoboBola = { atualizar: delta => passosOndas.push([scene.time.now, delta, scene.morteEmAndamento]) };
+  manager.room.players.push({ id: "aliado", health: 100 });
   manager.sendPlayerState = () => { inputs++; };
   manager.publishCoopFrame = () => { frames++; };
   Object.assign(runtime, { host: true, world, localContext: scene,
@@ -471,8 +478,11 @@ test("host atualiza repetidamente com CoopWorld real sem erros e continua public
     forceKeyframe: true, metrics: { frames: 0, bytes: 0, maxBytes: 0 } });
   for (let frame = 0; frame < 120; frame++) {
     scene.time.now = frame * 16;
+    scene.morteEmAndamento = frame >= 40 && frame < 80;
     assert.doesNotThrow(() => runtime.update(scene.time.now, 16));
   }
+  assert.deepEqual(passosOndas, Array.from({ length: 120 }, (_, frame) =>
+    [frame * 16, 16, frame >= 40 && frame < 80]));
   assert.ok(inputs > 0);
   assert.ok(frames > 0);
   assert.equal(runtime.metrics.frames, frames);

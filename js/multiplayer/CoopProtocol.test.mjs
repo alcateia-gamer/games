@@ -199,3 +199,30 @@ test("host desconectado sai da barreira e o sucessor preserva a preparação sem
   assert.equal(client.room.coopBossPreparation.id, preparation.id);
   assert.equal(client.room.coopBossPreparation.clients.client.status, "ready");
 });
+
+test("cotas consumidas sobrevivem a snapshots atrasados, reconexão e troca de host", () => {
+  const { host, client } = pair();
+  host.room.coopMap = { id: 1, key: "Level1Parte2" };
+  host.saveFactoryWaves({ 1625: 1 });
+  host.publishState();
+  host.publishCoopFrame({ mapKey: "Level1Parte2", targets: [{ id: "antigo" }] });
+  const quadroAntigo = client.coopWorld;
+  host.saveFactoryWaves({ 1625: 2 });
+  host.publishCoopFrame({ mapKey: "Level1Parte2", targets: [] });
+
+  client.receiveCoopFrame(quadroAntigo);
+  assert.deepEqual(client.coopWorld.targets, []);
+  client.receiveState({ ...host.room, revision: host.room.revision + 1,
+    factoryWaves: { visit: 1, counts: { 1625: 1 } } });
+  assert.deepEqual(client.room.factoryWaves.counts, { 1625: 2 });
+
+  client.removePlayer("host");
+  client.receiveState({ ...host.room, revision: client.room.revision + 1 });
+  client.receiveCoopFrame(quadroAntigo);
+  assert.equal(client.room.hostId, "client");
+  assert.deepEqual(client.room.factoryWaves.counts, { 1625: 2 });
+
+  client.room.coopMap = { id: 3, key: "Level1Parte2" };
+  client.saveFactoryWaves({});
+  assert.deepEqual(client.room.factoryWaves, { visit: 3, counts: {} });
+});

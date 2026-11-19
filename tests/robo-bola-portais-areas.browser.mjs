@@ -1,3 +1,4 @@
+import { exigirNascimentoDaArea } from "./factory-wave-assertions.mjs";
 /** Validação dos portais e da camada SpawnRoboBola no mapa/Arcade reais. */
 import assert from "node:assert/strict";
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -68,7 +69,7 @@ try {
   await foto("portais-espelhados-saida");
 
   // Proximidade do primeiro retângulo, ainda do lado de fora.
-  await posicionar(-1270, -1300);
+  await posicionar(-1080, -1140);
   relatorio.gerador = await page.evaluate(() => {
     const s = window.__game.scene.getScene("Level1Parte2");
     s.luzFabricaAcesa = false;
@@ -77,6 +78,10 @@ try {
     s.acenderLuzFabrica();
     // update real da cena: testa também a integração, não só a função isolada.
     s.update(s.time.now, 16);
+    for (let i = 0; i < 60 && !s.inimigos.some(r => r.spawnAreaRoboBolaId === 1608); i++) {
+      s.time.now += 16;
+      s.spawnAreasRoboBola.atualizar(16);
+    }
     const depois = s.spawnAreasRoboBola.snapshot();
     return { antes, depois, powered: s.luzFabricaAcesa,
       jogador: { x: s.player.x, y: s.player.y },
@@ -87,42 +92,80 @@ try {
   const primeira = relatorio.gerador.depois.find(a => a.id === 1608);
   assert.equal(primeira.ativada, true);
   assert.equal(primeira.invocados, 1);
-  assert.ok(relatorio.gerador.jogador.x < primeira.x, "ativa sem entrar no retângulo");
+  assert.ok(relatorio.gerador.jogador.y > primeira.y + primeira.height, "ativa sem entrar no retângulo");
 
-  // Todas as áreas reais, piso e colisões reais: spawn progressivo, inclusive as
-  // menores e as que possuem paredes no centro. Robôs ficam parados neste ensaio.
+  // Uma onda por ensaio, com os demais nascimentos já contabilizados. Isso reproduz
+  // espaço livre e impede que robôs de áreas vizinhas satisfaçam a expectativa.
   relatorio.areas = await page.evaluate(async () => {
     const s = window.__game.scene.getScene("Level1Parte2");
     const { retanguloLivreDoMapa } = await import("/js/enemies/EnemyPathfinding.js");
-    const { pontoLivreAreaRoboBola, candidatosAreaRoboBola } = await import("/js/enemies/RoboBolaSpawnAreas.js");
+    const { candidatosAreaRoboBola, criarSpawnAreasRoboBola } = await import("/js/enemies/RoboBolaSpawnAreas.js");
+    const { criarAcessoSpawnFabrica } = await import("/js/enemies/FactorySpawnAccess.js");
+    const { ampliarAreaNascimento, obterPisoSpawnRobos, retanguloCorpoSpawnRoboBola } =
+      await import("/js/enemies/EnemySpawnValidation.js");
+    const piso = obterPisoSpawnRobos(s);
+    const entrada = { x: 98, y: -1040 };
+    const acesso = criarAcessoSpawnFabrica(s, piso);
+    const plano = s.spawnAreasRoboBola.snapshot();
     const resultados = [];
-    for (const area of s.spawnAreasRoboBola.snapshot()) {
-      // Caminha junto à borda, mantendo-se fora do retângulo.
-      s.player.body.reset(area.x - 120, area.y + area.height / 2);
+    for (const area of [...plano].sort((a, b) => a.trecho - b.trecho)) {
+      for (const robo of s.inimigos.filter(r => r.spawnAreaRoboBolaId != null)) robo.destroy();
+      s.inimigos = s.inimigos.filter(r => r.active);
+      s.inimigoTeste = s.inimigos[0] ?? null;
+      const iniciais = s.portasFabrica.filter(p => ["porta01", "porta04"].includes(p.nome));
+      if (area.trecho === 2) for (const porta of iniciais.filter(p => p.estado !== "aberta")) {
+        porta.aplicarEstadoRede({ estado: "aberta", progresso: 1 });
+      }
+      const portas = Object.fromEntries(iniciais.map(p => [p.nome, p.estado]));
+      for (let i = 0; i < 180 && !acesso.atualizar([entrada]); i++) {}
+      const centro = area.id === 1608 ? { x: -1080, y: -1140 } : {
+        x: area.x + area.width / 2, y: area.y + area.height / 2,
+      };
+      const ponto = [centro, ...candidatosAreaRoboBola(area)].find(p => acesso.alcanca(p));
+      if (!ponto) {
+        resultados.push({ id: area.id, total: area.total, invocados: 0, portas, robos: [],
+          pendencia: "sem posição caminhável para o jogador no estágio de acesso" });
+        continue;
+      }
+      s.player.body.reset(ponto.x, ponto.y);
       s.player.body.updateFromGameObject();
-      for (let i = 0; i < 20; i++) s.spawnAreasRoboBola.atualizar(450);
-      const atual = s.spawnAreasRoboBola.snapshot().find(a => a.id === area.id);
-      const robos = s.inimigos.filter(r => r.spawnAreaRoboBolaId === area.id);
-      resultados.push({ id: area.id, total: atual.total, invocados: atual.invocados,
-        candidatosLivres: candidatosAreaRoboBola(area).filter(p => pontoLivreAreaRoboBola(s, p, s.companionPet.areaMapa)).length,
-        robos: robos.map(r => ({ x: r.x, y: r.y, livre: retanguloLivreDoMapa(s, r.body),
-          piso: s.companionPet.areaMapa.contem(r.body), dentro: r.body.x >= area.x && r.body.y >= area.y &&
-          r.body.right <= area.x + area.width && r.body.bottom <= area.y + area.height })) });
+      const sistema = criarSpawnAreasRoboBola(s);
+      sistema.restaurar(Object.fromEntries(plano.filter(a => a.id !== area.id).map(a => [a.id, a.total])));
+      const minimo = area.id === 1608 ? 2 : 1;
+      let atual = sistema.snapshot().find(a => a.id === area.id);
+      for (let i = 0; i < 360 && atual.invocados < minimo; i++) {
+        s.time.now += 16;
+        sistema.atualizar(16);
+        atual = sistema.snapshot().find(a => a.id === area.id);
+      }
+      const trabalho = sistema.trabalhoUltimaAtualizacao();
+      const faixa = ampliarAreaNascimento(area);
+      const robos = s.inimigos.filter(r => r.spawnAreaRoboBolaId === area.id).map(r => {
+        const corpo = retanguloCorpoSpawnRoboBola(r, 20, r.body);
+        return { area: r.spawnAreaRoboBolaId, nasceuEm: r.spawnProtegidoAte - 700,
+          livre: retanguloLivreDoMapa(s, corpo), piso: piso.contem(corpo), acessivel: acesso.alcanca(r.body.center),
+          dentro: r.body.center.x >= faixa.x && r.body.center.y >= faixa.y &&
+            r.body.center.x <= faixa.x + faixa.width && r.body.center.y <= faixa.y + faixa.height };
+      });
+      resultados.push({ id: area.id, total: atual.total, invocados: atual.invocados, portas, robos,
+        pendencia: !atual.ativada ? "onda não ativada pela posição do jogador" : trabalho.navegacaoPendente
+          ? "conectividade ainda em cálculo" : "prazo esgotado à espera de vaga válida" });
+      sistema.destruir();
     }
     return resultados;
   });
-  console.log("AREAS", JSON.stringify(relatorio.areas.map(a => ({ id: a.id,
-    total: a.total, invocados: a.invocados, seguros: a.robos.every(r => r.livre && r.piso && r.dentro) }))));
   assert.equal(relatorio.areas.length, 18);
+  assert.equal(relatorio.areas.reduce((soma, a) => soma + a.total, 0), 35);
   for (const area of relatorio.areas) {
-    assert.ok(area.invocados > 0, `Área ${area.id} deve ter piso e spawn válido`);
-    assert.equal(area.invocados, area.total, `Área ${area.id} deve completar a quantidade prevista`);
-    assert.ok(area.invocados <= 7);
-    assert.ok(area.robos.every(r => r.livre && r.piso && r.dentro), `Colisão/piso/limites da área ${area.id}`);
+    exigirNascimentoDaArea(area, area.id === 1608 ? 2 : 1);
+    assert.ok(area.invocados <= area.total && area.total <= 7, `Cota da área ${area.id}`);
+    assert.ok(area.robos.every(r => r.livre && r.piso && r.dentro && r.acessivel), `Colisão/piso/limites da área ${area.id}`);
   }
+  const [primeiro1608, segundo1608] = relatorio.areas.find(a => a.id === 1608).robos;
+  assert.ok(segundo1608.nasceuEm - primeiro1608.nasceuEm >= 450);
   const regiaoCorredor = relatorio.areas.filter(a => [1625, 1629, 1630].includes(a.id));
-  assert.equal(regiaoCorredor.reduce((total, a) => total + a.invocados, 0), 7,
-    "Os três retângulos próximos de (-1067, -4478) compartilham o limite de sete robôs");
+  assert.equal(regiaoCorredor.reduce((total, a) => total + a.total, 0), 6,
+    "Os três retângulos próximos de (-1067, -4478) recebem seis robôs após a redução no segundo trecho");
   await posicionar(-1050, -2850);
   await page.evaluate(() => {
     const s = window.__game.scene.getScene("Level1Parte2");
